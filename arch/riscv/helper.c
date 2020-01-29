@@ -407,8 +407,8 @@ void do_interrupt(CPUState *env)
         s = set_field(s, MSTATUS_MPIE, env->privilege_architecture_1_10 ? get_field(s, MSTATUS_MIE) : get_field(s, MSTATUS_UIE << env->priv));
         s = set_field(s, MSTATUS_MPP, env->priv);
         s = set_field(s, MSTATUS_MIE, 0);
-        csr_write_helper(env, s, CSR_MSTATUS);
         riscv_set_mode(env, PRV_M);
+        csr_write_helper(env, s, CSR_MSTATUS);
     }
     /* TODO yield load reservation  */
     env->exception_index = EXCP_NONE; /* mark as handled */
