@@ -153,6 +153,13 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write,
         return;
     }
 
+    // If the requested CSR is inaccessible in the current privilege
+    // level, generate an illegal instruction exception.
+    if (env->priv < ((csrno >> 8) & 3)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+        return;
+    }
+
     switch (csrno) {
     case CSR_FFLAGS:
         if (riscv_mstatus_fs(env)) {
@@ -444,6 +451,13 @@ static inline target_ulong csr_read_helper(CPUState *env, target_ulong csrno)
     target_ulong ctr_en = env->priv == PRV_U ? env->mucounteren :
                    env->priv == PRV_S ? env->mscounteren : -1U;
     target_ulong ctr_ok = (ctr_en >> (csrno & 31)) & 1;
+
+    // If the requested CSR is inaccessible in the current privilege
+    // level, generate an illegal instruction exception.
+    if (env->priv < ((csrno >> 8) & 3)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+        return 0;
+    }
 
     if (ctr_ok) {
         if (csrno >= CSR_HPMCOUNTER3 && csrno <= CSR_HPMCOUNTER31) {
