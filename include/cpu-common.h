@@ -115,7 +115,8 @@ typedef struct PhysPageDesc {
   ram_addr_t region_offset;
 } PhysPageDesc;
 
-target_ulong virt_to_phys(target_ulong virt);
+target_ulong virt_to_phys_code(target_ulong virt);
+target_ulong virt_to_phys_read(target_ulong virt);
 target_ulong virt_to_phys_mode_nofault(CPUState *env1, target_ulong virt);
 target_ulong virt_to_phys_mode_nofault(CPUState *env1, target_ulong virt);
 
