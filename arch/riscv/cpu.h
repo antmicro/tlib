@@ -4,7 +4,6 @@
 #include "cpu-defs.h"
 #include "softfloat.h"
 #include "host-utils.h"
-#include "cpu-common.h"
 
 // This could possibly be generalized. 0 and 1 values are used as "is_write". This conflicts in a way with READ_ACCESS_TYPE et al.
 #define MMU_DATA_LOAD 0
@@ -54,6 +53,7 @@ typedef struct DisasContext {
 
 typedef struct CPUState CPUState;
 
+#include "cpu-common.h"
 #include "pmp.h"
 
 // +---------------------------------------+
