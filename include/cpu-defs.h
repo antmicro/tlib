@@ -39,6 +39,15 @@
 # define GETPC() ((void *)((uintptr_t)__builtin_return_address(0) - 1))
 #endif
 
+#if defined(_WIN64)
+/* This is to avoid longjmp crashing because of stack unwinding.
+ * It is incompatible with the execution of generated code. */
+# undef setjmp
+# define setjmp(env) __builtin_setjmp(env)
+# undef longjmp
+# define longjmp(buf, val) __builtin_longjmp(buf, val)
+#endif
+
 #ifndef TARGET_LONG_BITS
 #error TARGET_LONG_BITS must be defined before including this header
 #endif
