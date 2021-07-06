@@ -1158,7 +1158,9 @@ void cpu_abort(CPUState *env, const char *fmt, ...)
         s[i] = 0;
     }
     // **
-    tlib_abort(s);
+    tlib_printf(LOG_LEVEL_ERROR, "CPU abort: %s", s);
+    env->exception_index = EXCP_ABORTED;
+    cpu_loop_exit(env);
 }
 
 int get_external_mmu_phys_addr(CPUState *env, uint32_t address, int access_type,
