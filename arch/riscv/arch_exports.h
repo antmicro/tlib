@@ -20,4 +20,7 @@ void tlib_allow_unaligned_accesses(int32_t allowed);
 uint32_t tlib_set_vlen(uint32_t vlen);
 uint32_t tlib_set_elen(uint32_t elen);
 
+uint64_t tlib_get_vector(int regn, int idx);
+void tlib_set_vector(int regn, int idx, uint64_t value);
+
 #endif
