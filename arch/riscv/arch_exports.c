@@ -205,3 +205,69 @@ void tlib_set_interrupt_mode(int32_t mode)
 
     cpu->interrupt_mode = mode;
 }
+
+uint64_t tlib_get_vector(uint32_t regn, uint32_t idx)
+{
+    if (regn >= 32) {
+        tlib_abortf("Vector register number out of bounds");
+    }
+    uint8_t *v = cpu->vr + (regn * cpu->vlenb);
+    if (cpu->vsew == 0) {
+        cpu->vsew = 8;
+    }
+    if (idx >= (cpu->vlenb << (cpu->vlmul & 0x4 ? 0 : cpu->vlmul)) / cpu->vsew) {
+        tlib_abortf("Vector element index out of bounds");
+    }
+    switch (cpu->vsew) {
+    case 8:
+        return v[idx];
+    case 16:
+        return ((uint16_t *)v)[idx];
+    case 32:
+        return ((uint32_t *)v)[idx];
+    case 64: 
+        return ((uint64_t *)v)[idx];
+    default:
+        tlib_abortf("Unsupported EEW");
+        return -1;
+    }
+}
+
+void tlib_set_vector(uint32_t regn, uint32_t idx, uint64_t value)
+{
+    if (regn >= 32) {
+        tlib_abortf("Vector register number out of bounds");
+    }
+    if (cpu->vsew == 0) {
+        cpu->vsew = 8;
+    }
+    uint8_t *v = cpu->vr + (regn * cpu->vlenb);
+    if (idx >= (cpu->vlenb << (cpu->vlmul & 0x4 ? 0 : cpu->vlmul)) / cpu->vsew) {
+        tlib_abortf("Vector element index out of bounds");
+    }
+    switch (cpu->vsew) {
+    case 8:
+        if (value >> 8) {
+            tlib_abortf("`value` won't fit in vector element");
+        }
+        v[idx] = value;
+        break;
+    case 16:
+        if (value >> 16) {
+            tlib_abortf("`value` won't fit in vector element");
+        }
+        ((uint16_t *)v)[idx] = value;
+        break;
+    case 32:
+        if (value >> 32) {
+            tlib_abortf("`value` won't fit in vector element");
+        }
+        ((uint32_t *)v)[idx] = value;
+        break;
+    case 64: 
+        ((uint64_t *)v)[idx] = value;
+        break;
+    default:
+        tlib_abortf("Unsupported EEW");
+    }
+}

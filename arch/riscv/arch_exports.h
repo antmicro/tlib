@@ -17,4 +17,7 @@ void tlib_set_nmi(int32_t nmi, int32_t state);
 
 void tlib_allow_unaligned_accesses(int32_t allowed);
 
+uint64_t tlib_get_vector(int regn, int idx);
+void tlib_set_vector(int regn, int idx, uint64_t value);
+
 #endif
