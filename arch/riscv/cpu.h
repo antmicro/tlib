@@ -65,6 +65,8 @@ typedef struct CPUState CPUState;
 struct CPUState {
     target_ulong gpr[32];
     uint64_t fpr[32]; /* assume both F and D extensions */
+    uint8_t vr[2048];
+
     target_ulong pc;
 
     target_ulong frm;
