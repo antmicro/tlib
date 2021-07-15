@@ -1765,15 +1765,63 @@ static void gen_v_cfg(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2, 
     tcg_temp_free(vec_imm);
 }
 
+static void gen_v_opivi(DisasContext *dc, uint8_t funct6, int vd, int64_t simm5, int vs2, uint8_t vm)
+{
+    if (!ensure_extension(dc, RISCV_FEATURE_RVV))
+    {
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+    }
+    TCGv t_vd, t_simm5;
+    t_vd = tcg_temp_new();
+    t_simm5 = tcg_temp_new();
+    tcg_gen_movi_i32(t_vd, vd);
+    tcg_gen_movi_i64(t_simm5, simm5);
+    
+    switch (funct6) {
+    case 0b010111: // vmerge/vmv
+        if ( vs2 != 0) {
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+            break;
+        }
+        if(vm) {
+            gen_helper_vmv_ivi(cpu_env, t_vd, t_simm5);
+        } else {
+            gen_helper_vmv_ivi_m(cpu_env, t_vd, t_simm5);
+        }
+        break;
+    default:
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        break;
+    }
+    tcg_temp_free(t_vd);
+    tcg_temp_free(t_simm5);
+}
+
 static void gen_v(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2, int imm)
 {
     if (!ensure_extension(dc, RISCV_FEATURE_RVV))
     {
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
     }
+    uint8_t funct6 = extract32(dc->opcode, 26, 6);
+    uint8_t vm = extract32(dc->opcode, 25, 1);
+
     switch (opc) {
-        case OPC_RISC_VSETVL:
-        case OPC_RISC_VSETVLI:
+        case OPC_RISC_V_IVV:
+        case OPC_RISC_V_FVV:
+        case OPC_RISC_V_MVV:
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+            break;
+        case OPC_RISC_V_IVI:
+            int64_t simm5 = (((int8_t)(rs1) << 3) >> 3);
+            gen_v_opivi(dc, funct6, rd, simm5, rs2, vm);
+            break;
+        case OPC_RISC_V_IVX:
+        case OPC_RISC_V_FVF:
+        case OPC_RISC_V_MVX:
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+            break;
+        case OPC_RISC_V_CFG:
             gen_v_cfg(dc, MASK_OP_V_CFG(dc->opcode), rd, rs1, rs2, imm);
             break;
         default:

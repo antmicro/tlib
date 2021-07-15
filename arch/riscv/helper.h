@@ -137,6 +137,9 @@ DEF_HELPER_5(vsxei16_m, void, env, i32, i32, i32, i32)
 DEF_HELPER_5(vsxei32_m, void, env, i32, i32, i32, i32)
 DEF_HELPER_5(vsxei64_m, void, env, i32, i32, i32, i32)
 
+DEF_HELPER_3(vmv_ivi, void, env, i32, s64)
+DEF_HELPER_3(vmv_ivi_m, void, env, i32, s64)
+
 DEF_HELPER_2(handle_custom_instruction, i32, i64, i64)
 
 void do_nmi(CPUState *env);
