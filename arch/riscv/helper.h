@@ -85,6 +85,32 @@ DEF_HELPER_2(check_address_reservation, tl, env, tl)
 /* Vector Extension */
 DEF_HELPER_5(vsetvl, tl, env, tl, tl, tl, tl)
 
+DEF_HELPER_5(vle8, void, env, i32, i32, i32, i32)
+DEF_HELPER_5(vle16, void, env, i32, i32, i32, i32)
+DEF_HELPER_5(vle32, void, env, i32, i32, i32, i32)
+DEF_HELPER_5(vle64, void, env, i32, i32, i32, i32)
+DEF_HELPER_5(vlse8, void, env, i32, i32, i32, i32)
+DEF_HELPER_5(vlse16, void, env, i32, i32, i32, i32)
+DEF_HELPER_5(vlse32, void, env, i32, i32, i32, i32)
+DEF_HELPER_5(vlse64, void, env, i32, i32, i32, i32)
+DEF_HELPER_5(vlxei8, void, env, i32, i32, i32, i32)
+DEF_HELPER_5(vlxei16, void, env, i32, i32, i32, i32)
+DEF_HELPER_5(vlxei32, void, env, i32, i32, i32, i32)
+DEF_HELPER_5(vlxei64, void, env, i32, i32, i32, i32)
+
+DEF_HELPER_5(vle8_m, void, env, i32, i32, i32, i32)
+DEF_HELPER_5(vle16_m, void, env, i32, i32, i32, i32)
+DEF_HELPER_5(vle32_m, void, env, i32, i32, i32, i32)
+DEF_HELPER_5(vle64_m, void, env, i32, i32, i32, i32)
+DEF_HELPER_5(vlse8_m, void, env, i32, i32, i32, i32)
+DEF_HELPER_5(vlse16_m, void, env, i32, i32, i32, i32)
+DEF_HELPER_5(vlse32_m, void, env, i32, i32, i32, i32)
+DEF_HELPER_5(vlse64_m, void, env, i32, i32, i32, i32)
+DEF_HELPER_5(vlxei8_m, void, env, i32, i32, i32, i32)
+DEF_HELPER_5(vlxei16_m, void, env, i32, i32, i32, i32)
+DEF_HELPER_5(vlxei32_m, void, env, i32, i32, i32, i32)
+DEF_HELPER_5(vlxei64_m, void, env, i32, i32, i32, i32)
+
 DEF_HELPER_2(handle_custom_instruction, i32, i64, i64)
 
 void do_nmi(CPUState *env);

@@ -19,6 +19,32 @@
 #include "cpu.h"
 #define ALIGNED_ONLY
 #include "softmmu_exec.h"
+
+
+#define MASKED
+#define SHIFT     0
+#include "vector_helper_template.h"
+#define SHIFT     0
+#include "vector_helper_template.h"
+
+#define MASKED
+#define SHIFT     1
+#include "vector_helper_template.h"
+#define SHIFT     1
+#include "vector_helper_template.h"
+
+#define MASKED
+#define SHIFT     2
+#include "vector_helper_template.h"
+#define SHIFT     2
+#include "vector_helper_template.h"
+
+#define MASKED
+#define SHIFT     3
+#include "vector_helper_template.h"
+#define SHIFT     3
+#include "vector_helper_template.h"
+
 #include "arch_callbacks.h"
 
 #if defined(TARGET_RISCV32)
