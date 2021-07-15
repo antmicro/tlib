@@ -71,6 +71,7 @@ typedef struct CPUState CPUState;
 struct CPUState {
     target_ulong gpr[32];
     uint64_t fpr[32]; /* assume both F and D extensions */
+    uint8_t vr[32 * (VLEN_MAX / 8)];
     target_ulong pc;
 
     target_ulong frm;
@@ -308,5 +309,7 @@ static inline uint32_t extract32(uint32_t value, uint8_t start, uint8_t length)
 #define GET_VTYPE_VSEW(inst)     extract32(inst, 3, 3)
 #define GET_VTYPE_VTA(inst)      extract32(inst, 6, 1)
 #define GET_VTYPE_VMA(inst)      extract32(inst, 7, 1)
+
+#define V(x) (env->vr + (x) * env->vlenb)
 
 #endif /* !defined (__RISCV_CPU_H__) */
