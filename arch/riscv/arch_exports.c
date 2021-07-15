@@ -271,3 +271,9 @@ void tlib_set_vector(uint32_t regn, uint32_t idx, uint64_t value)
         tlib_abortf("Unsupported EEW");
     }
 }
+
+void tlib_set_vlen(uint32_t vlen)
+{
+    cpu->vlen = vlen;
+    cpu->vlenb = vlen / 8;
+}
