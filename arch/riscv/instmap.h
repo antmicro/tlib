@@ -315,10 +315,21 @@ enum {
 };
 
 #define MASK_OP_V(op) (MASK_OP_MAJOR(op) | (op & (0x7 << 12)))
-#define MASK_OP_V_CFG(op) (MASK_OP_MAJOR(op) | (op & (0x7 << 12)) | (op & (0x1 << 31)))
 enum {
-    OPC_RISC_VSETVLI   = OPC_RISC_V | (0x7 << 12) | (0x0 << 31),
-    OPC_RISC_VSETVL    = OPC_RISC_V | (0x7 << 12) | (0x1 << 31),
+    OPC_RISC_V_IVV = OPC_RISC_V | (0x0 << 12),
+    OPC_RISC_V_FVV = OPC_RISC_V | (0x1 << 12),
+    OPC_RISC_V_MVV = OPC_RISC_V | (0x2 << 12),
+    OPC_RISC_V_IVI = OPC_RISC_V | (0x3 << 12),
+    OPC_RISC_V_IVX = OPC_RISC_V | (0x4 << 12),
+    OPC_RISC_V_FVF = OPC_RISC_V | (0x5 << 12),
+    OPC_RISC_V_MVX = OPC_RISC_V | (0x6 << 12),
+    OPC_RISC_V_CFG = OPC_RISC_V | (0x7 << 12),
+};
+
+#define MASK_OP_V_CFG(op) (MASK_OP_MAJOR(op) | OPC_RISC_V_CFG | (op & (0x1 << 31)))
+enum {
+    OPC_RISC_VSETVLI   = OPC_RISC_V | OPC_RISC_V_CFG | (0x0 << 31),
+    OPC_RISC_VSETVL    = OPC_RISC_V | OPC_RISC_V_CFG | (0x1 << 31),
 };
 
 #define GET_B_IMM(inst)          ((extract32(inst, 8, 4) << 1)\

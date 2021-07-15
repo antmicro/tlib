@@ -53,3 +53,54 @@ target_ulong helper_vsetvl(CPUState *env, target_ulong rd, target_ulong rs1, tar
     env->vstart = 0;
     return env->vl;
 }
+
+void helper_vmv_ivi(CPUState *env, uint32_t vd, int64_t imm)
+{
+    const target_ulong dst_eew = env->vsew;
+    for (int ei = env->vstart; ei < env->vl; ++ei) {
+        switch (dst_eew) {
+        case 8:
+            V(vd)[ei] = imm;
+            break;
+        case 16:
+            ((uint16_t *)V(vd))[ei] = imm;
+            break;
+        case 32:
+            ((uint32_t *)V(vd))[ei] = imm;
+            break;
+        case 64: 
+            ((uint64_t *)V(vd))[ei] = imm;
+            break;
+        default:
+            tlib_abortf("Unsupported EEW");
+            break;
+        }
+    }
+}
+
+void helper_vmv_ivi_m(CPUState *env, uint32_t vd, int64_t imm)
+{
+    const target_ulong dst_eew = env->vsew;
+    for (int ei = env->vstart; ei < env->vl; ++ei) {
+        if (!env->vma && !(V(0)[ei >> 3] & (1 << (ei & 0x7)))) {
+            continue;
+        }
+        switch (dst_eew) {
+        case 8:
+            V(vd)[ei] = imm;
+            break;
+        case 16:
+            ((uint16_t *)V(vd))[ei] = imm;
+            break;
+        case 32:
+            ((uint32_t *)V(vd))[ei] = imm;
+            break;
+        case 64: 
+            ((uint64_t *)V(vd))[ei] = imm;
+            break;
+        default:
+            tlib_abortf("Unsupported EEW");
+            break;
+        }
+    }
+}
