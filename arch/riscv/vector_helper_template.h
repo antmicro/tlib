@@ -33,6 +33,9 @@
 
 void glue(glue(helper_vle, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t lumop, uint32_t nf)
 {
+    if (V_IDX_INVALID_EEW(vd, SHIFT)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
     target_ulong src_addr = env->gpr[rs1];
     for (int ei = env->vstart; ei < env->vl; ++ei) {
 #ifdef MASKED
@@ -48,6 +51,9 @@ void glue(glue(helper_vle, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t 
 
 void glue(glue(helper_vlse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t rs2, uint32_t nf)
 {
+    if (V_IDX_INVALID_EEW(vd, SHIFT)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
     target_ulong src_addr = env->gpr[rs1];
     target_long offset = env->gpr[rs2];
     for (int ei = env->vstart; ei < env->vl; ++ei) {
@@ -64,6 +70,9 @@ void glue(glue(helper_vlse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t
 
 void glue(glue(helper_vlxei, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t vs2, uint32_t nf)
 {
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, SHIFT)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
     target_ulong src_addr = env->gpr[rs1];
     DATA_TYPE *offsets = (DATA_TYPE *)V(vs2);
     const target_ulong dst_eew = env->vsew;
@@ -98,6 +107,9 @@ void glue(glue(helper_vlxei, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_
 
 void glue(glue(helper_vse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t sumop, uint32_t nf)
 {
+    if (V_IDX_INVALID_EEW(vd, SHIFT)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
     target_ulong src_addr = env->gpr[rs1];
     for (int ei = env->vstart; ei < env->vl; ++ei) {
 #ifdef MASKED
@@ -113,6 +125,9 @@ void glue(glue(helper_vse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t 
 
 void glue(glue(helper_vsse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t rs2, uint32_t nf)
 {
+    if (V_IDX_INVALID_EEW(vd, SHIFT)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
     target_ulong src_addr = env->gpr[rs1];
     target_long offset = env->gpr[rs2];
     for (int ei = env->vstart; ei < env->vl; ++ei) {
@@ -129,6 +144,9 @@ void glue(glue(helper_vsse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t
 
 void glue(glue(helper_vsxei, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t vs2, uint32_t nf)
 {
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, SHIFT)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
     target_ulong src_addr = env->gpr[rs1];
     DATA_TYPE *offsets = (DATA_TYPE *)V(vs2);
     const target_ulong dst_eew = env->vsew;

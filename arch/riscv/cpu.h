@@ -311,5 +311,9 @@ static inline uint32_t extract32(uint32_t value, uint8_t start, uint8_t length)
 #define GET_VTYPE_VMA(inst)      extract32(inst, 7, 1)
 
 #define V(x) (env->vr + (x) * env->vlenb)
+#define EMUL(eew) ((((((int8_t)env->vlmul) << 5 ) >> 5) + (eew) - GET_VTYPE_VSEW(env->vtype)) & 0x7)
+#define V_IDX_INVALID_EMUL(n, emul) ((emul) < 0x4 && ((n) & ((1 << (emul)) - 1)) != 0)
+#define V_IDX_INVALID_EEW(n, eew) V_IDX_INVALID_EMUL(n, EMUL(eew))
+#define V_IDX_INVALID(n) V_IDX_INVALID_EMUL(n, env->vlmul)
 
 #endif /* !defined (__RISCV_CPU_H__) */
