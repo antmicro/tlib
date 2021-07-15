@@ -937,6 +937,129 @@ static void gen_fp_store(DisasContext *dc, uint32_t opc, int rs1, int rs2, targe
     tcg_temp_free(t1);
 }
 
+static void gen_v_store(DisasContext *dc, uint32_t rest, uint32_t vd, uint32_t rs1, uint32_t rs2, uint32_t width)
+{
+    uint32_t vm = extract32(rest, 0, 1);
+    uint32_t mop = extract32(rest, 1, 2);
+    uint32_t mew = extract32(rest, 3, 1);
+    uint32_t nf = extract32(rest, 4, 3);
+    if (!ensure_extension(dc, RISCV_FEATURE_RVV) || mew) {
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+    }
+    TCGv t_vd, t_rs1, t_rs2, t_nf;
+    t_vd = tcg_temp_new();
+    t_rs1 = tcg_temp_new();
+    t_rs2 = tcg_temp_new();
+    t_nf = tcg_temp_new();
+    tcg_gen_movi_i32(t_vd, vd);
+    tcg_gen_movi_i32(t_rs1, rs1);
+    tcg_gen_movi_i32(t_rs2, rs2);
+    tcg_gen_movi_i32(t_nf, nf);
+
+    switch (mop) {
+    case 0: // unit-stride
+        switch (width & 0x3) {
+        case 0:
+            if (vm) {
+                gen_helper_vse8(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+            } else {
+                gen_helper_vse8_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+            }
+            break;
+        case 1:
+            if (vm) {
+                gen_helper_vse16(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+            } else {
+                gen_helper_vse16_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+            }
+            break;
+        case 2:
+            if (vm) {
+                gen_helper_vse32(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+            } else {
+                gen_helper_vse32_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+            }
+            break;
+        case 3:
+            if (vm) {
+                gen_helper_vse64(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+            } else {
+                gen_helper_vse64_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+            }
+            break;
+        }
+        break;
+    case 2: // strided
+        switch (width & 0x3) {
+        case 0:
+            if (vm) {
+                gen_helper_vsse8(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+            } else {
+                gen_helper_vsse8_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+            }
+            break;
+        case 1:
+            if (vm) {
+                gen_helper_vsse16(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+            } else {
+                gen_helper_vsse16_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+            }
+            break;
+        case 2:
+            if (vm) {
+                gen_helper_vsse32(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+            } else {
+                gen_helper_vsse32_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+            }
+            break;
+        case 3:
+            if (vm) {
+                gen_helper_vsse64(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+            } else {
+                gen_helper_vsse64_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+            }
+            break;
+        }
+        break;
+    default: // indexed
+        switch (width & 0x3) {
+        case 0:
+            if (vm) {
+                gen_helper_vsxei8(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+            } else {
+                gen_helper_vsxei8_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+            }
+            break;
+        case 1:
+            if (vm) {
+                gen_helper_vsxei16(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+            } else {
+                gen_helper_vsxei16_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+            }
+            break;
+        case 2:
+            if (vm) {
+                gen_helper_vsxei32(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+            } else {
+                gen_helper_vsxei32_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+            }
+            break;
+        case 3:
+            if (vm) {
+                gen_helper_vsxei64(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+            } else {
+                gen_helper_vsxei64_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+            }
+            break;
+        }
+        break;
+    }
+    tcg_temp_free(t_vd);
+    tcg_temp_free(t_rs1);
+    tcg_temp_free(t_rs2);
+    tcg_temp_free(t_nf);
+}
+
 static void gen_atomic(CPUState *env, DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
 {
     if (!ensure_extension(dc, RISCV_FEATURE_RVA)) {
@@ -1991,7 +2114,11 @@ static void decode_RV32_64G(CPUState *env, DisasContext *dc)
         }
         break;
     case OPC_RISC_FP_STORE:
-        gen_fp_store(dc, MASK_OP_FP_STORE(dc->opcode), rs1, rs2, GET_STORE_IMM(dc->opcode));
+        if (rm - 1 < 4) {
+            gen_fp_store(dc, MASK_OP_FP_STORE(dc->opcode), rs1, rs2, GET_STORE_IMM(dc->opcode));
+        } else {
+            gen_v_store(dc, imm >> 5, rd, rs1, rs2, rm);
+        }
         break;
     case OPC_RISC_ATOMIC:
         gen_atomic(env, dc, MASK_OP_ATOMIC(dc->opcode), rd, rs1, rs2);
