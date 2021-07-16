@@ -33,7 +33,8 @@
 
 void glue(glue(helper_vle, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t lumop, uint32_t nf)
 {
-    if (V_IDX_INVALID_EEW(vd, SHIFT)) {
+    const target_ulong emul = EMUL(SHIFT);
+    if (emul == 0x7 || V_IDX_INVALID_EMUL(vd, emul) || V_INVALID_NF(vd, nf, emul)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
     target_ulong src_addr = env->gpr[rs1];
@@ -44,14 +45,15 @@ void glue(glue(helper_vle, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t 
         }
 #endif
         for (int fi = 0; fi <= nf; ++fi) {
-            ((DATA_TYPE *)V(vd + fi))[ei] = glue(ld, USUFFIX)(src_addr + ei * DATA_SIZE);
+            ((DATA_TYPE *)V(vd + (fi << SHIFT)))[ei] = glue(ld, USUFFIX)(src_addr + ei * DATA_SIZE);
         }
     }
 }
 
 void glue(glue(helper_vlse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t rs2, uint32_t nf)
 {
-    if (V_IDX_INVALID_EEW(vd, SHIFT)) {
+    const target_ulong emul = EMUL(SHIFT);
+    if (emul == 0x7 || V_IDX_INVALID_EMUL(vd, emul) || V_INVALID_NF(vd, nf, emul)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
     target_ulong src_addr = env->gpr[rs1];
@@ -63,14 +65,15 @@ void glue(glue(helper_vlse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t
         }
 #endif
         for (int fi = 0; fi <= nf; ++fi) {
-            ((DATA_TYPE *)V(vd + fi))[ei] = glue(ld, USUFFIX)(src_addr + ei * offset);
+            ((DATA_TYPE *)V(vd + (fi << SHIFT)))[ei] = glue(ld, USUFFIX)(src_addr + ei * offset);
         }
     }
 }
 
 void glue(glue(helper_vlxei, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t vs2, uint32_t nf)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, SHIFT)) {
+    const target_ulong emul = EMUL(SHIFT);
+    if (emul == 0x7 || V_IDX_INVALID(vd) || V_IDX_INVALID_EMUL(vs2, emul) || V_INVALID_NF(vd, nf, emul)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
     target_ulong src_addr = env->gpr[rs1];
@@ -86,16 +89,16 @@ void glue(glue(helper_vlxei, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_
         for (int fi = 0; fi <= nf; ++fi) {
             switch (dst_eew) {
             case 8:
-                V(vd + fi)[ei] = ldub(src_addr + ((DATA_TYPE *)V(vs2 + fi))[ei]);
+                V(vd + (fi << SHIFT))[ei] = ldub(src_addr + (target_ulong)offsets[ei] + fi);
                 break;
             case 16:
-                ((uint16_t *)V(vd + fi))[ei] = lduw(src_addr + offsets[ei] + sizeof(DATA_TYPE) * fi);
+                ((uint16_t *)V(vd + (fi << SHIFT)))[ei] = lduw(src_addr + (target_ulong)offsets[ei] + sizeof(DATA_TYPE) * fi);
                 break;
             case 32:
-                ((uint32_t *)V(vd + fi))[ei] = ldl(src_addr + offsets[ei] + sizeof(DATA_TYPE) * fi);
+                ((uint32_t *)V(vd + (fi << SHIFT)))[ei] = ldl(src_addr + (target_ulong)offsets[ei] + sizeof(DATA_TYPE) * fi);
                 break;
             case 64: 
-                ((uint64_t *)V(vd + fi))[ei] = ldq(src_addr + offsets[ei] + sizeof(DATA_TYPE) * fi);
+                ((uint64_t *)V(vd + (fi << SHIFT)))[ei] = ldq(src_addr + (target_ulong)offsets[ei] + sizeof(DATA_TYPE) * fi);
                 break;
             default:
                 tlib_abortf("Unsupported EEW");
@@ -107,7 +110,8 @@ void glue(glue(helper_vlxei, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_
 
 void glue(glue(helper_vse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t sumop, uint32_t nf)
 {
-    if (V_IDX_INVALID_EEW(vd, SHIFT)) {
+    const target_ulong emul = EMUL(SHIFT);
+    if (emul == 0x7 || V_IDX_INVALID_EMUL(vd, emul) || V_INVALID_NF(vd, nf, emul)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
     target_ulong src_addr = env->gpr[rs1];
@@ -118,14 +122,15 @@ void glue(glue(helper_vse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t 
         }
 #endif
         for (int fi = 0; fi <= nf; ++fi) {
-            glue(st, SUFFIX)(src_addr + ei * DATA_SIZE, ((DATA_TYPE *)V(vd + fi))[ei]);
+            glue(st, SUFFIX)(src_addr + ei * DATA_SIZE + (fi << SHIFT), ((DATA_TYPE *)V(vd + (fi << SHIFT)))[ei]);
         }
     }
 }
 
 void glue(glue(helper_vsse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t rs2, uint32_t nf)
 {
-    if (V_IDX_INVALID_EEW(vd, SHIFT)) {
+    const target_ulong emul = EMUL(SHIFT);
+    if (emul == 0x7 || V_IDX_INVALID_EMUL(vd, emul) || V_INVALID_NF(vd, nf, emul)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
     target_ulong src_addr = env->gpr[rs1];
@@ -137,14 +142,15 @@ void glue(glue(helper_vsse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t
         }
 #endif
         for (int fi = 0; fi <= nf; ++fi) {
-            glue(st, SUFFIX)(src_addr + ei * offset, ((DATA_TYPE *)V(vd + fi))[ei]);
+            glue(st, SUFFIX)(src_addr + ei * offset + (fi << SHIFT), ((DATA_TYPE *)V(vd + (fi << SHIFT)))[ei]);
         }
     }
 }
 
 void glue(glue(helper_vsxei, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t vs2, uint32_t nf)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, SHIFT)) {
+    const target_ulong emul = EMUL(SHIFT);
+    if (emul == 0x7 || V_IDX_INVALID(vd) || V_IDX_INVALID_EMUL(vs2, emul) || V_INVALID_NF(vd, nf, emul)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
     target_ulong src_addr = env->gpr[rs1];
@@ -159,17 +165,17 @@ void glue(glue(helper_vsxei, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_
 #endif
         for (int fi = 0; fi <= nf; ++fi) {
             switch (dst_eew) {
-            case 0:
-                stb(src_addr + ((DATA_TYPE *)V(vs2 + fi))[ei], V(vd + fi)[ei]);
+            case 8:
+                stb(src_addr + (target_ulong)offsets[ei] + (fi << 0), V(vd + (fi << SHIFT))[ei]);
                 break;
             case 16:
-                stw(src_addr + offsets[ei] + sizeof(DATA_TYPE) * fi, ((uint16_t *)V(vd + fi))[ei]);
+                stw(src_addr + (target_ulong)offsets[ei] + (fi << 1), ((uint16_t *)V(vd + (fi << SHIFT)))[ei]);
                 break;
             case 32:
-                stl(src_addr + offsets[ei] + sizeof(DATA_TYPE) * fi, ((uint32_t *)V(vd + fi))[ei]);
+                stl(src_addr + (target_ulong)offsets[ei] + (fi << 2), ((uint32_t *)V(vd + (fi << SHIFT)))[ei]);
                 break;
-            case 64: 
-                stq(src_addr + offsets[ei] + sizeof(DATA_TYPE) * fi, ((uint64_t *)V(vd + fi))[ei]);
+            case 64:
+                stq(src_addr + (target_ulong)offsets[ei] + (fi << 3), ((uint64_t *)V(vd + (fi << SHIFT)))[ei]);
                 break;
             default:
                 tlib_abortf("Unsupported EEW");

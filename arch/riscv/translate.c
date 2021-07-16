@@ -781,6 +781,7 @@ static void gen_v_load(DisasContext *dc, uint32_t rest, uint32_t vd, uint32_t rs
     uint32_t nf = extract32(rest, 4, 3);
     if (!ensure_extension(dc, RISCV_FEATURE_RVV) || mew) {
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        return;
     }
     TCGv t_vd, t_rs1, t_rs2, t_nf;
     t_vd = tcg_temp_new();
@@ -945,6 +946,7 @@ static void gen_v_store(DisasContext *dc, uint32_t rest, uint32_t vd, uint32_t r
     uint32_t nf = extract32(rest, 4, 3);
     if (!ensure_extension(dc, RISCV_FEATURE_RVV) || mew) {
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        return;
     }
     TCGv t_vd, t_rs1, t_rs2, t_nf;
     t_vd = tcg_temp_new();
