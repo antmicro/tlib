@@ -185,6 +185,52 @@ void glue(glue(helper_vsxei, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_
     }
 }
 
+#ifndef V_HELPER_ONCE
+#define V_HELPER_ONCE
+
+void helper_vl_wr(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t nf)
+{
+    uint8_t *v = V(vd);
+    target_ulong src_addr = env->gpr[rs1];
+    for (int i = 0; i < env->vlenb * nf; ++i) {
+        env->vstart = i;
+        v[i] = ldub(src_addr + i);
+    }
+}
+
+void helper_vs_wr(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t nf)
+{
+    uint8_t *v = V(vd);
+    target_ulong src_addr = env->gpr[rs1];
+    for (int i = 0; i < env->vlenb * nf; ++i) {
+        env->vstart = i;
+        stb(src_addr + i, v[i]);
+    }
+}
+
+void helper_vlm(CPUState *env, uint32_t vd, uint32_t rs1)
+{
+    uint8_t *v = V(vd);
+    target_ulong src_addr = env->gpr[rs1];
+    for (int i = env->vstart; i < (env->vl + 7) / 8; ++i) {
+        env->vstart = i;
+        v[i] = ldub(src_addr + i);
+    }
+}
+
+void helper_vsm(CPUState *env, uint32_t vd, uint32_t rs1)
+{
+    uint8_t *v = V(vd);
+    target_ulong src_addr = env->gpr[rs1];
+    for (int i = env->vstart; i < (env->vl + 7) / 8; ++i) {
+        env->vstart = i;
+        stb(src_addr + i, v[i]);
+    }
+}
+
+#endif
+
+
 #undef SHIFT
 #undef DATA_TYPE
 #undef BITS

@@ -209,10 +209,39 @@ enum {
     OPC_RISC_FLD = OPC_RISC_FP_LOAD | (0x3 << 12),
 };
 
+#define MASK_OP_V_LOAD(op) (MASK_OP_MAJOR(op) | (op & (0x3 << 26)))
+enum {
+    OPC_RISC_VL_US  = OPC_RISC_FP_LOAD | (0x0 << 26),
+    OPC_RISC_VL_UVI = OPC_RISC_FP_LOAD | (0x1 << 26),
+    OPC_RISC_VL_VS  = OPC_RISC_FP_LOAD | (0x2 << 26),
+    OPC_RISC_VL_OVI = OPC_RISC_FP_LOAD | (0x3 << 26),
+};
+
+#define MASK_OP_V_LOAD_US(op) (MASK_OP_V_LOAD(op) | (op & (0x1F << 20)))
+enum {
+    OPC_RISC_VL_US_WR   = OPC_RISC_VL_US | (0x8 << 20),
+    OPC_RISC_VL_US_MASK = OPC_RISC_VL_US | (0xB << 20),
+    OPC_RISC_VL_US_FOF  = OPC_RISC_VL_US | (0x10 << 20),
+};
+
 #define MASK_OP_FP_STORE(op) (MASK_OP_MAJOR(op) | (op & (0x7 << 12)))
 enum {
     OPC_RISC_FSW = OPC_RISC_FP_STORE | (0x2 << 12),
     OPC_RISC_FSD = OPC_RISC_FP_STORE | (0x3 << 12),
+};
+
+#define MASK_OP_V_STORE(op) (MASK_OP_MAJOR(op) | (op & (0x3 << 26)))
+enum {
+    OPC_RISC_VS_US  = OPC_RISC_FP_STORE | (0x0 << 26),
+    OPC_RISC_VS_UVI = OPC_RISC_FP_STORE | (0x1 << 26),
+    OPC_RISC_VS_VS  = OPC_RISC_FP_STORE | (0x2 << 26),
+    OPC_RISC_VS_OVI = OPC_RISC_FP_STORE | (0x3 << 26),
+};
+
+#define MASK_OP_V_STORE_US(op) (MASK_OP_V_STORE(op) | (op & (0x1F << 20)))
+enum {
+    OPC_RISC_VS_US_WR   = OPC_RISC_VS_US | (0x8 << 20),
+    OPC_RISC_VS_US_MASK = OPC_RISC_VS_US | (0xB << 20),
 };
 
 #define MASK_OP_FP_FMADD(op) (MASK_OP_MAJOR(op) | (op & (0x3 << 25)))

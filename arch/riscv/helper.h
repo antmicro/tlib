@@ -137,6 +137,11 @@ DEF_HELPER_5(vsxei16_m, void, env, i32, i32, i32, i32)
 DEF_HELPER_5(vsxei32_m, void, env, i32, i32, i32, i32)
 DEF_HELPER_5(vsxei64_m, void, env, i32, i32, i32, i32)
 
+DEF_HELPER_4(vl_wr, void, env, i32, i32, i32)
+DEF_HELPER_4(vs_wr, void, env, i32, i32, i32)
+DEF_HELPER_3(vlm, void, env, i32, i32)
+DEF_HELPER_3(vsm, void, env, i32, i32)
+
 DEF_HELPER_3(vmv_ivi, void, env, i32, s64)
 DEF_HELPER_3(vmv_ivi_m, void, env, i32, s64)
 
