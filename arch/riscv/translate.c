@@ -796,7 +796,6 @@ static void gen_v_load(DisasContext *dc, uint32_t opc, uint32_t rest, uint32_t v
     case OPC_RISC_VL_US: // unit-stride
         switch (MASK_OP_V_LOAD_US(dc->opcode)) {
         case OPC_RISC_VL_US:
-        case OPC_RISC_VL_US_FOF:
             switch (width & 0x3) {
             case 0:
                 if (vm) {
@@ -841,6 +840,38 @@ static void gen_v_load(DisasContext *dc, uint32_t opc, uint32_t rest, uint32_t v
                 break;
             }
             gen_helper_vlm(cpu_env, t_vd, t_rs1);
+            break;
+        case OPC_RISC_VL_US_FOF:
+            switch (width & 0x3) {
+            case 0:
+                if (vm) {
+                    gen_helper_vle8ff(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                } else {
+                    gen_helper_vle8ff_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                }
+                break;
+            case 1:
+                if (vm) {
+                    gen_helper_vle16ff(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                } else {
+                    gen_helper_vle16ff_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                }
+                break;
+            case 2:
+                if (vm) {
+                    gen_helper_vle32ff(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                } else {
+                    gen_helper_vle32ff_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                }
+                break;
+            case 3:
+                if (vm) {
+                    gen_helper_vle64ff(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                } else {
+                    gen_helper_vle64ff_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                }
+                break;
+            }
             break;
         }
         break;

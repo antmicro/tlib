@@ -50,6 +50,39 @@ void glue(glue(helper_vle, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t 
     }
 }
 
+void glue(glue(glue(helper_vle, BITS), ff), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t lumop, uint32_t nf)
+{
+    const target_ulong emul = EMUL(SHIFT);
+    if (emul == 0x7 || V_IDX_INVALID_EMUL(vd, emul) || V_INVALID_NF(vd, nf, emul)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    target_ulong src_addr = env->gpr[rs1];
+    cpu->graceful_memory_access_exception = 1;
+    bool first = true;
+    for (int ei = env->vstart; ei < env->vl; ++ei) {
+#ifdef MASKED
+        if (!(V(0)[ei >> 3] & (1 << (ei & 0x7)))) {
+            continue;
+        }
+#endif
+        for (int fi = 0; fi <= nf; ++fi) {
+            DATA_TYPE value = glue(ld, USUFFIX)(src_addr + ei * DATA_SIZE);
+            if (!cpu->graceful_memory_access_exception) {
+                if (first) {
+                    helper_raise_exception(env, env->exception_index);
+                } else {
+                    env->vl = ei;
+                    env->exception_index = 0;
+                }
+                break;
+            }
+            ((DATA_TYPE *)V(vd + (fi << SHIFT)))[ei] = value;
+            first = false;
+        }
+    }
+    cpu->graceful_memory_access_exception = 0;
+}
+
 void glue(glue(helper_vlse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t rs2, uint32_t nf)
 {
     const target_ulong emul = EMUL(SHIFT);
