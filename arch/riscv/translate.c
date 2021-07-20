@@ -25,6 +25,7 @@
 /* global register indices */
 static TCGv cpu_gpr[32], cpu_pc;
 static TCGv_i64 cpu_fpr[32]; /* assume F and D extensions */
+static TCGv cpu_vstart;
 
 #include "tb-helper.h"
 
@@ -56,6 +57,7 @@ void translate_init(void)
     }
 
     cpu_pc = tcg_global_mem_new(TCG_AREG0, offsetof(CPUState, pc), "pc");
+    cpu_vstart = tcg_global_mem_new(TCG_AREG0, offsetof(CPUState, vstart), "vstart");
 }
 
 static inline void kill_unknown(DisasContext *dc, int excp);
@@ -944,6 +946,7 @@ static void gen_v_load(DisasContext *dc, uint32_t opc, uint32_t rest, uint32_t v
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         break;
     }
+    tcg_gen_movi_tl(cpu_vstart, 0);
     tcg_temp_free(t_vd);
     tcg_temp_free(t_rs1);
     tcg_temp_free(t_rs2);
@@ -1133,6 +1136,7 @@ static void gen_v_store(DisasContext *dc, uint32_t opc, uint32_t rest, uint32_t 
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         break;
     }
+    tcg_gen_movi_tl(cpu_vstart, 0);
     tcg_temp_free(t_vd);
     tcg_temp_free(t_rs1);
     tcg_temp_free(t_rs2);
@@ -1907,6 +1911,7 @@ static void gen_v(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2, int 
             kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
             break;
     }
+    tcg_gen_movi_tl(cpu_vstart, 0);
 }
 
 static void decode_RV32_64C0(DisasContext *dc)

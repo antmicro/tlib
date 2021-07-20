@@ -44,6 +44,7 @@ void glue(glue(helper_vle, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t 
             continue;
         }
 #endif
+        env->vstart = ei;
         for (int fi = 0; fi <= nf; ++fi) {
             ((DATA_TYPE *)V(vd + (fi << SHIFT)))[ei] = glue(ld, USUFFIX)(src_addr + ei * DATA_SIZE);
         }
@@ -69,6 +70,7 @@ void glue(glue(glue(helper_vle, BITS), ff), POSTFIX)(CPUState *env, uint32_t vd,
             DATA_TYPE value = glue(ld, USUFFIX)(src_addr + ei * DATA_SIZE);
             if (!cpu->graceful_memory_access_exception) {
                 if (first) {
+                    env->vstart = ei;
                     helper_raise_exception(env, env->exception_index);
                 } else {
                     env->vl = ei;
@@ -97,6 +99,7 @@ void glue(glue(helper_vlse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t
             continue;
         }
 #endif
+        env->vstart = ei;
         for (int fi = 0; fi <= nf; ++fi) {
             ((DATA_TYPE *)V(vd + (fi << SHIFT)))[ei] = glue(ld, USUFFIX)(src_addr + ei * offset);
         }
@@ -119,6 +122,7 @@ void glue(glue(helper_vlxei, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_
             continue;
         }
 #endif
+        env->vstart = ei;
         for (int fi = 0; fi <= nf; ++fi) {
             switch (dst_eew) {
             case 8:
@@ -154,6 +158,7 @@ void glue(glue(helper_vse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t 
             continue;
         }
 #endif
+        env->vstart = ei;
         for (int fi = 0; fi <= nf; ++fi) {
             glue(st, SUFFIX)(src_addr + ei * DATA_SIZE + (fi << SHIFT), ((DATA_TYPE *)V(vd + (fi << SHIFT)))[ei]);
         }
@@ -174,6 +179,7 @@ void glue(glue(helper_vsse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t
             continue;
         }
 #endif
+        env->vstart = ei;
         for (int fi = 0; fi <= nf; ++fi) {
             glue(st, SUFFIX)(src_addr + ei * offset + (fi << SHIFT), ((DATA_TYPE *)V(vd + (fi << SHIFT)))[ei]);
         }
@@ -196,6 +202,7 @@ void glue(glue(helper_vsxei, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_
             continue;
         }
 #endif
+        env->vstart = ei;
         for (int fi = 0; fi <= nf; ++fi) {
             switch (dst_eew) {
             case 8:
