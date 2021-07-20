@@ -205,6 +205,9 @@ typedef struct CPUBreakpoint {
     long temp_buf[CPU_TEMP_BUF_NLONGS];                                       \
     /* when set any exception will force `cpu_exec` to finish immediately */  \
     int32_t return_on_exception;                                              \
+    /* when set a memory access that would rise an exception will unset this \
+                                                             flag instead */  \
+    int32_t graceful_memory_access_exception;                                 \
                                                                               \
 
 #endif

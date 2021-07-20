@@ -176,8 +176,12 @@ do_unaligned_access:
             do_unaligned_access(addr, READ_ACCESS_TYPE, mmu_idx, retaddr);
         }
 #endif
-        tlb_fill(cpu, addr, READ_ACCESS_TYPE, mmu_idx, retaddr, 0, DATA_SIZE);
-        goto redo;
+        if (!tlb_fill(cpu, addr, READ_ACCESS_TYPE, mmu_idx, retaddr, cpu->graceful_memory_access_exception, DATA_SIZE)) {
+            goto redo;
+        } else {
+            cpu->graceful_memory_access_exception = 0;
+            res = -1;
+        }
     }
 
     release_global_memory_lock(cpu);

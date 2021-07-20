@@ -48,7 +48,7 @@ uint32_t HELPER(neon_tbl)(uint32_t ireg, uint32_t def, uint32_t rn, uint32_t max
    NULL, it means that the function was called in C code (i.e. not
    from generated code or from helper.c) */
 /* XXX: fix it to restore all registers */
-void tlb_fill(CPUState *env1, target_ulong addr, int is_write, int mmu_idx, void *retaddr, int no_page_fault, int access_width)
+int tlb_fill(CPUState *env1, target_ulong addr, int is_write, int mmu_idx, void *retaddr, int no_page_fault, int access_width)
 {
     CPUState *saved_env;
     int ret;
@@ -61,6 +61,7 @@ void tlb_fill(CPUState *env1, target_ulong addr, int is_write, int mmu_idx, void
         cpu_loop_exit_restore(env, (uintptr_t)retaddr, is_write != 2);
     }
     env = saved_env;
+    return ret;
 }
 
 /* FIXME: Pass an axplicit pointer to QF to CPUState, and move saturating
