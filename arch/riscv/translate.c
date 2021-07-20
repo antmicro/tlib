@@ -1848,36 +1848,242 @@ static void gen_v_cfg(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2, 
     tcg_temp_free(vec_imm);
 }
 
-static void gen_v_opivi(DisasContext *dc, uint8_t funct6, int vd, int64_t simm5, int vs2, uint8_t vm)
+static void gen_v_opivv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int vs2, uint8_t vm)
 {
-    if (!ensure_extension(dc, RISCV_FEATURE_RVV))
-    {
-        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
-    }
-    TCGv t_vd, t_simm5;
+    TCGv t_vd, t_vs1, t_vs2;
     t_vd = tcg_temp_new();
-    t_simm5 = tcg_temp_new();
+    t_vs1 = tcg_temp_new();
+    t_vs2 = tcg_temp_new();
     tcg_gen_movi_i32(t_vd, vd);
-    tcg_gen_movi_i64(t_simm5, simm5);
-    
+    tcg_gen_movi_i32(t_vs1, vs1);
+    tcg_gen_movi_i32(t_vs2, vs2);
+
     switch (funct6) {
-    case 0b010111: // vmerge/vmv
-        if ( vs2 != 0) {
-            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
-            break;
-        }
-        if(vm) {
-            gen_helper_vmv_ivi(cpu_env, t_vd, t_simm5);
-        } else {
-            gen_helper_vmv_ivi_m(cpu_env, t_vd, t_simm5);
-        }
-        break;
+    case RISC_V_FUNCT_ADD:
+    case RISC_V_FUNCT_SUB:
+    case RISC_V_FUNCT_MINU:
+    case RISC_V_FUNCT_MIN:
+    case RISC_V_FUNCT_MAXU:
+    case RISC_V_FUNCT_MAX:
+    case RISC_V_FUNCT_AND:
+    case RISC_V_FUNCT_OR:
+    case RISC_V_FUNCT_XOR:
+    case RISC_V_FUNCT_RGATHER:
+    case RISC_V_FUNCT_RGATHEREI16:
+    case RISC_V_FUNCT_ADC:
+    case RISC_V_FUNCT_MADC:
+    case RISC_V_FUNCT_SBC:
+    case RISC_V_FUNCT_MSBC:
+    case RISC_V_FUNCT_MERGE_MV:
+    case RISC_V_FUNCT_MSEQ:
+    case RISC_V_FUNCT_MSNE:
+    case RISC_V_FUNCT_MSLTU:
+    case RISC_V_FUNCT_MSLT:
+    case RISC_V_FUNCT_MSLEU:
+    case RISC_V_FUNCT_MSLE:
+    case RISC_V_FUNCT_SADDU:
+    case RISC_V_FUNCT_SADD:
+    case RISC_V_FUNCT_SSUBU:
+    case RISC_V_FUNCT_SSUB:
+    case RISC_V_FUNCT_SLL:
+    case RISC_V_FUNCT_SMUL:
+    case RISC_V_FUNCT_SRL:
+    case RISC_V_FUNCT_SRA:
+    case RISC_V_FUNCT_SSRL:
+    case RISC_V_FUNCT_SSRA:
+    case RISC_V_FUNCT_NSRL:
+    case RISC_V_FUNCT_NSRA:
+    case RISC_V_FUNCT_NCLIPU:
+    case RISC_V_FUNCT_NCLIP:
+    case RISC_V_FUNCT_WREDSUMU:
+    case RISC_V_FUNCT_WREDSUM:
     default:
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         break;
     }
     tcg_temp_free(t_vd);
-    tcg_temp_free(t_simm5);
+    tcg_temp_free(t_vs1);
+    tcg_temp_free(t_vs2);
+}
+
+// common or mutually exclusive operations for vi and vx
+static void gen_v_opivt(DisasContext *dc, uint8_t funct6, int vd, int vs2, TCGv t, uint8_t vm)
+{
+    TCGv t_vd, t_vs2;
+    t_vd = tcg_temp_new();
+    t_vs2 = tcg_temp_new();
+    tcg_gen_movi_i32(t_vd, vd);
+    tcg_gen_movi_i32(t_vs2, vs2);
+
+    switch (funct6) {
+    // Common for vi and vx
+    case RISC_V_FUNCT_ADD:
+    case RISC_V_FUNCT_RSUB:
+    case RISC_V_FUNCT_AND:
+    case RISC_V_FUNCT_OR:
+    case RISC_V_FUNCT_XOR:
+    case RISC_V_FUNCT_RGATHER:
+    case RISC_V_FUNCT_SLIDEUP:
+    case RISC_V_FUNCT_SLIDEDOWN:
+    case RISC_V_FUNCT_ADC:
+    case RISC_V_FUNCT_MADC:
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        break;
+    case RISC_V_FUNCT_MERGE_MV:
+        if(vm) {
+            gen_helper_vmv_ivi(cpu_env, t_vd, t);
+        } else {
+            gen_helper_vmv_ivi_m(cpu_env, t_vd, t);
+        }
+        break;
+    case RISC_V_FUNCT_MSEQ:
+    case RISC_V_FUNCT_MSNE:
+    case RISC_V_FUNCT_MSLEU:
+    case RISC_V_FUNCT_MSLE:
+    case RISC_V_FUNCT_MSGTU:
+    case RISC_V_FUNCT_MSGT:
+    case RISC_V_FUNCT_SADDU:
+    case RISC_V_FUNCT_SADD:
+    case RISC_V_FUNCT_SLL:
+    case RISC_V_FUNCT_SRL:
+    case RISC_V_FUNCT_SRA:
+    case RISC_V_FUNCT_SSRL:
+    case RISC_V_FUNCT_SSRA:
+    case RISC_V_FUNCT_NSRL:
+    case RISC_V_FUNCT_NSRA:
+    case RISC_V_FUNCT_NCLIPU:
+    case RISC_V_FUNCT_NCLIP:
+    // defined for vi and reserved for vx
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        break;
+    // reserved for vi and defined for vx
+    case RISC_V_FUNCT_SUB:
+    case RISC_V_FUNCT_MINU:
+    case RISC_V_FUNCT_MIN:
+    case RISC_V_FUNCT_MAXU:
+    case RISC_V_FUNCT_MAX:
+    case RISC_V_FUNCT_SBC:
+    case RISC_V_FUNCT_MSBC:
+    case RISC_V_FUNCT_MSLTU:
+    case RISC_V_FUNCT_MSLT:
+    case RISC_V_FUNCT_SSUBU:
+    case RISC_V_FUNCT_SSUB:
+    default:
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        break;
+    }
+    tcg_temp_free(t_vd);
+    tcg_temp_free(t_vs2);
+}
+
+static void gen_v_opivi(DisasContext *dc, uint8_t funct6, int vd, int64_t simm5, int vs2, uint8_t vm)
+{
+    TCGv t_simm5;
+    t_simm5 = tcg_temp_new_i64();
+    tcg_gen_movi_i64(t_simm5, simm5);
+    
+    switch (funct6) {
+    // Common for vi and vx
+    case RISC_V_FUNCT_ADD:
+    case RISC_V_FUNCT_RSUB:
+    case RISC_V_FUNCT_AND:
+    case RISC_V_FUNCT_OR:
+    case RISC_V_FUNCT_XOR:
+    case RISC_V_FUNCT_RGATHER:
+    case RISC_V_FUNCT_SLIDEUP:
+    case RISC_V_FUNCT_SLIDEDOWN:
+    case RISC_V_FUNCT_ADC:
+    case RISC_V_FUNCT_MADC:
+    case RISC_V_FUNCT_MERGE_MV:
+    case RISC_V_FUNCT_MSEQ:
+    case RISC_V_FUNCT_MSNE:
+    case RISC_V_FUNCT_MSLEU:
+    case RISC_V_FUNCT_MSLE:
+    case RISC_V_FUNCT_MSGTU:
+    case RISC_V_FUNCT_MSGT:
+    case RISC_V_FUNCT_SADDU:
+    case RISC_V_FUNCT_SADD:
+    case RISC_V_FUNCT_SLL:
+    case RISC_V_FUNCT_SRL:
+    case RISC_V_FUNCT_SRA:
+    case RISC_V_FUNCT_SSRL:
+    case RISC_V_FUNCT_SSRA:
+    case RISC_V_FUNCT_NSRL:
+    case RISC_V_FUNCT_NSRA:
+    case RISC_V_FUNCT_NCLIPU:
+    case RISC_V_FUNCT_NCLIP:
+    // Reserved for vx
+        gen_v_opivt(dc, funct6, vd, vs2, t_simm5, vm);
+        break;
+    // Conflicting
+    case RISC_V_FUNCT_MV_NF_R:
+    default:
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        break;
+    }
+    tcg_temp_free_i64(t_simm5);
+}
+
+static void gen_v_opivx(DisasContext *dc, uint8_t funct6, int vd, int rs1, int vs2, uint8_t vm)
+{
+    TCGv t_rs1, t;
+    t_rs1 = tcg_temp_new();
+    t = tcg_temp_new_i64();
+    gen_get_gpr(t_rs1, rs1);
+    tcg_gen_ext_tl_i64(t, t_rs1);
+
+    switch (funct6) {
+    // Common for vi and vx
+    case RISC_V_FUNCT_ADD:
+    case RISC_V_FUNCT_RSUB:
+    case RISC_V_FUNCT_AND:
+    case RISC_V_FUNCT_OR:
+    case RISC_V_FUNCT_XOR:
+    case RISC_V_FUNCT_RGATHER:
+    case RISC_V_FUNCT_SLIDEUP:
+    case RISC_V_FUNCT_SLIDEDOWN:
+    case RISC_V_FUNCT_ADC:
+    case RISC_V_FUNCT_MADC:
+    case RISC_V_FUNCT_MERGE_MV:
+    case RISC_V_FUNCT_MSEQ:
+    case RISC_V_FUNCT_MSNE:
+    case RISC_V_FUNCT_MSLEU:
+    case RISC_V_FUNCT_MSLE:
+    case RISC_V_FUNCT_MSGTU:
+    case RISC_V_FUNCT_MSGT:
+    case RISC_V_FUNCT_SADDU:
+    case RISC_V_FUNCT_SADD:
+    case RISC_V_FUNCT_SLL:
+    case RISC_V_FUNCT_SRL:
+    case RISC_V_FUNCT_SRA:
+    case RISC_V_FUNCT_SSRL:
+    case RISC_V_FUNCT_SSRA:
+    case RISC_V_FUNCT_NSRL:
+    case RISC_V_FUNCT_NSRA:
+    case RISC_V_FUNCT_NCLIPU:
+    case RISC_V_FUNCT_NCLIP:
+    // Reserved for vi
+    case RISC_V_FUNCT_SUB:
+    case RISC_V_FUNCT_MINU:
+    case RISC_V_FUNCT_MIN:
+    case RISC_V_FUNCT_MAXU:
+    case RISC_V_FUNCT_MAX:
+    case RISC_V_FUNCT_SBC:
+    case RISC_V_FUNCT_MSBC:
+    case RISC_V_FUNCT_MSLTU:
+    case RISC_V_FUNCT_MSLT:
+    case RISC_V_FUNCT_SSUBU:
+    case RISC_V_FUNCT_SSUB:
+        gen_v_opivt(dc, funct6, vd, vs2, t, vm);
+        break;
+    // Conflicting
+    case RISC_V_FUNCT_SMUL:
+    default:
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        break;
+    }
+    tcg_temp_free(t_rs1);
+    tcg_temp_free_i64(t);
 }
 
 static void gen_v(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2, int imm)
@@ -1890,26 +2096,32 @@ static void gen_v(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2, int 
     uint8_t vm = extract32(dc->opcode, 25, 1);
 
     switch (opc) {
-        case OPC_RISC_V_IVV:
-        case OPC_RISC_V_FVV:
-        case OPC_RISC_V_MVV:
-            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
-            break;
-        case OPC_RISC_V_IVI:
-            int64_t simm5 = (((int8_t)(rs1) << 3) >> 3);
-            gen_v_opivi(dc, funct6, rd, simm5, rs2, vm);
-            break;
-        case OPC_RISC_V_IVX:
-        case OPC_RISC_V_FVF:
-        case OPC_RISC_V_MVX:
-            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
-            break;
-        case OPC_RISC_V_CFG:
-            gen_v_cfg(dc, MASK_OP_V_CFG(dc->opcode), rd, rs1, rs2, imm);
-            break;
-        default:
-            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
-            break;
+    case OPC_RISC_V_IVV:
+        gen_v_opivv(dc, funct6, rd, rs1, rs2, vm);
+        break;
+    case OPC_RISC_V_FVV:
+    case OPC_RISC_V_MVV:
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        break;
+    case OPC_RISC_V_IVI:
+        int64_t simm5 = rs1 >= 0x10 ? (0xffffffffffffffe0) | rs1 : rs1;
+        gen_v_opivi(dc, funct6, rd, simm5, rs2, vm);
+        break;
+    case OPC_RISC_V_IVX:
+        gen_v_opivx(dc, funct6, rd, rs1, rs2, vm);
+        break;
+    case OPC_RISC_V_FVF:
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        break;
+    case OPC_RISC_V_MVX:
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        break;
+    case OPC_RISC_V_CFG:
+        gen_v_cfg(dc, MASK_OP_V_CFG(dc->opcode), rd, rs1, rs2, imm);
+        break;
+    default:
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        break;
     }
     tcg_gen_movi_tl(cpu_vstart, 0);
 }
