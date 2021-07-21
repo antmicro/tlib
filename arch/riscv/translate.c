@@ -1867,6 +1867,12 @@ static void gen_v_opivv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_SUB:
+        if(vm) {
+            gen_helper_vsub_ivv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vsub_ivv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_MINU:
     case RISC_V_FUNCT_MIN:
     case RISC_V_FUNCT_MAXU:
@@ -1931,6 +1937,12 @@ static void gen_v_opivt(DisasContext *dc, uint8_t funct6, int vd, int vs2, TCGv 
         }
         break;
     case RISC_V_FUNCT_RSUB:
+        if(vm) {
+            gen_helper_vrsub_ivi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vrsub_ivi_m(cpu_env, t_vd, t_vs2, t);
+        }
+        break;
     case RISC_V_FUNCT_AND:
     case RISC_V_FUNCT_OR:
     case RISC_V_FUNCT_XOR:
@@ -1970,6 +1982,13 @@ static void gen_v_opivt(DisasContext *dc, uint8_t funct6, int vd, int vs2, TCGv 
         break;
     // reserved for vi and defined for vx
     case RISC_V_FUNCT_SUB:
+        tcg_gen_neg_i64(t, t);
+        if(vm) {
+            gen_helper_vadd_ivi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vadd_ivi_m(cpu_env, t_vd, t_vs2, t);
+        }
+        break;
     case RISC_V_FUNCT_MINU:
     case RISC_V_FUNCT_MIN:
     case RISC_V_FUNCT_MAXU:

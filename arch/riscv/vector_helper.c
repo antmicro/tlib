@@ -224,3 +224,117 @@ void helper_vadd_ivv_m(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
         }
     }
 }
+
+void helper_vsub_ivv(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
+{
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    for (int ei = env->vstart; ei < env->vl; ++ei) {
+        switch (eew) {
+        case 8:
+            V(vd)[ei] = V(vs2)[ei] - V(vs1)[ei];
+            break;
+        case 16:
+            ((uint16_t *)V(vd))[ei] = ((uint16_t *)V(vs2))[ei] - ((uint16_t *)V(vs1))[ei];
+            break;
+        case 32:
+            ((uint32_t *)V(vd))[ei] = ((uint32_t *)V(vs2))[ei] - ((uint32_t *)V(vs1))[ei];
+            break;
+        case 64: 
+            ((uint64_t *)V(vd))[ei] = ((uint64_t *)V(vs2))[ei] - ((uint64_t *)V(vs1))[ei];
+            break;
+        default:
+            tlib_abortf("Unsupported EEW");
+            break;
+        }
+    }
+}
+
+void helper_vsub_ivv_m(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
+{
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    for (int ei = env->vstart; ei < env->vl; ++ei) {
+        if (!env->vma && !(V(0)[ei >> 3] & (1 << (ei & 0x7)))) {
+            continue;
+        }
+        switch (eew) {
+        case 8:
+            V(vd)[ei] = V(vs2)[ei] - V(vs1)[ei];
+            break;
+        case 16:
+            ((uint16_t *)V(vd))[ei] = ((uint16_t *)V(vs2))[ei] - ((uint16_t *)V(vs1))[ei];
+            break;
+        case 32:
+            ((uint32_t *)V(vd))[ei] = ((uint32_t *)V(vs2))[ei] - ((uint32_t *)V(vs1))[ei];
+            break;
+        case 64: 
+            ((uint64_t *)V(vd))[ei] = ((uint64_t *)V(vs2))[ei] - ((uint64_t *)V(vs1))[ei];
+            break;
+        default:
+            tlib_abortf("Unsupported EEW");
+            break;
+        }
+    }
+}
+
+void helper_vrsub_ivi(CPUState *env, uint32_t vd, int32_t vs2, int64_t imm)
+{
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    for (int ei = env->vstart; ei < env->vl; ++ei) {
+        switch (eew) {
+        case 8:
+            V(vd)[ei] = - V(vs2)[ei] + imm;
+            break;
+        case 16:
+            ((uint16_t *)V(vd))[ei] = - ((uint16_t *)V(vs2))[ei] + imm;
+            break;
+        case 32:
+            ((uint32_t *)V(vd))[ei] = - ((uint32_t *)V(vs2))[ei] + imm;
+            break;
+        case 64: 
+            ((uint64_t *)V(vd))[ei] = - ((uint64_t *)V(vs2))[ei] + imm;
+            break;
+        default:
+            tlib_abortf("Unsupported EEW");
+            break;
+        }
+    }
+}
+
+void helper_vrsub_ivi_m(CPUState *env, uint32_t vd, int32_t vs2, int64_t imm)
+{
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    for (int ei = env->vstart; ei < env->vl; ++ei) {
+        if (!env->vma && !(V(0)[ei >> 3] & (1 << (ei & 0x7)))) {
+            continue;
+        }
+        switch (eew) {
+        case 8:
+            V(vd)[ei] = V(vs2)[ei] + imm;
+            break;
+        case 16:
+            ((uint16_t *)V(vd))[ei] = - ((uint16_t *)V(vs2))[ei] + imm;
+            break;
+        case 32:
+            ((uint32_t *)V(vd))[ei] = - ((uint32_t *)V(vs2))[ei] + imm;
+            break;
+        case 64: 
+            ((uint64_t *)V(vd))[ei] = - ((uint64_t *)V(vs2))[ei] + imm;
+            break;
+        default:
+            tlib_abortf("Unsupported EEW");
+            break;
+        }
+    }
+}

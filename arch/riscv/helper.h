@@ -156,6 +156,10 @@ DEF_HELPER_4(vadd_ivi, void, env, i32, i32, s64)
 DEF_HELPER_4(vadd_ivi_m, void, env, i32, i32, s64)
 DEF_HELPER_4(vadd_ivv, void, env, i32, i32, i32)
 DEF_HELPER_4(vadd_ivv_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vsub_ivv, void, env, i32, i32, i32)
+DEF_HELPER_4(vsub_ivv_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vrsub_ivi, void, env, i32, i32, s64)
+DEF_HELPER_4(vrsub_ivi_m, void, env, i32, i32, s64)
 
 DEF_HELPER_2(handle_custom_instruction, i32, i64, i64)
 
