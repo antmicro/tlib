@@ -2131,6 +2131,178 @@ static void gen_v_opivx(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
     tcg_temp_free_i64(t);
 }
 
+static void gen_v_opmvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int vs2, uint8_t vm)
+{
+    TCGv t_vd, t_vs1, t_vs2;
+    t_vd = tcg_temp_new();
+    t_vs1 = tcg_temp_new();
+    t_vs2 = tcg_temp_new();
+    tcg_gen_movi_i32(t_vd, vd);
+    tcg_gen_movi_i32(t_vs1, vs1);
+    tcg_gen_movi_i32(t_vs2, vs2);
+
+    switch (funct6) {
+    case RISC_V_FUNCT_FADD:
+    case RISC_V_FUNCT_REDAND:
+    case RISC_V_FUNCT_REDOR:
+    case RISC_V_FUNCT_REDXOR:
+    case RISC_V_FUNCT_REDMINU:
+    case RISC_V_FUNCT_REDMIN:
+    case RISC_V_FUNCT_REDMAXU:
+    case RISC_V_FUNCT_REDMAX:
+    case RISC_V_FUNCT_AADDU:
+    case RISC_V_FUNCT_AADD:
+    case RISC_V_FUNCT_ASUBU:
+    case RISC_V_FUNCT_ASUB:
+    case RISC_V_FUNCT_WXUNARY0:
+    case RISC_V_FUNCT_XUNARY0:
+    case RISC_V_FUNCT_MUNARY0:
+    case RISC_V_FUNCT_COMPRESS:
+    case RISC_V_FUNCT_MANDNOT:
+    case RISC_V_FUNCT_MAND:
+    case RISC_V_FUNCT_MOR:
+    case RISC_V_FUNCT_MXOR:
+    case RISC_V_FUNCT_MORNOT:
+    case RISC_V_FUNCT_MNAND:
+    case RISC_V_FUNCT_MNOR:
+    case RISC_V_FUNCT_MXNOR:
+    case RISC_V_FUNCT_DIVU:
+    case RISC_V_FUNCT_DIV:
+    case RISC_V_FUNCT_REMU:
+    case RISC_V_FUNCT_REM:
+    case RISC_V_FUNCT_MULHU:
+    case RISC_V_FUNCT_MUL:
+    case RISC_V_FUNCT_MULHSU:
+    case RISC_V_FUNCT_MULH:
+    case RISC_V_FUNCT_MADD:
+    case RISC_V_FUNCT_NMSUB:
+    case RISC_V_FUNCT_MACC:
+    case RISC_V_FUNCT_NMSAC:
+    case RISC_V_FUNCT_WADDU:
+        if (vm) {
+            gen_helper_vwaddu_mvv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vwaddu_mvv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
+    case RISC_V_FUNCT_WADD:
+        if (vm) {
+            gen_helper_vwadd_mvv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vwadd_mvv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
+    case RISC_V_FUNCT_WSUBU:
+        if (vm) {
+            gen_helper_vwsubu_mvv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vwsubu_mvv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
+    case RISC_V_FUNCT_WSUB:
+        if (vm) {
+            gen_helper_vwsub_mvv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vwsub_mvv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
+    case RISC_V_FUNCT_WADDUW:
+    case RISC_V_FUNCT_WADDW:
+    case RISC_V_FUNCT_WSUBUW:
+    case RISC_V_FUNCT_WSUBW:
+    case RISC_V_FUNCT_WMULU:
+    case RISC_V_FUNCT_WMULSU:
+    case RISC_V_FUNCT_WMUL:
+    case RISC_V_FUNCT_WMACCU:
+    case RISC_V_FUNCT_WMACC:
+    case RISC_V_FUNCT_WMACCSU:
+    default:
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        break;
+    }
+    tcg_temp_free(t_vd);
+    tcg_temp_free(t_vs1);
+    tcg_temp_free(t_vs2);
+}
+
+static void gen_v_opmvx(DisasContext *dc, uint8_t funct6, int vd, int rs1, int vs2, uint8_t vm)
+{
+    TCGv t_vd, t_rs1, t_vs2;
+    t_vd = tcg_temp_new();
+    t_vs2 = tcg_temp_new();
+    t_rs1 = tcg_temp_new();
+    tcg_gen_movi_i32(t_vd, vd);
+    tcg_gen_movi_i32(t_vs2, vs2);
+    gen_get_gpr(t_rs1, rs1);
+
+    switch (funct6) {
+    case RISC_V_FUNCT_AADDU:
+    case RISC_V_FUNCT_AADD:
+    case RISC_V_FUNCT_ASUBU:
+    case RISC_V_FUNCT_ASUB:
+    case RISC_V_FUNCT_SLIDE1UP:
+    case RISC_V_FUNCT_SLIDE1DOWN:
+    case RISC_V_FUNCT_RXUNARY0:
+    case RISC_V_FUNCT_DIVU:
+    case RISC_V_FUNCT_DIV:
+    case RISC_V_FUNCT_REMU:
+    case RISC_V_FUNCT_REM:
+    case RISC_V_FUNCT_MULHU:
+    case RISC_V_FUNCT_MUL:
+    case RISC_V_FUNCT_MULHSU:
+    case RISC_V_FUNCT_MULH:
+    case RISC_V_FUNCT_MADD:
+    case RISC_V_FUNCT_NMSUB:
+    case RISC_V_FUNCT_MACC:
+    case RISC_V_FUNCT_NMSAC:
+    case RISC_V_FUNCT_WADDU:
+        if (vm) {
+            gen_helper_vwaddu_mvx(cpu_env, t_vd, t_vs2, t_rs1);
+        } else {
+            gen_helper_vwaddu_mvx_m(cpu_env, t_vd, t_vs2, t_rs1);
+        }
+        break;
+    case RISC_V_FUNCT_WADD:
+        if (vm) {
+            gen_helper_vwadd_mvx(cpu_env, t_vd, t_vs2, t_rs1);
+        } else {
+            gen_helper_vwadd_mvx_m(cpu_env, t_vd, t_vs2, t_rs1);
+        }
+        break;
+    case RISC_V_FUNCT_WSUBU:
+        if (vm) {
+            gen_helper_vwsubu_mvx(cpu_env, t_vd, t_vs2, t_rs1);
+        } else {
+            gen_helper_vwsubu_mvx_m(cpu_env, t_vd, t_vs2, t_rs1);
+        }
+        break;
+    case RISC_V_FUNCT_WSUB:
+        if (vm) {
+            gen_helper_vwsub_mvx(cpu_env, t_vd, t_vs2, t_rs1);
+        } else {
+            gen_helper_vwsub_mvx_m(cpu_env, t_vd, t_vs2, t_rs1);
+        }
+        break;
+    case RISC_V_FUNCT_WADDUW:
+    case RISC_V_FUNCT_WADDW:
+    case RISC_V_FUNCT_WSUBUW:
+    case RISC_V_FUNCT_WSUBW:
+    case RISC_V_FUNCT_WMULU:
+    case RISC_V_FUNCT_WMULSU:
+    case RISC_V_FUNCT_WMUL:
+    case RISC_V_FUNCT_WMACCU:
+    case RISC_V_FUNCT_WMACC:
+    case RISC_V_FUNCT_WMACCUS:
+    case RISC_V_FUNCT_WMACCSU:
+    default:
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        break;
+    }
+    tcg_temp_free(t_vd);
+    tcg_temp_free(t_vs2);
+    tcg_temp_free(t_rs1);
+}
+
 static void gen_v(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2, int imm)
 {
     if (!ensure_extension(dc, RISCV_FEATURE_RVV))
@@ -2145,8 +2317,10 @@ static void gen_v(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2, int 
         gen_v_opivv(dc, funct6, rd, rs1, rs2, vm);
         break;
     case OPC_RISC_V_FVV:
-    case OPC_RISC_V_MVV:
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        break;
+    case OPC_RISC_V_MVV:
+        gen_v_opmvv(dc, funct6, rd, rs1, rs2, vm);
         break;
     case OPC_RISC_V_IVI:
         int64_t simm5 = rs1 >= 0x10 ? (0xffffffffffffffe0) | rs1 : rs1;
@@ -2159,7 +2333,7 @@ static void gen_v(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2, int 
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         break;
     case OPC_RISC_V_MVX:
-        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        gen_v_opmvx(dc, funct6, rd, rs1, rs2, vm);
         break;
     case OPC_RISC_V_CFG:
         gen_v_cfg(dc, MASK_OP_V_CFG(dc->opcode), rd, rs1, rs2, imm);
