@@ -2207,9 +2207,33 @@ static void gen_v_opmvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_WADDUW:
+        if (vm) {
+            gen_helper_vwaddu_mwv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vwaddu_mwv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_WADDW:
+        if (vm) {
+            gen_helper_vwadd_mwv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vwadd_mwv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_WSUBUW:
+        if (vm) {
+            gen_helper_vwsubu_mwv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vwsubu_mwv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_WSUBW:
+        if (vm) {
+            gen_helper_vwsub_mwv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vwsub_mwv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_WMULU:
     case RISC_V_FUNCT_WMULSU:
     case RISC_V_FUNCT_WMUL:
@@ -2284,9 +2308,33 @@ static void gen_v_opmvx(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
         }
         break;
     case RISC_V_FUNCT_WADDUW:
+        if (vm) {
+            gen_helper_vwaddu_mwx(cpu_env, t_vd, t_vs2, t_rs1);
+        } else {
+            gen_helper_vwaddu_mwx_m(cpu_env, t_vd, t_vs2, t_rs1);
+        }
+        break;
     case RISC_V_FUNCT_WADDW:
+        if (vm) {
+            gen_helper_vwadd_mwx(cpu_env, t_vd, t_vs2, t_rs1);
+        } else {
+            gen_helper_vwadd_mwx_m(cpu_env, t_vd, t_vs2, t_rs1);
+        }
+        break;
     case RISC_V_FUNCT_WSUBUW:
+        if (vm) {
+            gen_helper_vwsubu_mwx(cpu_env, t_vd, t_vs2, t_rs1);
+        } else {
+            gen_helper_vwsubu_mwx_m(cpu_env, t_vd, t_vs2, t_rs1);
+        }
+        break;
     case RISC_V_FUNCT_WSUBW:
+        if (vm) {
+            gen_helper_vwsub_mwx(cpu_env, t_vd, t_vs2, t_rs1);
+        } else {
+            gen_helper_vwsub_mwx_m(cpu_env, t_vd, t_vs2, t_rs1);
+        }
+        break;
     case RISC_V_FUNCT_WMULU:
     case RISC_V_FUNCT_WMULSU:
     case RISC_V_FUNCT_WMUL:
