@@ -81,28 +81,25 @@ void helper_vmv_ivi(CPUState *env, uint32_t vd, int64_t imm)
     }
 }
 
-void helper_vmv_ivi_m(CPUState *env, uint32_t vd, int64_t imm)
+void helper_vmv_ivv(CPUState *env, uint32_t vd, int32_t vs1)
 {
-    if (V_IDX_INVALID(vd)) {
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs1)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong dst_eew = env->vsew;
-    for (int ei = env->vstart; ei < env->vl; ++ei) {
-        if (!env->vma && !(V(0)[ei >> 3] & (1 << (ei & 0x7)))) {
-            continue;
-        }
-        switch (dst_eew) {
+    const target_ulong eew = env->vsew;
+    for (int i = env->vstart; i < env->vl; ++i) {
+        switch (eew) {
         case 8:
-            V(vd)[ei] = imm;
+            V(vd)[i] = V(vs1)[i];
             break;
         case 16:
-            ((uint16_t *)V(vd))[ei] = imm;
+            ((uint16_t *)V(vd))[i] = ((uint16_t *)V(vs1))[i];
             break;
         case 32:
-            ((uint32_t *)V(vd))[ei] = imm;
+            ((uint32_t *)V(vd))[i] = ((uint32_t *)V(vs1))[i];
             break;
         case 64: 
-            ((uint64_t *)V(vd))[ei] = imm;
+            ((uint64_t *)V(vd))[i] = ((uint64_t *)V(vs1))[i];
             break;
         default:
             tlib_abortf("Unsupported EEW");
