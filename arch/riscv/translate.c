@@ -1874,9 +1874,33 @@ static void gen_v_opivv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_MINU:
+        if (vm) {
+            gen_helper_vminu_ivv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vminu_ivv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_MIN:
+        if (vm) {
+            gen_helper_vmin_ivv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vmin_ivv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_MAXU:
+        if (vm) {
+            gen_helper_vmaxu_ivv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vmaxu_ivv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_MAX:
+        if (vm) {
+            gen_helper_vmax_ivv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vmax_ivv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_AND:
     case RISC_V_FUNCT_OR:
     case RISC_V_FUNCT_XOR:
@@ -2004,9 +2028,33 @@ static void gen_v_opivt(DisasContext *dc, uint8_t funct6, int vd, int vs2, TCGv 
         }
         break;
     case RISC_V_FUNCT_MINU:
+        if (vm) {
+            gen_helper_vminu_ivi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vminu_ivi_m(cpu_env, t_vd, t_vs2, t);
+        }
+        break;
     case RISC_V_FUNCT_MIN:
+        if (vm) {
+            gen_helper_vmin_ivi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vmin_ivi_m(cpu_env, t_vd, t_vs2, t);
+        }
+        break;
     case RISC_V_FUNCT_MAXU:
+        if (vm) {
+            gen_helper_vmaxu_ivi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vmaxu_ivi_m(cpu_env, t_vd, t_vs2, t);
+        }
+        break;
     case RISC_V_FUNCT_MAX:
+        if (vm) {
+            gen_helper_vmax_ivi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vmax_ivi_m(cpu_env, t_vd, t_vs2, t);
+        }
+        break;
     case RISC_V_FUNCT_SBC:
     case RISC_V_FUNCT_MSBC:
     case RISC_V_FUNCT_MSLTU:
