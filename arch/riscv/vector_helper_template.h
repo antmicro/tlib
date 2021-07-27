@@ -2016,6 +2016,96 @@ void glue(helper_vwredsum_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2,
     }
 }
 
+void glue(helper_vslideup_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_ulong rs1)
+{
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    const int start = rs1 > env->vstart ? rs1 : env->vstart;
+    for (int ei = start; ei < env->vl; ++ei) {
+#ifdef MASKED
+        if (!(V(0)[ei >> 3] & (1 << (ei & 0x7)))) {
+            continue;
+        }
+#endif
+        switch (eew) {
+        case 8:
+            ((int8_t *)V(vd))[ei] = ((int8_t *)V(vs2))[ei - rs1];
+            break;
+        case 16:
+            ((int16_t *)V(vd))[ei] = ((int16_t *)V(vs2))[ei - rs1];
+            break;
+        case 32:
+            ((int32_t *)V(vd))[ei] = ((int32_t *)V(vs2))[ei - rs1];
+            break;
+        case 64:
+            ((int64_t *)V(vd))[ei] = ((int64_t *)V(vs2))[ei - rs1];
+            break;
+        default:
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            break;
+        }
+    }
+}
+
+void glue(helper_vslidedown_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_ulong rs1)
+{
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    const int src_max = env->vl < env->vlmax - rs1 ? env->vl : env->vlmax - rs1;
+    for (int ei = env->vstart; ei < src_max; ++ei) {
+#ifdef MASKED
+        if (!(V(0)[ei >> 3] & (1 << (ei & 0x7)))) {
+            continue;
+        }
+#endif
+        switch (eew) {
+        case 8:
+            ((int8_t *)V(vd))[ei] = ((int8_t *)V(vs2))[ei + rs1];
+            break;
+        case 16:
+            ((int16_t *)V(vd))[ei] = ((int16_t *)V(vs2))[ei + rs1];
+            break;
+        case 32:
+            ((int32_t *)V(vd))[ei] = ((int32_t *)V(vs2))[ei + rs1];
+            break;
+        case 64:
+            ((int64_t *)V(vd))[ei] = ((int64_t *)V(vs2))[ei + rs1];
+            break;
+        default:
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            break;
+        }
+    }
+    for (int ei = src_max; ei < env->vl; ++ei) {
+#ifdef MASKED
+        if (!(V(0)[ei >> 3] & (1 << (ei & 0x7)))) {
+            continue;
+        }
+#endif
+        switch (eew) {
+        case 8:
+            ((int8_t *)V(vd))[ei] = 0;
+            break;
+        case 16:
+            ((int16_t *)V(vd))[ei] = 0;
+            break;
+        case 32:
+            ((int32_t *)V(vd))[ei] = 0;
+            break;
+        case 64:
+            ((int64_t *)V(vd))[ei] = 0;
+            break;
+        default:
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            break;
+        }
+    }
+}
+
 #endif
 
 

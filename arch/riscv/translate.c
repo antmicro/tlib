@@ -2022,7 +2022,19 @@ static void gen_v_opivt(DisasContext *dc, uint8_t funct6, int vd, int vs2, TCGv 
     case RISC_V_FUNCT_XOR:
     case RISC_V_FUNCT_RGATHER:
     case RISC_V_FUNCT_SLIDEUP:
+        if (vm) {
+            gen_helper_vslideup_ivi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vslideup_ivi_m(cpu_env, t_vd, t_vs2, t);
+        }
+        break;
     case RISC_V_FUNCT_SLIDEDOWN:
+        if (vm) {
+            gen_helper_vslidedown_ivi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vslidedown_ivi_m(cpu_env, t_vd, t_vs2, t);
+        }
+        break;
     case RISC_V_FUNCT_ADC:
     case RISC_V_FUNCT_MADC:
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
@@ -2146,6 +2158,8 @@ static void gen_v_opivi(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
     case RISC_V_FUNCT_NSRA:
     case RISC_V_FUNCT_NCLIPU:
     case RISC_V_FUNCT_NCLIP:
+    case RISC_V_FUNCT_SLIDEUP:
+    case RISC_V_FUNCT_SLIDEDOWN:
         tcg_gen_movi_i64(t_simm5, simm5);
         gen_v_opivt(dc, funct6, vd, vs2, t_simm5, vm);
         break;
@@ -2156,8 +2170,6 @@ static void gen_v_opivi(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
     case RISC_V_FUNCT_OR:
     case RISC_V_FUNCT_XOR:
     case RISC_V_FUNCT_RGATHER:
-    case RISC_V_FUNCT_SLIDEUP:
-    case RISC_V_FUNCT_SLIDEDOWN:
     case RISC_V_FUNCT_ADC:
     case RISC_V_FUNCT_MADC:
     case RISC_V_FUNCT_MERGE_MV:

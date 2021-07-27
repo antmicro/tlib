@@ -265,6 +265,11 @@ DEF_HELPER_4(vwredsumu_ivv_m, void, env, i32, i32, i32)
 DEF_HELPER_4(vwredsum_ivv, void, env, i32, i32, i32)
 DEF_HELPER_4(vwredsum_ivv_m, void, env, i32, i32, i32)
 
+DEF_HELPER_4(vslideup_ivi, void, env, i32, i32, tl)
+DEF_HELPER_4(vslideup_ivi_m, void, env, i32, i32, tl)
+DEF_HELPER_4(vslidedown_ivi, void, env, i32, i32, tl)
+DEF_HELPER_4(vslidedown_ivi_m, void, env, i32, i32, tl)
+
 DEF_HELPER_2(handle_custom_instruction, i32, i64, i64)
 
 void do_nmi(CPUState *env);
