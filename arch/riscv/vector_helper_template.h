@@ -2162,6 +2162,63 @@ void glue(helper_vslide1up, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, ui
     }
 }
 
+void glue(helper_vslide1down, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, uint64_t rs1)
+{
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    const int src_max = env->vl - 1;
+
+    for (int ei = env->vstart; ei < src_max; ++ei) {
+#ifdef MASKED
+        if (!(V(0)[ei >> 3] & (1 << (ei & 0x7)))) {
+            continue;
+        }
+#endif
+        switch (eew) {
+        case 8:
+            ((int8_t *)V(vd))[ei] = ((int8_t *)V(vs2))[ei + 1];
+            break;
+        case 16:
+            ((int16_t *)V(vd))[ei] = ((int16_t *)V(vs2))[ei + 1];
+            break;
+        case 32:
+            ((int32_t *)V(vd))[ei] = ((int32_t *)V(vs2))[ei + 1];
+            break;
+        case 64:
+            ((int64_t *)V(vd))[ei] = ((int64_t *)V(vs2))[ei + 1];
+            break;
+        default:
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            break;
+        }
+    }
+#ifdef MASKED
+    if(V(0)[src_max >> 3] & (1 << (src_max & 0x7))) {
+#endif
+        switch (eew) {
+        case 8:
+            ((int8_t *)V(vd))[src_max] = rs1;
+            break;
+        case 16:
+            ((int16_t *)V(vd))[src_max] = rs1;
+            break;
+        case 32:
+            ((int32_t *)V(vd))[src_max] = rs1;
+            break;
+        case 64:
+            ((int64_t *)V(vd))[src_max] = rs1;
+            break;
+        default:
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            break;
+        }
+#ifdef MASKED
+    }
+#endif
+}
+
 #endif
 
 

@@ -2443,6 +2443,12 @@ static void gen_v_opmvx(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
         }
         break;
     case RISC_V_FUNCT_SLIDE1DOWN:
+        if (vm) {
+            gen_helper_vslide1down(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vslide1down_m(cpu_env, t_vd, t_vs2, t);
+        }
+        break;
     case RISC_V_FUNCT_RXUNARY0:
     case RISC_V_FUNCT_DIVU:
     case RISC_V_FUNCT_DIV:
@@ -2582,6 +2588,12 @@ static void gen_v_opfvf(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
         }
         break;
     case RISC_V_FUNCT_FSLIDE1DOWN:
+        if (vm) {
+            gen_helper_vslide1down(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        } else {
+            gen_helper_vslide1down_m(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        }
+        break;
     case RISC_V_FUNCT_RFUNARY0:
     case RISC_V_FUNCT_FMERGE_FMV:
     case RISC_V_FUNCT_MFEQ:
