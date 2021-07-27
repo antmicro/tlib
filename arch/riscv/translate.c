@@ -2418,20 +2418,30 @@ static void gen_v_opmvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
 
 static void gen_v_opmvx(DisasContext *dc, uint8_t funct6, int vd, int rs1, int vs2, uint8_t vm)
 {
-    TCGv t_vd, t_rs1, t_vs2;
+    TCGv t_vd, t_rs1, t_vs2, t;
     t_vd = tcg_temp_new();
     t_vs2 = tcg_temp_new();
     t_rs1 = tcg_temp_new();
+    t = tcg_temp_new_i64();
     tcg_gen_movi_i32(t_vd, vd);
     tcg_gen_movi_i32(t_vs2, vs2);
     gen_get_gpr(t_rs1, rs1);
+    tcg_gen_ext_tl_i64(t, t_rs1);
 
     switch (funct6) {
     case RISC_V_FUNCT_AADDU:
     case RISC_V_FUNCT_AADD:
     case RISC_V_FUNCT_ASUBU:
     case RISC_V_FUNCT_ASUB:
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        break;
     case RISC_V_FUNCT_SLIDE1UP:
+        if (vm) {
+            gen_helper_vslide1up(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vslide1up_m(cpu_env, t_vd, t_vs2, t);
+        }
+        break;
     case RISC_V_FUNCT_SLIDE1DOWN:
     case RISC_V_FUNCT_RXUNARY0:
     case RISC_V_FUNCT_DIVU:
@@ -2546,6 +2556,69 @@ static void gen_v_opmvx(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
     tcg_temp_free(t_rs1);
 }
 
+static void gen_v_opfvf(DisasContext *dc, uint8_t funct6, int vd, int rs1, int vs2, uint8_t vm)
+{
+    TCGv t_vd, t_vs2;
+    t_vd = tcg_temp_new();
+    t_vs2 = tcg_temp_new();
+    tcg_gen_movi_i32(t_vd, vd);
+    tcg_gen_movi_i32(t_vs2, vs2);
+
+    switch (funct6) {
+    case RISC_V_FUNCT_REDSUM:
+    case RISC_V_FUNCT_FSUB:
+    case RISC_V_FUNCT_FMIN:
+    case RISC_V_FUNCT_FMAX:
+    case RISC_V_FUNCT_FSGNJ:
+    case RISC_V_FUNCT_FSGNJN:
+    case RISC_V_FUNCT_FSGNJX:
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        break;
+    case RISC_V_FUNCT_FSLIDE1UP:
+        if (vm) {
+            gen_helper_vslide1up(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        } else {
+            gen_helper_vslide1up_m(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        }
+        break;
+    case RISC_V_FUNCT_FSLIDE1DOWN:
+    case RISC_V_FUNCT_RFUNARY0:
+    case RISC_V_FUNCT_FMERGE_FMV:
+    case RISC_V_FUNCT_MFEQ:
+    case RISC_V_FUNCT_MFLE:
+    case RISC_V_FUNCT_MFLT:
+    case RISC_V_FUNCT_MFNE:
+    case RISC_V_FUNCT_MFGT:
+    case RISC_V_FUNCT_MFGE:
+    case RISC_V_FUNCT_FDIV:
+    case RISC_V_FUNCT_FRDIV:
+    case RISC_V_FUNCT_FMUL:
+    case RISC_V_FUNCT_FRSUB:
+    case RISC_V_FUNCT_FMADD:
+    case RISC_V_FUNCT_FNMADD:
+    case RISC_V_FUNCT_FMSUB:
+    case RISC_V_FUNCT_FNMSUB:
+    case RISC_V_FUNCT_FMACC:
+    case RISC_V_FUNCT_FNMACC:
+    case RISC_V_FUNCT_FMSAC:
+    case RISC_V_FUNCT_FNMSAC:
+    case RISC_V_FUNCT_FWADD:
+    case RISC_V_FUNCT_FWSUB:
+    case RISC_V_FUNCT_FWADDW:
+    case RISC_V_FUNCT_FWSUBW:
+    case RISC_V_FUNCT_FWMUL:
+    case RISC_V_FUNCT_FWMACC:
+    case RISC_V_FUNCT_FWNMACC:
+    case RISC_V_FUNCT_FWMSAC:
+    case RISC_V_FUNCT_FWNMSAC:
+    default:
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        break;
+    }
+    tcg_temp_free(t_vd);
+    tcg_temp_free(t_vs2);
+}
+
 static void gen_v(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2, int imm)
 {
     if (!ensure_extension(dc, RISCV_FEATURE_RVV))
@@ -2572,7 +2645,7 @@ static void gen_v(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2, int 
         gen_v_opivx(dc, funct6, rd, rs1, rs2, vm);
         break;
     case OPC_RISC_V_FVF:
-        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        gen_v_opfvf(dc, funct6, rd, rs1, rs2, vm);
         break;
     case OPC_RISC_V_MVX:
         gen_v_opmvx(dc, funct6, rd, rs1, rs2, vm);
