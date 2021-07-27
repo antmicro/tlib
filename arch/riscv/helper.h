@@ -249,6 +249,15 @@ DEF_HELPER_4(vnsra_ivi_m, void, env, i32, i32, tl)
 DEF_HELPER_4(vnsra_ivv, void, env, i32, i32, i32)
 DEF_HELPER_4(vnsra_ivv_m, void, env, i32, i32, i32)
 
+DEF_HELPER_4(vnclipu_ivv, void, env, i32, i32, i32)
+DEF_HELPER_4(vnclipu_ivv_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vnclipu_ivi, void, env, i32, i32, tl)
+DEF_HELPER_4(vnclipu_ivi_m, void, env, i32, i32, tl)
+DEF_HELPER_4(vnclip_ivv, void, env, i32, i32, i32)
+DEF_HELPER_4(vnclip_ivv_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vnclip_ivi, void, env, i32, i32, tl)
+DEF_HELPER_4(vnclip_ivi_m, void, env, i32, i32, tl)
+
 DEF_HELPER_2(handle_custom_instruction, i32, i64, i64)
 
 void do_nmi(CPUState *env);

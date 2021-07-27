@@ -1956,7 +1956,19 @@ static void gen_v_opivv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_NCLIPU:
+        if (vm) {
+            gen_helper_vnclipu_ivv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vnclipu_ivv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_NCLIP:
+        if (vm) {
+            gen_helper_vnclip_ivv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vnclip_ivv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_WREDSUMU:
     case RISC_V_FUNCT_WREDSUM:
     default:
@@ -2044,10 +2056,20 @@ static void gen_v_opivt(DisasContext *dc, uint8_t funct6, int vd, int vs2, TCGv 
         }
         break;
     case RISC_V_FUNCT_NCLIPU:
-    case RISC_V_FUNCT_NCLIP:
-    // defined for vi and reserved for vx
-        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        if (vm) {
+            gen_helper_vnclipu_ivi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vnclipu_ivi_m(cpu_env, t_vd, t_vs2, t);
+        }
         break;
+    case RISC_V_FUNCT_NCLIP:
+        if (vm) {
+            gen_helper_vnclip_ivi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vnclip_ivi_m(cpu_env, t_vd, t_vs2, t);
+        }
+        break;
+    // defined for vi and reserved for vx
     // reserved for vi and defined for vx
     case RISC_V_FUNCT_SUB:
         tcg_gen_neg_i64(t, t);

@@ -8,27 +8,81 @@
 #endif
 
 #if DATA_SIZE == 8
-#define BITS      64
-#define SUFFIX    q
-#define USUFFIX   q
-#define DATA_TYPE uint64_t
+#define BITS       64
+#define SUFFIX     q
+#define USUFFIX    q
+#define DATA_TYPE  uint64_t
+#define DATA_STYPE int64_t
 #elif DATA_SIZE == 4
-#define BITS      32
-#define SUFFIX    l
-#define USUFFIX   l
-#define DATA_TYPE uint32_t
+#define BITS       32
+#define SUFFIX     l
+#define USUFFIX    l
+#define DATA_TYPE  uint32_t
+#define DATA_STYPE int32_t
 #elif DATA_SIZE == 2
-#define BITS      16
-#define SUFFIX    w
-#define USUFFIX   uw
-#define DATA_TYPE uint16_t
+#define BITS       16
+#define SUFFIX     w
+#define USUFFIX    uw
+#define DATA_TYPE  uint16_t
+#define DATA_STYPE int16_t
 #elif DATA_SIZE == 1
-#define BITS      8
-#define SUFFIX    b
-#define USUFFIX   ub
-#define DATA_TYPE uint8_t
+#define BITS       8
+#define SUFFIX     b
+#define USUFFIX    ub
+#define DATA_TYPE  uint8_t
+#define DATA_STYPE int8_t
 #else
 #error unsupported data size
+#endif
+
+#ifdef MASKED
+
+static inline DATA_TYPE glue(roundoff_u, BITS)(DATA_TYPE v, uint16_t d, uint8_t rm)
+{
+    if (d == 0) {
+        return v;
+    }
+    DATA_TYPE r = 0;
+    switch (rm & 0b11) {
+    case 0b00: // rnu
+        r = (v >> (d - 1)) & 0b1;
+        break;
+    case 0b01: // rne
+        r = ((v >> (d - 1)) & 0b1) && (((v >> d) & 0b1) || (v & ((1 << (d - 1)) - 1)));
+        break;
+    case 0b10: // rdn
+        r = 0;
+        break;
+    case 0b11: // rod
+        r = !((v >> d) & 0b1) && (v & ((1 << d) - 1));
+        break;
+    }
+    return (v >> d) + r;
+}
+
+static inline DATA_STYPE glue(roundoff_i, BITS)(DATA_STYPE v, uint16_t d, uint8_t rm)
+{
+    if (d == 0) {
+        return v;
+    }
+    DATA_STYPE r = 0;
+    switch (rm & 0b11) {
+    case 0b00: // rnu
+        r = (v >> (d - 1)) & 0b1;
+        break;
+    case 0b01: // rne
+        r = ((v >> (d - 1)) & 0b1) && (((v >> d) & 0b1) || (v & ((1 << (d - 1)) - 1)));
+        break;
+    case 0b10: // rdn
+        r = 0;
+        break;
+    case 0b11: // rod
+        r = !((v >> d) & 0b1) && (v & ((1 << d) - 1));
+        break;
+    }
+    return (v >> d) + r;
+}
+
 #endif
 
 void glue(glue(helper_vle, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t lumop, uint32_t nf)
@@ -270,7 +324,7 @@ void helper_vsm(CPUState *env, uint32_t vd, uint32_t rs1)
 
 #endif
 
-#if SHIFT == 0
+#if SHIFT == 3
 
 void glue(helper_vadd_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int64_t imm)
 {
@@ -1636,7 +1690,7 @@ void glue(helper_vnsrl_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, ta
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
     const target_ulong eew = env->vsew;
-    rs1 &= (eew << 1) - 1;
+    const uint16_t shift = rs1 & ((eew << 1) - 1);
     for (int ei = env->vstart; ei < env->vl; ++ei) {
 #ifdef MASKED
         if (!(V(0)[ei >> 3] & (1 << (ei & 0x7)))) {
@@ -1645,13 +1699,13 @@ void glue(helper_vnsrl_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, ta
 #endif
         switch (eew) {
         case 8:
-            ((uint8_t *)V(vd))[ei] = ((uint16_t *)V(vd))[vs2] >> rs1;
+            ((uint8_t *)V(vd))[ei] = ((uint16_t *)V(vd))[vs2] >> shift;
             break;
         case 16:
-            ((uint16_t *)V(vd))[ei] = ((uint32_t *)V(vd))[vs2] >> rs1;
+            ((uint16_t *)V(vd))[ei] = ((uint32_t *)V(vd))[vs2] >> shift;
             break;
         case 32:
-            ((uint32_t *)V(vd))[ei] = ((uint64_t *)V(vd))[vs2] >> rs1;
+            ((uint32_t *)V(vd))[ei] = ((uint64_t *)V(vd))[vs2] >> shift;
             break;
         default:
             helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
@@ -1696,7 +1750,7 @@ void glue(helper_vnsra_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, ta
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
     const target_ulong eew = env->vsew;
-    rs1 &= (eew << 1) - 1;
+    const uint16_t shift = rs1 & ((eew << 1) - 1);
     for (int ei = env->vstart; ei < env->vl; ++ei) {
 #ifdef MASKED
         if (!(V(0)[ei >> 3] & (1 << (ei & 0x7)))) {
@@ -1705,13 +1759,13 @@ void glue(helper_vnsra_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, ta
 #endif
         switch (eew) {
         case 8:
-            ((int8_t *)V(vd))[ei] = ((int16_t *)V(vd))[vs2] >> rs1;
+            ((int8_t *)V(vd))[ei] = ((int16_t *)V(vd))[vs2] >> shift;
             break;
         case 16:
-            ((int16_t *)V(vd))[ei] = ((int32_t *)V(vd))[vs2] >> rs1;
+            ((int16_t *)V(vd))[ei] = ((int32_t *)V(vd))[vs2] >> shift;
             break;
         case 32:
-            ((int32_t *)V(vd))[ei] = ((int64_t *)V(vd))[vs2] >> rs1;
+            ((int32_t *)V(vd))[ei] = ((int64_t *)V(vd))[vs2] >> shift;
             break;
         default:
             helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
@@ -1750,11 +1804,136 @@ void glue(helper_vnsra_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, in
     }
 }
 
+void glue(helper_vnclipu_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
+{
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    const uint16_t v1_mask = (eew << 1) - 1;
+    const uint8_t rm = env->vxrm & 0b11;
+    for (int ei = env->vstart; ei < env->vl; ++ei) {
+#ifdef MASKED
+        if (!(V(0)[ei >> 3] & (1 << (ei & 0x7)))) {
+            continue;
+        }
+#endif
+        switch (eew) {
+        case 8:
+            ((uint8_t *)V(vd))[ei] = roundoff_u16(((uint16_t *)V(vd))[vs2], ((uint8_t *)V(vd))[vs1] & v1_mask, rm);
+            break;
+        case 16:
+            ((uint16_t *)V(vd))[ei] = roundoff_u32(((uint32_t *)V(vd))[vs2], ((uint16_t *)V(vd))[vs1] & v1_mask, rm);
+            break;
+        case 32:
+            ((uint32_t *)V(vd))[ei] = roundoff_u64(((uint64_t *)V(vd))[vs2], ((uint32_t *)V(vd))[vs1] & v1_mask, rm);
+            break;
+        default:
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            break;
+        }
+    }
+}
+
+void glue(helper_vnclipu_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_ulong rs1)
+{
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    const uint16_t shift = rs1 & ((eew << 1) - 1);
+    const uint8_t rm = env->vxrm & 0b11;
+    for (int ei = env->vstart; ei < env->vl; ++ei) {
+#ifdef MASKED
+        if (!(V(0)[ei >> 3] & (1 << (ei & 0x7)))) {
+            continue;
+        }
+#endif
+        switch (eew) {
+        case 8:
+            ((uint8_t *)V(vd))[ei] = roundoff_u16(((uint16_t *)V(vd))[vs2], shift, rm);
+            break;
+        case 16:
+            ((uint16_t *)V(vd))[ei] = roundoff_u32(((uint32_t *)V(vd))[vs2], shift, rm);
+            break;
+        case 32:
+            ((uint32_t *)V(vd))[ei] = roundoff_u64(((uint64_t *)V(vd))[vs2], shift, rm);
+            break;
+        default:
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            break;
+        }
+    }
+}
+
+void glue(helper_vnclip_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
+{
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    const uint16_t v1_mask = (eew << 1) - 1;
+    const uint8_t rm = env->vxrm & 0b11;
+    for (int ei = env->vstart; ei < env->vl; ++ei) {
+#ifdef MASKED
+        if (!(V(0)[ei >> 3] & (1 << (ei & 0x7)))) {
+            continue;
+        }
+#endif
+        switch (eew) {
+        case 8:
+            ((int8_t *)V(vd))[ei] = roundoff_i16(((int16_t *)V(vd))[vs2], ((uint8_t *)V(vd))[vs1] & v1_mask, rm);
+            break;
+        case 16:
+            ((int16_t *)V(vd))[ei] = roundoff_i32(((int32_t *)V(vd))[vs2], ((uint16_t *)V(vd))[vs1] & v1_mask, rm);
+            break;
+        case 32:
+            ((int32_t *)V(vd))[ei] = roundoff_i64(((int64_t *)V(vd))[vs2], ((uint32_t *)V(vd))[vs1] & v1_mask, rm);
+            break;
+        default:
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            break;
+        }
+    }
+}
+
+void glue(helper_vnclip_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_ulong rs1)
+{
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    const uint16_t shift = rs1 & ((eew << 1) - 1);
+    const uint8_t rm = env->vxrm & 0b11;
+    for (int ei = env->vstart; ei < env->vl; ++ei) {
+#ifdef MASKED
+        if (!(V(0)[ei >> 3] & (1 << (ei & 0x7)))) {
+            continue;
+        }
+#endif
+        switch (eew) {
+        case 8:
+            ((int8_t *)V(vd))[ei] = roundoff_i16(((int16_t *)V(vd))[vs2], shift, rm);
+            break;
+        case 16:
+            ((int16_t *)V(vd))[ei] = roundoff_i32(((int32_t *)V(vd))[vs2], shift, rm);
+            break;
+        case 32:
+            ((int32_t *)V(vd))[ei] = roundoff_i64(((int64_t *)V(vd))[vs2], shift, rm);
+            break;
+        default:
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            break;
+        }
+    }
+}
+
 #endif
 
 
 #undef SHIFT
 #undef DATA_TYPE
+#undef DATA_STYPE
 #undef BITS
 #undef SUFFIX
 #undef USUFFIX
