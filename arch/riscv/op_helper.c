@@ -20,7 +20,6 @@
 #define ALIGNED_ONLY
 #include "softmmu_exec.h"
 
-
 #define MASKED
 #define SHIFT     0
 #include "vector_helper_template.h"
