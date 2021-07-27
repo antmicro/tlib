@@ -107,3 +107,35 @@ void helper_vmv_ivv(CPUState *env, uint32_t vd, int32_t vs1)
         }
     }
 }
+
+void helper_vcompress_mvv(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
+{
+    if (env->vstart != 0 || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    int di = 0;
+    for (int i = 0; i < env->vl; ++i) {
+        if (!(V(vs1)[i >> 3] & (1 << (i & 0x7)))) {
+            continue;
+        }
+        switch (eew) {
+        case 8:
+            ((uint8_t *)V(vd))[di] = ((uint8_t *)V(vs2))[i];
+            break;
+        case 16:
+            ((uint16_t *)V(vd))[di] = ((uint16_t *)V(vs2))[i];
+            break;
+        case 32:
+            ((uint32_t *)V(vd))[di] = ((uint32_t *)V(vs2))[i];
+            break;
+        case 64: 
+            ((uint64_t *)V(vd))[di] = ((uint64_t *)V(vs2))[i];
+            break;
+        default:
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            break;
+        }
+        di += 1;
+    }
+}
