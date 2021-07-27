@@ -2099,14 +2099,23 @@ static void gen_v_opivt(DisasContext *dc, uint8_t funct6, int vd, int vs2, TCGv 
     tcg_temp_free(t_vs2);
 }
 
-static void gen_v_opivi(DisasContext *dc, uint8_t funct6, int vd, int64_t simm5, int vs2, uint8_t vm)
+static void gen_v_opivi(DisasContext *dc, uint8_t funct6, int vd, int rs1, int vs2, uint8_t vm)
 {
+    int64_t simm5 = rs1;
     TCGv t_simm5;
     t_simm5 = tcg_temp_new_i64();
-    tcg_gen_movi_i64(t_simm5, simm5);
     
     switch (funct6) {
     // Common for vi and vx
+    // zero-extended immediate
+    case RISC_V_FUNCT_NSRL:
+    case RISC_V_FUNCT_NSRA:
+    case RISC_V_FUNCT_NCLIPU:
+    case RISC_V_FUNCT_NCLIP:
+        tcg_gen_movi_i64(t_simm5, simm5);
+        gen_v_opivt(dc, funct6, vd, vs2, t_simm5, vm);
+        break;
+    // sign-extended immediate
     case RISC_V_FUNCT_ADD:
     case RISC_V_FUNCT_RSUB:
     case RISC_V_FUNCT_AND:
@@ -2131,11 +2140,9 @@ static void gen_v_opivi(DisasContext *dc, uint8_t funct6, int vd, int64_t simm5,
     case RISC_V_FUNCT_SRA:
     case RISC_V_FUNCT_SSRL:
     case RISC_V_FUNCT_SSRA:
-    case RISC_V_FUNCT_NSRL:
-    case RISC_V_FUNCT_NSRA:
-    case RISC_V_FUNCT_NCLIPU:
-    case RISC_V_FUNCT_NCLIP:
     // Reserved for vx
+        simm5 = rs1 >= 0x10 ? (0xffffffffffffffe0) | rs1 : rs1;
+        tcg_gen_movi_i64(t_simm5, simm5);
         gen_v_opivt(dc, funct6, vd, vs2, t_simm5, vm);
         break;
     // Conflicting
@@ -2505,8 +2512,7 @@ static void gen_v(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2, int 
         gen_v_opmvv(dc, funct6, rd, rs1, rs2, vm);
         break;
     case OPC_RISC_V_IVI:
-        int64_t simm5 = rs1 >= 0x10 ? (0xffffffffffffffe0) | rs1 : rs1;
-        gen_v_opivi(dc, funct6, rd, simm5, rs2, vm);
+        gen_v_opivi(dc, funct6, rd, rs1, rs2, vm);
         break;
     case OPC_RISC_V_IVX:
         gen_v_opivx(dc, funct6, rd, rs1, rs2, vm);
