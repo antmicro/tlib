@@ -1970,7 +1970,19 @@ static void gen_v_opivv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_WREDSUMU:
+        if (vm) {
+            gen_helper_vwredsumu_ivv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vwredsumu_ivv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_WREDSUM:
+        if (vm) {
+            gen_helper_vwredsum_ivv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vwredsum_ivv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     default:
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         break;

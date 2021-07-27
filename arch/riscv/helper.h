@@ -260,6 +260,11 @@ DEF_HELPER_4(vnclip_ivi_m, void, env, i32, i32, tl)
 
 DEF_HELPER_4(vcompress_mvv, void, env, i32, i32, i32)
 
+DEF_HELPER_4(vwredsumu_ivv, void, env, i32, i32, i32)
+DEF_HELPER_4(vwredsumu_ivv_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vwredsum_ivv, void, env, i32, i32, i32)
+DEF_HELPER_4(vwredsum_ivv_m, void, env, i32, i32, i32)
+
 DEF_HELPER_2(handle_custom_instruction, i32, i64, i64)
 
 void do_nmi(CPUState *env);
