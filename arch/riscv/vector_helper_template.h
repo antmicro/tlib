@@ -1928,6 +1928,94 @@ void glue(helper_vnclip_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, t
     }
 }
 
+void glue(helper_vwredsumu_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
+{
+    if (V_IDX_INVALID(vs2)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    uint64_t acc = 0;
+    for (int ei = env->vstart; ei < env->vl; ++ei) {
+#ifdef MASKED
+        if (!(V(0)[ei >> 3] & (1 << (ei & 0x7)))) {
+            continue;
+        }
+#endif
+        switch (eew) {
+        case 8:
+            acc += ((uint8_t *)V(vs2))[ei];
+            break;
+        case 16:
+            acc += ((uint16_t *)V(vs2))[ei];
+            break;
+        case 32:
+            acc += ((uint32_t *)V(vs2))[ei];
+            break;
+        default:
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            break;
+        }
+    }
+    switch (eew) {
+    case 8:
+        ((uint16_t *)V(vd))[0] = acc + ((uint16_t *)V(vs1))[0];
+        break;
+    case 16:
+        ((uint32_t *)V(vd))[0] = acc + ((uint32_t *)V(vs1))[0];
+        break;
+    case 32:
+        ((uint64_t *)V(vd))[0] = acc + ((uint64_t *)V(vs1))[0];
+        break;
+    default:
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+        break;
+    }
+}
+
+void glue(helper_vwredsum_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
+{
+    if (V_IDX_INVALID(vs2)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    int64_t acc = 0;
+    for (int ei = env->vstart; ei < env->vl; ++ei) {
+#ifdef MASKED
+        if (!(V(0)[ei >> 3] & (1 << (ei & 0x7)))) {
+            continue;
+        }
+#endif
+        switch (eew) {
+        case 8:
+            acc += ((int8_t *)V(vs2))[ei];
+            break;
+        case 16:
+            acc += ((int16_t *)V(vs2))[ei];
+            break;
+        case 32:
+            acc += ((int32_t *)V(vs2))[ei];
+            break;
+        default:
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            break;
+        }
+    }
+    switch (eew) {
+    case 8:
+        ((int16_t *)V(vd))[0] = acc + ((int16_t *)V(vs1))[0];
+        break;
+    case 16:
+        ((int32_t *)V(vd))[0] = acc + ((int32_t *)V(vs1))[0];
+        break;
+    case 32:
+        ((int64_t *)V(vd))[0] = acc + ((int64_t *)V(vs1))[0];
+        break;
+    default:
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+        break;
+    }
+}
+
 #endif
 
 
