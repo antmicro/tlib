@@ -2284,6 +2284,38 @@ void glue(helper_vrgatherei16_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t 
     }
 }
 
+void glue(helper_vrgather_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_ulong rs1)
+{
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    for (int ei = env->vstart; ei < env->vl; ++ei) {
+#ifdef MASKED
+        if (!(V(0)[ei >> 3] & (1 << (ei & 0x7)))) {
+            continue;
+        }
+#endif
+        switch (eew) {
+        case 8:
+            ((int8_t *)V(vs2))[ei] = rs1 >= env->vlmax ? 0 : ((int8_t *)V(vs2))[rs1];
+            break;
+        case 16:
+            ((int16_t *)V(vs2))[ei] = rs1 >= env->vlmax ? 0 : ((int16_t *)V(vs2))[rs1];
+            break;
+        case 32:
+            ((int32_t *)V(vs2))[ei] = rs1 >= env->vlmax ? 0 : ((int32_t *)V(vs2))[rs1];
+            break;
+        case 64:
+            ((int64_t *)V(vs2))[ei] = rs1 >= env->vlmax ? 0 : ((int64_t *)V(vs2))[rs1];
+            break;
+        default:
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            break;
+        }
+    }
+}
+
 #endif
 
 
