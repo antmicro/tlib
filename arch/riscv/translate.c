@@ -2309,6 +2309,54 @@ static void gen_v_opmvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
     case RISC_V_FUNCT_ASUB:
     case RISC_V_FUNCT_WXUNARY0:
     case RISC_V_FUNCT_XUNARY0:
+        switch (vs1) {
+        case 2:
+            if (vm) {
+                gen_helper_vzext_vf8(cpu_env, t_vd, t_vs2);
+            } else {
+                gen_helper_vzext_vf8_m(cpu_env, t_vd, t_vs2);
+            }
+            break;
+        case 3:
+            if (vm) {
+                gen_helper_vsext_vf8(cpu_env, t_vd, t_vs2);
+            } else {
+                gen_helper_vsext_vf8_m(cpu_env, t_vd, t_vs2);
+            }
+            break;
+        case 4:
+            if (vm) {
+                gen_helper_vzext_vf4(cpu_env, t_vd, t_vs2);
+            } else {
+                gen_helper_vzext_vf4_m(cpu_env, t_vd, t_vs2);
+            }
+            break;
+        case 5:
+            if (vm) {
+                gen_helper_vsext_vf4(cpu_env, t_vd, t_vs2);
+            } else {
+                gen_helper_vsext_vf4_m(cpu_env, t_vd, t_vs2);
+            }
+            break;
+        case 6:
+            if (vm) {
+                gen_helper_vzext_vf2(cpu_env, t_vd, t_vs2);
+            } else {
+                gen_helper_vzext_vf2_m(cpu_env, t_vd, t_vs2);
+            }
+            break;
+        case 7:
+            if (vm) {
+                gen_helper_vsext_vf2(cpu_env, t_vd, t_vs2);
+            } else {
+                gen_helper_vsext_vf2_m(cpu_env, t_vd, t_vs2);
+            }
+            break;
+        default:
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+            break;
+        }
+        break;
     case RISC_V_FUNCT_MUNARY0:
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         break;
