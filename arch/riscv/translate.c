@@ -1921,10 +1921,40 @@ static void gen_v_opivv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_ADC:
+        if (vm) {
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        } else {
+            if (!vd) {
+                kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+                break;
+            }
+            gen_helper_vadc_vvm(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_MADC:
+        if (vm) {
+            gen_helper_vmadc_vv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vmadc_vvm(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_SBC:
+        if (vm) {
+            if (!vd) {
+                kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+                break;
+            }
+            gen_helper_vsbc_vvm(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        }
+        break;
     case RISC_V_FUNCT_MSBC:
-        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        if (vm) {
+            gen_helper_vmsbc_vv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vmsbc_vvm(cpu_env, t_vd, t_vs2, t_vs1);
+        }
         break;
     case RISC_V_FUNCT_MERGE_MV:
         if (vm) {
@@ -2058,8 +2088,22 @@ static void gen_v_opivt(DisasContext *dc, uint8_t funct6, int vd, int vs2, TCGv 
         }
         break;
     case RISC_V_FUNCT_ADC:
+        if (vm) {
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        } else {
+            if (!vd) {
+                kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+                break;
+            }
+            gen_helper_vadc_vi(cpu_env, t_vd, t_vs2, t);
+        }
+        break;
     case RISC_V_FUNCT_MADC:
-        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        if (vm) {
+            gen_helper_vmadc_vi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vmadc_vim(cpu_env, t_vd, t_vs2, t);
+        }
         break;
     case RISC_V_FUNCT_MERGE_MV:
         if (vm) {
@@ -2154,7 +2198,23 @@ static void gen_v_opivt(DisasContext *dc, uint8_t funct6, int vd, int vs2, TCGv 
         }
         break;
     case RISC_V_FUNCT_SBC:
+        if (vm) {
+            if (!vd) {
+                kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+                break;
+            }
+            gen_helper_vsbc_vi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        }
+        break;
     case RISC_V_FUNCT_MSBC:
+        if (vm) {
+            gen_helper_vmsbc_vi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vmsbc_vim(cpu_env, t_vd, t_vs2, t);
+        }
+        break;
     case RISC_V_FUNCT_MSLTU:
     case RISC_V_FUNCT_MSLT:
     case RISC_V_FUNCT_SSUBU:
