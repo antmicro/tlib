@@ -1904,8 +1904,22 @@ static void gen_v_opivv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
     case RISC_V_FUNCT_AND:
     case RISC_V_FUNCT_OR:
     case RISC_V_FUNCT_XOR:
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        break;
     case RISC_V_FUNCT_RGATHER:
+        if (vm) {
+            gen_helper_vrgather_ivv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vrgather_ivv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_RGATHEREI16:
+        if (vm) {
+            gen_helper_vrgatherei16_ivv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vrgatherei16_ivv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_ADC:
     case RISC_V_FUNCT_MADC:
     case RISC_V_FUNCT_SBC:

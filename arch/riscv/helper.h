@@ -274,6 +274,11 @@ DEF_HELPER_4(vslide1up_m, void, env, i32, i32, i64)
 DEF_HELPER_4(vslide1down, void, env, i32, i32, i64)
 DEF_HELPER_4(vslide1down_m, void, env, i32, i32, i64)
 
+DEF_HELPER_4(vrgather_ivv, void, env, i32, i32, i32)
+DEF_HELPER_4(vrgather_ivv_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vrgatherei16_ivv, void, env, i32, i32, i32)
+DEF_HELPER_4(vrgatherei16_ivv_m, void, env, i32, i32, i32)
+
 DEF_HELPER_2(handle_custom_instruction, i32, i64, i64)
 
 void do_nmi(CPUState *env);
