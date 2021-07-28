@@ -278,6 +278,8 @@ DEF_HELPER_4(vrgather_ivv, void, env, i32, i32, i32)
 DEF_HELPER_4(vrgather_ivv_m, void, env, i32, i32, i32)
 DEF_HELPER_4(vrgatherei16_ivv, void, env, i32, i32, i32)
 DEF_HELPER_4(vrgatherei16_ivv_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vrgather_ivi, void, env, i32, i32, tl)
+DEF_HELPER_4(vrgather_ivi_m, void, env, i32, i32, tl)
 
 DEF_HELPER_2(handle_custom_instruction, i32, i64, i64)
 
