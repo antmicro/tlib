@@ -85,7 +85,7 @@ static inline DATA_STYPE glue(roundoff_i, BITS)(DATA_STYPE v, uint16_t d, uint8_
 
 #endif
 
-void glue(glue(helper_vle, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t lumop, uint32_t nf)
+void glue(glue(helper_vle, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t nf)
 {
     const target_ulong emul = EMUL(SHIFT);
     if (emul == 0x7 || V_IDX_INVALID_EMUL(vd, emul) || V_INVALID_NF(vd, nf, emul)) {
@@ -105,7 +105,7 @@ void glue(glue(helper_vle, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t 
     }
 }
 
-void glue(glue(glue(helper_vle, BITS), ff), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t lumop, uint32_t nf)
+void glue(glue(glue(helper_vle, BITS), ff), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t nf)
 {
     const target_ulong emul = EMUL(SHIFT);
     if (emul == 0x7 || V_IDX_INVALID_EMUL(vd, emul) || V_INVALID_NF(vd, nf, emul)) {
@@ -120,8 +120,8 @@ void glue(glue(glue(helper_vle, BITS), ff), POSTFIX)(CPUState *env, uint32_t vd,
             continue;
         }
 #endif
+        DATA_TYPE value = glue(ld, USUFFIX)(src_addr + ei * DATA_SIZE);
         for (int fi = 0; fi <= nf; ++fi) {
-            DATA_TYPE value = glue(ld, USUFFIX)(src_addr + ei * DATA_SIZE);
             if (!cpu->graceful_memory_access_exception) {
                 if (first) {
                     env->vstart = ei;
@@ -154,8 +154,9 @@ void glue(glue(helper_vlse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t
         }
 #endif
         env->vstart = ei;
+        DATA_TYPE data = glue(ld, USUFFIX)(src_addr + ei * offset);
         for (int fi = 0; fi <= nf; ++fi) {
-            ((DATA_TYPE *)V(vd + (fi << SHIFT)))[ei] = glue(ld, USUFFIX)(src_addr + ei * offset);
+            ((DATA_TYPE *)V(vd + (fi << SHIFT)))[ei] = data;
         }
     }
 }
@@ -192,14 +193,14 @@ void glue(glue(helper_vlxei, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_
                 ((uint64_t *)V(vd + (fi << SHIFT)))[ei] = ldq(src_addr + (target_ulong)offsets[ei] + sizeof(DATA_TYPE) * fi);
                 break;
             default:
-                tlib_abortf("Unsupported EEW");
+                helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
                 break;
             }
         }
     }
 }
 
-void glue(glue(helper_vse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t sumop, uint32_t nf)
+void glue(glue(helper_vse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t nf)
 {
     const target_ulong emul = EMUL(SHIFT);
     if (emul == 0x7 || V_IDX_INVALID_EMUL(vd, emul) || V_INVALID_NF(vd, nf, emul)) {
@@ -272,7 +273,7 @@ void glue(glue(helper_vsxei, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_
                 stq(src_addr + (target_ulong)offsets[ei] + (fi << 3), ((uint64_t *)V(vd + (fi << SHIFT)))[ei]);
                 break;
             default:
-                tlib_abortf("Unsupported EEW");
+                helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
                 break;
             }
         }

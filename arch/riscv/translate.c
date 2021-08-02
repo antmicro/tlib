@@ -801,30 +801,30 @@ static void gen_v_load(DisasContext *dc, uint32_t opc, uint32_t rest, uint32_t v
             switch (width & 0x3) {
             case 0:
                 if (vm) {
-                    gen_helper_vle8(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                    gen_helper_vle8(cpu_env, t_vd, t_rs1, t_nf);
                 } else {
-                    gen_helper_vle8_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                    gen_helper_vle8_m(cpu_env, t_vd, t_rs1, t_nf);
                 }
                 break;
             case 1:
                 if (vm) {
-                    gen_helper_vle16(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                    gen_helper_vle16(cpu_env, t_vd, t_rs1, t_nf);
                 } else {
-                    gen_helper_vle16_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                    gen_helper_vle16_m(cpu_env, t_vd, t_rs1, t_nf);
                 }
                 break;
             case 2:
                 if (vm) {
-                    gen_helper_vle32(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                    gen_helper_vle32(cpu_env, t_vd, t_rs1, t_nf);
                 } else {
-                    gen_helper_vle32_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                    gen_helper_vle32_m(cpu_env, t_vd, t_rs1, t_nf);
                 }
                 break;
             case 3:
                 if (vm) {
-                    gen_helper_vle64(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                    gen_helper_vle64(cpu_env, t_vd, t_rs1, t_nf);
                 } else {
-                    gen_helper_vle64_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                    gen_helper_vle64_m(cpu_env, t_vd, t_rs1, t_nf);
                 }
                 break;
             }
@@ -847,30 +847,30 @@ static void gen_v_load(DisasContext *dc, uint32_t opc, uint32_t rest, uint32_t v
             switch (width & 0x3) {
             case 0:
                 if (vm) {
-                    gen_helper_vle8ff(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                    gen_helper_vle8ff(cpu_env, t_vd, t_rs1, t_nf);
                 } else {
-                    gen_helper_vle8ff_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                    gen_helper_vle8ff_m(cpu_env, t_vd, t_rs1, t_nf);
                 }
                 break;
             case 1:
                 if (vm) {
-                    gen_helper_vle16ff(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                    gen_helper_vle16ff(cpu_env, t_vd, t_rs1, t_nf);
                 } else {
-                    gen_helper_vle16ff_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                    gen_helper_vle16ff_m(cpu_env, t_vd, t_rs1, t_nf);
                 }
                 break;
             case 2:
                 if (vm) {
-                    gen_helper_vle32ff(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                    gen_helper_vle32ff(cpu_env, t_vd, t_rs1, t_nf);
                 } else {
-                    gen_helper_vle32ff_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                    gen_helper_vle32ff_m(cpu_env, t_vd, t_rs1, t_nf);
                 }
                 break;
             case 3:
                 if (vm) {
-                    gen_helper_vle64ff(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                    gen_helper_vle64ff(cpu_env, t_vd, t_rs1, t_nf);
                 } else {
-                    gen_helper_vle64ff_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                    gen_helper_vle64ff_m(cpu_env, t_vd, t_rs1, t_nf);
                 }
                 break;
             }
@@ -1020,30 +1020,30 @@ static void gen_v_store(DisasContext *dc, uint32_t opc, uint32_t rest, uint32_t 
             switch (width & 0x3) {
             case 0:
                 if (vm) {
-                    gen_helper_vse8(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                    gen_helper_vse8(cpu_env, t_vd, t_rs1, t_nf);
                 } else {
-                    gen_helper_vse8_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                    gen_helper_vse8_m(cpu_env, t_vd, t_rs1, t_nf);
                 }
                 break;
             case 1:
                 if (vm) {
-                    gen_helper_vse16(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                    gen_helper_vse16(cpu_env, t_vd, t_rs1, t_nf);
                 } else {
-                    gen_helper_vse16_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                    gen_helper_vse16_m(cpu_env, t_vd, t_rs1, t_nf);
                 }
                 break;
             case 2:
                 if (vm) {
-                    gen_helper_vse32(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                    gen_helper_vse32(cpu_env, t_vd, t_rs1, t_nf);
                 } else {
-                    gen_helper_vse32_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                    gen_helper_vse32_m(cpu_env, t_vd, t_rs1, t_nf);
                 }
                 break;
             case 3:
                 if (vm) {
-                    gen_helper_vse64(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                    gen_helper_vse64(cpu_env, t_vd, t_rs1, t_nf);
                 } else {
-                    gen_helper_vse64_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
+                    gen_helper_vse64_m(cpu_env, t_vd, t_rs1, t_nf);
                 }
                 break;
             }
