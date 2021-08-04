@@ -503,10 +503,12 @@ enum {
     RISC_V_FUNCT_FWNMSAC     = 0b111111, //                                    OPFVV, OPFVF
 };
 
-#define MASK_OP_V_CFG(op) (MASK_OP_MAJOR(op) | OPC_RISC_V_CFG | (op & (0x1 << 31)))
+#define MASK_OP_V_CFG(op) (op & OPC_RISC_V_CFG) | (op & (0x3 << 30))
 enum {
-    OPC_RISC_VSETVLI   = OPC_RISC_V | OPC_RISC_V_CFG | (0x0 << 31),
-    OPC_RISC_VSETVL    = OPC_RISC_V | OPC_RISC_V_CFG | (0x1 << 31),
+    OPC_RISC_VSETVLI_0   = OPC_RISC_V_CFG | (0x0 << 30),
+    OPC_RISC_VSETVLI_1   = OPC_RISC_V_CFG | (0x1 << 30),
+    OPC_RISC_VSETVL      = OPC_RISC_V_CFG | (0x2 << 30),
+    OPC_RISC_VSETIVLI    = OPC_RISC_V_CFG | (0x3 << 30),
 };
 
 #define GET_B_IMM(inst)          ((extract32(inst, 8, 4) << 1)\

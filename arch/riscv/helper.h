@@ -83,7 +83,7 @@ DEF_HELPER_2(reserve_address, void, env, tl)
 DEF_HELPER_2(check_address_reservation, tl, env, tl)
 
 /* Vector Extension */
-DEF_HELPER_5(vsetvl, tl, env, tl, tl, tl, tl)
+DEF_HELPER_6(vsetvl, tl, env, tl, tl, tl, tl, i32)
 
 DEF_HELPER_4(vle8, void, env, i32, i32, i32)
 DEF_HELPER_4(vle8ff, void, env, i32, i32, i32)

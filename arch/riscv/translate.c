@@ -1824,14 +1824,28 @@ static void gen_v_cfg(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2, 
     tcg_gen_movi_tl(imm_rs1, rs1);
     tcg_gen_movi_tl(csr_store, CSR_VL);
 
+    if (opc == OPC_RISC_VSETIVLI){
+        tcg_gen_movi_i32(vec_imm, 1);
+    } else {
+        tcg_gen_movi_i32(vec_imm, 0);
+    }
+
     switch (opc) {
         case OPC_RISC_VSETVL:
-            // set VL csr
-            gen_helper_vsetvl(dest, cpu_env, rd_pass, imm_rs1, source1, source2);
+            gen_helper_vsetvl(dest, cpu_env, rd_pass, imm_rs1, source1, source2,
+                              vec_imm);
             break;
-        case OPC_RISC_VSETVLI:
-            // set VL
-            gen_helper_vsetvl(dest, cpu_env, rd_pass, imm_rs1, source1, rs2_pass);
+        case OPC_RISC_VSETVLI_0:
+            gen_helper_vsetvl(dest, cpu_env, rd_pass, imm_rs1, source1, rs2_pass,
+                              vec_imm);
+            break;
+        case OPC_RISC_VSETVLI_1:
+            gen_helper_vsetvl(dest, cpu_env, rd_pass, imm_rs1, source1, rs2_pass,
+                              vec_imm);
+            break;
+        case OPC_RISC_VSETIVLI:
+            gen_helper_vsetvl(dest, cpu_env, rd_pass, imm_rs1, rs1_pass, rs2_pass,
+                              vec_imm);
             break;
         default:
             kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
@@ -2232,7 +2246,7 @@ static void gen_v_opivi(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
     int64_t simm5 = rs1;
     TCGv t_simm5;
     t_simm5 = tcg_temp_new_i64();
-    
+
     switch (funct6) {
     // Common for vi and vx
     // zero-extended immediate
