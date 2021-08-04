@@ -14,7 +14,9 @@ static inline void require_vec(CPUState *env)
  *
  * Adapted from Spike's processor_t::vectorUnit_t::set_vl
  */
-target_ulong helper_vsetvl(CPUState *env, target_ulong rd, target_ulong rs1, target_ulong rs1_pass, target_ulong rs2_pass)
+target_ulong helper_vsetvl(CPUState *env, target_ulong rd, target_ulong rs1,
+                           target_ulong rs1_pass, target_ulong rs2_pass,
+                           uint32_t is_rs1_imm)
 {
     require_vec(env);
 
@@ -38,8 +40,9 @@ target_ulong helper_vsetvl(CPUState *env, target_ulong rd, target_ulong rs1, tar
         env->vtype |= ((target_ulong)1) << (TARGET_LONG_BITS - 1);
         env->vlmax = 0;
     }
-
-    if (env->vlmax == 0) {
+    if (is_rs1_imm == 1) {  // vsetivli
+        env->vl = MIN(rs1_pass, env->vlmax);
+    } else if (env->vlmax == 0) {  // AVL encoding for vsetvl and vsetvli
         env->vl = 0;
     } else if (rd == 0 && rs1 == 0) {
         // Keep existing VL value
@@ -70,7 +73,7 @@ void helper_vmv_ivi(CPUState *env, uint32_t vd, int64_t imm)
         case 32:
             ((uint32_t *)V(vd))[ei] = imm;
             break;
-        case 64: 
+        case 64:
             ((uint64_t *)V(vd))[ei] = imm;
             break;
         default:
@@ -97,7 +100,7 @@ void helper_vmv_ivv(CPUState *env, uint32_t vd, int32_t vs1)
         case 32:
             ((uint32_t *)V(vd))[i] = ((uint32_t *)V(vs1))[i];
             break;
-        case 64: 
+        case 64:
             ((uint64_t *)V(vd))[i] = ((uint64_t *)V(vs1))[i];
             break;
         default:
@@ -128,7 +131,7 @@ void helper_vcompress_mvv(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
         case 32:
             ((uint32_t *)V(vd))[di] = ((uint32_t *)V(vs2))[i];
             break;
-        case 64: 
+        case 64:
             ((uint64_t *)V(vd))[di] = ((uint64_t *)V(vs2))[i];
             break;
         default:

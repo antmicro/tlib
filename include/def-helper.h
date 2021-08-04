@@ -119,6 +119,8 @@
     DEF_HELPER_FLAGS_4(name, 0, ret, t1, t2, t3, t4)
 #define DEF_HELPER_5(name, ret, t1, t2, t3, t4, t5) \
     DEF_HELPER_FLAGS_5(name, 0, ret, t1, t2, t3, t4, t5)
+#define DEF_HELPER_6(name, ret, t1, t2, t3, t4, t5, t6) \
+    DEF_HELPER_FLAGS_6(name, 0, ret, t1, t2, t3, t4, t5, t6)
 
 #endif /* DEF_HELPER_H */
 
@@ -145,6 +147,9 @@ dh_ctype(ret) HELPER(name) (dh_ctype(t1), dh_ctype(t2), dh_ctype(t3), \
 dh_ctype(ret) HELPER(name) (dh_ctype(t1), dh_ctype(t2), dh_ctype(t3), \
                             dh_ctype(t4), dh_ctype(t5));
 
+#define DEF_HELPER_FLAGS_6(name, flags, ret, t1, t2, t3, t4, t5, t6) \
+dh_ctype(ret) HELPER(name) (dh_ctype(t1), dh_ctype(t2), dh_ctype(t3), \
+                            dh_ctype(t4), dh_ctype(t5), dh_ctype(t6));
 #undef GEN_HELPER
 #define GEN_HELPER -1
 
@@ -222,6 +227,23 @@ static inline void glue(gen_helper_, name)(dh_retvar_decl(ret) dh_arg_decl(t1, 1
   dh_arg(t5, 5); \
   tcg_gen_helperN(HELPER(name), flags, sizemask, dh_retvar(ret), 5, args); \
 }
+
+#define DEF_HELPER_FLAGS_6(name, flags, ret, t1, t2, t3, t4, t5, t6) \
+static inline void glue(gen_helper_, name)(dh_retvar_decl(ret) dh_arg_decl(t1, 1), \
+    dh_arg_decl(t2, 2), dh_arg_decl(t3, 3), dh_arg_decl(t4, 4), dh_arg_decl(t5, 5), \
+    dh_arg_decl(t6, 6)) \
+{ \
+  TCGArg args[6]; \
+  int sizemask = 0; \
+  dh_sizemask(ret, 0); \
+  dh_arg(t1, 1); \
+  dh_arg(t2, 2); \
+  dh_arg(t3, 3); \
+  dh_arg(t4, 4); \
+  dh_arg(t5, 5); \
+  dh_arg(t6, 6); \
+  tcg_gen_helperN(HELPER(name), flags, sizemask, dh_retvar(ret), 6, args); \
+}
 #undef GEN_HELPER
 #define GEN_HELPER -1
 
@@ -246,6 +268,9 @@ DEF_HELPER_FLAGS_0(name, flags, ret)
 #define DEF_HELPER_FLAGS_5(name, flags, ret, t1, t2, t3, t4, t5) \
 DEF_HELPER_FLAGS_0(name, flags, ret)
 
+#define DEF_HELPER_FLAGS_6(name, flags, ret, t1, t2, t3, t4, t5, t6) \
+DEF_HELPER_FLAGS_0(name, flags, ret)
+
 #undef GEN_HELPER
 #define GEN_HELPER -1
 
@@ -258,6 +283,7 @@ DEF_HELPER_FLAGS_0(name, flags, ret)
 #undef DEF_HELPER_FLAGS_3
 #undef DEF_HELPER_FLAGS_4
 #undef DEF_HELPER_FLAGS_5
+#undef DEF_HELPER_FLAGS_6
 #undef GEN_HELPER
 
 #endif
