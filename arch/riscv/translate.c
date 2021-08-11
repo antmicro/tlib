@@ -1998,11 +1998,47 @@ static void gen_v_opivv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_MSEQ:
+        if (vm) {
+            gen_helper_vmseq_ivv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vmseq_ivv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_MSNE:
+        if (vm) {
+            gen_helper_vmsne_ivv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vmsne_ivv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_MSLTU:
+        if (vm) {
+            gen_helper_vmsltu_ivv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vmsltu_ivv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_MSLT:
+        if (vm) {
+            gen_helper_vmslt_ivv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vmslt_ivv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_MSLEU:
+        if (vm) {
+            gen_helper_vmsleu_ivv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vmsleu_ivv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_MSLE:
+        if (vm) {
+            gen_helper_vmsle_ivv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vmsle_ivv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_SADDU:
     case RISC_V_FUNCT_SADD:
     case RISC_V_FUNCT_SSUBU:
@@ -2185,11 +2221,47 @@ static void gen_v_opivt(DisasContext *dc, uint8_t funct6, int vd, int vs2, TCGv 
         }
         break;
     case RISC_V_FUNCT_MSEQ:
+        if (vm) {
+            gen_helper_vmseq_ivi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vmseq_ivi_m(cpu_env, t_vd, t_vs2, t);
+        }
+        break;
     case RISC_V_FUNCT_MSNE:
+        if (vm) {
+            gen_helper_vmsne_ivi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vmsne_ivi_m(cpu_env, t_vd, t_vs2, t);
+        }
+        break;
     case RISC_V_FUNCT_MSLEU:
+        if (vm) {
+            gen_helper_vmsleu_ivi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vmsleu_ivi_m(cpu_env, t_vd, t_vs2, t);
+        }
+        break;
     case RISC_V_FUNCT_MSLE:
+        if (vm) {
+            gen_helper_vmsle_ivi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vmsle_ivi_m(cpu_env, t_vd, t_vs2, t);
+        }
+        break;
     case RISC_V_FUNCT_MSGTU:
+        if (vm) {
+            gen_helper_vmsgtu_ivi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vmsgtu_ivi_m(cpu_env, t_vd, t_vs2, t);
+        }
+        break;
     case RISC_V_FUNCT_MSGT:
+        if (vm) {
+            gen_helper_vmsgt_ivi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vmsgt_ivi_m(cpu_env, t_vd, t_vs2, t);
+        }
+        break;
     case RISC_V_FUNCT_SADDU:
     case RISC_V_FUNCT_SADD:
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
@@ -2304,7 +2376,19 @@ static void gen_v_opivt(DisasContext *dc, uint8_t funct6, int vd, int vs2, TCGv 
         }
         break;
     case RISC_V_FUNCT_MSLTU:
+        if (vm) {
+            gen_helper_vmsltu_ivi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vmsltu_ivi_m(cpu_env, t_vd, t_vs2, t);
+        }
+        break;
     case RISC_V_FUNCT_MSLT:
+        if (vm) {
+            gen_helper_vmslt_ivi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vmslt_ivi_m(cpu_env, t_vd, t_vs2, t);
+        }
+        break;
     case RISC_V_FUNCT_SSUBU:
     case RISC_V_FUNCT_SSUB:
     default:
