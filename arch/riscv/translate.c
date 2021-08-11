@@ -2040,10 +2040,32 @@ static void gen_v_opivv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_SADDU:
+        if (vm) {
+            gen_helper_vsaddu_ivv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vsaddu_ivv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_SADD:
+        if (vm) {
+            gen_helper_vsadd_ivv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vsadd_ivv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_SSUBU:
+        if (vm) {
+            gen_helper_vssubu_ivv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vssubu_ivv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_SSUB:
-        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        if (vm) {
+            gen_helper_vssub_ivv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vssub_ivv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
         break;
     case RISC_V_FUNCT_SLL:
         if (vm) {
@@ -2263,8 +2285,18 @@ static void gen_v_opivt(DisasContext *dc, uint8_t funct6, int vd, int vs2, TCGv 
         }
         break;
     case RISC_V_FUNCT_SADDU:
+        if (vm) {
+            gen_helper_vsaddu_ivi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vsaddu_ivi_m(cpu_env, t_vd, t_vs2, t);
+        }
+        break;
     case RISC_V_FUNCT_SADD:
-        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        if (vm) {
+            gen_helper_vsadd_ivi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vsadd_ivi_m(cpu_env, t_vd, t_vs2, t);
+        }
         break;
     case RISC_V_FUNCT_SLL:
         if (vm) {
@@ -2390,7 +2422,19 @@ static void gen_v_opivt(DisasContext *dc, uint8_t funct6, int vd, int vs2, TCGv 
         }
         break;
     case RISC_V_FUNCT_SSUBU:
+        if (vm) {
+            gen_helper_vssubu_ivi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vssubu_ivi_m(cpu_env, t_vd, t_vs2, t);
+        }
+        break;
     case RISC_V_FUNCT_SSUB:
+        if (vm) {
+            gen_helper_vssub_ivi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vssub_ivi_m(cpu_env, t_vd, t_vs2, t);
+        }
+        break;
     default:
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         break;
