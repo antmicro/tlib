@@ -1992,7 +1992,7 @@ static void gen_v_opivv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
                 kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
                 break;
             }
-            gen_helper_vmv_ivv(cpu_env, t_vd, t_vs1);
+            gen_helper_vmerge_ivv(cpu_env, t_vd, t_vs2, t_vs1);
         } else {
             kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         }
@@ -2217,7 +2217,7 @@ static void gen_v_opivt(DisasContext *dc, uint8_t funct6, int vd, int vs2, TCGv 
             }
             gen_helper_vmv_ivi(cpu_env, t_vd, t);
         } else {
-            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+            gen_helper_vmerge_ivi(cpu_env, t_vd, t_vs2, t);
         }
         break;
     case RISC_V_FUNCT_MSEQ:
