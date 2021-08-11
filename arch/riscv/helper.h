@@ -320,6 +320,19 @@ DEF_HELPER_4(vor_ivi_m, void, env, i32, i32, tl)
 DEF_HELPER_4(vxor_ivi, void, env, i32, i32, tl)
 DEF_HELPER_4(vxor_ivi_m, void, env, i32, i32, tl)
 
+DEF_HELPER_4(vsll_ivv, void, env, i32, i32, i32)
+DEF_HELPER_4(vsll_ivv_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vsrl_ivv, void, env, i32, i32, i32)
+DEF_HELPER_4(vsrl_ivv_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vsra_ivv, void, env, i32, i32, i32)
+DEF_HELPER_4(vsra_ivv_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vsll_ivi, void, env, i32, i32, tl)
+DEF_HELPER_4(vsll_ivi_m, void, env, i32, i32, tl)
+DEF_HELPER_4(vsrl_ivi, void, env, i32, i32, tl)
+DEF_HELPER_4(vsrl_ivi_m, void, env, i32, i32, tl)
+DEF_HELPER_4(vsra_ivi, void, env, i32, i32, tl)
+DEF_HELPER_4(vsra_ivi_m, void, env, i32, i32, tl)
+
 DEF_HELPER_2(handle_custom_instruction, i32, i64, i64)
 
 void do_nmi(CPUState *env);
