@@ -2607,11 +2607,35 @@ static void gen_v_opmvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
     case RISC_V_FUNCT_MNAND:
     case RISC_V_FUNCT_MNOR:
     case RISC_V_FUNCT_MXNOR:
-    case RISC_V_FUNCT_DIVU:
-    case RISC_V_FUNCT_DIV:
-    case RISC_V_FUNCT_REMU:
-    case RISC_V_FUNCT_REM:
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        break;
+    case RISC_V_FUNCT_DIVU:
+        if (vm) {
+            gen_helper_vdivu_mvv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vdivu_mvv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
+    case RISC_V_FUNCT_DIV:
+        if (vm) {
+            gen_helper_vdiv_mvv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vdiv_mvv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
+    case RISC_V_FUNCT_REMU:
+        if (vm) {
+            gen_helper_vremu_mvv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vremu_mvv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
+    case RISC_V_FUNCT_REM:
+        if (vm) {
+            gen_helper_vrem_mvv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vrem_mvv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
         break;
     case RISC_V_FUNCT_MULHU:
         if (vm) {
@@ -2770,11 +2794,35 @@ static void gen_v_opmvx(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
         }
         break;
     case RISC_V_FUNCT_RXUNARY0:
-    case RISC_V_FUNCT_DIVU:
-    case RISC_V_FUNCT_DIV:
-    case RISC_V_FUNCT_REMU:
-    case RISC_V_FUNCT_REM:
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        break;
+    case RISC_V_FUNCT_DIVU:
+        if (vm) {
+            gen_helper_vdivu_mvx(cpu_env, t_vd, t_vs2, t_rs1);
+        } else {
+            gen_helper_vdivu_mvx_m(cpu_env, t_vd, t_vs2, t_rs1);
+        }
+        break;
+    case RISC_V_FUNCT_DIV:
+        if (vm) {
+            gen_helper_vdiv_mvx(cpu_env, t_vd, t_vs2, t_rs1);
+        } else {
+            gen_helper_vdiv_mvx_m(cpu_env, t_vd, t_vs2, t_rs1);
+        }
+        break;
+    case RISC_V_FUNCT_REMU:
+        if (vm) {
+            gen_helper_vremu_mvx(cpu_env, t_vd, t_vs2, t_rs1);
+        } else {
+            gen_helper_vremu_mvx_m(cpu_env, t_vd, t_vs2, t_rs1);
+        }
+        break;
+    case RISC_V_FUNCT_REM:
+        if (vm) {
+            gen_helper_vrem_mvx(cpu_env, t_vd, t_vs2, t_rs1);
+        } else {
+            gen_helper_vrem_mvx_m(cpu_env, t_vd, t_vs2, t_rs1);
+        }
         break;
     case RISC_V_FUNCT_MULHU:
         if (vm) {
