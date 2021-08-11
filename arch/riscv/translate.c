@@ -1916,9 +1916,25 @@ static void gen_v_opivv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_AND:
+        if (vm) {
+            gen_helper_vand_ivv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vand_ivv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_OR:
+        if (vm) {
+            gen_helper_vor_ivv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vor_ivv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_XOR:
-        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        if (vm) {
+            gen_helper_vxor_ivv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vxor_ivv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
         break;
     case RISC_V_FUNCT_RGATHER:
         if (vm) {
@@ -2076,9 +2092,25 @@ static void gen_v_opivt(DisasContext *dc, uint8_t funct6, int vd, int vs2, TCGv 
         }
         break;
     case RISC_V_FUNCT_AND:
+        if (vm) {
+            gen_helper_vand_ivi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vand_ivi_m(cpu_env, t_vd, t_vs2, t);
+        }
+        break;
     case RISC_V_FUNCT_OR:
+        if (vm) {
+            gen_helper_vor_ivi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vor_ivi_m(cpu_env, t_vd, t_vs2, t);
+        }
+        break;
     case RISC_V_FUNCT_XOR:
-        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        if (vm) {
+            gen_helper_vxor_ivi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vxor_ivi_m(cpu_env, t_vd, t_vs2, t);
+        }
         break;
     case RISC_V_FUNCT_RGATHER:
         if (vm) {
