@@ -396,6 +396,21 @@ DEF_HELPER_4(vnmsub_mvv_m, void, env, i32, i32, i32)
 DEF_HELPER_4(vnmsub_mvx, void, env, i32, i32, tl)
 DEF_HELPER_4(vnmsub_mvx_m, void, env, i32, i32, tl)
 
+DEF_HELPER_4(vwmaccu_mvv, void, env, i32, i32, i32)
+DEF_HELPER_4(vwmaccu_mvv_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vwmaccu_mvx, void, env, i32, i32, tl)
+DEF_HELPER_4(vwmaccu_mvx_m, void, env, i32, i32, tl)
+DEF_HELPER_4(vwmacc_mvv, void, env, i32, i32, i32)
+DEF_HELPER_4(vwmacc_mvv_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vwmacc_mvx, void, env, i32, i32, tl)
+DEF_HELPER_4(vwmacc_mvx_m, void, env, i32, i32, tl)
+DEF_HELPER_4(vwmaccsu_mvv, void, env, i32, i32, i32)
+DEF_HELPER_4(vwmaccsu_mvv_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vwmaccsu_mvx, void, env, i32, i32, tl)
+DEF_HELPER_4(vwmaccsu_mvx_m, void, env, i32, i32, tl)
+DEF_HELPER_4(vwmaccus_mvx, void, env, i32, i32, tl)
+DEF_HELPER_4(vwmaccus_mvx_m, void, env, i32, i32, tl)
+
 DEF_HELPER_2(handle_custom_instruction, i32, i64, i64)
 
 void do_nmi(CPUState *env);

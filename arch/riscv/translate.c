@@ -2771,8 +2771,26 @@ static void gen_v_opmvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_WMACCU:
+        if (vm) {
+            gen_helper_vwmaccu_mvv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vwmaccu_mvv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_WMACC:
+        if (vm) {
+            gen_helper_vwmacc_mvv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vwmacc_mvv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_WMACCSU:
+        if (vm) {
+            gen_helper_vwmaccsu_mvv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vwmaccsu_mvv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     default:
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         break;
@@ -2980,9 +2998,33 @@ static void gen_v_opmvx(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
         }
         break;
     case RISC_V_FUNCT_WMACCU:
+        if (vm) {
+            gen_helper_vwmaccu_mvx(cpu_env, t_vd, t_vs2, t_rs1);
+        } else {
+            gen_helper_vwmaccu_mvx_m(cpu_env, t_vd, t_vs2, t_rs1);
+        }
+        break;
     case RISC_V_FUNCT_WMACC:
+        if (vm) {
+            gen_helper_vwmacc_mvx(cpu_env, t_vd, t_vs2, t_rs1);
+        } else {
+            gen_helper_vwmacc_mvx_m(cpu_env, t_vd, t_vs2, t_rs1);
+        }
+        break;
     case RISC_V_FUNCT_WMACCUS:
+        if (vm) {
+            gen_helper_vwmaccus_mvx(cpu_env, t_vd, t_vs2, t_rs1);
+        } else {
+            gen_helper_vwmaccus_mvx_m(cpu_env, t_vd, t_vs2, t_rs1);
+        }
+        break;
     case RISC_V_FUNCT_WMACCSU:
+        if (vm) {
+            gen_helper_vwmaccsu_mvx(cpu_env, t_vd, t_vs2, t_rs1);
+        } else {
+            gen_helper_vwmaccsu_mvx_m(cpu_env, t_vd, t_vs2, t_rs1);
+        }
+        break;
     default:
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         break;
