@@ -2666,10 +2666,32 @@ static void gen_v_opmvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_MADD:
+        if (vm) {
+            gen_helper_vmadd_mvv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vmadd_mvv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_NMSUB:
+        if (vm) {
+            gen_helper_vnmsub_mvv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vnmsub_mvv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_MACC:
+        if (vm) {
+            gen_helper_vmacc_mvv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vmacc_mvv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_NMSAC:
-        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        if (vm) {
+            gen_helper_vnmsac_mvv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vnmsac_mvv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
         break;
     case RISC_V_FUNCT_WADDU:
         if (vm) {
@@ -2853,10 +2875,32 @@ static void gen_v_opmvx(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
         }
         break;
     case RISC_V_FUNCT_MADD:
+        if (vm) {
+            gen_helper_vmadd_mvx(cpu_env, t_vd, t_vs2, t_rs1);
+        } else {
+            gen_helper_vmadd_mvx_m(cpu_env, t_vd, t_vs2, t_rs1);
+        }
+        break;
     case RISC_V_FUNCT_NMSUB:
+        if (vm) {
+            gen_helper_vnmsub_mvx(cpu_env, t_vd, t_vs2, t_rs1);
+        } else {
+            gen_helper_vnmsub_mvx_m(cpu_env, t_vd, t_vs2, t_rs1);
+        }
+        break;
     case RISC_V_FUNCT_MACC:
+        if (vm) {
+            gen_helper_vmacc_mvx(cpu_env, t_vd, t_vs2, t_rs1);
+        } else {
+            gen_helper_vmacc_mvx_m(cpu_env, t_vd, t_vs2, t_rs1);
+        }
+        break;
     case RISC_V_FUNCT_NMSAC:
-        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        if (vm) {
+            gen_helper_vnmsac_mvx(cpu_env, t_vd, t_vs2, t_rs1);
+        } else {
+            gen_helper_vnmsac_mvx_m(cpu_env, t_vd, t_vs2, t_rs1);
+        }
         break;
     case RISC_V_FUNCT_WADDU:
         if (vm) {
