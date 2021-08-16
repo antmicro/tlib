@@ -5066,6 +5066,158 @@ void glue(helper_vasubu_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, t
     }
 }
 
+void glue(helper_vsmul_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
+{
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    const uint8_t rm = env->vxrm & 0b11;
+    const uint16_t shift = eew - 1;
+    for (int ei = env->vstart; ei < env->vl; ++ei) {
+#ifdef MASKED
+        if (!(V(0)[ei >> 3] & (1 << (ei & 0x7)))) {
+            continue;
+        }
+#endif
+        switch (eew) {
+        case 8: {
+                int16_t a = ((int8_t *)V(vs2))[ei];
+                int16_t b = ((int8_t *)V(vs1))[ei];
+                int16_t res = roundoff_i16(a * b, shift, rm);
+                if (res < INT8_MIN) {
+                    res = INT8_MIN;
+                    env->vxsat |= 1;
+                } else if (res > INT8_MAX) {
+                    res = INT8_MAX;
+                    env->vxsat |= 1;
+                }
+                ((int8_t *)V(vd))[ei] = res;
+                break;
+            }
+        case 16: {
+                int32_t a = ((int16_t *)V(vs2))[ei];
+                int32_t b = ((int16_t *)V(vs1))[ei];
+                int32_t res = roundoff_i32(a * b, shift, rm);
+                if (res < INT16_MIN) {
+                    res = INT16_MIN;
+                    env->vxsat |= 1;
+                } else if (res > INT16_MAX) {
+                    res = INT16_MAX;
+                    env->vxsat |= 1;
+                }
+                ((int16_t *)V(vd))[ei] = res;
+                break;
+            }
+        case 32: {
+                int64_t a = ((int32_t *)V(vs2))[ei];
+                int64_t b = ((int32_t *)V(vs1))[ei];
+                int64_t res = roundoff_i64(a * b, shift, rm);
+                if (res < INT32_MIN) {
+                    res = INT32_MIN;
+                    env->vxsat |= 1;
+                } else if (res > INT32_MAX) {
+                    res = INT32_MAX;
+                    env->vxsat |= 1;
+                }
+                ((int32_t *)V(vd))[ei] = res;
+                break;
+            }
+        case 64: {
+                __int128_t a = ((int64_t *)V(vs2))[ei];
+                __int128_t b = ((int64_t *)V(vs1))[ei];
+                __int128_t res = roundoff_i128(a * b, shift, rm);
+                if (res < INT64_MIN) {
+                    res = INT64_MIN;
+                    env->vxsat |= 1;
+                } else if (res > INT64_MAX) {
+                    res = INT64_MAX;
+                    env->vxsat |= 1;
+                }
+                ((int64_t *)V(vd))[ei] = res;
+                break;
+            }
+        default:
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            break;
+        }
+    }
+}
+
+void glue(helper_vsmul_ivx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
+{
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    const uint8_t rm = env->vxrm & 0b11;
+    const uint16_t shift = eew - 1;
+    for (int ei = env->vstart; ei < env->vl; ++ei) {
+#ifdef MASKED
+        if (!(V(0)[ei >> 3] & (1 << (ei & 0x7)))) {
+            continue;
+        }
+#endif
+        switch (eew) {
+        case 8: {
+                int16_t a = ((int8_t *)V(vs2))[ei];
+                int16_t res = roundoff_i16(a * rs1, shift, rm);
+                if (res < INT8_MIN) {
+                    res = INT8_MIN;
+                    env->vxsat |= 1;
+                } else if (res > INT8_MAX) {
+                    res = INT8_MAX;
+                    env->vxsat |= 1;
+                }
+                ((int8_t *)V(vd))[ei] = res;
+                break;
+            }
+        case 16: {
+                int32_t a = ((int16_t *)V(vs2))[ei];
+                int32_t res = roundoff_i32(a * rs1, shift, rm);
+                if (res < INT16_MIN) {
+                    res = INT16_MIN;
+                    env->vxsat |= 1;
+                } else if (res > INT16_MAX) {
+                    res = INT16_MAX;
+                    env->vxsat |= 1;
+                }
+                ((int16_t *)V(vd))[ei] = res;
+                break;
+            }
+        case 32: {
+                int64_t a = ((int32_t *)V(vs2))[ei];
+                int64_t res = roundoff_i64(a * rs1, shift, rm);
+                if (res < INT32_MIN) {
+                    res = INT32_MIN;
+                    env->vxsat |= 1;
+                } else if (res > INT32_MAX) {
+                    res = INT32_MAX;
+                    env->vxsat |= 1;
+                }
+                ((int32_t *)V(vd))[ei] = res;
+                break;
+            }
+        case 64: {
+                __int128_t a = ((int64_t *)V(vs2))[ei];
+                __int128_t res = roundoff_i128(a * rs1, shift, rm);
+                if (res < INT64_MIN) {
+                    res = INT64_MIN;
+                    env->vxsat |= 1;
+                } else if (res > INT64_MAX) {
+                    res = INT64_MAX;
+                    env->vxsat |= 1;
+                }
+                ((int64_t *)V(vd))[ei] = res;
+                break;
+            }
+        default:
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            break;
+        }
+    }
+}
+
 #endif
 
 #undef SHIFT

@@ -2075,7 +2075,11 @@ static void gen_v_opivv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_SMUL:
-        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        if (vm) {
+            gen_helper_vsmul_ivv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vsmul_ivv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
         break;
     case RISC_V_FUNCT_SRL:
         if (vm) {
@@ -2500,7 +2504,7 @@ static void gen_v_opivi(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
 
 static void gen_v_opivx(DisasContext *dc, uint8_t funct6, int vd, int rs1, int vs2, uint8_t vm)
 {
-    TCGv t_rs1, t;
+    TCGv t_vd, t_vs2, t_rs1, t;
     t_rs1 = tcg_temp_new();
     t = tcg_temp_new_i64();
     gen_get_gpr(t_rs1, rs1);
@@ -2552,6 +2556,18 @@ static void gen_v_opivx(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
         break;
     // Conflicting
     case RISC_V_FUNCT_SMUL:
+        t_vd = tcg_temp_new();
+        t_vs2 = tcg_temp_new();
+        tcg_gen_movi_i32(t_vd, vd);
+        tcg_gen_movi_i32(t_vs2, vs2);
+        if (vm) {
+            gen_helper_vsmul_ivx(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vsmul_ivx_m(cpu_env, t_vd, t_vs2, t);
+        }
+        tcg_temp_free(t_vd);
+        tcg_temp_free(t_vs2);
+        break;
     default:
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         break;
