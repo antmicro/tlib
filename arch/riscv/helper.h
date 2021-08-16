@@ -462,6 +462,23 @@ DEF_HELPER_4(vssra_ivv_m, void, env, i32, i32, i32)
 DEF_HELPER_4(vssra_ivi, void, env, i32, i32, tl)
 DEF_HELPER_4(vssra_ivi_m, void, env, i32, i32, tl)
 
+DEF_HELPER_4(vredsum_vs, void, env, i32, i32, i32)
+DEF_HELPER_4(vredsum_vs_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vredmaxu_vs, void, env, i32, i32, i32)
+DEF_HELPER_4(vredmaxu_vs_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vredmax_vs, void, env, i32, i32, i32)
+DEF_HELPER_4(vredmax_vs_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vredminu_vs, void, env, i32, i32, i32)
+DEF_HELPER_4(vredminu_vs_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vredmin_vs, void, env, i32, i32, i32)
+DEF_HELPER_4(vredmin_vs_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vredand_vs, void, env, i32, i32, i32)
+DEF_HELPER_4(vredand_vs_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vredor_vs, void, env, i32, i32, i32)
+DEF_HELPER_4(vredor_vs_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vredxor_vs, void, env, i32, i32, i32)
+DEF_HELPER_4(vredxor_vs_m, void, env, i32, i32, i32)
+
 DEF_HELPER_2(handle_custom_instruction, i32, i64, i64)
 
 void do_nmi(CPUState *env);

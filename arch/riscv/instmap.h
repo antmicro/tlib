@@ -357,8 +357,8 @@ enum {
 
 enum {
     RISC_V_FUNCT_ADD         = 0b000000, // OPIVV, OPIVX, OPIVI
-    RISC_V_FUNCT_FADD        = 0b000000, //                      OPMVV
-    RISC_V_FUNCT_REDSUM      = 0b000000, //                                    OPFVV, OPFVF
+    RISC_V_FUNCT_REDSUM      = 0b000000, //                      OPMVV
+    RISC_V_FUNCT_FADD        = 0b000000, //                                    OPFVV, OPFVF
     RISC_V_FUNCT_REDAND      = 0b000001, //                      OPMVV
     RISC_V_FUNCT_FREDSUM     = 0b000001, //                                    OPFVV
     RISC_V_FUNCT_SUB         = 0b000010, // OPIVV, OPIVX

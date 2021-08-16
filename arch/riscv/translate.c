@@ -2607,14 +2607,62 @@ static void gen_v_opmvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
     tcg_gen_movi_i32(t_vs2, vs2);
 
     switch (funct6) {
-    case RISC_V_FUNCT_FADD:
+    case RISC_V_FUNCT_REDSUM:
+        if (vm) {
+            gen_helper_vredsum_vs(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vredsum_vs_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_REDAND:
+        if (vm) {
+            gen_helper_vredand_vs(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vredand_vs_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_REDOR:
+        if (vm) {
+            gen_helper_vredor_vs(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vredor_vs_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_REDXOR:
+        if (vm) {
+            gen_helper_vredxor_vs(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vredxor_vs_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_REDMINU:
+        if (vm) {
+            gen_helper_vredminu_vs(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vredminu_vs_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_REDMIN:
+        if (vm) {
+            gen_helper_vredmin_vs(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vredmin_vs_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_REDMAXU:
+        if (vm) {
+            gen_helper_vredmaxu_vs(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vredmaxu_vs_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_REDMAX:
+        if (vm) {
+            gen_helper_vredmax_vs(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vredmax_vs_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_AADDU:
         if (vm) {
             gen_helper_vaaddu_mvv(cpu_env, t_vd, t_vs2, t_vs1);
