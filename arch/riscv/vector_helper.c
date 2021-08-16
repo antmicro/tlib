@@ -546,3 +546,43 @@ void helper_vmsbc_vim(CPUState *env, uint32_t vd, int32_t vs2, target_ulong rs1)
         }
     }
 }
+
+target_ulong helper_vmv_xs(CPUState *env, int32_t vs2)
+{
+    const target_ulong eew = env->vsew;
+    switch (eew) {
+    case 8:
+        return ((uint8_t *)V(vs2))[0];
+    case 16:
+        return ((uint16_t *)V(vs2))[0];
+    case 32:
+        return ((uint32_t *)V(vs2))[0];
+    case 64:
+        return ((uint64_t *)V(vs2))[0];
+    default:
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+        return 0;
+    }
+}
+
+void helper_vmv_sx(CPUState *env, uint32_t vd, target_ulong rs1)
+{
+    const target_ulong eew = env->vsew;
+    switch (eew) {
+    case 8:
+        ((uint8_t *)V(vd))[0] = rs1;
+        break;
+    case 16:
+        ((uint16_t *)V(vd))[0] = rs1;
+        break;
+    case 32:
+        ((uint32_t *)V(vd))[0] = rs1;
+        break;
+    case 64:
+        ((uint64_t *)V(vd))[0] = rs1;
+        break;
+    default:
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+        break;
+    }
+}
