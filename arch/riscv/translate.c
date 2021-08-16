@@ -2096,8 +2096,18 @@ static void gen_v_opivv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_SSRL:
+        if (vm) {
+            gen_helper_vssrl_ivv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vssrl_ivv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_SSRA:
-        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        if (vm) {
+            gen_helper_vssra_ivv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vssra_ivv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
         break;
     case RISC_V_FUNCT_NSRL:
         if (vm) {
@@ -2324,8 +2334,18 @@ static void gen_v_opivt(DisasContext *dc, uint8_t funct6, int vd, int vs2, TCGv 
         }
         break;
     case RISC_V_FUNCT_SSRL:
+        if (vm) {
+            gen_helper_vssrl_ivi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vssrl_ivi_m(cpu_env, t_vd, t_vs2, t);
+        }
+        break;
     case RISC_V_FUNCT_SSRA:
-        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        if (vm) {
+            gen_helper_vssra_ivi(cpu_env, t_vd, t_vs2, t);
+        } else {
+            gen_helper_vssra_ivi_m(cpu_env, t_vd, t_vs2, t);
+        }
         break;
     case RISC_V_FUNCT_NSRL:
         if (vm) {
