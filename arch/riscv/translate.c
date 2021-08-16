@@ -2580,9 +2580,33 @@ static void gen_v_opmvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
     case RISC_V_FUNCT_REDMAXU:
     case RISC_V_FUNCT_REDMAX:
     case RISC_V_FUNCT_AADDU:
+        if (vm) {
+            gen_helper_vaaddu_mvv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vaaddu_mvv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_AADD:
+        if (vm) {
+            gen_helper_vaadd_mvv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vaadd_mvv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_ASUBU:
+        if (vm) {
+            gen_helper_vasubu_mvv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vasubu_mvv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_ASUB:
+        if (vm) {
+            gen_helper_vasub_mvv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vasub_mvv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_WXUNARY0:
     case RISC_V_FUNCT_XUNARY0:
         switch (vs1) {
@@ -2858,10 +2882,32 @@ static void gen_v_opmvx(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
 
     switch (funct6) {
     case RISC_V_FUNCT_AADDU:
+        if (vm) {
+            gen_helper_vaaddu_mvx(cpu_env, t_vd, t_vs2, t_rs1);
+        } else {
+            gen_helper_vaaddu_mvx_m(cpu_env, t_vd, t_vs2, t_rs1);
+        }
+        break;
     case RISC_V_FUNCT_AADD:
+        if (vm) {
+            gen_helper_vaadd_mvx(cpu_env, t_vd, t_vs2, t_rs1);
+        } else {
+            gen_helper_vaadd_mvx_m(cpu_env, t_vd, t_vs2, t_rs1);
+        }
+        break;
     case RISC_V_FUNCT_ASUBU:
+        if (vm) {
+            gen_helper_vasubu_mvx(cpu_env, t_vd, t_vs2, t_rs1);
+        } else {
+            gen_helper_vasubu_mvx_m(cpu_env, t_vd, t_vs2, t_rs1);
+        }
+        break;
     case RISC_V_FUNCT_ASUB:
-        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        if (vm) {
+            gen_helper_vasub_mvx(cpu_env, t_vd, t_vs2, t_rs1);
+        } else {
+            gen_helper_vasub_mvx_m(cpu_env, t_vd, t_vs2, t_rs1);
+        }
         break;
     case RISC_V_FUNCT_SLIDE1UP:
         if (vm) {
