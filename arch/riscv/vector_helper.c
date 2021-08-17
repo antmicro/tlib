@@ -586,3 +586,39 @@ void helper_vmv_sx(CPUState *env, uint32_t vd, target_ulong rs1)
         break;
     }
 }
+
+void helper_vmv1r_v(CPUState *env, uint32_t vd, uint32_t vs2)
+{
+    const uint8_t emul = 0;
+    if (V_IDX_INVALID_EMUL(vd, emul) || V_IDX_INVALID_EMUL(vs2, emul)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    memcpy(V(vd), V(vs2), env->vlen * env->vsew << emul);
+}
+
+void helper_vmv2r_v(CPUState *env, uint32_t vd, uint32_t vs2)
+{
+    const uint8_t emul = 1;
+    if (V_IDX_INVALID_EMUL(vd, emul) || V_IDX_INVALID_EMUL(vs2, emul)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    memcpy(V(vd), V(vs2), env->vlen * env->vsew << emul);
+}
+
+void helper_vmv4r_v(CPUState *env, uint32_t vd, uint32_t vs2)
+{
+    const uint8_t emul = 2;
+    if (V_IDX_INVALID_EMUL(vd, emul) || V_IDX_INVALID_EMUL(vs2, emul)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    memcpy(V(vd), V(vs2), env->vlen * env->vsew << emul);
+}
+
+void helper_vmv8r_v(CPUState *env, uint32_t vd, uint32_t vs2)
+{
+    const uint8_t emul = 3;
+    if (V_IDX_INVALID_EMUL(vd, emul) || V_IDX_INVALID_EMUL(vs2, emul)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    memcpy(V(vd), V(vs2), env->vlen * env->vsew << emul);
+}

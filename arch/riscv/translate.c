@@ -2514,7 +2514,34 @@ static void gen_v_opivi(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
         gen_v_opivt(dc, funct6, vd, vs2, t_simm5, vm);
         break;
     // Conflicting
-    case RISC_V_FUNCT_MV_NF_R:
+    case RISC_V_FUNCT_MV_NF_R: {
+            TCGv t_vd, t_vs2;
+            t_vd = tcg_temp_new();
+            t_vs2 = tcg_temp_new();
+            tcg_gen_movi_i32(t_vd, vd);
+            tcg_gen_movi_i32(t_vs2, vs2);
+
+            switch (rs1) {
+            case 0:
+                gen_helper_vmv1r_v(cpu_env, t_vd, t_vs2);
+                break;
+            case 1:
+                gen_helper_vmv2r_v(cpu_env, t_vd, t_vs2);
+                break;
+            case 3:
+                gen_helper_vmv4r_v(cpu_env, t_vd, t_vs2);
+                break;
+            case 7:
+                gen_helper_vmv8r_v(cpu_env, t_vd, t_vs2);
+                break;
+            default:
+                kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+                break;
+            }
+            tcg_temp_free(t_vd);
+            tcg_temp_free(t_vs2);
+            break;
+        }
     default:
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         break;
