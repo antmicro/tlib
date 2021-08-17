@@ -2807,6 +2807,13 @@ static void gen_v_opmvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
                 gen_helper_vmsbf_m(cpu_env, t_vd, t_vs2);
             }
             break;
+        case 0x3:
+            if (vm) {
+                gen_helper_vmsif(cpu_env, t_vd, t_vs2);
+            } else {
+                gen_helper_vmsif_m(cpu_env, t_vd, t_vs2);
+            }
+            break;
         default:
             kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
             break;
