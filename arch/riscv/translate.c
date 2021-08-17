@@ -2728,6 +2728,14 @@ static void gen_v_opmvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
                 kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
             }
             break;
+        case 0x10:
+            if (vm) {
+                gen_helper_vpopc(t_vd, cpu_env, t_vs2);
+            } else {
+                gen_helper_vpopc_m(t_vd, cpu_env, t_vs2);
+            }
+            gen_set_gpr(vd, t_vd);
+            break;
         default:
             kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
             break;

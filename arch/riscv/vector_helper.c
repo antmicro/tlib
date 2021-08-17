@@ -657,3 +657,46 @@ MASK_OP_GEN(nor, MASK_OP_GEN_OP_NOR)
 MASK_OP_GEN(ornot, MASK_OP_GEN_OP_ORNOT)
 #define MASK_OP_GEN_OP_XNOR(a, b) (~((a) ^ (b)))
 MASK_OP_GEN(xnor, MASK_OP_GEN_OP_XNOR)
+
+static uint8_t bitcnt(uint8_t a)
+{
+    a = (a & 0x55) + ((a >> 1) & 0x55);
+    a = (a & 0x33) + ((a >> 2) & 0x33);
+    return (a & 0x0f) + ((a >> 4) & 0x0f);
+}
+
+target_ulong helper_vpopc(CPUState *env, uint32_t vs2)
+{
+    target_ulong cnt = 0;
+    int i = env->vstart >> 3;
+    if (env->vl - env->vstart < 8) {
+        return bitcnt(((0xffu << (env->vstart & 0x7)) & (0xffu >> (env->vl & 0x7))) & V(vs2)[i]);
+    }
+    cnt += bitcnt((0xffu << (env->vstart & 0x7)) & V(vs2)[i]);
+
+    for (; i < env->vl >> 3; ++i) {
+        cnt += bitcnt(V(vs2)[i]);
+    }
+    if (env->vl & 0x7) {
+        cnt += bitcnt((0xffu >> (env->vl & 0x7)) & V(vs2)[i]);
+    }
+    return cnt;
+}
+
+target_ulong helper_vpopc_m(CPUState *env, uint32_t vs2)
+{
+    target_ulong cnt = 0;
+    int i = env->vstart >> 3;
+    if (env->vl - env->vstart < 8) {
+        return bitcnt(((0xffu << (env->vstart & 0x7)) & (0xffu >> (env->vl & 0x7))) & V(0)[i] & V(vs2)[i]);
+    }
+    cnt += bitcnt((0xffu << (env->vstart & 0x7)) & V(0)[i] & V(vs2)[i]);
+
+    for (; i < env->vl >> 3; ++i) {
+        cnt += bitcnt(V(0)[i] & V(vs2)[i]);
+    }
+    if (env->vl & 0x7) {
+        cnt += bitcnt((0xffu >> (env->vl & 0x7)) & V(0)[i] & V(vs2)[i]);
+    }
+    return cnt;
+}
