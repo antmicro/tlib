@@ -701,7 +701,7 @@ target_ulong helper_vpopc_m(CPUState *env, uint32_t vs2)
     return cnt;
 }
 
-static target_long firstbit(uint8_t a)
+static target_long first_bit(uint8_t a)
 {
     target_long idx = a & 0xf ? 4 : 0;
     idx += (a >> idx) & 0x3 ? 2 : 0; 
@@ -717,13 +717,13 @@ target_long helper_vfirst(CPUState *env, uint32_t vs2)
     target_long tmp = 0;
     int i = 0;
     for (; i < env->vl >> 3; ++i) {
-        tmp = firstbit(V(vs2)[i]);
+        tmp = first_bit(V(vs2)[i]);
         if (~tmp) {
             return (i << 3) + tmp;
         }
     }
     if (env->vl & 0x7) {
-        tmp = firstbit((0xffu >> (env->vl & 0x7)) & V(vs2)[i]);
+        tmp = first_bit((0xffu >> (env->vl & 0x7)) & V(vs2)[i]);
     }
     return ~tmp ? (i << 3) + tmp : tmp;
 }
@@ -736,15 +736,91 @@ target_long helper_vfirst_m(CPUState *env, uint32_t vs2)
     target_long tmp = 0;
     int i = 0;
     for (; i < env->vl >> 3; ++i) {
-        tmp = firstbit(V(0)[i] & V(vs2)[i]);
+        tmp = first_bit(V(0)[i] & V(vs2)[i]);
         if (~tmp) {
             return (i << 3) + tmp;
         }
     }
     if (env->vl & 0x7) {
-        tmp = firstbit((0xffu >> (env->vl & 0x7)) & V(0)[i] & V(vs2)[i]);
+        tmp = first_bit((0xffu >> (env->vl & 0x7)) & V(0)[i] & V(vs2)[i]);
     }
     return ~tmp ? (i << 3) + tmp : tmp;
+}
+
+static uint8_t set_before_first_bit(uint8_t a) {
+    return (a & -a) - 1;
+}
+
+void helper_vmsbf(CPUState *env, uint32_t vd, uint32_t vs2)
+{
+    if (env->vstart) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    target_long tmp = 0;
+    int i = 0;
+    for (; i < env->vl >> 3; ++i) {
+        tmp = set_before_first_bit(V(vs2)[i]);
+        if (~tmp) {
+            break;
+        }
+        V(vd)[i] |= 0xff;
+    }
+    if (!~tmp && env->vl & 0x7) {
+        tmp = set_before_first_bit((0xffu >> (env->vl & 0x7)) & V(vs2)[i]);
+        if (~tmp) {
+            V(vd)[i] |= (0xffu >> (env->vl & 0x7)) & tmp;
+            V(vd)[i] &= ~(0xffu >> (env->vl & 0x7)) | tmp;
+        } else {
+            V(vd)[i] |= (0xffu >> (env->vl & 0x7));
+        }
+        return;
+    }
+
+    V(vd)[i] |= tmp;
+    V(vd)[i] &= tmp;
+
+    for (; i < env->vl >> 3; ++i) {
+        V(vd)[i] &= 0xff;
+    }
+    if (env->vl & 0x7) {
+        V(vd)[i] &= ~(0xffu >> (env->vl & 0x7));
+    }
+}
+
+void helper_vmsbf_m(CPUState *env, uint32_t vd, uint32_t vs2)
+{
+    if (env->vstart) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    target_long tmp = 0;
+    int i = 0;
+    for (; i < env->vl >> 3; ++i) {
+        tmp = set_before_first_bit(V(0)[i] & V(vs2)[i]);
+        if (~tmp) {
+            break;
+        }
+        V(vd)[i] |= V(0)[i];
+    }
+    if (!~tmp && env->vl & 0x7) {
+        tmp = set_before_first_bit((0xffu >> (env->vl & 0x7)) & V(0)[i] & V(vs2)[i]);
+        if (~tmp) {
+            V(vd)[i] |= (0xffu >> (env->vl & 0x7)) & V(0)[i] & tmp;
+            V(vd)[i] &= ~(0xffu >> (env->vl & 0x7)) | ~V(0)[i] | tmp;
+        } else {
+            V(vd)[i] |= (0xffu >> (env->vl & 0x7)) & V(0)[i];
+        }
+        return;
+    }
+
+    V(vd)[i] |= V(0)[i] & tmp;
+    V(vd)[i] &= ~V(0)[i] | tmp;
+
+    for (; i < env->vl >> 3; ++i) {
+        V(vd)[i] &= ~V(0)[i];
+    }
+    if (env->vl & 0x7) {
+        V(vd)[i] &= ~(0xffu >> (env->vl & 0x7)) | ~V(0)[i];
+    }
 }
 
 #undef MASK_OP_GEN_OP_AND

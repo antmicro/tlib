@@ -2799,7 +2799,18 @@ static void gen_v_opmvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_MUNARY0:
-        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        switch (vs1) {
+        case 0x1:
+            if (vm) {
+                gen_helper_vmsbf(cpu_env, t_vd, t_vs2);
+            } else {
+                gen_helper_vmsbf_m(cpu_env, t_vd, t_vs2);
+            }
+            break;
+        default:
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+            break;
+        }
         break;
     case RISC_V_FUNCT_COMPRESS:
         if (vm) {
