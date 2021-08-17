@@ -498,6 +498,8 @@ DEF_HELPER_4(vmxnor_mm, void, env, i32, i32, i32)
 
 DEF_HELPER_2(vpopc, tl, env, i32)
 DEF_HELPER_2(vpopc_m, tl, env, i32)
+DEF_HELPER_2(vfirst, tl, env, i32)
+DEF_HELPER_2(vfirst_m, tl, env, i32)
 
 DEF_HELPER_2(handle_custom_instruction, i32, i64, i64)
 

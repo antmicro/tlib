@@ -700,3 +700,59 @@ target_ulong helper_vpopc_m(CPUState *env, uint32_t vs2)
     }
     return cnt;
 }
+
+static target_long firstbit(uint8_t a)
+{
+    target_long idx = a & 0xf ? 4 : 0;
+    idx += (a >> idx) & 0x3 ? 2 : 0; 
+    idx += (a >> idx) & 0x1 ? 1 : 0; 
+    return idx - 1;
+}
+
+target_long helper_vfirst(CPUState *env, uint32_t vs2)
+{
+    if (env->vstart) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    target_long tmp = 0;
+    int i = 0;
+    for (; i < env->vl >> 3; ++i) {
+        tmp = firstbit(V(vs2)[i]);
+        if (~tmp) {
+            return (i << 3) + tmp;
+        }
+    }
+    if (env->vl & 0x7) {
+        tmp = firstbit((0xffu >> (env->vl & 0x7)) & V(vs2)[i]);
+    }
+    return ~tmp ? (i << 3) + tmp : tmp;
+}
+
+target_long helper_vfirst_m(CPUState *env, uint32_t vs2)
+{
+    if (env->vstart) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    target_long tmp = 0;
+    int i = 0;
+    for (; i < env->vl >> 3; ++i) {
+        tmp = firstbit(V(0)[i] & V(vs2)[i]);
+        if (~tmp) {
+            return (i << 3) + tmp;
+        }
+    }
+    if (env->vl & 0x7) {
+        tmp = firstbit((0xffu >> (env->vl & 0x7)) & V(0)[i] & V(vs2)[i]);
+    }
+    return ~tmp ? (i << 3) + tmp : tmp;
+}
+
+#undef MASK_OP_GEN_OP_AND
+#undef MASK_OP_GEN_OP_NAND
+#undef MASK_OP_GEN_OP_ANDNOT
+#undef MASK_OP_GEN_OP_XOR
+#undef MASK_OP_GEN_OP_OR
+#undef MASK_OP_GEN_OP_NOR
+#undef MASK_OP_GEN_OP_ORNOT
+#undef MASK_OP_GEN_OP_XNOR
+#undef MASK_OP_GEN
