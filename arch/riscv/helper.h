@@ -487,6 +487,15 @@ DEF_HELPER_3(vmv2r_v, void, env, i32, i32)
 DEF_HELPER_3(vmv4r_v, void, env, i32, i32)
 DEF_HELPER_3(vmv8r_v, void, env, i32, i32)
 
+DEF_HELPER_4(vmand_mm, void, env, i32, i32, i32)
+DEF_HELPER_4(vmnand_mm, void, env, i32, i32, i32)
+DEF_HELPER_4(vmandnot_mm, void, env, i32, i32, i32)
+DEF_HELPER_4(vmxor_mm, void, env, i32, i32, i32)
+DEF_HELPER_4(vmor_mm, void, env, i32, i32, i32)
+DEF_HELPER_4(vmnor_mm, void, env, i32, i32, i32)
+DEF_HELPER_4(vmornot_mm, void, env, i32, i32, i32)
+DEF_HELPER_4(vmxnor_mm, void, env, i32, i32, i32)
+
 DEF_HELPER_2(handle_custom_instruction, i32, i64, i64)
 
 void do_nmi(CPUState *env);

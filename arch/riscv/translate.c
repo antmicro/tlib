@@ -2793,14 +2793,60 @@ static void gen_v_opmvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_MANDNOT:
+        if (vm) {
+            gen_helper_vmandnot_mm(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        }
+        break;
     case RISC_V_FUNCT_MAND:
+        if (vm) {
+            gen_helper_vmand_mm(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        }
+        break;
     case RISC_V_FUNCT_MOR:
+        if (vm) {
+            gen_helper_vmor_mm(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        }
+        break;
     case RISC_V_FUNCT_MXOR:
+        if (vm) {
+            gen_helper_vmxor_mm(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        }
+        break;
     case RISC_V_FUNCT_MORNOT:
+        if (vm) {
+            gen_helper_vmornot_mm(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        }
+        break;
     case RISC_V_FUNCT_MNAND:
+        if (vm) {
+            gen_helper_vmnand_mm(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        }
+        break;
     case RISC_V_FUNCT_MNOR:
+        if (vm) {
+            gen_helper_vmnor_mm(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        }
+        break;
     case RISC_V_FUNCT_MXNOR:
-        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        if (vm) {
+            gen_helper_vmxnor_mm(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        }
         break;
     case RISC_V_FUNCT_DIVU:
         if (vm) {
