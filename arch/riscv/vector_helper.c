@@ -899,6 +899,82 @@ void helper_vmsif_m(CPUState *env, uint32_t vd, uint32_t vs2)
     }
 }
 
+void helper_vmsof(CPUState *env, uint32_t vd, uint32_t vs2)
+{
+    if (env->vstart) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    target_long tmp = 0;
+    int i = 0;
+    for (; i < env->vl >> 3; ++i) {
+        tmp = set_before_first_bit(V(vs2)[i]);
+        if (~tmp) {
+            break;
+        }
+        V(vd)[i] = 0;
+    }
+    if (!~tmp && env->vl & 0x7) {
+        tmp = set_before_first_bit((0xffu >> (env->vl & 0x7)) & V(vs2)[i]);
+        if (~tmp) {
+            tmp = (tmp << 1 | 1) ^ tmp;
+            V(vd)[i] |= (0xffu >> (env->vl & 0x7)) & tmp;
+            V(vd)[i] &= ~(0xffu >> (env->vl & 0x7)) | tmp;
+        } else {
+            V(vd)[i] |= (0xffu >> (env->vl & 0x7));
+        }
+        return;
+    }
+
+    tmp = (tmp << 1 | 1) ^ tmp;
+    V(vd)[i] |= tmp;
+    V(vd)[i] &= tmp;
+
+    for (; i < env->vl >> 3; ++i) {
+        V(vd)[i] = 0;
+    }
+    if (env->vl & 0x7) {
+        V(vd)[i] &= ~(0xffu >> (env->vl & 0x7));
+    }
+}
+
+void helper_vmsof_m(CPUState *env, uint32_t vd, uint32_t vs2)
+{
+    if (env->vstart) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    target_long tmp = 0;
+    int i = 0;
+    for (; i < env->vl >> 3; ++i) {
+        tmp = set_before_first_bit(V(0)[i] & V(vs2)[i]);
+        if (~tmp) {
+            break;
+        }
+        V(vd)[i] &= ~V(0)[i];
+    }
+    if (!~tmp && env->vl & 0x7) {
+        tmp = set_before_first_bit((0xffu >> (env->vl & 0x7)) & V(0)[i] & V(vs2)[i]);
+        if (~tmp) {
+            tmp = (tmp << 1 | 1) ^ tmp;
+            V(vd)[i] |= (0xffu >> (env->vl & 0x7)) & V(0)[i] & tmp;
+            V(vd)[i] &= ~(0xffu >> (env->vl & 0x7)) | ~V(0)[i] | tmp;
+        } else {
+            V(vd)[i] |= (0xffu >> (env->vl & 0x7)) & V(0)[i];
+        }
+        return;
+    }
+
+    tmp = (tmp << 1 | 1) ^ tmp;
+    V(vd)[i] |= V(0)[i] & tmp;
+    V(vd)[i] &= ~V(0)[i] | tmp;
+
+    for (; i < env->vl >> 3; ++i) {
+        V(vd)[i] &= ~V(0)[i];
+    }
+    if (env->vl & 0x7) {
+        V(vd)[i] &= ~(0xffu >> (env->vl & 0x7)) | ~V(0)[i];
+    }
+}
+
 #undef MASK_OP_GEN_OP_AND
 #undef MASK_OP_GEN_OP_NAND
 #undef MASK_OP_GEN_OP_ANDNOT

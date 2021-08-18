@@ -504,6 +504,8 @@ DEF_HELPER_3(vmsbf, void, env, i32, i32)
 DEF_HELPER_3(vmsbf_m, void, env, i32, i32)
 DEF_HELPER_3(vmsif, void, env, i32, i32)
 DEF_HELPER_3(vmsif_m, void, env, i32, i32)
+DEF_HELPER_3(vmsof, void, env, i32, i32)
+DEF_HELPER_3(vmsof_m, void, env, i32, i32)
 
 DEF_HELPER_2(handle_custom_instruction, i32, i64, i64)
 
