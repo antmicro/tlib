@@ -5956,6 +5956,38 @@ void glue(helper_viota, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2)
     }
 }
 
+void glue(helper_vid, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2)
+{
+    if (V_IDX_INVALID(vd) || env->vstart) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    for (int ei = 0; ei < env->vl; ++ei) {
+#ifdef MASKED
+        if (!(V(0)[ei >> 3] & (1 << (ei & 0x7)))) {
+            continue;
+        }
+#endif
+        switch (eew) {
+        case 8:
+            ((uint8_t *)V(vd))[ei] = ei;
+            break;
+        case 16:
+            ((uint16_t *)V(vd))[ei] = ei;
+            break;
+        case 32:
+            ((uint32_t *)V(vd))[ei] = ei;
+            break;
+        case 64:
+            ((uint64_t *)V(vs2))[ei] = ei;
+            break;
+        default:
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            break;
+        }
+    }
+}
+
 #endif
 
 #undef SHIFT
