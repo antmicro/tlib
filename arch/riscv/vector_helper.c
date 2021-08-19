@@ -111,6 +111,62 @@ void helper_vmv_ivv(CPUState *env, uint32_t vd, int32_t vs1)
     }
 }
 
+void helper_vmerge_ivv(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
+{
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    for (int ei = env->vstart; ei < env->vl; ++ei) {
+        uint8_t mask = !(V(0)[ei >> 3] & (1 << (ei & 0x7)));
+        switch (eew) {
+        case 8:
+            ((int8_t *)V(vd))[ei] = mask ? ((int8_t *)V(vs2))[ei] : ((int8_t *)V(vs1))[ei];
+            break;
+        case 16:
+            ((int16_t *)V(vd))[ei] = mask ? ((int16_t *)V(vs2))[ei] : ((int16_t *)V(vs1))[ei];
+            break;
+        case 32:
+            ((int32_t *)V(vd))[ei] = mask ? ((int32_t *)V(vs2))[ei] : ((int32_t *)V(vs1))[ei];
+            break;
+        case 64:
+            ((int64_t *)V(vd))[ei] = mask ? ((int64_t *)V(vs2))[ei] : ((int64_t *)V(vs1))[ei];
+            break;
+        default:
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            break;
+        }
+    }
+}
+
+void helper_vmerge_ivi(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
+{
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    for (int ei = env->vstart; ei < env->vl; ++ei) {
+        uint8_t mask = !(V(0)[ei >> 3] & (1 << (ei & 0x7)));
+        switch (eew) {
+        case 8:
+            ((int8_t *)V(vd))[ei] = mask ? ((int8_t *)V(vs2))[ei] : rs1;
+            break;
+        case 16:
+            ((int16_t *)V(vd))[ei] = mask ? ((int16_t *)V(vs2))[ei] : rs1;
+            break;
+        case 32:
+            ((int32_t *)V(vd))[ei] = mask ? ((int32_t *)V(vs2))[ei] : rs1;
+            break;
+        case 64:
+            ((int64_t *)V(vd))[ei] = mask ? ((int64_t *)V(vs2))[ei] : rs1;
+            break;
+        default:
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            break;
+        }
+    }
+}
+
 void helper_vcompress_mvv(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
     if (env->vstart != 0 || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
