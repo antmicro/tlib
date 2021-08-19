@@ -3364,6 +3364,79 @@ static void gen_v_opmvx(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
     tcg_temp_free(t_rs1);
 }
 
+static void gen_v_opfvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int vs2, uint8_t vm)
+{
+    TCGv t_vd, t_vs2, t_vs1;
+    t_vd = tcg_temp_new();
+    t_vs2 = tcg_temp_new();
+    t_vs1 = tcg_temp_new();
+    tcg_gen_movi_i32(t_vd, vd);
+    tcg_gen_movi_i32(t_vs2, vs2);
+    tcg_gen_movi_i32(t_vs1, vs1);
+
+    switch (funct6) {
+    case RISC_V_FUNCT_FADD:
+        if (vm) {
+            gen_helper_vfadd_vv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vfadd_vv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
+    case RISC_V_FUNCT_FREDSUM:
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        break;
+    case RISC_V_FUNCT_FSUB:
+        if (vm) {
+            gen_helper_vfsub_vv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vfsub_vv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
+    case RISC_V_FUNCT_FREDOSUM:
+    case RISC_V_FUNCT_FMIN:
+    case RISC_V_FUNCT_FREDMIN:
+    case RISC_V_FUNCT_FMAX:
+    case RISC_V_FUNCT_FREDMAX:
+    case RISC_V_FUNCT_FSGNJ:
+    case RISC_V_FUNCT_FSGNJN:
+    case RISC_V_FUNCT_FSGNJX:
+    case RISC_V_FUNCT_WFUNARY0:
+    case RISC_V_FUNCT_FUNARY0:
+    case RISC_V_FUNCT_FUNARY1:
+    case RISC_V_FUNCT_MFEQ:
+    case RISC_V_FUNCT_MFLE:
+    case RISC_V_FUNCT_MFLT:
+    case RISC_V_FUNCT_MFNE:
+    case RISC_V_FUNCT_FDIV:
+    case RISC_V_FUNCT_FMUL:
+    case RISC_V_FUNCT_FMADD:
+    case RISC_V_FUNCT_FNMADD:
+    case RISC_V_FUNCT_FMSUB:
+    case RISC_V_FUNCT_FNMSUB:
+    case RISC_V_FUNCT_FMACC:
+    case RISC_V_FUNCT_FNMACC:
+    case RISC_V_FUNCT_FMSAC:
+    case RISC_V_FUNCT_FNMSAC:
+    case RISC_V_FUNCT_FWADD:
+    case RISC_V_FUNCT_FWREDSUM:
+    case RISC_V_FUNCT_FWSUB:
+    case RISC_V_FUNCT_FWREDOSUM:
+    case RISC_V_FUNCT_FWADDW:
+    case RISC_V_FUNCT_FWSUBW:
+    case RISC_V_FUNCT_FWMUL:
+    case RISC_V_FUNCT_FWMACC:
+    case RISC_V_FUNCT_FWNMACC:
+    case RISC_V_FUNCT_FWMSAC:
+    case RISC_V_FUNCT_FWNMSAC:
+    default:
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        break;
+    }
+    tcg_temp_free(t_vd);
+    tcg_temp_free(t_vs2);
+    tcg_temp_free(t_vs1);
+}
+
 static void gen_v_opfvf(DisasContext *dc, uint8_t funct6, int vd, int rs1, int vs2, uint8_t vm)
 {
     TCGv t_vd, t_vs2;
@@ -3373,8 +3446,20 @@ static void gen_v_opfvf(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
     tcg_gen_movi_i32(t_vs2, vs2);
 
     switch (funct6) {
-    case RISC_V_FUNCT_REDSUM:
+    case RISC_V_FUNCT_FADD:
+        if (vm) {
+            gen_helper_vfadd_vf(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        } else {
+            gen_helper_vfadd_vf_m(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        }
+        break;
     case RISC_V_FUNCT_FSUB:
+        if (vm) {
+            gen_helper_vfsub_vf(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        } else {
+            gen_helper_vfsub_vf_m(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        }
+        break;
     case RISC_V_FUNCT_FMIN:
     case RISC_V_FUNCT_FMAX:
     case RISC_V_FUNCT_FSGNJ:
@@ -3407,7 +3492,15 @@ static void gen_v_opfvf(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
     case RISC_V_FUNCT_FDIV:
     case RISC_V_FUNCT_FRDIV:
     case RISC_V_FUNCT_FMUL:
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        break;
     case RISC_V_FUNCT_FRSUB:
+        if (vm) {
+            gen_helper_vfrsub_vf(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        } else {
+            gen_helper_vfrsub_vf_m(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        }
+        break;
     case RISC_V_FUNCT_FMADD:
     case RISC_V_FUNCT_FNMADD:
     case RISC_V_FUNCT_FMSUB:
@@ -3447,7 +3540,7 @@ static void gen_v(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2, int 
         gen_v_opivv(dc, funct6, rd, rs1, rs2, vm);
         break;
     case OPC_RISC_V_FVV:
-        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        gen_v_opfvv(dc, funct6, rd, rs1, rs2, vm);
         break;
     case OPC_RISC_V_MVV:
         gen_v_opmvv(dc, funct6, rd, rs1, rs2, vm);

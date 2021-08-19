@@ -513,6 +513,17 @@ DEF_HELPER_3(viota_m, void, env, i32, i32)
 DEF_HELPER_2(vid, void, env, i32)
 DEF_HELPER_2(vid_m, void, env, i32)
 
+DEF_HELPER_4(vfadd_vv, void, env, i32, i32, i32)
+DEF_HELPER_4(vfadd_vv_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vfadd_vf, void, env, i32, i32, i64)
+DEF_HELPER_4(vfadd_vf_m, void, env, i32, i32, i64)
+DEF_HELPER_4(vfsub_vv, void, env, i32, i32, i32)
+DEF_HELPER_4(vfsub_vv_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vfsub_vf, void, env, i32, i32, i64)
+DEF_HELPER_4(vfsub_vf_m, void, env, i32, i32, i64)
+DEF_HELPER_4(vfrsub_vf, void, env, i32, i32, i64)
+DEF_HELPER_4(vfrsub_vf_m, void, env, i32, i32, i64)
+
 DEF_HELPER_2(handle_custom_instruction, i32, i64, i64)
 
 void do_nmi(CPUState *env);
