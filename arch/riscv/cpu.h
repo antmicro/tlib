@@ -312,7 +312,7 @@ static inline uint32_t extract32(uint32_t value, uint8_t start, uint8_t length)
 
 #define V(x) (env->vr + (x) * env->vlenb)
 #define SEW() GET_VTYPE_VSEW(env->vtype)
-#define EMUL(eew) ((((((int8_t)env->vlmul) << 5 ) >> 5) + (eew) - SEW()) & 0x7)
+#define EMUL(eew) (((int8_t)(env->vlmul & 0x4 ? env->vlmul | 0xf8 : env->vlmul) + (eew) - SEW()) & 0x7)
 #define V_IDX_INVALID_EMUL(n, emul) ((emul) < 0x4 && ((n) & ((1 << (emul)) - 1)) != 0)
 #define V_IDX_INVALID_EEW(n, eew) V_IDX_INVALID_EMUL(n, EMUL(eew))
 #define V_IDX_INVALID(n) V_IDX_INVALID_EMUL(n, env->vlmul)

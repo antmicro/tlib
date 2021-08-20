@@ -88,7 +88,7 @@ static inline DATA_STYPE glue(roundoff_i, BITS)(DATA_STYPE v, uint16_t d, uint8_
 void glue(glue(helper_vle, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t nf)
 {
     const target_ulong emul = EMUL(SHIFT);
-    if (emul == 0x7 || V_IDX_INVALID_EMUL(vd, emul) || V_INVALID_NF(vd, nf, emul)) {
+    if (emul == 0x4 || V_IDX_INVALID_EMUL(vd, emul) || V_INVALID_NF(vd, nf, emul)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
     target_ulong src_addr = env->gpr[rs1];
@@ -108,7 +108,7 @@ void glue(glue(helper_vle, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t 
 void glue(glue(glue(helper_vle, BITS), ff), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t nf)
 {
     const target_ulong emul = EMUL(SHIFT);
-    if (emul == 0x7 || V_IDX_INVALID_EMUL(vd, emul) || V_INVALID_NF(vd, nf, emul)) {
+    if (emul == 0x4 || V_IDX_INVALID_EMUL(vd, emul) || V_INVALID_NF(vd, nf, emul)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
     target_ulong src_addr = env->gpr[rs1];
@@ -142,7 +142,7 @@ void glue(glue(glue(helper_vle, BITS), ff), POSTFIX)(CPUState *env, uint32_t vd,
 void glue(glue(helper_vlse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t rs2, uint32_t nf)
 {
     const target_ulong emul = EMUL(SHIFT);
-    if (emul == 0x7 || V_IDX_INVALID_EMUL(vd, emul) || V_INVALID_NF(vd, nf, emul)) {
+    if (emul == 0x4 || V_IDX_INVALID_EMUL(vd, emul) || V_INVALID_NF(vd, nf, emul)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
     target_ulong src_addr = env->gpr[rs1];
@@ -164,7 +164,7 @@ void glue(glue(helper_vlse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t
 void glue(glue(helper_vlxei, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t vs2, uint32_t nf)
 {
     const target_ulong emul = EMUL(SHIFT);
-    if (emul == 0x7 || V_IDX_INVALID(vd) || V_IDX_INVALID_EMUL(vs2, emul) || V_INVALID_NF(vd, nf, emul)) {
+    if (emul == 0x4 || V_IDX_INVALID(vd) || V_IDX_INVALID_EMUL(vs2, emul) || V_INVALID_NF(vd, nf, emul)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
     target_ulong src_addr = env->gpr[rs1];
@@ -203,7 +203,7 @@ void glue(glue(helper_vlxei, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_
 void glue(glue(helper_vse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t nf)
 {
     const target_ulong emul = EMUL(SHIFT);
-    if (emul == 0x7 || V_IDX_INVALID_EMUL(vd, emul) || V_INVALID_NF(vd, nf, emul)) {
+    if (emul == 0x4 || V_IDX_INVALID_EMUL(vd, emul) || V_INVALID_NF(vd, nf, emul)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
     target_ulong src_addr = env->gpr[rs1];
@@ -223,7 +223,7 @@ void glue(glue(helper_vse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t 
 void glue(glue(helper_vsse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t rs2, uint32_t nf)
 {
     const target_ulong emul = EMUL(SHIFT);
-    if (emul == 0x7 || V_IDX_INVALID_EMUL(vd, emul) || V_INVALID_NF(vd, nf, emul)) {
+    if (emul == 0x4 || V_IDX_INVALID_EMUL(vd, emul) || V_INVALID_NF(vd, nf, emul)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
     target_ulong src_addr = env->gpr[rs1];
@@ -244,7 +244,7 @@ void glue(glue(helper_vsse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t
 void glue(glue(helper_vsxei, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t vs2, uint32_t nf)
 {
     const target_ulong emul = EMUL(SHIFT);
-    if (emul == 0x7 || V_IDX_INVALID(vd) || V_IDX_INVALID_EMUL(vs2, emul) || V_INVALID_NF(vd, nf, emul)) {
+    if (emul == 0x4 || V_IDX_INVALID(vd) || V_IDX_INVALID_EMUL(vs2, emul) || V_INVALID_NF(vd, nf, emul)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
     target_ulong src_addr = env->gpr[rs1];
