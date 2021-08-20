@@ -646,7 +646,7 @@ void glue(helper_vwaddu_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, t
     }
 }
 
-void glue(helper_vwadd_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_ulong rs1)
+void glue(helper_vwadd_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 {
     if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
@@ -660,13 +660,13 @@ void glue(helper_vwadd_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, ta
 #endif
         switch (eew) {
         case 8:
-            ((uint16_t *)V(vd))[ei] = ((int8_t *)V(vs2))[ei] + rs1;
+            ((int16_t *)V(vd))[ei] = ((int8_t *)V(vs2))[ei] + (int16_t)(int8_t)rs1;
             break;
         case 16:
-            ((uint32_t *)V(vd))[ei] = ((int16_t *)V(vs2))[ei] + rs1;
+            ((int32_t *)V(vd))[ei] = ((int16_t *)V(vs2))[ei] + (int32_t)(int16_t)rs1;
             break;
         case 32:
-            ((uint64_t *)V(vd))[ei] = ((int32_t *)V(vs2))[ei] + rs1;
+            ((int64_t *)V(vd))[ei] = ((int32_t *)V(vs2))[ei] + (int64_t)(int32_t)rs1;
             break;
         default:
             helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
@@ -704,7 +704,7 @@ void glue(helper_vwsubu_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, t
     }
 }
 
-void glue(helper_vwsub_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_ulong rs1)
+void glue(helper_vwsub_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 {
     if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
@@ -718,13 +718,13 @@ void glue(helper_vwsub_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, ta
 #endif
         switch (eew) {
         case 8:
-            ((uint16_t *)V(vd))[ei] = ((int8_t *)V(vs2))[ei] - rs1;
+            ((uint16_t *)V(vd))[ei] = ((int8_t *)V(vs2))[ei] - (int16_t)(int8_t)rs1;
             break;
         case 16:
-            ((uint32_t *)V(vd))[ei] = ((int16_t *)V(vs2))[ei] - rs1;
+            ((uint32_t *)V(vd))[ei] = ((int16_t *)V(vs2))[ei] - (int32_t)(int16_t)rs1;
             break;
         case 32:
-            ((uint64_t *)V(vd))[ei] = ((int32_t *)V(vs2))[ei] - rs1;
+            ((uint64_t *)V(vd))[ei] = ((int32_t *)V(vs2))[ei] - (int64_t)(int32_t)rs1;
             break;
         default:
             helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
@@ -892,13 +892,13 @@ void glue(helper_vwadd_mwx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, ta
 #endif
         switch (eew) {
         case 8:
-            ((uint16_t *)V(vd))[ei] = ((uint16_t *)V(vs2))[ei] + rs1;
+            ((int16_t *)V(vd))[ei] = ((int16_t *)V(vs2))[ei] + (int8_t)rs1;
             break;
         case 16:
-            ((uint32_t *)V(vd))[ei] = ((uint32_t *)V(vs2))[ei] + rs1;
+            ((int32_t *)V(vd))[ei] = ((int32_t *)V(vs2))[ei] + (int16_t)rs1;
             break;
         case 32:
-            ((uint64_t *)V(vd))[ei] = ((uint64_t *)V(vs2))[ei] + rs1;
+            ((int64_t *)V(vd))[ei] = ((int64_t *)V(vs2))[ei] + (int32_t)rs1;
             break;
         default:
             helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
@@ -936,7 +936,7 @@ void glue(helper_vwsubu_mwx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, t
     }
 }
 
-void glue(helper_vwsub_mwx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_ulong rs1)
+void glue(helper_vwsub_mwx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 {
     if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
@@ -950,13 +950,13 @@ void glue(helper_vwsub_mwx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, ta
 #endif
         switch (eew) {
         case 8:
-            ((uint16_t *)V(vd))[ei] = ((uint16_t *)V(vs2))[ei] - rs1;
+            ((int16_t *)V(vd))[ei] = ((int16_t *)V(vs2))[ei] - (int8_t)rs1;
             break;
         case 16:
-            ((uint32_t *)V(vd))[ei] = ((uint32_t *)V(vs2))[ei] - rs1;
+            ((int32_t *)V(vd))[ei] = ((int32_t *)V(vs2))[ei] - (int16_t)rs1;
             break;
         case 32:
-            ((uint64_t *)V(vd))[ei] = ((uint64_t *)V(vs2))[ei] - rs1;
+            ((int64_t *)V(vd))[ei] = ((int64_t *)V(vs2))[ei] - (int32_t)rs1;
             break;
         default:
             helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
