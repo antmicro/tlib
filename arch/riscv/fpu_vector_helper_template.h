@@ -15,13 +15,13 @@ void glue(helper_vfadd_vv, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, ui
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -55,13 +55,13 @@ void glue(helper_vfadd_vf, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, ui
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -95,13 +95,13 @@ void glue(helper_vfsub_vv, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, ui
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -135,13 +135,13 @@ void glue(helper_vfsub_vf, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, ui
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -175,13 +175,13 @@ void glue(helper_vfrsub_vf, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, u
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -215,7 +215,7 @@ void glue(helper_vfwadd_vv, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, u
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF) || !riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -246,7 +246,7 @@ void glue(helper_vfwadd_vf, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, u
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF) || !riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -282,7 +282,7 @@ void glue(helper_vfwadd_wv, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, u
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF) || !riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -313,7 +313,7 @@ void glue(helper_vfwadd_wf, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, u
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF) || !riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -349,7 +349,7 @@ void glue(helper_vfwsub_vv, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, u
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF) || !riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -380,7 +380,7 @@ void glue(helper_vfwsub_vf, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, u
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF) || !riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -416,7 +416,7 @@ void glue(helper_vfwsub_wv, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, u
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF) || !riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -447,7 +447,7 @@ void glue(helper_vfwsub_wf, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, u
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF) || !riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -483,13 +483,13 @@ void glue(helper_vfmul_vv, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, ui
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -523,13 +523,13 @@ void glue(helper_vfmul_vf, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, ui
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -563,13 +563,13 @@ void glue(helper_vfdiv_vv, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, ui
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -603,13 +603,13 @@ void glue(helper_vfdiv_vf, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, ui
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -643,13 +643,13 @@ void glue(helper_vfrdiv_vf, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, u
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -683,7 +683,7 @@ void glue(helper_vfwmul_vv, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, u
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF) || !riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -714,7 +714,7 @@ void glue(helper_vfwmul_vf, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, u
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF) || !riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -750,13 +750,13 @@ void glue(helper_vfmacc_vv, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, u
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -790,13 +790,13 @@ void glue(helper_vfmacc_vf, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, u
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -830,13 +830,13 @@ void glue(helper_vfnmacc_vv, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, 
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -870,13 +870,13 @@ void glue(helper_vfnmacc_vf, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, 
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -910,13 +910,13 @@ void glue(helper_vfmsac_vv, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, u
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -950,13 +950,13 @@ void glue(helper_vfmsac_vf, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, u
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -990,13 +990,13 @@ void glue(helper_vfnmsac_vv, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, 
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -1030,13 +1030,13 @@ void glue(helper_vfnmsac_vf, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, 
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -1070,13 +1070,13 @@ void glue(helper_vfmadd_vv, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, u
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -1110,13 +1110,13 @@ void glue(helper_vfmadd_vf, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, u
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -1150,13 +1150,13 @@ void glue(helper_vfnmadd_vv, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, 
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -1190,13 +1190,13 @@ void glue(helper_vfnmadd_vf, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, 
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -1230,13 +1230,13 @@ void glue(helper_vfmsub_vv, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, u
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -1270,13 +1270,13 @@ void glue(helper_vfmsub_vf, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, u
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -1310,13 +1310,13 @@ void glue(helper_vfnmsub_vv, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, 
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -1350,13 +1350,13 @@ void glue(helper_vfnmsub_vf, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, 
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -1390,7 +1390,7 @@ void glue(helper_vfwmacc_vv, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, 
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF) || !riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -1421,7 +1421,7 @@ void glue(helper_vfwmacc_vf, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, 
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF) || !riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -1457,7 +1457,7 @@ void glue(helper_vfwnmacc_vv, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2,
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF) || !riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -1488,7 +1488,7 @@ void glue(helper_vfwnmacc_vf, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2,
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF) || !riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -1524,7 +1524,7 @@ void glue(helper_vfwmsac_vv, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, 
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF) || !riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -1555,7 +1555,7 @@ void glue(helper_vfwmsac_vf, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, 
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF) || !riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -1591,7 +1591,7 @@ void glue(helper_vfwnmsac_vv, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2,
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF) || !riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -1622,7 +1622,7 @@ void glue(helper_vfwnmsac_vf, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2,
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF) || !riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
@@ -1658,13 +1658,13 @@ void glue(helper_vfsqrt_v, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2)
     switch (eew) {
     case 32:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-       	 	helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
         break;
