@@ -3468,6 +3468,12 @@ static void gen_v_opfvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_FWMUL:
+        if (vm) {
+            gen_helper_vfwmul_vv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vfwmul_vv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_FWMACC:
     case RISC_V_FUNCT_FWNMACC:
     case RISC_V_FUNCT_FWMSAC:
@@ -3602,6 +3608,12 @@ static void gen_v_opfvf(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
         }
         break;
     case RISC_V_FUNCT_FWMUL:
+        if (vm) {
+            gen_helper_vfwmul_vf(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        } else {
+            gen_helper_vfwmul_vf_m(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        }
+        break;
     case RISC_V_FUNCT_FWMACC:
     case RISC_V_FUNCT_FWNMACC:
     case RISC_V_FUNCT_FWMSAC:
