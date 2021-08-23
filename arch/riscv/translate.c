@@ -3424,14 +3424,60 @@ static void gen_v_opfvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_FMADD:
+        if (vm) {
+            gen_helper_vfmadd_vv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vfmadd_vv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_FNMADD:
+        if (vm) {
+            gen_helper_vfnmadd_vv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vfnmadd_vv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_FMSUB:
+        if (vm) {
+            gen_helper_vfmsub_vv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vfmsub_vv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_FNMSUB:
+        if (vm) {
+            gen_helper_vfnmsub_vv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vfnmsub_vv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_FMACC:
+        if (vm) {
+            gen_helper_vfmacc_vv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vfmacc_vv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_FNMACC:
+        if (vm) {
+            gen_helper_vfnmacc_vv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vfnmacc_vv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_FMSAC:
+        if (vm) {
+            gen_helper_vfmsac_vv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vfmsac_vv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_FNMSAC:
-        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        if (vm) {
+            gen_helper_vfnmsac_vv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vfnmsac_vv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
         break;
     case RISC_V_FUNCT_FWADD:
         if (vm) {
@@ -3570,14 +3616,60 @@ static void gen_v_opfvf(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
         }
         break;
     case RISC_V_FUNCT_FMADD:
+        if (vm) {
+            gen_helper_vfmadd_vf(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        } else {
+            gen_helper_vfmadd_vf_m(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        }
+        break;
     case RISC_V_FUNCT_FNMADD:
+        if (vm) {
+            gen_helper_vfnmadd_vf(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        } else {
+            gen_helper_vfnmadd_vf_m(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        }
+        break;
     case RISC_V_FUNCT_FMSUB:
+        if (vm) {
+            gen_helper_vfmsub_vf(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        } else {
+            gen_helper_vfmsub_vf_m(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        }
+        break;
     case RISC_V_FUNCT_FNMSUB:
+        if (vm) {
+            gen_helper_vfnmsub_vf(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        } else {
+            gen_helper_vfnmsub_vf_m(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        }
+        break;
     case RISC_V_FUNCT_FMACC:
+        if (vm) {
+            gen_helper_vfmacc_vf(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        } else {
+            gen_helper_vfmacc_vf_m(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        }
+        break;
     case RISC_V_FUNCT_FNMACC:
+        if (vm) {
+            gen_helper_vfnmacc_vf(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        } else {
+            gen_helper_vfnmacc_vf_m(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        }
+        break;
     case RISC_V_FUNCT_FMSAC:
+        if (vm) {
+            gen_helper_vfmsac_vf(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        } else {
+            gen_helper_vfmsac_vf_m(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        }
+        break;
     case RISC_V_FUNCT_FNMSAC:
-        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        if (vm) {
+            gen_helper_vfnmsac_vf(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        } else {
+            gen_helper_vfnmsac_vf_m(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        }
         break;
     case RISC_V_FUNCT_FWADD:
         if (vm) {
