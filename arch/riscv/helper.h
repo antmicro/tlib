@@ -619,6 +619,19 @@ DEF_HELPER_4(vfmax_vv_m, void, env, i32, i32, i32)
 DEF_HELPER_4(vfmax_vf, void, env, i32, i32, i64)
 DEF_HELPER_4(vfmax_vf_m, void, env, i32, i32, i64)
 
+DEF_HELPER_4(vfsgnj_vv, void, env, i32, i32, i32)
+DEF_HELPER_4(vfsgnj_vv_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vfsgnj_vf, void, env, i32, i32, i64)
+DEF_HELPER_4(vfsgnj_vf_m, void, env, i32, i32, i64)
+DEF_HELPER_4(vfsgnjn_vv, void, env, i32, i32, i32)
+DEF_HELPER_4(vfsgnjn_vv_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vfsgnjn_vf, void, env, i32, i32, i64)
+DEF_HELPER_4(vfsgnjn_vf_m, void, env, i32, i32, i64)
+DEF_HELPER_4(vfsgnjx_vv, void, env, i32, i32, i32)
+DEF_HELPER_4(vfsgnjx_vv_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vfsgnjx_vf, void, env, i32, i32, i64)
+DEF_HELPER_4(vfsgnjx_vf_m, void, env, i32, i32, i64)
+
 DEF_HELPER_2(handle_custom_instruction, i32, i64, i64)
 
 void do_nmi(CPUState *env);
