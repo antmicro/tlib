@@ -3521,9 +3521,33 @@ static void gen_v_opfvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_FWMACC:
+        if (vm) {
+            gen_helper_vfwmacc_vv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vfwmacc_vv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_FWNMACC:
+        if (vm) {
+            gen_helper_vfwnmacc_vv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vfwnmacc_vv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_FWMSAC:
+        if (vm) {
+            gen_helper_vfwmsac_vv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vfwmsac_vv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_FWNMSAC:
+        if (vm) {
+            gen_helper_vfwnmsac_vv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vfwnmsac_vv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     default:
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         break;
@@ -3707,9 +3731,33 @@ static void gen_v_opfvf(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
         }
         break;
     case RISC_V_FUNCT_FWMACC:
+        if (vm) {
+            gen_helper_vfwmacc_vf(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        } else {
+            gen_helper_vfwmacc_vf_m(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        }
+        break;
     case RISC_V_FUNCT_FWNMACC:
+        if (vm) {
+            gen_helper_vfwnmacc_vf(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        } else {
+            gen_helper_vfwnmacc_vf_m(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        }
+        break;
     case RISC_V_FUNCT_FWMSAC:
+        if (vm) {
+            gen_helper_vfwmsac_vf(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        } else {
+            gen_helper_vfwmsac_vf_m(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        }
+        break;
     case RISC_V_FUNCT_FWNMSAC:
+        if (vm) {
+            gen_helper_vfwnmsac_vf(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        } else {
+            gen_helper_vfwnmsac_vf_m(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        }
+        break;
     default:
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         break;
