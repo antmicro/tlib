@@ -541,6 +541,17 @@ DEF_HELPER_4(vfwsub_wv_m, void, env, i32, i32, i32)
 DEF_HELPER_4(vfwsub_wf, void, env, i32, i32, i64)
 DEF_HELPER_4(vfwsub_wf_m, void, env, i32, i32, i64)
 
+DEF_HELPER_4(vfmul_vv, void, env, i32, i32, i32)
+DEF_HELPER_4(vfmul_vv_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vfmul_vf, void, env, i32, i32, i64)
+DEF_HELPER_4(vfmul_vf_m, void, env, i32, i32, i64)
+DEF_HELPER_4(vfdiv_vv, void, env, i32, i32, i32)
+DEF_HELPER_4(vfdiv_vv_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vfdiv_vf, void, env, i32, i32, i64)
+DEF_HELPER_4(vfdiv_vf_m, void, env, i32, i32, i64)
+DEF_HELPER_4(vfrdiv_vf, void, env, i32, i32, i64)
+DEF_HELPER_4(vfrdiv_vf_m, void, env, i32, i32, i64)
+
 DEF_HELPER_2(handle_custom_instruction, i32, i64, i64)
 
 void do_nmi(CPUState *env);

@@ -3407,8 +3407,22 @@ static void gen_v_opfvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
     case RISC_V_FUNCT_MFLE:
     case RISC_V_FUNCT_MFLT:
     case RISC_V_FUNCT_MFNE:
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        break;
     case RISC_V_FUNCT_FDIV:
+        if (vm) {
+            gen_helper_vfdiv_vv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vfdiv_vv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_FMUL:
+        if (vm) {
+            gen_helper_vfmul_vv(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vfmul_vv_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
+        break;
     case RISC_V_FUNCT_FMADD:
     case RISC_V_FUNCT_FNMADD:
     case RISC_V_FUNCT_FMSUB:
@@ -3519,10 +3533,28 @@ static void gen_v_opfvf(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
     case RISC_V_FUNCT_MFNE:
     case RISC_V_FUNCT_MFGT:
     case RISC_V_FUNCT_MFGE:
-    case RISC_V_FUNCT_FDIV:
-    case RISC_V_FUNCT_FRDIV:
-    case RISC_V_FUNCT_FMUL:
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        break;
+    case RISC_V_FUNCT_FDIV:
+        if (vm) {
+            gen_helper_vfdiv_vf(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        } else {
+            gen_helper_vfdiv_vf_m(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        }
+        break;
+    case RISC_V_FUNCT_FRDIV:
+        if (vm) {
+            gen_helper_vfrdiv_vf(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        } else {
+            gen_helper_vfrdiv_vf_m(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        }
+        break;
+    case RISC_V_FUNCT_FMUL:
+        if (vm) {
+            gen_helper_vfmul_vf(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        } else {
+            gen_helper_vfmul_vf_m(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        }
         break;
     case RISC_V_FUNCT_FRSUB:
         if (vm) {
