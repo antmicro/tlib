@@ -568,4 +568,16 @@ extern const float128 float128_default_nan;
 
 uint64_t float32_to_uint64(float32 a, float_status *status);
 
+/*----------------------------------------------------------------------------
+ | Software conversion routines with assumed round-to-odd (OR bits into LSB, aka "jam") rounding mode.
+ *----------------------------------------------------------------------------*/
+uint64_t float64_to_uint64_rod(float64 a STATUS_PARAM);
+int64 float64_to_int64_rod(float64 a STATUS_PARAM);
+uint32 float64_to_uint32_rod(float64 a STATUS_PARAM);
+int32 float64_to_int32_rod(float64 a STATUS_PARAM);
+uint64_t float32_to_uint64_rod(float32 a, float_status *status);
+int64 float32_to_int64_rod(float32 a STATUS_PARAM);
+uint32 float32_to_uint32_rod(float32 a STATUS_PARAM);
+int32 float32_to_int32_rod(float32 a STATUS_PARAM);
+
 #endif /* !SOFTFLOAT_H */

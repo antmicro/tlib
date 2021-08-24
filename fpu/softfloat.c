@@ -7178,3 +7178,292 @@ float128 float128_scalbn(float128 a, int n STATUS_PARAM)
                                          STATUS_VAR);
 
 }
+
+// Same as roundAndPackUInt64 but assumes round-to-odd (OR bits into LSB, aka "jam") rounding mode
+static int64_t rodAndPackUint64(flag zSign, uint64_t absZ0, uint64_t absZ1, float_status *status)
+{
+    absZ0 |= absZ1 != 0;
+    if (zSign && absZ0) {
+        float_raise(float_flag_invalid, status);
+        return 0;
+    }
+
+    if (absZ1) {
+        status->float_exception_flags |= float_flag_inexact;
+    }
+    return absZ0;
+}
+
+// Same as roundAndPackInt64 but assumes round-to-odd (OR bits into LSB, aka "jam") rounding mode
+static uint64_t rodAndPackInt64(flag zSign, uint64_t absZ0, uint64_t absZ1 STATUS_PARAM)
+{
+    int64 z;
+
+    absZ0 |= absZ1 != 0;
+    z = absZ0;
+    if (zSign) {
+        z = -z;
+    }
+    if (z && ((z < 0) ^ zSign)) {
+        float_raise(float_flag_invalid STATUS_VAR);
+        return
+            zSign ? (int64_t)LIT64(0x8000000000000000) : LIT64(0x7FFFFFFFFFFFFFFF);
+    }
+    if (absZ1) {
+        STATUS(float_exception_flags) |= float_flag_inexact;
+    }
+    return z;
+
+}
+
+// Same as roundAndPackInt32 but assumes round-to-odd (OR bits into LSB, aka "jam") rounding mode
+static int32 rodAndPackInt32(flag zSign, uint64_t absZ STATUS_PARAM)
+{
+    int8 roundBits;
+    int32 z;
+
+    roundBits = absZ & 0x7F;
+    absZ = absZ >> 7 | (roundBits != 0);
+    z = absZ;
+    if (zSign) {
+        z = -z;
+    }
+    if ((absZ >> 32) || (z && ((z < 0) ^ zSign))) {
+        float_raise(float_flag_invalid STATUS_VAR);
+        return zSign ? (int32_t)0x80000000 : 0x7FFFFFFF;
+    }
+    if (roundBits) {
+        STATUS(float_exception_flags) |= float_flag_inexact;
+    }
+    return z;
+
+}
+
+// Same as float64_to_uint64 but assumes round-to-odd (OR bits into LSB, aka "jam") rounding mode
+uint64_t float64_to_uint64_rod(float64 a STATUS_PARAM)
+{
+    flag aSign;
+    int16 aExp, shiftCount;
+    uint64_t aSig, aSigExtra;
+    a = float64_squash_input_denormal(a STATUS_VAR);
+
+    aSig = extractFloat64Frac(a);
+    aExp = extractFloat64Exp(a);
+    aSign = extractFloat64Sign(a);
+    if (aExp) {
+        aSig |= LIT64(0x0010000000000000);
+    }
+    shiftCount = 0x433 - aExp;
+    if (shiftCount <= 0) {
+        if (shiftCount < -11) goto invalid;
+        if (0x43E < aExp) {
+            float_raise(float_flag_invalid STATUS_VAR);
+            if (!aSign || ((aExp == 0x7FF) && (aSig != LIT64(0x0010000000000000)))) {
+                return LIT64(0x7FFFFFFFFFFFFFFF);
+            }
+            return (int64_t)LIT64(0x8000000000000000);
+        }
+        aSigExtra = 0;
+        aSig <<= -shiftCount;
+    } else {
+        shift64ExtraRightJamming(aSig, 0, shiftCount, &aSig, &aSigExtra);
+    }
+    return rodAndPackInt64(aSign, aSig, aSigExtra STATUS_VAR);
+invalid:
+    return (aExp == 0x7FF) && extractFloat64Frac(a) ? LIT64(0xFFFFFFFFFFFFFFFF)
+                : aSign ? 0 : LIT64(0xFFFFFFFFFFFFFFFF);
+
+}
+
+// Same as float64_to_int64 but assumes round-to-odd (OR bits into LSB, aka "jam") rounding mode
+int64 float64_to_int64_rod(float64 a STATUS_PARAM)
+{
+    flag aSign;
+    int16 aExp, shiftCount;
+    uint64_t aSig, aSigExtra;
+    a = float64_squash_input_denormal(a STATUS_VAR);
+
+    aSig = extractFloat64Frac(a);
+    aExp = extractFloat64Exp(a);
+    aSign = extractFloat64Sign(a);
+    if (aExp) {
+        aSig |= LIT64(0x0010000000000000);
+    }
+    shiftCount = 0x433 - aExp;
+    if (shiftCount <= 0) {
+        if (shiftCount < -11) goto invalid;
+        if (0x43E < aExp) {
+            float_raise(float_flag_invalid STATUS_VAR);
+            if (!aSign || ((aExp == 0x7FF) && (aSig != LIT64(0x0010000000000000)))) {
+                return LIT64(0x7FFFFFFFFFFFFFFF);
+            }
+            return (int64_t)LIT64(0x8000000000000000);
+        }
+        aSigExtra = 0;
+        aSig <<= -shiftCount;
+    } else {
+        shift64ExtraRightJamming(aSig, 0, shiftCount, &aSig, &aSigExtra);
+    }
+    return rodAndPackInt64(aSign, aSig, aSigExtra STATUS_VAR);
+invalid:
+    return (aExp == 0x7FF) && extractFloat64Frac(a) ? LIT64(0x7FFFFFFFFFFFFFFF)
+                : aSign ? (-LIT64(0x7FFFFFFFFFFFFFFF) - 1) : LIT64(0x7FFFFFFFFFFFFFFF);
+
+}
+
+// Same as float64_to_uint32 but assumes round-to-odd (OR bits into LSB, aka "jam") rounding mode
+uint32 float64_to_uint32_rod(float64 a STATUS_PARAM)
+{
+    int64_t v;
+    uint32 res;
+
+    v = float64_to_int64_rod(a STATUS_VAR);
+    if (v < 0) {
+        res = 0;
+        float_raise(float_flag_invalid STATUS_VAR);
+    } else if (v > 0xffffffff) {
+        res = 0xffffffff;
+        float_raise(float_flag_invalid STATUS_VAR);
+    } else {
+        res = v;
+    }
+    return res;
+}
+
+// Same as float64_to_int32 but assumes round-to-odd (OR bits into LSB, aka "jam") rounding mode
+int32 float64_to_int32_rod(float64 a STATUS_PARAM)
+{
+    flag aSign;
+    int16 aExp, shiftCount;
+    uint64_t aSig;
+    a = float64_squash_input_denormal(a STATUS_VAR);
+
+    aSig = extractFloat64Frac(a);
+    aExp = extractFloat64Exp(a);
+    aSign = extractFloat64Sign(a);
+    if ((aExp == 0x7FF) && aSig) {
+        aSign = 0;
+    }
+    if (aExp) {
+        aSig |= LIT64(0x0010000000000000);
+    }
+    shiftCount = 0x42C - aExp;
+    if (0 < shiftCount) {
+        shift64RightJamming(aSig, shiftCount, &aSig);
+    }
+    return rodAndPackInt32(aSign, aSig STATUS_VAR);
+
+}
+
+// Same as float32_to_uint64 but assumes round-to-odd (OR bits into LSB, aka "jam") rounding mode
+uint64_t float32_to_uint64_rod(float32 a, float_status *status)
+{
+    flag aSign;
+    int aExp;
+    int shiftCount;
+    uint32_t aSig;
+    uint64_t aSig64, aSigExtra;
+    a = float32_squash_input_denormal(a, status);
+
+    aSig = extractFloat32Frac(a);
+    aExp = extractFloat32Exp(a);
+    aSign = extractFloat32Sign(a);
+    if ((aSign) && (aExp > 126)) {
+        float_raise(float_flag_invalid, status);
+        if (float32_is_any_nan(a)) {
+            return LIT64(0xFFFFFFFFFFFFFFFF);
+        } else {
+            return 0;
+        }
+    }
+    shiftCount = 0xBE - aExp;
+    if (aExp) {
+        aSig |= 0x00800000;
+    }
+    if (shiftCount < 0) {
+        float_raise(float_flag_invalid, status);
+        return LIT64(0xFFFFFFFFFFFFFFFF);
+    }
+
+    aSig64 = aSig;
+    aSig64 <<= 40;
+    shift64ExtraRightJamming(aSig64, 0, shiftCount, &aSig64, &aSigExtra);
+    return rodAndPackUint64(aSign, aSig64, aSigExtra, status);
+}
+
+// Same as float32_to_int64 but assumes round-to-odd (OR bits into LSB, aka "jam") rounding mode
+int64 float32_to_int64_rod(float32 a STATUS_PARAM)
+{
+    flag aSign;
+    int16 aExp, shiftCount;
+    uint32_t aSig;
+    uint64_t aSig64, aSigExtra;
+    a = float32_squash_input_denormal(a STATUS_VAR);
+
+    aSig = extractFloat32Frac(a);
+    aExp = extractFloat32Exp(a);
+    aSign = extractFloat32Sign(a);
+    shiftCount = 0xBE - aExp;
+    if (shiftCount < 0) {
+        float_raise(float_flag_invalid STATUS_VAR);
+        if (!aSign || ((aExp == 0xFF) && aSig)) {
+            return LIT64(0x7FFFFFFFFFFFFFFF);
+        }
+        return (int64_t)LIT64(0x8000000000000000);
+    }
+    if (aExp) {
+        aSig |= 0x00800000;
+    }
+    aSig64 = aSig;
+    aSig64 <<= 40;
+    shift64ExtraRightJamming(aSig64, 0, shiftCount, &aSig64, &aSigExtra);
+    return rodAndPackInt64(aSign, aSig64, aSigExtra STATUS_VAR);
+
+}
+
+// Same as float32_to_uint32 but assumes round-to-odd (OR bits into LSB, aka "jam") rounding mode
+uint32 float32_to_uint32_rod(float32 a STATUS_PARAM)
+{
+    int64_t v;
+    uint32 res;
+
+    v = float32_to_int64_rod(a STATUS_VAR);
+    if (v < 0) {
+        res = 0;
+        float_raise(float_flag_invalid STATUS_VAR);
+    } else if (v > 0xffffffff) {
+        res = 0xffffffff;
+        float_raise(float_flag_invalid STATUS_VAR);
+    } else {
+        res = v;
+    }
+    return res;
+}
+
+// Same as float32_to_int32 but assumes round-to-odd (OR bits into LSB, aka "jam") rounding mode
+int32 float32_to_int32_rod(float32 a STATUS_PARAM)
+{
+    flag aSign;
+    int16 aExp, shiftCount;
+    uint32_t aSig;
+    uint64_t aSig64;
+
+    a = float32_squash_input_denormal(a STATUS_VAR);
+    aSig = extractFloat32Frac(a);
+    aExp = extractFloat32Exp(a);
+    aSign = extractFloat32Sign(a);
+    if ((aExp == 0xFF) && aSig) {
+        aSign = 0;
+    }
+    if (aExp) {
+        aSig |= 0x00800000;
+    }
+    shiftCount = 0xAF - aExp;
+    aSig64 = aSig;
+    aSig64 <<= 32;
+    if (0 < shiftCount) {
+        shift64RightJamming(aSig64, shiftCount, &aSig64);
+    }
+    return rodAndPackInt32(aSign, aSig64 STATUS_VAR);
+
+}
