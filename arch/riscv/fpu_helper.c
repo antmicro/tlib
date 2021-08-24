@@ -23,6 +23,11 @@ unsigned int ieee_rm[] = {
     float_round_nearest_even, float_round_to_zero, float_round_down, float_round_up, float_round_ties_away
 };
 
+/* convert RISC-V Vector Fixed-Point Rounding Mode to IEEE library numbers */
+unsigned int ieee_vxrm[] = {
+    float_round_up, float_round_nearest_even, float_round_down
+};
+
 /* obtain rm value to use in computation
  * as the last step, convert rm codes to what the softfloat library expects
  * Adapted from Spike's decode.h:RM
@@ -318,6 +323,42 @@ uint64_t helper_fcvt_s_lu(CPUState *env, uint64_t rs1, uint64_t rm)
 }
 #endif
 
+uint32_t helper_fcvt_wu_s_rod(CPUState *env, uint32_t frs1)
+{
+    require_fp;
+    frs1 = float32_to_uint32_rod(frs1, &env->fp_status);
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return frs1;
+}
+
+int32_t helper_fcvt_w_s_rod(CPUState *env, uint32_t frs1)
+{
+    require_fp;
+    frs1 = float32_to_int32_rod(frs1, &env->fp_status);
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return frs1;
+}
+
+uint64_t helper_fcvt_lu_d_rod(CPUState *env, uint64_t frs1)
+{
+    require_fp;
+    frs1 = float64_to_uint64_rod(frs1, &env->fp_status);
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return frs1;
+}
+
+int64_t helper_fcvt_l_d_rod(CPUState *env, uint64_t frs1)
+{
+    require_fp;
+    frs1 = float64_to_int64_rod(frs1, &env->fp_status);
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return frs1;
+}
+
 /* adapted from spike */
 #define isNaNF32UI(ui) (0xFF000000 < (uint32_t)((uint_fast32_t)ui << 1))
 #define signF32UI(a)   ((bool)((uint32_t)a >> 31))
@@ -496,7 +537,6 @@ target_ulong helper_fcvt_wu_d(CPUState *env, uint64_t frs1, uint64_t rm)
     return frs1;
 }
 
-#if defined(TARGET_RISCV64)
 uint64_t helper_fcvt_l_d(CPUState *env, uint64_t frs1, uint64_t rm)
 {
     require_fp;
@@ -516,7 +556,6 @@ uint64_t helper_fcvt_lu_d(CPUState *env, uint64_t frs1, uint64_t rm)
     mark_fs_dirty();
     return frs1;
 }
-#endif
 
 uint64_t helper_fcvt_d_w(CPUState *env, target_ulong rs1, uint64_t rm)
 {
@@ -540,7 +579,6 @@ uint64_t helper_fcvt_d_wu(CPUState *env, target_ulong rs1, uint64_t rm)
     return res;
 }
 
-#if defined(TARGET_RISCV64)
 uint64_t helper_fcvt_d_l(CPUState *env, uint64_t rs1, uint64_t rm)
 {
     require_fp;
@@ -560,7 +598,6 @@ uint64_t helper_fcvt_d_lu(CPUState *env, uint64_t rs1, uint64_t rm)
     mark_fs_dirty();
     return rs1;
 }
-#endif
 
 /* adapted from spike */
 #define isNaNF64UI(ui) (UINT64_C(0xFFE0000000000000) \

@@ -658,6 +658,20 @@ DEF_HELPER_4(vfge_vf_m, void, env, i32, i32, i64)
 DEF_HELPER_3(vfclass_v, void, env, i32, i32)
 DEF_HELPER_3(vfclass_v_m, void, env, i32, i32)
 
+
+DEF_HELPER_3(vfcvt_xuf_v, void, env, i32, i32)
+DEF_HELPER_3(vfcvt_xuf_v_m, void, env, i32, i32)
+DEF_HELPER_3(vfcvt_xf_v, void, env, i32, i32)
+DEF_HELPER_3(vfcvt_xf_v_m, void, env, i32, i32)
+DEF_HELPER_3(vfcvt_rtz_xuf_v, void, env, i32, i32)
+DEF_HELPER_3(vfcvt_rtz_xuf_v_m, void, env, i32, i32)
+DEF_HELPER_3(vfcvt_rtz_xf_v, void, env, i32, i32)
+DEF_HELPER_3(vfcvt_rtz_xf_v_m, void, env, i32, i32)
+DEF_HELPER_3(vfcvt_fxu_v, void, env, i32, i32)
+DEF_HELPER_3(vfcvt_fxu_v_m, void, env, i32, i32)
+DEF_HELPER_3(vfcvt_fx_v, void, env, i32, i32)
+DEF_HELPER_3(vfcvt_fx_v_m, void, env, i32, i32)
+
 DEF_HELPER_2(handle_custom_instruction, i32, i64, i64)
 
 void do_nmi(CPUState *env);

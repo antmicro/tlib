@@ -2673,5 +2673,261 @@ void glue(helper_vfclass_v, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2)
     }
 }
 
+void glue(helper_vfcvt_xuf_v, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2)
+{
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    switch (eew) {
+    case 32:
+        if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            return;
+        }
+        break;
+    case 64:
+        if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            return;
+        }
+        break;
+    default:
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+        return;
+    }
+    for (int ei = 0; ei < env->vl; ++ei) {
+#ifdef MASKED
+        if (!(V(0)[ei >> 3] & (1 << (ei & 0x7)))) {
+            continue;
+        }
+#endif
+        switch (eew) {
+        case 32:
+            if (env->vxrm == 0b11) {
+                ((uint32_t *)V(vd))[ei] = helper_fcvt_wu_s_rod(env, ((uint32_t *)V(vs2))[ei]);
+            } else {
+                ((uint32_t *)V(vd))[ei] = helper_fcvt_wu_s(env, ((uint32_t *)V(vs2))[ei], ieee_vxrm[env->vxrm]);
+            }
+            break;
+        case 64:
+            if (env->vxrm == 0b11) {
+                ((uint64_t *)V(vd))[ei] = helper_fcvt_lu_d_rod(env, ((uint64_t *)V(vs2))[ei]);
+            } else {
+                ((uint64_t *)V(vd))[ei] = helper_fcvt_lu_d(env, ((uint64_t *)V(vs2))[ei], ieee_vxrm[env->vxrm]);
+            }
+            break;
+        }
+    }
+}
+
+void glue(helper_vfcvt_xf_v, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2)
+{
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    switch (eew) {
+    case 32:
+        if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            return;
+        }
+        break;
+    case 64:
+        if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            return;
+        }
+        break;
+    default:
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+        return;
+    }
+    for (int ei = 0; ei < env->vl; ++ei) {
+#ifdef MASKED
+        if (!(V(0)[ei >> 3] & (1 << (ei & 0x7)))) {
+            continue;
+        }
+#endif
+        switch (eew) {
+        case 32:
+            if (env->vxrm == 0b11) {
+                ((uint32_t *)V(vd))[ei] = helper_fcvt_w_s_rod(env, ((uint32_t *)V(vs2))[ei]);
+            } else {
+                ((uint32_t *)V(vd))[ei] = helper_fcvt_w_s(env, ((uint32_t *)V(vs2))[ei], ieee_vxrm[env->vxrm]);
+            }
+            break;
+        case 64:
+            if (env->vxrm == 0b11) {
+                ((uint64_t *)V(vd))[ei] = helper_fcvt_l_d_rod(env, ((uint64_t *)V(vs2))[ei]);
+            } else {
+                ((uint64_t *)V(vd))[ei] = helper_fcvt_l_d(env, ((uint64_t *)V(vs2))[ei], ieee_vxrm[env->vxrm]);
+            }
+            break;
+        }
+    }
+}
+
+void glue(helper_vfcvt_rtz_xuf_v, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2)
+{
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    switch (eew) {
+    case 32:
+        if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            return;
+        }
+        break;
+    case 64:
+        if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            return;
+        }
+        break;
+    default:
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+        return;
+    }
+    for (int ei = 0; ei < env->vl; ++ei) {
+#ifdef MASKED
+        if (!(V(0)[ei >> 3] & (1 << (ei & 0x7)))) {
+            continue;
+        }
+#endif
+        switch (eew) {
+        case 32:
+            ((uint32_t *)V(vd))[ei] = helper_fcvt_wu_s(env, ((uint32_t *)V(vs2))[ei], float_round_to_zero);
+            break;
+        case 64:
+            ((uint64_t *)V(vd))[ei] = helper_fcvt_lu_d(env, ((uint64_t *)V(vs2))[ei], float_round_to_zero);
+            break;
+        }
+    }
+}
+
+void glue(helper_vfcvt_rtz_xf_v, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2)
+{
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    switch (eew) {
+    case 32:
+        if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            return;
+        }
+        break;
+    case 64:
+        if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            return;
+        }
+        break;
+    default:
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+        return;
+    }
+    for (int ei = 0; ei < env->vl; ++ei) {
+#ifdef MASKED
+        if (!(V(0)[ei >> 3] & (1 << (ei & 0x7)))) {
+            continue;
+        }
+#endif
+        switch (eew) {
+        case 32:
+            ((uint32_t *)V(vd))[ei] = helper_fcvt_w_s(env, ((uint32_t *)V(vs2))[ei], float_round_to_zero);
+            break;        
+        case 64:
+            ((uint64_t *)V(vd))[ei] = helper_fcvt_l_d(env, ((uint64_t *)V(vs2))[ei], float_round_to_zero);
+            break;
+        }
+    }
+}
+
+void glue(helper_vfcvt_fxu_v, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2)
+{
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    switch (eew) {
+    case 32:
+        if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            return;
+        }
+        break;
+    case 64:
+        if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            return;
+        }
+        break;
+    default:
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+        return;
+    }
+    for (int ei = 0; ei < env->vl; ++ei) {
+#ifdef MASKED
+        if (!(V(0)[ei >> 3] & (1 << (ei & 0x7)))) {
+            continue;
+        }
+#endif
+        switch (eew) {
+        case 32:
+            ((uint32_t *)V(vd))[ei] = helper_fcvt_s_wu(env, ((uint32_t *)V(vs2))[ei], float_round_to_zero);
+            break;        
+        case 64:
+            ((uint64_t *)V(vd))[ei] = helper_fcvt_d_lu(env, ((uint64_t *)V(vs2))[ei], float_round_to_zero);
+            break;
+        }
+    }
+}
+
+void glue(helper_vfcvt_fx_v, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2)
+{
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    switch (eew) {
+    case 32:
+        if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            return;
+        }
+        break;
+    case 64:
+        if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            return;
+        }
+        break;
+    default:
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+        return;
+    }
+    for (int ei = 0; ei < env->vl; ++ei) {
+#ifdef MASKED
+        if (!(V(0)[ei >> 3] & (1 << (ei & 0x7)))) {
+            continue;
+        }
+#endif
+        switch (eew) {
+        case 32:
+            ((uint32_t *)V(vd))[ei] = helper_fcvt_s_w(env, ((uint32_t *)V(vs2))[ei], float_round_to_zero);
+            break;        
+        case 64:
+            ((uint64_t *)V(vd))[ei] = helper_fcvt_d_l(env, ((uint64_t *)V(vs2))[ei], float_round_to_zero);
+            break;
+        }
+    }
+}
+
 #undef MASKED
 #undef POSTFIX
