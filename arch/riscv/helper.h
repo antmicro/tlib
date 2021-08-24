@@ -653,6 +653,9 @@ DEF_HELPER_4(vfgt_vf_m, void, env, i32, i32, i64)
 DEF_HELPER_4(vfge_vf, void, env, i32, i32, i64)
 DEF_HELPER_4(vfge_vf_m, void, env, i32, i32, i64)
 
+DEF_HELPER_3(vfclass_v, void, env, i32, i32)
+DEF_HELPER_3(vfclass_v_m, void, env, i32, i32)
+
 DEF_HELPER_2(handle_custom_instruction, i32, i64, i64)
 
 void do_nmi(CPUState *env);
