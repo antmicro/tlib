@@ -482,6 +482,7 @@ DEF_HELPER_4(vredxor_vs_m, void, env, i32, i32, i32)
 
 DEF_HELPER_2(vmv_xs, tl, env, i32)
 DEF_HELPER_3(vmv_sx, void, env, i32, tl)
+DEF_HELPER_3(vfmv_vf, void, env, i32, i64)
 
 DEF_HELPER_3(vmv1r_v, void, env, i32, i32)
 DEF_HELPER_3(vmv2r_v, void, env, i32, i32)

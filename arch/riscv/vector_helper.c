@@ -111,6 +111,41 @@ void helper_vmv_ivv(CPUState *env, uint32_t vd, int32_t vs1)
     }
 }
 
+void helper_vfmv_vf(CPUState *env, uint32_t vd, uint64_t f1)
+{
+    if (V_IDX_INVALID(vd)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    switch (eew) {
+    case 32:
+        if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            return;
+        }
+        break;
+    case 64:
+        if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            return;
+        }
+        break;
+    default:
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+        return;
+    }
+    for (int ei = 0; ei < env->vl; ++ei) {
+        switch (eew) {
+        case 32:
+            ((uint32_t *)V(vd))[ei] = f1;
+            break;
+        case 64:
+            ((uint64_t *)V(vd))[ei] = f1;
+            break;
+        }
+    }
+}
+
 void helper_vmerge_ivv(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
     if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
