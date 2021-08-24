@@ -167,6 +167,42 @@ void helper_vmerge_ivi(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
     }
 }
 
+void helper_vfmerge_vfm(CPUState *env, uint32_t vd, uint32_t vs2, uint64_t f1)
+{
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    }
+    const target_ulong eew = env->vsew;
+    switch (eew) {
+    case 32:
+        if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            return;
+        }
+        break;
+    case 64:
+        if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
+            helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+            return;
+        }
+        break;
+    default:
+        helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+        return;
+    }
+    for (int ei = 0; ei < env->vl; ++ei) {
+        uint8_t mask = !(V(0)[ei >> 3] & (1 << (ei & 0x7)));
+        switch (eew) {
+        case 32:
+            ((uint32_t *)V(vd))[ei] = mask ? ((uint32_t *)V(vs2))[ei] : f1;
+            break;
+        case 64:
+            ((uint64_t *)V(vd))[ei] = mask ? ((uint64_t *)V(vs2))[ei] : f1;
+            break;
+        }
+    }
+}
+
 void helper_vcompress_mvv(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
     if (env->vstart != 0 || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {

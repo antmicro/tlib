@@ -413,6 +413,7 @@ DEF_HELPER_4(vwmaccus_mvx_m, void, env, i32, i32, tl)
 
 DEF_HELPER_4(vmerge_ivv, void, env, i32, i32, i32)
 DEF_HELPER_4(vmerge_ivi, void, env, i32, i32, tl)
+DEF_HELPER_4(vfmerge_vfm, void, env, i32, i32, i64)
 
 DEF_HELPER_4(vsaddu_ivv, void, env, i32, i32, i32)
 DEF_HELPER_4(vsaddu_ivv_m, void, env, i32, i32, i32)

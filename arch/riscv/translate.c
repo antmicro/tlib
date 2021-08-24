@@ -3710,8 +3710,14 @@ static void gen_v_opfvf(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
         }
         break;
     case RISC_V_FUNCT_RFUNARY0:
-    case RISC_V_FUNCT_FMERGE_FMV:
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        break;
+    case RISC_V_FUNCT_FMERGE_FMV:
+        if (vm) {
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        } else {
+            gen_helper_vfmerge_vfm(cpu_env, t_vd, t_vs2, cpu_fpr[rs1]);
+        }
         break;
     case RISC_V_FUNCT_MFEQ:
         if (vm) {
