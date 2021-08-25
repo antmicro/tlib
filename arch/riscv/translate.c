@@ -178,6 +178,12 @@ static inline void gen_get_gpr(TCGv t, int reg_num)
     }
 }
 
+
+static inline void gen_get_fpr(TCGv_i64 t, int reg_num)
+{
+    tcg_gen_mov_tl(t, cpu_fpr[reg_num]);
+}
+
 /* Wrapper for setting reg values - need to check of reg is zero since
  * cpu_gpr[0] is not actually allocated. this is more for safety purposes,
  * since we usually avoid calling the OP_TYPE_gen function if we see a write to
@@ -3445,6 +3451,20 @@ static void gen_v_opfvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_WFUNARY0:
+        {
+            if ((vm =! 1) && (vs1 =! 0)) {
+                kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+                break;
+            }
+            int case_exit = gen_new_label();
+            gen_helper_vfmv_fs(t_vd, cpu_env, t_vs2);
+            // Fast exit when no operation was performed
+            tcg_gen_brcondi_tl(TCG_COND_EQ, t_vd, -1u, case_exit);
+
+            tcg_gen_mov_i64(cpu_fpr[vs2], t_vd);
+            gen_set_label(case_exit);
+            break;
+        }
     case RISC_V_FUNCT_FUNARY0:
         switch (vs1) {
         case 0x0:
@@ -3877,6 +3897,11 @@ static void gen_v_opfvf(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
         }
         break;
     case RISC_V_FUNCT_RFUNARY0:
+        if ((vm == 0) && (vs2 == 0)) {
+                gen_get_fpr(t_vs2, vs2);
+                gen_helper_vfmv_sf(cpu_env, t_vd, t_vs2);
+                break;
+            }
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         break;
     case RISC_V_FUNCT_FMERGE_FMV:
