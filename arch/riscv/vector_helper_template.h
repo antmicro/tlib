@@ -1454,22 +1454,22 @@ void glue(helper_vminu_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, ta
         switch (eew) {
         case 8: {
                 uint8_t v2 = ((uint8_t *)V(vs2))[ei];
-                ((uint8_t *)V(vd))[ei] = v2 < rs1 ? v2 : rs1;
+                ((uint8_t *)V(vd))[ei] = v2 < (uint8_t)rs1 ? v2 : rs1;
                 break;
             }
         case 16: {
                 uint16_t v2 = ((uint16_t *)V(vs2))[ei];
-                ((uint16_t *)V(vd))[ei] = v2 < rs1 ? v2 : rs1;
+                ((uint16_t *)V(vd))[ei] = v2 < (uint16_t)rs1 ? v2 : rs1;
                 break;
             }
         case 32: {
                 uint32_t v2 = ((uint32_t *)V(vs2))[ei];
-                ((uint32_t *)V(vd))[ei] = v2 < rs1 ? v2 : rs1;
+                ((uint32_t *)V(vd))[ei] = v2 < (uint32_t)rs1 ? v2 : rs1;
                 break;
             }
         case 64: {
                 uint64_t v2 = ((uint64_t *)V(vs2))[ei];
-                ((uint64_t *)V(vd))[ei] = v2 < rs1 ? v2 : rs1;
+                ((uint64_t *)V(vd))[ei] = v2 < (uint64_t)rs1 ? v2 : rs1;
                 break;
             }
         default:
@@ -1538,22 +1538,22 @@ void glue(helper_vmin_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, tar
         switch (eew) {
         case 8: {
                 int8_t v2 = ((int8_t *)V(vs2))[ei];
-                ((int8_t *)V(vd))[ei] = v2 < rs1 ? v2 : rs1;
+                ((int8_t *)V(vd))[ei] = v2 < (int8_t)rs1 ? v2 : rs1;
                 break;
             }
         case 16: {
                 int16_t v2 = ((int16_t *)V(vs2))[ei];
-                ((int16_t *)V(vd))[ei] = v2 < rs1 ? v2 : rs1;
+                ((int16_t *)V(vd))[ei] = v2 < (int16_t)rs1 ? v2 : rs1;
                 break;
             }
         case 32: {
                 int32_t v2 = ((int32_t *)V(vs2))[ei];
-                ((int32_t *)V(vd))[ei] = v2 < rs1 ? v2 : rs1;
+                ((int32_t *)V(vd))[ei] = v2 < (int32_t)rs1 ? v2 : rs1;
                 break;
             }
         case 64: {
                 int64_t v2 = ((int64_t *)V(vs2))[ei];
-                ((int64_t *)V(vd))[ei] = v2 < rs1 ? v2 : rs1;
+                ((int64_t *)V(vd))[ei] = v2 < (int64_t)rs1 ? v2 : rs1;
                 break;
             }
         default:
@@ -1622,22 +1622,22 @@ void glue(helper_vmaxu_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, ta
         switch (eew) {
         case 8: {
                 uint8_t v2 = ((uint8_t *)V(vs2))[ei];
-                ((uint8_t *)V(vd))[ei] = v2 > rs1 ? v2 : rs1;
+                ((uint8_t *)V(vd))[ei] = v2 > (uint8_t)rs1 ? v2 : rs1;
                 break;
             }
         case 16: {
                 uint16_t v2 = ((uint16_t *)V(vs2))[ei];
-                ((uint16_t *)V(vd))[ei] = v2 > rs1 ? v2 : rs1;
+                ((uint16_t *)V(vd))[ei] = v2 > (uint16_t)rs1 ? v2 : rs1;
                 break;
             }
         case 32: {
                 uint32_t v2 = ((uint32_t *)V(vs2))[ei];
-                ((uint32_t *)V(vd))[ei] = v2 > rs1 ? v2 : rs1;
+                ((uint32_t *)V(vd))[ei] = v2 > (uint32_t)rs1 ? v2 : rs1;
                 break;
             }
         case 64: {
                 uint64_t v2 = ((uint64_t *)V(vs2))[ei];
-                ((uint64_t *)V(vd))[ei] = v2 > rs1 ? v2 : rs1;
+                ((uint64_t *)V(vd))[ei] = v2 > (uint64_t)rs1 ? v2 : rs1;
                 break;
             }
         default:
