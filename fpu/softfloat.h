@@ -579,5 +579,6 @@ uint64_t float32_to_uint64_rod(float32 a, float_status *status);
 int64 float32_to_int64_rod(float32 a STATUS_PARAM);
 uint32 float32_to_uint32_rod(float32 a STATUS_PARAM);
 int32 float32_to_int32_rod(float32 a STATUS_PARAM);
+float32 float64_to_float32_rod(float64 a STATUS_PARAM);
 
 #endif /* !SOFTFLOAT_H */

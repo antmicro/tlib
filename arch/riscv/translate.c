@@ -3530,6 +3530,62 @@ static void gen_v_opfvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
                 gen_helper_vfwcvt_rtz_xf_v_m(cpu_env, t_vd, t_vs2);
             }
             break;
+        case 0x10:
+            if (vm) {
+                gen_helper_vfncvt_xuf_w(cpu_env, t_vd, t_vs2);
+            } else {
+                gen_helper_vfncvt_xuf_w_m(cpu_env, t_vd, t_vs2);
+            }
+            break;
+        case 0x11:
+            if (vm) {
+                gen_helper_vfncvt_xf_w(cpu_env, t_vd, t_vs2);
+            } else {
+                gen_helper_vfncvt_xf_w_m(cpu_env, t_vd, t_vs2);
+            }
+            break;
+        case 0x12:
+            if (vm) {
+                gen_helper_vfncvt_fxu_w(cpu_env, t_vd, t_vs2);
+            } else {
+                gen_helper_vfncvt_fxu_w_m(cpu_env, t_vd, t_vs2);
+            }
+            break;
+        case 0x13:
+            if (vm) {
+                gen_helper_vfncvt_fx_w(cpu_env, t_vd, t_vs2);
+            } else {
+                gen_helper_vfncvt_fx_w_m(cpu_env, t_vd, t_vs2);
+            }
+            break;
+        case 0x14:
+            if (vm) {
+                gen_helper_vfncvt_ff_w(cpu_env, t_vd, t_vs2);
+            } else {
+                gen_helper_vfncvt_ff_w_m(cpu_env, t_vd, t_vs2);
+            }
+            break;
+        case 0x15:
+            if (vm) {
+                gen_helper_vfncvt_rod_ff_w(cpu_env, t_vd, t_vs2);
+            } else {
+                gen_helper_vfncvt_rod_ff_w_m(cpu_env, t_vd, t_vs2);
+            }
+            break;
+        case 0x16:
+            if (vm) {
+                gen_helper_vfncvt_rtz_xuf_w(cpu_env, t_vd, t_vs2);
+            } else {
+                gen_helper_vfncvt_rtz_xuf_w_m(cpu_env, t_vd, t_vs2);
+            }
+            break;
+        case 0x17:
+            if (vm) {
+                gen_helper_vfncvt_rtz_xf_w(cpu_env, t_vd, t_vs2);
+            } else {
+                gen_helper_vfncvt_rtz_xf_w_m(cpu_env, t_vd, t_vs2);
+            }
+            break;
         default:
             kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
             break;
