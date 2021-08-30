@@ -3481,6 +3481,55 @@ static void gen_v_opfvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
                 gen_helper_vfcvt_rtz_xf_v_m(cpu_env, t_vd, t_vs2);
             }
             break;
+        case 0x8:
+            if (vm) {
+                gen_helper_vfwcvt_xuf_v(cpu_env, t_vd, t_vs2);
+            } else {
+                gen_helper_vfwcvt_xuf_v_m(cpu_env, t_vd, t_vs2);
+            }
+            break;
+        case 0x9:
+            if (vm) {
+                gen_helper_vfwcvt_xf_v(cpu_env, t_vd, t_vs2);
+            } else {
+                gen_helper_vfwcvt_xf_v_m(cpu_env, t_vd, t_vs2);
+            }
+            break;
+        case 0xa:
+            if (vm) {
+                gen_helper_vfwcvt_fxu_v(cpu_env, t_vd, t_vs2);
+            } else {
+                gen_helper_vfwcvt_fxu_v_m(cpu_env, t_vd, t_vs2);
+            }
+            break;
+        case 0xb:
+            if (vm) {
+                gen_helper_vfwcvt_fx_v(cpu_env, t_vd, t_vs2);
+            } else {
+                gen_helper_vfwcvt_fx_v_m(cpu_env, t_vd, t_vs2);
+            }
+            break;
+        case 0xc:
+            if (vm) {
+                gen_helper_vfwcvt_ff_v(cpu_env, t_vd, t_vs2);
+            } else {
+                gen_helper_vfwcvt_ff_v_m(cpu_env, t_vd, t_vs2);
+            }
+            break;
+        case 0xe:
+            if (vm) {
+                gen_helper_vfwcvt_rtz_xuf_v(cpu_env, t_vd, t_vs2);
+            } else {
+                gen_helper_vfwcvt_rtz_xuf_v_m(cpu_env, t_vd, t_vs2);
+            }
+            break;
+        case 0xf:
+            if (vm) {
+                gen_helper_vfwcvt_rtz_xf_v(cpu_env, t_vd, t_vs2);
+            } else {
+                gen_helper_vfwcvt_rtz_xf_v_m(cpu_env, t_vd, t_vs2);
+            }
+            break;
         default:
             kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
             break;

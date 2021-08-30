@@ -259,7 +259,6 @@ target_ulong helper_fcvt_wu_s(CPUState *env, uint64_t frs1, uint64_t rm)
     return frs1;
 }
 
-#if defined(TARGET_RISCV64)
 uint64_t helper_fcvt_l_s(CPUState *env, uint64_t frs1, uint64_t rm)
 {
     require_fp;
@@ -279,7 +278,6 @@ uint64_t helper_fcvt_lu_s(CPUState *env, uint64_t frs1, uint64_t rm)
     mark_fs_dirty();
     return frs1;
 }
-#endif
 
 uint64_t helper_fcvt_s_w(CPUState *env, target_ulong rs1, uint64_t rm)
 {
@@ -354,6 +352,24 @@ int64_t helper_fcvt_l_d_rod(CPUState *env, uint64_t frs1)
 {
     require_fp;
     frs1 = float64_to_int64_rod(frs1, &env->fp_status);
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return frs1;
+}
+
+uint64_t helper_fcvt_lu_s_rod(CPUState *env, uint32_t frs1)
+{
+    require_fp;
+    frs1 = float32_to_uint64_rod(frs1, &env->fp_status);
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return frs1;
+}
+
+int64_t helper_fcvt_l_s_rod(CPUState *env, uint32_t frs1)
+{
+    require_fp;
+    frs1 = float32_to_int64_rod(frs1, &env->fp_status);
     set_fp_exceptions();
     mark_fs_dirty();
     return frs1;
