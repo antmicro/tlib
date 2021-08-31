@@ -3718,7 +3718,11 @@ static void gen_v_opfvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_FWREDSUM:
-        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        if (vm) {
+            gen_helper_vfwredosum_vs(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vfwredosum_vs_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
         break;
     case RISC_V_FUNCT_FWSUB:
         if (vm) {
@@ -3728,7 +3732,11 @@ static void gen_v_opfvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_FWREDOSUM:
-        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        if (vm) {
+            gen_helper_vfwredosum_vs(cpu_env, t_vd, t_vs2, t_vs1);
+        } else {
+            gen_helper_vfwredosum_vs_m(cpu_env, t_vd, t_vs2, t_vs1);
+        }
         break;
     case RISC_V_FUNCT_FWADDW:
         if (vm) {

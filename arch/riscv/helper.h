@@ -703,6 +703,9 @@ DEF_HELPER_3(vfncvt_ff_w_m, void, env, i32, i32)
 DEF_HELPER_3(vfncvt_rod_ff_w, void, env, i32, i32)
 DEF_HELPER_3(vfncvt_rod_ff_w_m, void, env, i32, i32)
 
+DEF_HELPER_4(vfwredosum_vs, void, env, i32, i32, i32)
+DEF_HELPER_4(vfwredosum_vs_m, void, env, i32, i32, i32)
+
 DEF_HELPER_2(handle_custom_instruction, i32, i64, i64)
 
 void do_nmi(CPUState *env);
