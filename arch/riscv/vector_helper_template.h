@@ -83,6 +83,46 @@ static inline DATA_STYPE glue(roundoff_i, BITS)(DATA_STYPE v, uint16_t d, uint8_
     return (v >> d) + r;
 }
 
+static inline DATA_TYPE glue(divu_, BITS)(DATA_TYPE dividend, DATA_TYPE divisor)
+{
+    if (divisor == 0) {
+        return glue(glue(UINT, BITS), _MAX);
+    } else {
+        return dividend / divisor;
+    }
+}
+
+static inline DATA_STYPE glue(div_, BITS)(DATA_STYPE dividend, DATA_STYPE divisor)
+{
+    if (divisor == 0) {
+        return -1;
+    } else if (divisor == -1 && dividend == glue(glue(INT, BITS), _MIN)) {
+        return glue(glue(INT, BITS), _MIN);
+    } else {
+        return dividend / divisor;
+    }
+}
+
+static inline DATA_TYPE glue(remu_, BITS)(DATA_TYPE dividend, DATA_TYPE divisor)
+{
+    if (divisor == 0) {
+        return dividend;
+    } else {
+        return dividend % divisor;
+    }
+}
+
+static inline DATA_STYPE glue(rem_, BITS)(DATA_STYPE dividend, DATA_STYPE divisor)
+{
+    if (divisor == 0) {
+        return dividend;
+    } else if (divisor == -1 && dividend == glue(glue(INT, BITS), _MIN)) {
+        return 0;
+    } else {
+        return dividend % divisor;
+    }
+}
+
 #endif
 
 void glue(glue(helper_vle, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t nf)
@@ -3545,16 +3585,16 @@ void glue(helper_vdivu_mvv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, in
 #endif
         switch (eew) {
         case 8:
-            ((uint8_t *)V(vd))[ei] = ((uint8_t *)V(vs2))[ei] / ((uint8_t *)V(vs1))[ei];
+            ((uint8_t *)V(vd))[ei] = divu_8(((uint8_t *)V(vs2))[ei], ((uint8_t *)V(vs1))[ei]);
             break;
         case 16:
-            ((uint16_t *)V(vd))[ei] = ((uint16_t *)V(vs2))[ei] / ((uint16_t *)V(vs1))[ei];
+            ((uint16_t *)V(vd))[ei] = divu_16(((uint16_t *)V(vs2))[ei], ((uint16_t *)V(vs1))[ei]);
             break;
         case 32:
-            ((uint32_t *)V(vd))[ei] = ((uint32_t *)V(vs2))[ei] / ((uint32_t *)V(vs1))[ei];
+            ((uint32_t *)V(vd))[ei] = divu_32(((uint32_t *)V(vs2))[ei], ((uint32_t *)V(vs1))[ei]);
             break;
         case 64:
-            ((uint64_t *)V(vd))[ei] = ((uint64_t *)V(vs2))[ei] / ((uint64_t *)V(vs1))[ei];
+            ((uint64_t *)V(vd))[ei] = divu_64(((uint64_t *)V(vs2))[ei], ((uint64_t *)V(vs1))[ei]);
             break;
         default:
             helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
@@ -3577,16 +3617,16 @@ void glue(helper_vdiv_mvv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int
 #endif
         switch (eew) {
         case 8:
-            ((int8_t *)V(vd))[ei] = ((int8_t *)V(vs2))[ei] / ((int8_t *)V(vs1))[ei];
+            ((int8_t *)V(vd))[ei] = div_8(((int8_t *)V(vs2))[ei], ((int8_t *)V(vs1))[ei]);
             break;
         case 16:
-            ((int16_t *)V(vd))[ei] = ((int16_t *)V(vs2))[ei] / ((int16_t *)V(vs1))[ei];
+            ((int16_t *)V(vd))[ei] = div_16(((int16_t *)V(vs2))[ei], ((int16_t *)V(vs1))[ei]);
             break;
         case 32:
-            ((int32_t *)V(vd))[ei] = ((int32_t *)V(vs2))[ei] / ((int32_t *)V(vs1))[ei];
+            ((int32_t *)V(vd))[ei] = div_32(((int32_t *)V(vs2))[ei], ((int32_t *)V(vs1))[ei]);
             break;
         case 64:
-            ((int64_t *)V(vd))[ei] = ((int64_t *)V(vs2))[ei] / ((int64_t *)V(vs1))[ei];
+            ((int64_t *)V(vd))[ei] = div_64(((int64_t *)V(vs2))[ei], ((int64_t *)V(vs1))[ei]);
             break;
         default:
             helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
@@ -3609,16 +3649,16 @@ void glue(helper_vremu_mvv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, in
 #endif
         switch (eew) {
         case 8:
-            ((uint8_t *)V(vd))[ei] = ((uint8_t *)V(vs2))[ei] % ((uint8_t *)V(vs1))[ei];
+            ((uint8_t *)V(vd))[ei] = remu_8(((uint8_t *)V(vs2))[ei], ((uint8_t *)V(vs1))[ei]);
             break;
         case 16:
-            ((uint16_t *)V(vd))[ei] = ((uint16_t *)V(vs2))[ei] % ((uint16_t *)V(vs1))[ei];
+            ((uint16_t *)V(vd))[ei] = remu_16(((uint16_t *)V(vs2))[ei], ((uint16_t *)V(vs1))[ei]);
             break;
         case 32:
-            ((uint32_t *)V(vd))[ei] = ((uint32_t *)V(vs2))[ei] % ((uint32_t *)V(vs1))[ei];
+            ((uint32_t *)V(vd))[ei] = remu_32(((uint32_t *)V(vs2))[ei], ((uint32_t *)V(vs1))[ei]);
             break;
         case 64:
-            ((uint64_t *)V(vd))[ei] = ((uint64_t *)V(vs2))[ei] % ((uint64_t *)V(vs1))[ei];
+            ((uint64_t *)V(vd))[ei] = remu_64(((uint64_t *)V(vs2))[ei], ((uint64_t *)V(vs1))[ei]);
             break;
         default:
             helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
@@ -3641,16 +3681,16 @@ void glue(helper_vrem_mvv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int
 #endif
         switch (eew) {
         case 8:
-            ((int8_t *)V(vd))[ei] = ((int8_t *)V(vs2))[ei] % ((int8_t *)V(vs1))[ei];
+            ((int8_t *)V(vd))[ei] = rem_8(((int8_t *)V(vs2))[ei], ((int8_t *)V(vs1))[ei]);
             break;
         case 16:
-            ((int16_t *)V(vd))[ei] = ((int16_t *)V(vs2))[ei] % ((int16_t *)V(vs1))[ei];
+            ((int16_t *)V(vd))[ei] = rem_16(((int16_t *)V(vs2))[ei], ((int16_t *)V(vs1))[ei]);
             break;
         case 32:
-            ((int32_t *)V(vd))[ei] = ((int32_t *)V(vs2))[ei] % ((int32_t *)V(vs1))[ei];
+            ((int32_t *)V(vd))[ei] = rem_32(((int32_t *)V(vs2))[ei], ((int32_t *)V(vs1))[ei]);
             break;
         case 64:
-            ((int64_t *)V(vd))[ei] = ((int64_t *)V(vs2))[ei] % ((int64_t *)V(vs1))[ei];
+            ((int64_t *)V(vd))[ei] = rem_64(((int64_t *)V(vs2))[ei], ((int64_t *)V(vs1))[ei]);
             break;
         default:
             helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
@@ -3673,16 +3713,16 @@ void glue(helper_vdivu_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, ta
 #endif
         switch (eew) {
         case 8:
-            ((uint8_t *)V(vd))[ei] = ((uint8_t *)V(vs2))[ei] / rs1;
+            ((uint8_t *)V(vd))[ei] = divu_8(((uint8_t *)V(vs2))[ei], rs1);
             break;
         case 16:
-            ((uint16_t *)V(vd))[ei] = ((uint16_t *)V(vs2))[ei] / rs1;
+            ((uint16_t *)V(vd))[ei] = divu_16(((uint16_t *)V(vs2))[ei], rs1);
             break;
         case 32:
-            ((uint32_t *)V(vd))[ei] = ((uint32_t *)V(vs2))[ei] / rs1;
+            ((uint32_t *)V(vd))[ei] = divu_32(((uint32_t *)V(vs2))[ei], rs1);
             break;
         case 64:
-            ((uint64_t *)V(vd))[ei] = ((uint64_t *)V(vs2))[ei] / rs1;
+            ((uint64_t *)V(vd))[ei] = divu_64(((uint64_t *)V(vs2))[ei], rs1);
             break;
         default:
             helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
@@ -3705,16 +3745,16 @@ void glue(helper_vdiv_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, tar
 #endif
         switch (eew) {
         case 8:
-            ((int8_t *)V(vd))[ei] = ((int8_t *)V(vs2))[ei] / rs1;
+            ((int8_t *)V(vd))[ei] = div_8(((int8_t *)V(vs2))[ei], rs1);
             break;
         case 16:
-            ((int16_t *)V(vd))[ei] = ((int16_t *)V(vs2))[ei] / rs1;
+            ((int16_t *)V(vd))[ei] = div_16(((int16_t *)V(vs2))[ei], rs1);
             break;
         case 32:
-            ((int32_t *)V(vd))[ei] = ((int32_t *)V(vs2))[ei] / rs1;
+            ((int32_t *)V(vd))[ei] = div_32(((int32_t *)V(vs2))[ei], rs1);
             break;
         case 64:
-            ((int64_t *)V(vd))[ei] = ((int64_t *)V(vs2))[ei] / rs1;
+            ((int64_t *)V(vd))[ei] = div_64(((int64_t *)V(vs2))[ei], rs1);
             break;
         default:
             helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
@@ -3737,16 +3777,16 @@ void glue(helper_vremu_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, ta
 #endif
         switch (eew) {
         case 8:
-            ((uint8_t *)V(vd))[ei] = ((uint8_t *)V(vs2))[ei] % rs1;
+            ((uint8_t *)V(vd))[ei] = remu_8(((uint8_t *)V(vs2))[ei], rs1);
             break;
         case 16:
-            ((uint16_t *)V(vd))[ei] = ((uint16_t *)V(vs2))[ei] % rs1;
+            ((uint16_t *)V(vd))[ei] = remu_16(((uint16_t *)V(vs2))[ei], rs1);
             break;
         case 32:
-            ((uint32_t *)V(vd))[ei] = ((uint32_t *)V(vs2))[ei] % rs1;
+            ((uint32_t *)V(vd))[ei] = remu_32(((uint32_t *)V(vs2))[ei], rs1);
             break;
         case 64:
-            ((uint64_t *)V(vd))[ei] = ((uint64_t *)V(vs2))[ei] % rs1;
+            ((uint64_t *)V(vd))[ei] = remu_64(((uint64_t *)V(vs2))[ei], rs1);
             break;
         default:
             helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
@@ -3769,16 +3809,16 @@ void glue(helper_vrem_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, tar
 #endif
         switch (eew) {
         case 8:
-            ((int8_t *)V(vd))[ei] = ((int8_t *)V(vs2))[ei] % rs1;
+            ((int8_t *)V(vd))[ei] = rem_8(((int8_t *)V(vs2))[ei], rs1);
             break;
         case 16:
-            ((int16_t *)V(vd))[ei] = ((int16_t *)V(vs2))[ei] % rs1;
+            ((int16_t *)V(vd))[ei] = rem_16(((int16_t *)V(vs2))[ei], rs1);
             break;
         case 32:
-            ((int32_t *)V(vd))[ei] = ((int32_t *)V(vs2))[ei] % rs1;
+            ((int32_t *)V(vd))[ei] = rem_32(((int32_t *)V(vs2))[ei], rs1);
             break;
         case 64:
-            ((int64_t *)V(vd))[ei] = ((int64_t *)V(vs2))[ei] % rs1;
+            ((int64_t *)V(vd))[ei] = rem_64(((int64_t *)V(vs2))[ei], rs1);
             break;
         default:
             helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
