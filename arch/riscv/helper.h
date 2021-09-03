@@ -705,6 +705,12 @@ DEF_HELPER_3(vfncvt_rod_ff_w_m, void, env, i32, i32)
 
 DEF_HELPER_4(vfwredosum_vs, void, env, i32, i32, i32)
 DEF_HELPER_4(vfwredosum_vs_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vfredsum_vs, void, env, i32, i32, i32)
+DEF_HELPER_4(vfredsum_vs_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vfredmin_vs, void, env, i32, i32, i32)
+DEF_HELPER_4(vfredmin_vs_m, void, env, i32, i32, i32)
+DEF_HELPER_4(vfredmax_vs, void, env, i32, i32, i32)
+DEF_HELPER_4(vfredmax_vs_m, void, env, i32, i32, i32)
 
 DEF_HELPER_3(vfrsqrt7_v, void, env, i32, i32)
 DEF_HELPER_3(vfrsqrt7_v_m, void, env, i32, i32)
