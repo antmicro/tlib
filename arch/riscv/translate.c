@@ -830,7 +830,7 @@ static void gen_v_load(DisasContext *dc, uint32_t opc, uint32_t rest, uint32_t v
             }
             break;
         case OPC_RISC_VL_US_WR:
-            if (!vm || ((nf & (nf + 1)) != 0) || vd) {
+            if (!vm || ((nf & (nf + 1)) != 0) || !vd) {
                 generate_exception(dc, RISCV_EXCP_ILLEGAL_INST);
                 break;
             }
