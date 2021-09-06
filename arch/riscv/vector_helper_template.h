@@ -372,8 +372,9 @@ static inline __int128_t roundoff_i128(__int128_t v, uint16_t d, uint8_t rm)
 void helper_vl_wr(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t nf)
 {
     uint8_t *v = V(vd);
+    uint8_t nfield = nf + 1;
     target_ulong src_addr = env->gpr[rs1];
-    for (int i = 0; i < env->vlenb * nf; ++i) {
+    for (int i = 0; i < env->vlenb * nfield; ++i) {
         env->vstart = i;
         v[i] = ldub(src_addr + i);
     }
@@ -382,8 +383,9 @@ void helper_vl_wr(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t nf)
 void helper_vs_wr(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t nf)
 {
     uint8_t *v = V(vd);
+    uint8_t nfield = nf + 1;
     target_ulong src_addr = env->gpr[rs1];
-    for (int i = 0; i < env->vlenb * nf; ++i) {
+    for (int i = 0; i < env->vlenb * nfield; ++i) {
         env->vstart = i;
         stb(src_addr + i, v[i]);
     }
