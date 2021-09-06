@@ -190,6 +190,14 @@ static inline void gen_set_gpr(int reg_num_dst, TCGv t)
     }
 }
 
+/* Some instructions don't allow NFIELDS value to be different from 1, 2, 4 or 8.
+ * As NFIELDS can be expressed as `nf + 1` this function checks if the above condition is true, while saving a few clock cycles
+ * */
+static inline bool is_nfields_power_of_two(uint32_t nf)
+{
+    return (nf & (nf + 1)) == 0;
+}
+
 static void gen_mulhsu(TCGv ret, TCGv arg1, TCGv arg2)
 {
     TCGv rl = tcg_temp_new();
@@ -830,7 +838,7 @@ static void gen_v_load(DisasContext *dc, uint32_t opc, uint32_t rest, uint32_t v
             }
             break;
         case OPC_RISC_VL_US_WR:
-            if (!vm || ((nf & (nf + 1)) != 0) || !vd) {
+            if (!vm || !is_nfields_power_of_two(nf)) {
                 generate_exception(dc, RISCV_EXCP_ILLEGAL_INST);
                 break;
             }
@@ -1049,7 +1057,7 @@ static void gen_v_store(DisasContext *dc, uint32_t opc, uint32_t rest, uint32_t 
             }
             break;
         case OPC_RISC_VS_US_WR:
-            if (!vm || width || ((nf & (nf + 1)) != 0) || vd) {
+            if (!vm || width || !is_nfields_power_of_two(nf)) {
                 generate_exception(dc, RISCV_EXCP_ILLEGAL_INST);
                 break;
             }
