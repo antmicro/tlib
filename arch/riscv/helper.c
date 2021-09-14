@@ -46,6 +46,8 @@ void cpu_reset(CPUState *env)
     uint64_t custom_csrs[CSRS_SLOTS];
     memcpy(custom_csrs, env->custom_csrs,
            sizeof(uint64_t) * CSRS_SLOTS);
+    target_ulong vlenb = env->vlenb;
+    target_ulong elen = env->elen;
 
     memset(env, 0, offsetof(CPUState, breakpoints));
 
@@ -69,8 +71,8 @@ void cpu_reset(CPUState *env)
            sizeof(uint64_t) * CSRS_SLOTS);
     env->pmp_napot_grain = -1;
 
-    env->vlenb = 64;
-    env->elen = 64;
+    env->vlenb = vlenb;
+    env->elen = elen;
 }
 
 int get_interrupts_in_order(target_ulong pending_interrupts, target_ulong priv)
