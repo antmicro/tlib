@@ -71,8 +71,8 @@ void cpu_reset(CPUState *env)
            sizeof(uint64_t) * CSRS_SLOTS);
     env->pmp_napot_grain = -1;
 
-    env->vlenb = vlenb;
-    env->elen = elen;
+    env->vlenb = vlenb ? vlenb : 64;
+    env->elen = elen ? elen : 64;
 }
 
 int get_interrupts_in_order(target_ulong pending_interrupts, target_ulong priv)
