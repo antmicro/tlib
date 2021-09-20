@@ -750,22 +750,22 @@ void helper_vmv8r_v(CPUState *env, uint32_t vd, uint32_t vs2)
     memcpy(V(vd), V(vs2), env->vlen * env->vsew << emul);
 }
 
-#define MASK_OP_GEN(name, OP)                                                                                               \
-void glue(glue(helper_vm, name), _mm)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)                               \
-{                                                                                                                           \
-    int i = env->vstart >> 3;                                                                                               \
-    if (env->vl - env->vstart < 8) {                                                                                        \
-        V(vd)[i] ^= ((0xffu << (env->vstart & 0x7)) & (0xffu >> (env->vl & 0x7))) & (V(vd)[i] ^ OP(V(vs2)[i], V(vs1)[i]));  \
-        return;                                                                                                             \
-    }                                                                                                                       \
-    V(vd)[i] ^= (0xffu << (env->vstart & 0x7)) & (V(vd)[i] ^ OP(V(vs2)[i], V(vs1)[i]));                                     \
-                                                                                                                            \
-    for (; i < env->vl >> 3; ++i) {                                                                                         \
-        V(vd)[i] = OP(V(vs2)[i], V(vs1)[i]);                                                                                \
-    }                                                                                                                       \
-    if (env->vl & 0x7) {                                                                                                    \
-        V(vd)[i] ^= (0xffu >> (env->vl & 0x7)) & (V(vd)[i] ^ OP(V(vs2)[i], V(vs1)[i]));                                     \
-    }                                                                                                                       \
+#define MASK_OP_GEN(name, OP)                                                                                                       \
+void glue(glue(helper_vm, name), _mm)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)                                       \
+{                                                                                                                                   \
+    int i = env->vstart >> 3;                                                                                                       \
+    if (env->vl - env->vstart < 8) {                                                                                                \
+        V(vd)[i] ^= ((0xffu << (env->vstart & 0x7)) & (0xffu >> (8 - (env->vl & 0x7)))) & (V(vd)[i] ^ OP(V(vs2)[i], V(vs1)[i]));    \
+        return;                                                                                                                     \
+    }                                                                                                                               \
+    V(vd)[i] ^= (0xffu << (env->vstart & 0x7)) & (V(vd)[i] ^ OP(V(vs2)[i], V(vs1)[i]));                                             \
+                                                                                                                                    \
+    for (++i; i < env->vl >> 3; ++i) {                                                                                              \
+        V(vd)[i] = OP(V(vs2)[i], V(vs1)[i]);                                                                                        \
+    }                                                                                                                               \
+    if (env->vl & 0x7) {                                                                                                            \
+        V(vd)[i] ^= (0xffu >> (8 - (env->vl & 0x7))) & (V(vd)[i] ^ OP(V(vs2)[i], V(vs1)[i]));                                       \
+    }                                                                                                                               \
 }
 
 #define MASK_OP_GEN_OP_AND(a, b) ((a) & (b))
