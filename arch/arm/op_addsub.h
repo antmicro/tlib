@@ -335,12 +335,12 @@ uint32_t HELPER(glue(PFX,sub16))(uint32_t a, uint32_t b GE_ARG)
     uint32_t ovf_flags=0;
 #endif
 
-    res1 = glue(unit_add16_, PFX)(a, b, &ovf);
+    res1 = glue(unit_sub16_, PFX)(a, b, &ovf);
 #ifdef ARITH_GE
     ovf_flags |= (3 * ovf);
 #endif
 
-    res2 = glue(unit_add16_, PFX)(a >> 16, b >> 16, &ovf);
+    res2 = glue(unit_sub16_, PFX)(a >> 16, b >> 16, &ovf);
 #ifdef ARITH_GE
     ovf_flags |= (3 * ovf) << 2;
 #endif
