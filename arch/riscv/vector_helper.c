@@ -720,7 +720,7 @@ void helper_vmv1r_v(CPUState *env, uint32_t vd, uint32_t vs2)
     if (V_IDX_INVALID_EMUL(vd, emul) || V_IDX_INVALID_EMUL(vs2, emul)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    memcpy(V(vd), V(vs2), env->vlen * env->vsew << emul);
+    memcpy(V(vd), V(vs2), env->vlenb << emul);
 }
 
 void helper_vmv2r_v(CPUState *env, uint32_t vd, uint32_t vs2)
@@ -729,7 +729,7 @@ void helper_vmv2r_v(CPUState *env, uint32_t vd, uint32_t vs2)
     if (V_IDX_INVALID_EMUL(vd, emul) || V_IDX_INVALID_EMUL(vs2, emul)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    memcpy(V(vd), V(vs2), env->vlen * env->vsew << emul);
+    memcpy(V(vd), V(vs2), env->vlenb << emul);
 }
 
 void helper_vmv4r_v(CPUState *env, uint32_t vd, uint32_t vs2)
@@ -738,7 +738,7 @@ void helper_vmv4r_v(CPUState *env, uint32_t vd, uint32_t vs2)
     if (V_IDX_INVALID_EMUL(vd, emul) || V_IDX_INVALID_EMUL(vs2, emul)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    memcpy(V(vd), V(vs2), env->vlen * env->vsew << emul);
+    memcpy(V(vd), V(vs2), env->vlenb << emul);
 }
 
 void helper_vmv8r_v(CPUState *env, uint32_t vd, uint32_t vs2)
@@ -747,7 +747,7 @@ void helper_vmv8r_v(CPUState *env, uint32_t vd, uint32_t vs2)
     if (V_IDX_INVALID_EMUL(vd, emul) || V_IDX_INVALID_EMUL(vs2, emul)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    memcpy(V(vd), V(vs2), env->vlen * env->vsew << emul);
+    memcpy(V(vd), V(vs2), env->vlenb << emul);
 }
 
 #define MASK_OP_GEN(name, OP)                                                                                                       \
