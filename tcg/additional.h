@@ -68,3 +68,10 @@ static inline void tcg_abortf(char *fmt, ...)
     va_end(ap);
     __builtin_unreachable();
 }
+
+void tcg_perf_init_labeling();
+void tcg_perf_fini_labeling();
+void tcg_perf_out_symbol_s(void *s, int size, const char *label);
+void tcg_perf_out_symbol_i(void *s, int size, int label);
+void tcg_perf_out_symbol(void *s, int size);
+

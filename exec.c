@@ -697,6 +697,7 @@ TranslationBlock *tb_gen_code(CPUState *env, target_ulong pc, target_ulong cs_ba
     cpu_gen_code(env, tb, &code_gen_size, &search_size);
     code_gen_ptr = (void *)(((uintptr_t)code_gen_ptr + code_gen_size
         + search_size + CODE_GEN_ALIGN - 1) & ~(CODE_GEN_ALIGN - 1));
+    tcg_perf_out_symbol_i(code_gen_ptr, code_gen_size, tb->icount, tb);
 
     /* check next page if needed */
     phys_page2 = -1;

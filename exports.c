@@ -62,6 +62,7 @@ static void init_tcg()
     attach_malloc(tlib_malloc);
     attach_realloc(tlib_realloc);
     attach_free(tlib_free);
+    tcg_perf_init_labeling();
 }
 
 // This function is unsafe if called with a C# frame above tlib_execute on the stack.

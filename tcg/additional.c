@@ -136,3 +136,159 @@ void set_tlb_table_n_0_rwa(int i, unsigned int read, unsigned int write, unsigne
     tlb_table_n_0_addr_write[i] = write;
     tlb_table_n_0_addend[i] = addend;
 }
+
+#ifdef GENERATE_PERF_MAP
+
+#include <unistd.h>
+#include "../include/infrastructure.h"
+
+// not thread safe
+static FILE *perf_map_handle;
+
+typedef struct tcg_perf_map_symbol
+{
+    void *ptr;
+    int size;
+    char *label;
+    bool reused;
+
+    struct tcg_perf_map_symbol *left, *right;
+} tcg_perf_map_symbol;
+
+static tcg_perf_map_symbol *symbols = NULL;
+
+#define RETURN_EMPTY_PERF_HANDLE \
+    if(unlikely(perf_map_handle == NULL)) \
+    {   \
+        return; \
+    }
+
+void tcg_perf_init_labeling()
+{
+    char target[30];
+
+    snprintf(target, sizeof(target), "/tmp/perf-%d.map", getpid());
+    perf_map_handle = fopen(target, "a");
+
+    if (unlikely(perf_map_handle == NULL)) {
+        tlib_printf(LOG_LEVEL_WARNING, "Cannot generate perf.map.");
+    }
+}
+
+static void tcg_perf_symbol_tree_recurse_helper(tcg_perf_map_symbol *s, void (*callback)(tcg_perf_map_symbol *))
+{
+    if (s == NULL) {
+        return;
+    }
+
+    tcg_perf_symbol_tree_recurse_helper(s->left, callback);
+    tcg_perf_symbol_tree_recurse_helper(s->right, callback);
+    (*callback)(s);
+}
+
+static void tcg_perf_flush_symbol(tcg_perf_map_symbol *s)
+{
+    if (s->label) {
+        fprintf(perf_map_handle, "%p %x %stcg_jit_code:%p:%s\n", s->ptr, s->size, s->reused ? "[REUSED]" : "", s->ptr, s->label);
+    } else {
+        fprintf(perf_map_handle, "%p %x %stcg_jit_code:%p\n", s->ptr, s->size, s->reused ? "[REUSED]" : "", s->ptr);
+    }
+}
+
+void tcg_perf_flush_map()
+{
+    RETURN_EMPTY_PERF_HANDLE;
+    tcg_perf_symbol_tree_recurse_helper(symbols, tcg_perf_flush_symbol);
+}
+
+static void tcg_perf_free_symbol(tcg_perf_map_symbol *s)
+{
+    TCG_free(s->label);
+    TCG_free(s);
+}
+
+void tcg_perf_fini_labeling()
+{
+    if (likely(perf_map_handle != NULL)) {
+        tcg_perf_flush_map();
+        fclose(perf_map_handle);
+
+        tcg_perf_symbol_tree_recurse_helper(symbols, tcg_perf_free_symbol);
+    }
+}
+
+static tcg_perf_map_symbol **tcg_perf_append_symbol_inner(tcg_perf_map_symbol *s)
+{
+    tcg_perf_map_symbol **next = &symbols;
+    while (*next != NULL) {
+        if (s->ptr == (*next)->ptr) {
+            s->reused = true;
+            s->left = (*next)->left;
+            s->right = (*next)->right;
+            tcg_perf_free_symbol(*next);
+            return next;
+        } else if (s->ptr < (*next)->ptr) {
+            next = &(*next)->left;
+        } else {
+            next = &(*next)->right;
+        }
+    }
+    return next;
+}
+
+void tcg_perf_append_symbol(tcg_perf_map_symbol *s)
+{
+    tcg_perf_map_symbol **place = tcg_perf_append_symbol_inner(s);
+    *place = s;
+}
+
+void tcg_perf_out_symbol_s(void *s, int size, const char *label)
+{
+    RETURN_EMPTY_PERF_HANDLE;
+
+    size_t len = strlen(label) + 1;
+    char *_label = TCG_malloc(sizeof(char) * len);
+    strncpy(_label, label, len);
+
+    tcg_perf_map_symbol *symbol = TCG_malloc(sizeof(tcg_perf_map_symbol));
+    *symbol = (tcg_perf_map_symbol) { .ptr = s, .size = size, .label = _label, .reused = false, .left = NULL, .right = NULL};
+    tcg_perf_append_symbol(symbol);
+}
+
+void tcg_perf_out_symbol(void *s, int size)
+{
+    RETURN_EMPTY_PERF_HANDLE;
+
+    tcg_perf_out_symbol_s(s, size, "");
+}
+
+void tcg_perf_out_symbol_i(void *s, int size, int label)
+{
+    RETURN_EMPTY_PERF_HANDLE;
+    char buffer[20];
+
+    snprintf(buffer, sizeof(buffer), "%x", label);
+    tcg_perf_out_symbol_s(s, size, buffer);
+}
+
+#else
+void tcg_perf_init_labeling()
+{
+}
+
+void tcg_perf_fini_labeling()
+{
+}
+
+void tcg_perf_out_symbol(void *s, int size)
+{
+}
+
+void tcg_perf_out_symbol_s(void *s, int size, const char *label)
+{
+}
+
+void tcg_perf_out_symbol_i(void *s, int size, int label)
+{
+}
+#endif
