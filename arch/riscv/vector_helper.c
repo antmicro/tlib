@@ -1118,7 +1118,8 @@ uint64_t helper_vfmv_fs(CPUState *env, int32_t vr, int32_t vs2)
                helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
                break;
            }
-           return (uint64_t)((uint32_t *)V(vs2))[0] | (-1ul << 32);
+           uint64_t nanbox_mask =  ((uint64_t) -1) << 32;
+           return (uint64_t)((uint32_t *)V(vs2))[0] | nanbox_mask;
            break;
         case 64:
            if (!riscv_has_ext(env, RISCV_FEATURE_RVD))
