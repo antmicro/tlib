@@ -2019,10 +2019,10 @@ void glue(helper_vnclip_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, t
 
 void glue(helper_vwredsumu_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
-    if (V_IDX_INVALID(vs2)) {
+    const target_ulong eew = env->vsew;
+    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2) || V_IDX_INVALID_EEW(vs1, eew << 1)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     uint64_t acc = 0;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
 #ifdef MASKED
@@ -2063,10 +2063,10 @@ void glue(helper_vwredsumu_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2
 
 void glue(helper_vwredsum_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
-    if (V_IDX_INVALID(vs2)) {
+    const target_ulong eew = env->vsew;
+    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2) || V_IDX_INVALID_EEW(vs1, eew << 1)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     int64_t acc = 0;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
 #ifdef MASKED
