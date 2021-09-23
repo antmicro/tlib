@@ -1878,13 +1878,13 @@ void glue(helper_vnsra_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, in
 #endif
         switch (eew) {
         case 8:
-            ((int8_t *)V(vd))[ei] = ((int16_t *)V(vs2))[ei] >> (((uint8_t *)V(vs1))[ei] & v1_mask);
+            ((int8_t *)V(vd))[ei] = ((int16_t *)V(vs2))[ei] >> (((int8_t *)V(vs1))[ei] & v1_mask);
             break;
         case 16:
-            ((int16_t *)V(vd))[ei] = ((int32_t *)V(vs2))[ei] >> (((uint16_t *)V(vs1))[ei] & v1_mask);
+            ((int16_t *)V(vd))[ei] = ((int32_t *)V(vs2))[ei] >> (((int16_t *)V(vs1))[ei] & v1_mask);
             break;
         case 32:
-            ((int32_t *)V(vd))[ei] = ((int64_t *)V(vs2))[ei] >> (((uint32_t *)V(vs1))[ei] & v1_mask);
+            ((int32_t *)V(vd))[ei] = ((int64_t *)V(vs2))[ei] >> (((int32_t *)V(vs1))[ei] & v1_mask);
             break;
         default:
             helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
