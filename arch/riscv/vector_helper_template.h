@@ -1775,10 +1775,10 @@ void glue(helper_vmax_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, tar
 
 void glue(helper_vnsrl_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+    const target_ulong eew = env->vsew;
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     const uint16_t shift = rs1 & ((eew << 1) - 1);
     for (int ei = env->vstart; ei < env->vl; ++ei) {
 #ifdef MASKED
@@ -1788,13 +1788,13 @@ void glue(helper_vnsrl_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, ta
 #endif
         switch (eew) {
         case 8:
-            ((uint8_t *)V(vd))[ei] = ((uint16_t *)V(vd))[vs2] >> shift;
+            ((uint8_t *)V(vd))[ei] = ((uint16_t *)V(vs2))[ei] >> shift;
             break;
         case 16:
-            ((uint16_t *)V(vd))[ei] = ((uint32_t *)V(vd))[vs2] >> shift;
+            ((uint16_t *)V(vd))[ei] = ((uint32_t *)V(vs2))[ei] >> shift;
             break;
         case 32:
-            ((uint32_t *)V(vd))[ei] = ((uint64_t *)V(vd))[vs2] >> shift;
+            ((uint32_t *)V(vd))[ei] = ((uint64_t *)V(vs2))[ei] >> shift;
             break;
         default:
             helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
@@ -1805,10 +1805,10 @@ void glue(helper_vnsrl_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, ta
 
 void glue(helper_vnsrl_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
+    const target_ulong eew = env->vsew;
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1) || V_IDX_INVALID(vs1)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     const uint16_t v1_mask = (eew << 1) - 1;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
 #ifdef MASKED
@@ -1818,13 +1818,13 @@ void glue(helper_vnsrl_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, in
 #endif
         switch (eew) {
         case 8:
-            ((uint8_t *)V(vd))[ei] = ((uint16_t *)V(vd))[vs2] >> (((uint8_t *)V(vd))[vs1] & v1_mask);
+            ((uint8_t *)V(vd))[ei] = ((uint16_t *)V(vs2))[ei] >> (((uint8_t *)V(vs1))[ei] & v1_mask);
             break;
         case 16:
-            ((uint16_t *)V(vd))[ei] = ((uint32_t *)V(vd))[vs2] >> (((uint16_t *)V(vd))[vs1] & v1_mask);
+            ((uint16_t *)V(vd))[ei] = ((uint32_t *)V(vs2))[ei] >> (((uint16_t *)V(vs1))[ei] & v1_mask);
             break;
         case 32:
-            ((uint32_t *)V(vd))[ei] = ((uint64_t *)V(vd))[vs2] >> (((uint32_t *)V(vd))[vs1] & v1_mask);
+            ((uint32_t *)V(vd))[ei] = ((uint64_t *)V(vs2))[ei] >> (((uint32_t *)V(vs1))[ei] & v1_mask);
             break;
         default:
             helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
@@ -1835,10 +1835,10 @@ void glue(helper_vnsrl_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, in
 
 void glue(helper_vnsra_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+    const target_ulong eew = env->vsew;
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     const uint16_t shift = rs1 & ((eew << 1) - 1);
     for (int ei = env->vstart; ei < env->vl; ++ei) {
 #ifdef MASKED
@@ -1848,13 +1848,13 @@ void glue(helper_vnsra_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, ta
 #endif
         switch (eew) {
         case 8:
-            ((int8_t *)V(vd))[ei] = ((int16_t *)V(vd))[vs2] >> shift;
+            ((int8_t *)V(vd))[ei] = ((int16_t *)V(vs2))[ei] >> shift;
             break;
         case 16:
-            ((int16_t *)V(vd))[ei] = ((int32_t *)V(vd))[vs2] >> shift;
+            ((int16_t *)V(vd))[ei] = ((int32_t *)V(vs2))[ei] >> shift;
             break;
         case 32:
-            ((int32_t *)V(vd))[ei] = ((int64_t *)V(vd))[vs2] >> shift;
+            ((int32_t *)V(vd))[ei] = ((int64_t *)V(vs2))[ei] >> shift;
             break;
         default:
             helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
@@ -1865,10 +1865,10 @@ void glue(helper_vnsra_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, ta
 
 void glue(helper_vnsra_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
+    const target_ulong eew = env->vsew;
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1) || V_IDX_INVALID(vs1)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     const uint16_t v1_mask = (eew << 1) - 1;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
 #ifdef MASKED
@@ -1878,13 +1878,13 @@ void glue(helper_vnsra_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, in
 #endif
         switch (eew) {
         case 8:
-            ((int8_t *)V(vd))[ei] = ((int16_t *)V(vd))[vs2] >> (((uint8_t *)V(vd))[vs1] & v1_mask);
+            ((int8_t *)V(vd))[ei] = ((int16_t *)V(vs2))[ei] >> (((uint8_t *)V(vs1))[ei] & v1_mask);
             break;
         case 16:
-            ((int16_t *)V(vd))[ei] = ((int32_t *)V(vd))[vs2] >> (((uint16_t *)V(vd))[vs1] & v1_mask);
+            ((int16_t *)V(vd))[ei] = ((int32_t *)V(vs2))[ei] >> (((uint16_t *)V(vs1))[ei] & v1_mask);
             break;
         case 32:
-            ((int32_t *)V(vd))[ei] = ((int64_t *)V(vd))[vs2] >> (((uint32_t *)V(vd))[vs1] & v1_mask);
+            ((int32_t *)V(vd))[ei] = ((int64_t *)V(vs2))[ei] >> (((uint32_t *)V(vs1))[ei] & v1_mask);
             break;
         default:
             helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
@@ -1895,10 +1895,10 @@ void glue(helper_vnsra_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, in
 
 void glue(helper_vnclipu_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
+    const target_ulong eew = env->vsew;
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1) || V_IDX_INVALID(vs1)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     const uint16_t v1_mask = (eew << 1) - 1;
     const uint8_t rm = env->vxrm & 0b11;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
@@ -1909,13 +1909,13 @@ void glue(helper_vnclipu_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, 
 #endif
         switch (eew) {
         case 8:
-            ((uint8_t *)V(vd))[ei] = roundoff_u16(((uint16_t *)V(vd))[vs2], ((uint8_t *)V(vd))[vs1] & v1_mask, rm);
+            ((uint8_t *)V(vd))[ei] = roundoff_u16(((uint16_t *)V(vs2))[ei], ((uint8_t *)V(vs1))[ei] & v1_mask, rm);
             break;
         case 16:
-            ((uint16_t *)V(vd))[ei] = roundoff_u32(((uint32_t *)V(vd))[vs2], ((uint16_t *)V(vd))[vs1] & v1_mask, rm);
+            ((uint16_t *)V(vd))[ei] = roundoff_u32(((uint32_t *)V(vs2))[ei], ((uint16_t *)V(vs1))[ei] & v1_mask, rm);
             break;
         case 32:
-            ((uint32_t *)V(vd))[ei] = roundoff_u64(((uint64_t *)V(vd))[vs2], ((uint32_t *)V(vd))[vs1] & v1_mask, rm);
+            ((uint32_t *)V(vd))[ei] = roundoff_u64(((uint64_t *)V(vs2))[ei], ((uint32_t *)V(vs1))[ei] & v1_mask, rm);
             break;
         default:
             helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
@@ -1926,10 +1926,10 @@ void glue(helper_vnclipu_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, 
 
 void glue(helper_vnclipu_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_ulong rs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+    const target_ulong eew = env->vsew;
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     const uint16_t shift = rs1 & ((eew << 1) - 1);
     const uint8_t rm = env->vxrm & 0b11;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
@@ -1940,13 +1940,13 @@ void glue(helper_vnclipu_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, 
 #endif
         switch (eew) {
         case 8:
-            ((uint8_t *)V(vd))[ei] = roundoff_u16(((uint16_t *)V(vd))[vs2], shift, rm);
+            ((uint8_t *)V(vd))[ei] = roundoff_u16(((uint16_t *)V(vs2))[ei], shift, rm);
             break;
         case 16:
-            ((uint16_t *)V(vd))[ei] = roundoff_u32(((uint32_t *)V(vd))[vs2], shift, rm);
+            ((uint16_t *)V(vd))[ei] = roundoff_u32(((uint32_t *)V(vs2))[ei], shift, rm);
             break;
         case 32:
-            ((uint32_t *)V(vd))[ei] = roundoff_u64(((uint64_t *)V(vd))[vs2], shift, rm);
+            ((uint32_t *)V(vd))[ei] = roundoff_u64(((uint64_t *)V(vs2))[ei], shift, rm);
             break;
         default:
             helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
@@ -1957,10 +1957,10 @@ void glue(helper_vnclipu_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, 
 
 void glue(helper_vnclip_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
+    const target_ulong eew = env->vsew;
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1) || V_IDX_INVALID(vs1)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     const uint16_t v1_mask = (eew << 1) - 1;
     const uint8_t rm = env->vxrm & 0b11;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
@@ -1971,13 +1971,13 @@ void glue(helper_vnclip_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, i
 #endif
         switch (eew) {
         case 8:
-            ((int8_t *)V(vd))[ei] = roundoff_i16(((int16_t *)V(vd))[vs2], ((uint8_t *)V(vd))[vs1] & v1_mask, rm);
+            ((int8_t *)V(vd))[ei] = roundoff_i16(((int16_t *)V(vs2))[ei], ((uint8_t *)V(vs1))[ei] & v1_mask, rm);
             break;
         case 16:
-            ((int16_t *)V(vd))[ei] = roundoff_i32(((int32_t *)V(vd))[vs2], ((uint16_t *)V(vd))[vs1] & v1_mask, rm);
+            ((int16_t *)V(vd))[ei] = roundoff_i32(((int32_t *)V(vs2))[ei], ((uint16_t *)V(vs1))[ei] & v1_mask, rm);
             break;
         case 32:
-            ((int32_t *)V(vd))[ei] = roundoff_i64(((int64_t *)V(vd))[vs2], ((uint32_t *)V(vd))[vs1] & v1_mask, rm);
+            ((int32_t *)V(vd))[ei] = roundoff_i64(((int64_t *)V(vs2))[ei], ((uint32_t *)V(vs1))[ei] & v1_mask, rm);
             break;
         default:
             helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
@@ -1988,10 +1988,10 @@ void glue(helper_vnclip_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, i
 
 void glue(helper_vnclip_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_ulong rs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+    const target_ulong eew = env->vsew;
+    if (V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1)) {
         helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     const uint16_t shift = rs1 & ((eew << 1) - 1);
     const uint8_t rm = env->vxrm & 0b11;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
@@ -2002,13 +2002,13 @@ void glue(helper_vnclip_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, t
 #endif
         switch (eew) {
         case 8:
-            ((int8_t *)V(vd))[ei] = roundoff_i16(((int16_t *)V(vd))[vs2], shift, rm);
+            ((int8_t *)V(vd))[ei] = roundoff_i16(((int16_t *)V(vs2))[ei], shift, rm);
             break;
         case 16:
-            ((int16_t *)V(vd))[ei] = roundoff_i32(((int32_t *)V(vd))[vs2], shift, rm);
+            ((int16_t *)V(vd))[ei] = roundoff_i32(((int32_t *)V(vs2))[ei], shift, rm);
             break;
         case 32:
-            ((int32_t *)V(vd))[ei] = roundoff_i64(((int64_t *)V(vd))[vs2], shift, rm);
+            ((int32_t *)V(vd))[ei] = roundoff_i64(((int64_t *)V(vs2))[ei], shift, rm);
             break;
         default:
             helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
