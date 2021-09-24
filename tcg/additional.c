@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010-2015 Antmicro Ltd <www.antmicro.com>
+ * Copyright (c) 2010-2021 Antmicro Ltd <www.antmicro.com>
  * Copyright (c) 2011-2015 Realtime Embedded AB <www.rte.se>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -142,7 +142,7 @@ void set_tlb_table_n_0_rwa(int i, unsigned int read, unsigned int write, unsigne
 #include <unistd.h>
 #include "../include/infrastructure.h"
 
-// not thread safe
+// not thread safe - it relies on the property of Renode, that it disposes of machines sequentially
 static FILE *perf_map_handle;
 
 typedef struct tcg_perf_map_symbol
@@ -153,9 +153,72 @@ typedef struct tcg_perf_map_symbol
     bool reused;
 
     struct tcg_perf_map_symbol *left, *right;
+    int height;
 } tcg_perf_map_symbol;
 
+// self balancing (AVL) tree
 static tcg_perf_map_symbol *symbols = NULL;
+
+/* Left/Right Rotation
+            |            Right               |
+            s           <=====               m
+           / \           Left               / \
+          l   m         =====>             s   mr
+             / \                          / \
+            ml  mr                       l   ml
+ */
+
+static inline int max(int a, int b)
+{
+    return a > b ? a : b;
+}
+
+static inline int tcg_perf_tree_height(tcg_perf_map_symbol *s)
+{
+    return s == NULL ? 0 : s->height;
+}
+
+static tcg_perf_map_symbol *tcg_perf_tree_left_rotate(tcg_perf_map_symbol *s)
+{
+    if (s == NULL) {
+        return NULL;
+    }
+    if (unlikely(s->right == NULL)) {
+        return s;
+    }
+
+    tcg_perf_map_symbol *l = s->left;
+    tcg_perf_map_symbol *m = s->right;
+
+    s->right = m->left;
+    m->left = s;
+
+    s->height = max(tcg_perf_tree_height(l), tcg_perf_tree_height(s->right)) + 1;
+    m->height = max(tcg_perf_tree_height(s), tcg_perf_tree_height(m->right)) + 1;
+
+    return m;
+}
+
+static tcg_perf_map_symbol *tcg_perf_tree_right_rotate(tcg_perf_map_symbol *m)
+{
+    if (m == NULL) {
+        return NULL;
+    }
+    if (unlikely(m->left == NULL)) {
+        return m;
+    }
+
+    tcg_perf_map_symbol *s = m->left;
+    tcg_perf_map_symbol *mr = m->right;
+
+    m->left = s->right;
+    s->right = m;
+
+    m->height = max(tcg_perf_tree_height(mr), tcg_perf_tree_height(m->left)) + 1;
+    s->height = max(tcg_perf_tree_height(m),  tcg_perf_tree_height(s->left)) + 1;
+
+    return s;
+}
 
 #define RETURN_EMPTY_PERF_HANDLE \
     if(unlikely(perf_map_handle == NULL)) \
@@ -186,7 +249,7 @@ static void tcg_perf_symbol_tree_recurse_helper(tcg_perf_map_symbol *s, void (*c
     (*callback)(s);
 }
 
-static void tcg_perf_flush_symbol(tcg_perf_map_symbol *s)
+static inline void tcg_perf_flush_symbol(tcg_perf_map_symbol *s)
 {
     if (s->label) {
         fprintf(perf_map_handle, "%p %x %stcg_jit_code:%p:%s\n", s->ptr, s->size, s->reused ? "[REUSED]" : "", s->ptr, s->label);
@@ -201,9 +264,11 @@ void tcg_perf_flush_map()
     tcg_perf_symbol_tree_recurse_helper(symbols, tcg_perf_flush_symbol);
 }
 
-static void tcg_perf_free_symbol(tcg_perf_map_symbol *s)
+static inline void tcg_perf_free_symbol(tcg_perf_map_symbol *s)
 {
-    TCG_free(s->label);
+    if (s->label) {
+        TCG_free(s->label);
+    }
     TCG_free(s);
 }
 
@@ -217,41 +282,115 @@ void tcg_perf_fini_labeling()
     }
 }
 
-static tcg_perf_map_symbol **tcg_perf_append_symbol_inner(tcg_perf_map_symbol *s)
+static int tcg_perf_tree_get_balance_factor(tcg_perf_map_symbol *node)
+{
+    if (node == NULL) {
+        return 0;
+    }
+    int leftH = node->left == NULL ? 0 : tcg_perf_tree_height(node->left);
+    int rightH = node->right == NULL ? 0 : tcg_perf_tree_height(node->right);
+    return rightH - leftH;
+}
+
+typedef struct tree_walk_trace
+{
+    tcg_perf_map_symbol **node;
+    struct tree_walk_trace *next;
+} tree_walk_trace;
+
+static inline tree_walk_trace *trace_step(tree_walk_trace *trace)
+{
+    tree_walk_trace *next = trace->next;
+    TCG_free(trace);
+    return next;
+}
+
+void tcg_perf_append_symbol(tcg_perf_map_symbol *s)
 {
     tcg_perf_map_symbol **next = &symbols;
+    tree_walk_trace *head = NULL;
+
     while (*next != NULL) {
+        tree_walk_trace *tmp = TCG_malloc(sizeof(tree_walk_trace));
+        tmp->node = next;
+        tmp->next = head;
+        head = tmp;
+
         if (s->ptr == (*next)->ptr) {
             s->reused = true;
             s->left = (*next)->left;
             s->right = (*next)->right;
+            s->height = (*next)->height;
             tcg_perf_free_symbol(*next);
-            return next;
+
+            // Dispose of trace
+            while (head != NULL) {
+                head = trace_step(head);
+            }
+
+            break;
         } else if (s->ptr < (*next)->ptr) {
             next = &(*next)->left;
         } else {
             next = &(*next)->right;
         }
     }
-    return next;
-}
 
-void tcg_perf_append_symbol(tcg_perf_map_symbol *s)
-{
-    tcg_perf_map_symbol **place = tcg_perf_append_symbol_inner(s);
-    *place = s;
+    *next = s;
+    if (head == NULL) {
+        return;
+    }
+
+    // Step one up
+    head = trace_step(head);
+
+    // Rebalance tree and cleanup trace
+    while (head != NULL) {
+        tcg_perf_map_symbol *current = *(head->node);
+
+        current->height = max(tcg_perf_tree_height(current->left), tcg_perf_tree_height(current->right)) + 1;
+        int balance_factor = tcg_perf_tree_get_balance_factor(current);
+
+        if (balance_factor < -1) { // Left-heavy
+            if (tcg_perf_tree_get_balance_factor(current->left) >= 1) {
+                // Left Right
+                current->left = tcg_perf_tree_left_rotate(current->left);
+                current = tcg_perf_tree_right_rotate(current);
+            } else {
+                // Left Left
+                current = tcg_perf_tree_right_rotate(current);
+            }
+        } else if (balance_factor > 1) {    // Right-heavy
+            if (tcg_perf_tree_get_balance_factor(current->right) <= -1) {
+                // Right Left
+                current->right = tcg_perf_tree_right_rotate(current->right);
+                current = tcg_perf_tree_left_rotate(current);
+            } else {
+                // Right Right
+                current = tcg_perf_tree_left_rotate(current);
+            }
+        }
+
+        *(head->node) = current;
+        head = trace_step(head);
+    }
 }
 
 void tcg_perf_out_symbol_s(void *s, int size, const char *label)
 {
     RETURN_EMPTY_PERF_HANDLE;
+    char *_label = NULL;
 
-    size_t len = strlen(label) + 1;
-    char *_label = TCG_malloc(sizeof(char) * len);
-    strncpy(_label, label, len);
+    if(label) {
+        size_t len = strlen(label) + 1;
+        _label = TCG_malloc(sizeof(char) * len);
+        strncpy(_label, label, len);
+    }
 
     tcg_perf_map_symbol *symbol = TCG_malloc(sizeof(tcg_perf_map_symbol));
-    *symbol = (tcg_perf_map_symbol) { .ptr = s, .size = size, .label = _label, .reused = false, .left = NULL, .right = NULL};
+    *symbol =
+        (tcg_perf_map_symbol) { .ptr = s, .size = size, .label = _label, .reused = false, .left = NULL, .right = NULL,
+                                .height = 1};
     tcg_perf_append_symbol(symbol);
 }
 
@@ -259,7 +398,7 @@ void tcg_perf_out_symbol(void *s, int size)
 {
     RETURN_EMPTY_PERF_HANDLE;
 
-    tcg_perf_out_symbol_s(s, size, "");
+    tcg_perf_out_symbol_s(s, size, NULL);
 }
 
 void tcg_perf_out_symbol_i(void *s, int size, int label)
@@ -271,24 +410,26 @@ void tcg_perf_out_symbol_i(void *s, int size, int label)
     tcg_perf_out_symbol_s(s, size, buffer);
 }
 
+#undef RETURN_EMPTY_PERF_HANDLE
+
 #else
-void tcg_perf_init_labeling()
+inline void tcg_perf_init_labeling()
 {
 }
 
-void tcg_perf_fini_labeling()
+inline void tcg_perf_fini_labeling()
 {
 }
 
-void tcg_perf_out_symbol(void *s, int size)
+inline void tcg_perf_out_symbol(void *s, int size)
 {
 }
 
-void tcg_perf_out_symbol_s(void *s, int size, const char *label)
+inline void tcg_perf_out_symbol_s(void *s, int size, const char *label)
 {
 }
 
-void tcg_perf_out_symbol_i(void *s, int size, int label)
+inline void tcg_perf_out_symbol_i(void *s, int size, int label)
 {
 }
 #endif
