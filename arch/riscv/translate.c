@@ -3379,10 +3379,10 @@ static void gen_v_opmvx(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
 
 static void gen_v_opfvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int vs2, uint8_t vm)
 {
-    TCGv t_vd, t_vs2, t_vs1;
-    t_vd = tcg_temp_new();
-    t_vs2 = tcg_temp_new();
-    t_vs1 = tcg_temp_new();
+    TCGv_i32 t_vd, t_vs2, t_vs1;
+    t_vd = tcg_temp_new_i32();
+    t_vs2 = tcg_temp_new_i32();
+    t_vs1 = tcg_temp_new_i32();
     tcg_gen_movi_i32(t_vd, vd);
     tcg_gen_movi_i32(t_vs2, vs2);
     tcg_gen_movi_i32(t_vs1, vs1);
@@ -3478,20 +3478,12 @@ static void gen_v_opfvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_WFUNARY0:
-        {
-            if ((vm =! 1) && (vs1 =! 0)) {
-                kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
-                break;
-            }
-            int case_exit = gen_new_label();
-            gen_helper_vfmv_fs(t_vd, cpu_env, t_vs2);
-            // Fast exit when no operation was performed
-            tcg_gen_brcondi_tl(TCG_COND_EQ, t_vd, -1u, case_exit);
-
-            tcg_gen_mov_i64(cpu_fpr[vs2], t_vd);
-            gen_set_label(case_exit);
-            break;
+        if (vm && vs1 == 0) {
+            gen_helper_vfmv_fs(cpu_env, t_vd, t_vs2);
+        } else {
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         }
+        break;
     case RISC_V_FUNCT_FUNARY0:
         switch (vs1) {
         case 0x0:
@@ -3860,9 +3852,9 @@ static void gen_v_opfvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         break;
     }
-    tcg_temp_free(t_vd);
-    tcg_temp_free(t_vs2);
-    tcg_temp_free(t_vs1);
+    tcg_temp_free_i32(t_vd);
+    tcg_temp_free_i32(t_vs2);
+    tcg_temp_free_i32(t_vs1);
 }
 
 static void gen_v_opfvf(DisasContext *dc, uint8_t funct6, int vd, int rs1, int vs2, uint8_t vm)

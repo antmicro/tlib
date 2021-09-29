@@ -718,7 +718,7 @@ DEF_HELPER_3(vfrec7_v, void, env, i32, i32)
 DEF_HELPER_3(vfrec7_v_m, void, env, i32, i32)
 
 DEF_HELPER_2(handle_custom_instruction, i32, i64, i64)
-DEF_HELPER_2(vfmv_fs, i64, env, i32)
+DEF_HELPER_3(vfmv_fs, void, env, i32, i32)
 DEF_HELPER_3(vfmv_sf, void, env, i32, i64)
 
 void do_nmi(CPUState *env);

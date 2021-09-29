@@ -1102,12 +1102,12 @@ void helper_vmsof_m(CPUState *env, uint32_t vd, uint32_t vs2)
     }
 }
 
-uint64_t helper_vfmv_fs(CPUState *env, int32_t vr, int32_t vs2)
+void helper_vfmv_fs(CPUState *env, int32_t vd, int32_t vs2)
 {
     if (env->vstart >= env->vl)
     {
         // No operation is performed
-        return -1u;
+        return;
     }
     const target_ulong eew = env->vsew;
     switch(eew)
@@ -1119,7 +1119,7 @@ uint64_t helper_vfmv_fs(CPUState *env, int32_t vr, int32_t vs2)
                break;
            }
            uint64_t nanbox_mask =  ((uint64_t) -1) << 32;
-           return (uint64_t)((uint32_t *)V(vs2))[0] | nanbox_mask;
+           env->fpr[vd] = (uint64_t)((uint32_t *)V(vs2))[0] | nanbox_mask;
            break;
         case 64:
            if (!riscv_has_ext(env, RISCV_FEATURE_RVD))
@@ -1127,13 +1127,12 @@ uint64_t helper_vfmv_fs(CPUState *env, int32_t vr, int32_t vs2)
                helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
                break;
            }
-           return ((uint64_t *)V(vs2))[0];
+           env->fpr[vd] = ((uint64_t *)V(vs2))[0];
            break;
         default:
             helper_raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
             break;
     }
-    return -1u;
 }
 
 void helper_vfmv_sf(CPUState *env, target_ulong vd, int64_t rs1)
