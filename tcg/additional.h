@@ -75,3 +75,6 @@ void tcg_perf_out_symbol_s(void *s, int size, const char *label);
 void tcg_perf_out_symbol_i(void *s, int size, int label);
 void tcg_perf_out_symbol(void *s, int size);
 
+struct TranslationBlock;
+void tcg_perf_out_symbol_from_tb(struct TranslationBlock *tb, int host_size, const char *comment);
+
