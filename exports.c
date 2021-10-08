@@ -270,6 +270,7 @@ EXC_INT_2(int32_t, tlib_atomic_memory_state_init, uintptr_t, atomic_memory_state
 
 void tlib_dispose()
 {
+    tcg_perf_fini_labeling();
     tlib_arch_dispose();
     code_gen_free();
     free_all_page_descriptors();

@@ -145,12 +145,14 @@ void set_tlb_table_n_0_rwa(int i, unsigned int read, unsigned int write, unsigne
 // not thread safe - it relies on the property of Renode, that it disposes of machines sequentially
 static FILE *perf_map_handle;
 
+struct TranslationBlock;
 typedef struct tcg_perf_map_symbol
 {
     void *ptr;
     int size;
     char *label;
     bool reused;
+    struct TranslationBlock *tb;
 
     struct tcg_perf_map_symbol *left, *right;
     int height;
@@ -252,10 +254,19 @@ static void tcg_perf_symbol_tree_recurse_helper(tcg_perf_map_symbol *s, void (*c
 static inline void tcg_perf_flush_symbol(tcg_perf_map_symbol *s)
 {
     if (s->label) {
-        fprintf(perf_map_handle, "%p %x %stcg_jit_code:%p:%s\n", s->ptr, s->size, s->reused ? "[REUSED]" : "", s->ptr, s->label);
+        fprintf(perf_map_handle, "%p %x %stcg_jit_code:%p:%s", s->ptr, s->size, s->reused ? "[REUSED]" : "", s->ptr, s->label);
     } else {
-        fprintf(perf_map_handle, "%p %x %stcg_jit_code:%p\n", s->ptr, s->size, s->reused ? "[REUSED]" : "", s->ptr);
+        fprintf(perf_map_handle, "%p %x %stcg_jit_code:%p", s->ptr, s->size, s->reused ? "[REUSED]" : "", s->ptr);
     }
+
+    if (s->tb) {
+        char *buffer = TCG_malloc(sizeof(char) * 100);
+        tcg_perf_tb_info_to_string(s->tb, buffer, 100);
+        fprintf(perf_map_handle, "%s", buffer);
+        TCG_free(buffer);
+    }
+
+    fprintf(perf_map_handle, "\n");
 }
 
 void tcg_perf_flush_map()
@@ -321,6 +332,7 @@ void tcg_perf_append_symbol(tcg_perf_map_symbol *s)
             s->left = (*next)->left;
             s->right = (*next)->right;
             s->height = (*next)->height;
+            s->tb = (*next)->tb;
             tcg_perf_free_symbol(*next);
 
             // Dispose of trace
@@ -376,12 +388,12 @@ void tcg_perf_append_symbol(tcg_perf_map_symbol *s)
     }
 }
 
-void tcg_perf_out_symbol_s(void *s, int size, const char *label)
+void tcg_perf_out_symbol_s(void *s, int size, const char *label, struct TranslationBlock *tb)
 {
     RETURN_EMPTY_PERF_HANDLE;
     char *_label = NULL;
 
-    if(label) {
+    if (label) {
         size_t len = strlen(label) + 1;
         _label = TCG_malloc(sizeof(char) * len);
         strncpy(_label, label, len);
@@ -389,25 +401,25 @@ void tcg_perf_out_symbol_s(void *s, int size, const char *label)
 
     tcg_perf_map_symbol *symbol = TCG_malloc(sizeof(tcg_perf_map_symbol));
     *symbol =
-        (tcg_perf_map_symbol) { .ptr = s, .size = size, .label = _label, .reused = false, .left = NULL, .right = NULL,
+        (tcg_perf_map_symbol) { .ptr = s, .size = size, .label = _label, .reused = false, .tb = tb, .left = NULL, .right = NULL,
                                 .height = 1};
     tcg_perf_append_symbol(symbol);
 }
 
-void tcg_perf_out_symbol(void *s, int size)
+void tcg_perf_out_symbol(void *s, int size, struct TranslationBlock *tb)
 {
     RETURN_EMPTY_PERF_HANDLE;
 
-    tcg_perf_out_symbol_s(s, size, NULL);
+    tcg_perf_out_symbol_s(s, size, NULL, tb);
 }
 
-void tcg_perf_out_symbol_i(void *s, int size, int label)
+void tcg_perf_out_symbol_i(void *s, int size, int label, struct TranslationBlock *tb)
 {
     RETURN_EMPTY_PERF_HANDLE;
     char buffer[20];
 
     snprintf(buffer, sizeof(buffer), "%x", label);
-    tcg_perf_out_symbol_s(s, size, buffer);
+    tcg_perf_out_symbol_s(s, size, buffer, tb);
 }
 
 #undef RETURN_EMPTY_PERF_HANDLE
@@ -421,15 +433,15 @@ inline void tcg_perf_fini_labeling()
 {
 }
 
-inline void tcg_perf_out_symbol(void *s, int size)
+inline void tcg_perf_out_symbol(void *s, int size, struct TranslationBlock *tb)
 {
 }
 
-inline void tcg_perf_out_symbol_s(void *s, int size, const char *label)
+inline void tcg_perf_out_symbol_s(void *s, int size, const char *label, struct TranslationBlock *tb)
 {
 }
 
-inline void tcg_perf_out_symbol_i(void *s, int size, int label)
+inline void tcg_perf_out_symbol_i(void *s, int size, int label, struct TranslationBlock *tb)
 {
 }
 #endif

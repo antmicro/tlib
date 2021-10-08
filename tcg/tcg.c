@@ -289,7 +289,6 @@ void tcg_dispose()
     TCG_free(tcg_op_defs[0].sorted_args);
     tcg_pool_free(tcg->ctx);
     TCG_free(tcg->ctx->helpers);
-    tcg_perf_fini_labeling();
 }
 
 void tcg_prologue_init()
