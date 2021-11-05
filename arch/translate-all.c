@@ -306,3 +306,18 @@ int cpu_restore_state_and_restore_instructions_count(CPUState *env, TranslationB
     }
     return executed_instructions;
 }
+
+void generate_opcode_count_increment(CPUState *env, uint32_t opcode)
+{
+    uint32_t masked_opcode;
+    for (uint32_t i = 0; i < env->opcode_counters_size; i++) {
+        // mask out non-opcode fields
+        masked_opcode = opcode & env->opcode_counters[i].mask;
+        if (env->opcode_counters[i].opcode == masked_opcode) {
+            TCGv_i32 p = tcg_const_i32(i);
+            gen_helper_count_opcode_inner(p);
+            tcg_temp_free_i32(p);
+            break;
+        }
+    }
+}

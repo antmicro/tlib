@@ -272,4 +272,7 @@ void tb_invalidate_phys_page_range_inner(tb_page_addr_t start, tb_page_addr_t en
 extern void unmap_page(target_phys_addr_t address);
 void free_all_page_descriptors(void);
 void code_gen_free(void);
+
+void generate_opcode_count_increment(CPUState*, uint32_t);
+
 #endif

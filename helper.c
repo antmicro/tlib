@@ -74,3 +74,8 @@ void HELPER(var_log)(target_ulong v)
 {
     tlib_printf(LOG_LEVEL_INFO, "Var Log: 0x" TARGET_FMT_lx, v);
 }
+
+void HELPER(count_opcode_inner)(uint32_t instruction_id)
+{
+   cpu->opcode_counters[instruction_id].counter++;
+}
