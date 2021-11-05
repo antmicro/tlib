@@ -1454,6 +1454,11 @@ static int disas_insn(CPUState *env, DisasContext *dc)
     target_long simm;
 
     insn = ldl_code(dc->base.pc);
+
+    if (env->count_opcodes) {
+        generate_opcode_count_increment(env, insn);
+    }
+    
     opc = GET_FIELD(insn, 0, 1);
 
     rd = GET_FIELD(insn, 2, 6);

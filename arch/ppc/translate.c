@@ -9689,6 +9689,10 @@ int disas_insn(CPUState *env, DisasContext *dc)
         dc->opcode = ldl_code(dc->base.pc);
     }
 
+    if (env->count_opcodes) {
+        generate_opcode_count_increment(env, dc->opcode);
+    }
+
     if (dc->vle_enabled) { // use the vle decoding function to obtain the opcodes
         decode_vle_instruction(dc, &op1, &op2, &op3);
         table = env->vle_opcodes;

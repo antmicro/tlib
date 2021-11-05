@@ -6786,6 +6786,11 @@ static void disas_arm_insn(CPUState *env, DisasContext *s)
     TCGv_i64 tmp64;
 
     insn = ldl_code(s->base.pc);
+    
+    if (env->count_opcodes) {
+        generate_opcode_count_increment(env, insn);
+    }
+    
     s->base.pc += 4;
 
     /* M variants do not implement ARM mode.  */
@@ -9359,6 +9364,11 @@ static void disas_thumb_insn(CPUState *env, DisasContext *s)
     }
 
     insn = lduw_code(s->base.pc);
+    
+    if(env->count_opcodes) {
+        generate_opcode_count_increment(env, insn);
+    }
+    
     s->base.pc += 2;
     switch (insn >> 12) {
     case 0: case 1:

@@ -4614,6 +4614,10 @@ static int disas_insn(CPUState *env, DisasContext *dc)
     /* check for compressed insn */
     int instruction_length = (is_compressed ? 2 : 4);
     dc->base.npc = dc->base.pc + instruction_length;
+    
+    if (env->count_opcodes) {
+        generate_opcode_count_increment(env, dc->opcode);
+    }
 
     if (is_compressed) {
         decode_RV32_64C(env, dc);

@@ -4089,6 +4089,11 @@ static int disas_insn(CPUState *env, DisasContext *s)
     s->rip_offset = 0; /* for relative ip address */
 next_byte:
     b = ldub_code(s->base.pc);
+
+    if (env->count_opcodes) {
+        generate_opcode_count_increment(env, b);
+    }
+
     s->base.pc++;
     /* check prefixes */
 #ifdef TARGET_X86_64
