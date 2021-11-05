@@ -146,6 +146,14 @@ typedef struct CPUBreakpoint {
     QTAILQ_ENTRY(CPUBreakpoint) entry;
 } CPUBreakpoint;
 
+#define MAX_OPCODE_COUNTERS 1024
+typedef struct opcode_counter_descriptor
+{
+    uint32_t opcode;
+    uint32_t mask;
+    uint32_t counter;
+} opcode_counter_descriptor;
+
 #define CPU_TEMP_BUF_NLONGS 128
 #define CPU_COMMON                                                            \
     /* --------------------------------------- */                             \
@@ -194,6 +202,10 @@ typedef struct CPUBreakpoint {
     int interrupt_end_callback_enabled;                                       \
     int32_t tlib_is_on_memory_access_enabled;                                 \
     int allow_unaligned_accesses;                                             \
+                                                                              \
+    bool count_opcodes;                                                       \
+    uint32_t opcode_counters_size;                                            \
+    opcode_counter_descriptor opcode_counters[MAX_OPCODE_COUNTERS];           \
                                                                               \
     int id;                                                                   \
     /* STARTING FROM HERE FIELDS ARE NOT SERIALIZED */                        \
