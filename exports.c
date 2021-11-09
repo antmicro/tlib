@@ -527,6 +527,7 @@ uint32_t tlib_install_opcode_counter(uint32_t opcode, uint32_t mask)
 
     cpu->opcode_counters[cpu->opcode_counters_size].opcode = opcode;
     cpu->opcode_counters[cpu->opcode_counters_size].mask = mask;
-
-    return ++cpu->opcode_counters_size;
+    cpu->opcode_counters_size++;
+    
+    return cpu->opcode_counters_size;
 }
