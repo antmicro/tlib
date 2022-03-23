@@ -1120,6 +1120,49 @@ void cpu_abort(CPUState *env, const char *fmt, ...)
     tlib_abort(s);
 }
 
+int get_external_mmu_phys_addr(CPUState *env, uint32_t address, int access_type,
+                                                              target_phys_addr_t *phys_ptr, int *prot)
+{
+    bool found = false;
+    int window_index = 0;
+    ExtMmuRange *mmu_window = env->external_mmu_window;
+
+    *phys_ptr = address;
+    *prot = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
+
+    for (; window_index < MAX_EXTERNAL_MMU_RANGES; window_index++) {
+        if (!mmu_window[window_index].active) {
+            break;
+        } else if (address >= mmu_window[window_index].range_start && address < mmu_window[window_index].range_end) {
+            found = true;
+            break;
+        }
+    }
+
+    if (found) {
+        *phys_ptr += mmu_window[window_index].addend;
+        *prot = mmu_window[window_index].priv;
+        bool allowed = false;
+        switch(access_type) {
+            case ACCESS_DATA_LOAD:
+                allowed = *prot & PAGE_READ;
+                break;
+            case ACCESS_DATA_STORE:
+                allowed = *prot & PAGE_WRITE;
+                break;
+            case ACCESS_INST_FETCH:
+                allowed = *prot & PAGE_EXEC;
+                break;
+            default:
+                tlib_abortf("Incorrect access type %d", access_type);
+                break;
+        }
+        if (!allowed) {
+            return TRANSLATE_FAIL;
+        }
+    }
+    return TRANSLATE_SUCCESS;
+}
 static inline void tlb_flush_jmp_cache(CPUState *env, target_ulong addr)
 {
     unsigned int i;

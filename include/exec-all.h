@@ -71,6 +71,8 @@ void tb_invalidate_phys_page_range(tb_page_addr_t start, tb_page_addr_t end, int
 void tlb_flush_page(CPUState *env, target_ulong addr);
 void tlb_flush(CPUState *env, int flush_global);
 void tlb_set_page(CPUState *env, target_ulong vaddr, target_phys_addr_t paddr, int prot, int mmu_idx, target_ulong size);
+int get_external_mmu_phys_addr(CPUState *env, uint32_t address, int access_type,
+                                                              target_phys_addr_t *phys_ptr, int *prot);
 
 #define CODE_GEN_ALIGN           16 /* must be >= of the size of a icache line */
 

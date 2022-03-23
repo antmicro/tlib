@@ -90,6 +90,8 @@ typedef struct DisasContextBase {
 #define TB_JMP_CACHE_BITS  12
 #define TB_JMP_CACHE_SIZE  (1 << TB_JMP_CACHE_BITS)
 
+#define MAX_EXTERNAL_MMU_RANGES  255
+
 /* Only the bottom TB_JMP_PAGE_BITS of the jump cache hash bits vary for
    addresses on the same page.  The top bits are the same.  This allows
    TLB invalidation to quickly clear a subset of the hash table.  */
@@ -148,6 +150,15 @@ typedef struct opcode_counter_descriptor
     uint64_t counter;
 } opcode_counter_descriptor;
 
+typedef struct ExtMmuRange
+{
+    target_ulong range_start;
+    target_ulong range_end;
+    target_ulong addend;
+    uint8_t priv;
+    bool active;
+} ExtMmuRange;
+
 #define MAX_IO_ACCESS_REGIONS_COUNT 1024
 
 #define CPU_TEMP_BUF_NLONGS 128
@@ -187,12 +198,16 @@ typedef struct opcode_counter_descriptor
     int exception_index;                                                      \
     int nr_cores;   /* number of cores within this CPU package */             \
     int nr_threads; /* number of threads within this CPU */                   \
+                                                                              \
+    /* External mmu settings */                                               \
+    bool external_mmu_enabled;                                                \
+    ExtMmuRange external_mmu_window[MAX_EXTERNAL_MMU_RANGES];                 \
     /* user data */                                                           \
     /* chaining is enabled by default */                                      \
     int chaining_disabled;                                                    \
     /* tb cache is enabled by default */                                      \
     int tb_cache_disabled;                                                    \
-    /* indicates if the block_finished hook is registered, implicitly \
+    /* indicates if the block_finished hook is registered, implicitly         \
                           disabling block chaining */                         \
     int block_finished_hook_present;                                          \
     /* indicates if the block_begin hook is registered */                     \

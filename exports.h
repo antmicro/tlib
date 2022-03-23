@@ -69,4 +69,26 @@ void tlib_set_event_flag(int value);
 
 uint32_t tlib_get_current_tb_disas_flags(void);
 
+uint32_t tlib_get_mmu_windows_count(void);
+
+void tlib_enable_external_window_mmu(uint32_t value);
+
+int32_t tlib_acquire_mmu_window();
+
+void tlib_set_mmu_window_start(uint32_t index, uint64_t addr_start);
+
+void tlib_set_mmu_window_end(uint32_t index, uint64_t addr_end);
+
+void tlib_set_window_privileges(uint32_t index, int32_t privileges);
+
+void tlib_set_mmu_window_addend(uint32_t index, uint64_t addend);
+
+void tlib_get_mmu_window_start(uint32_t index);
+
+void tlib_get_mmu_window_end(uint32_t index);
+
+void tlib_get_window_privileges(uint32_t index);
+
+void tlib_get_mmu_window_addend(uint32_t index);
+
 #endif
