@@ -268,6 +268,19 @@ int xtensa_cpu_tlb_fill(CPUState *env, vaddr address, int size,
     unsigned access;
     int ret;
 
+    if(unlikely(cpu->external_mmu_enabled))
+    {
+        if(TRANSLATE_SUCCESS == get_external_mmu_phys_addr(env, address, access_type, &paddr, &access))
+        {
+            page_size = TARGET_PAGE_SIZE;
+            goto set_page;
+        }
+        else
+        {
+            return TRANSLATE_FAIL;
+        }
+    }
+
     ret = get_physical_address(env, true, address, access_type,
                                        mmu_idx, &paddr, &page_size, &access);
 #if DEBUG
