@@ -246,7 +246,7 @@ void cpu_x86_update_cr4(CPUState *env, uint32_t new_cr4)
    0  = nothing more to do
    1  = generate PF fault
  */
-int cpu_handle_mmu_fault(CPUState *env, target_ulong addr, int is_write1, int mmu_idx)
+int cpu_handle_mmu_fault(CPUState *env, target_ulong addr, int access_type, int mmu_idx)
 {
     uint64_t ptep, pte;
     target_ulong pde_addr, pte_addr;
@@ -256,7 +256,7 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong addr, int is_write1, int mm
     target_ulong vaddr, virt_addr;
 
     is_user = mmu_idx == MMU_USER_IDX;
-    is_write = is_write1 & 1;
+    is_write = (access_type == ACCESS_DATA_STORE);
 
     if (!(env->cr[0] & CR0_PG_MASK)) {
         pte = addr;
@@ -280,7 +280,7 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong addr, int is_write1, int mm
             if (sext != 0 && sext != -1) {
                 env->error_code = 0;
                 env->exception_index = EXCP0D_GPF;
-                return 1;
+                return TRANSLATE_SUCCESS;
             }
 
             pml4e_addr = ((env->cr[3] & ~0xfff) + (((addr >> 39) & 0x1ff) << 3)) & env->a20_mask;
@@ -341,7 +341,7 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong addr, int is_write1, int mm
             /* 2 MB page */
             page_size = 2048 * 1024;
             ptep ^= PG_NX_MASK;
-            if ((ptep & PG_NX_MASK) && is_write1 == 2) {
+            if ((ptep & PG_NX_MASK) && access_type == ACCESS_INST_FETCH) {
                 goto do_fault_protect;
             }
             if (is_user) {
@@ -386,7 +386,7 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong addr, int is_write1, int mm
             /* combine pde and pte nx, user and rw protections */
             ptep &= pte ^ PG_NX_MASK;
             ptep ^= PG_NX_MASK;
-            if ((ptep & PG_NX_MASK) && is_write1 == 2) {
+            if ((ptep & PG_NX_MASK) && access_type == ACCESS_INST_FETCH) {
                 goto do_fault_protect;
             }
             if (is_user) {
@@ -515,9 +515,10 @@ do_mapping:
     page_offset = (addr & TARGET_PAGE_MASK) & (page_size - 1);
     paddr = (pte & TARGET_PAGE_MASK) + page_offset;
     vaddr = virt_addr + page_offset;
-
+set_page:
     tlb_set_page(env, vaddr, paddr, prot, mmu_idx, page_size);
-    return 0;
+    return TRANSLATE_SUCCESS;
+
 do_fault_protect:
     error_code = PG_ERROR_P_MASK;
 do_fault:
@@ -525,7 +526,7 @@ do_fault:
     if (is_user) {
         error_code |= PG_ERROR_U_MASK;
     }
-    if (is_write1 == 2 && (env->efer & MSR_EFER_NXE) && (env->cr[4] & CR4_PAE_MASK)) {
+    if (access_type == ACCESS_INST_FETCH && (env->efer & MSR_EFER_NXE) && (env->cr[4] & CR4_PAE_MASK)) {
         error_code |= PG_ERROR_I_D_MASK;
     }
     if (env->intercept_exceptions & (1 << EXCP0E_PAGE)) {
@@ -536,7 +537,7 @@ do_fault:
     }
     env->error_code = error_code;
     env->exception_index = EXCP0E_PAGE;
-    return 1;
+    return TRANSLATE_FAIL;
 }
 
 target_phys_addr_t cpu_get_phys_page_debug(CPUState *env, target_ulong addr)
