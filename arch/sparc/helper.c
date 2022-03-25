@@ -173,8 +173,19 @@ int cpu_handle_mmu_fault (CPUState *env, target_ulong address, int access_type, 
     target_ulong page_size;
     int error_code = 0, prot, access_index;
 
+    if(unlikely(cpu->external_mmu_enabled))
+    {
+        if(TRANSLATE_SUCCESS == get_external_mmu_phys_addr(env, address, access_type, &paddr, &prot))
+        {
+            page_size = TARGET_PAGE_SIZE;
+            goto set_page;
+        }
+        return TRANSLATE_FAIL;
+    }
+
     error_code = get_physical_address(env, &paddr, &prot, &access_index, address, access_type, mmu_idx, &page_size);
     if (error_code == 0) {
+set_page:
         vaddr = address & TARGET_PAGE_MASK;
         paddr &= TARGET_PAGE_MASK;
         tlb_set_page(env, vaddr, paddr, prot, mmu_idx, page_size);
