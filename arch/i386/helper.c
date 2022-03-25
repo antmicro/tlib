@@ -258,6 +258,11 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong addr, int access_type, int 
     is_user = mmu_idx == MMU_USER_IDX;
     is_write = (access_type == ACCESS_DATA_STORE);
 
+    if(unlikely(cpu->external_mmu_enabled))
+    {
+        goto do_external_mmu_mapping;
+    }
+
     if (!(env->cr[0] & CR0_PG_MASK)) {
         pte = addr;
         virt_addr = addr & TARGET_PAGE_MASK;
@@ -507,6 +512,16 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong addr, int access_type, int 
             }
         }
     }
+do_external_mmu_mapping:
+    if(get_external_mmu_phys_addr(env, addr, access_type, &paddr, &prot) == TRANSLATE_FAIL)
+    {
+        error_code = 0;
+        return TRANSLATE_FAIL;
+    }
+    page_size = TARGET_PAGE_SIZE;
+    vaddr = addr & TARGET_PAGE_MASK;
+    paddr = paddr & TARGET_PAGE_MASK;
+    goto set_page;
 do_mapping:
     pte = pte & env->a20_mask;
 
