@@ -523,12 +523,17 @@ extern uintptr_t tlib_host_page_bits;
 extern uintptr_t tlib_host_page_size;
 extern uintptr_t tlib_host_page_mask;
 
+/* Access types as used in the get_phys_addr* functions */
+#define ACCESS_DATA_LOAD  0
+#define ACCESS_DATA_STORE 1
+#define ACCESS_INST_FETCH 2
+
 #define HOST_PAGE_ALIGN(addr) (((addr) + tlib_host_page_size - 1) & tlib_host_page_mask)
 
 /* same as PROT_xxx */
-#define PAGE_READ      0x0001
-#define PAGE_WRITE     0x0002
-#define PAGE_EXEC      0x0004
+#define PAGE_READ      (1 << ACCESS_DATA_LOAD)
+#define PAGE_WRITE     (1 << ACCESS_DATA_STORE)
+#define PAGE_EXEC      (1 << ACCESS_INST_FETCH)
 #define PAGE_BITS      (PAGE_READ | PAGE_WRITE | PAGE_EXEC)
 #define PAGE_VALID     0x0008
 /* original state of the write flag (used when tracking self-modifying
