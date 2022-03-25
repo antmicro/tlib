@@ -22,8 +22,6 @@
 
 #define RV(x) ((target_ulong)1 << (x - 'A'))
 
-#define TRANSLATE_FAIL    1
-#define TRANSLATE_SUCCESS 0
 #define NB_MMU_MODES      4
 
 #define MAX_RISCV_PMPS    (16)

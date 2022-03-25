@@ -528,6 +528,10 @@ extern uintptr_t tlib_host_page_mask;
 #define ACCESS_DATA_STORE 1
 #define ACCESS_INST_FETCH 2
 
+/* Return value from get_phys_addr* */
+#define TRANSLATE_FAIL    1
+#define TRANSLATE_SUCCESS 0
+
 #define HOST_PAGE_ALIGN(addr) (((addr) + tlib_host_page_size - 1) & tlib_host_page_mask)
 
 /* same as PROT_xxx */
