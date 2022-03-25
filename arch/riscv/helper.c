@@ -159,7 +159,7 @@ static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int
      * (riscv_cpu_do_interrupt) is correct */
     int mode = mmu_idx;
 
-    if (mode == PRV_M && access_type != MMU_INST_FETCH) {
+    if (mode == PRV_M && access_type != ACCESS_INST_FETCH) {
         if (get_field(env->mstatus, MSTATUS_MPRV)) {
             mode = get_field(env->mstatus, MSTATUS_MPP);
         }
@@ -243,17 +243,17 @@ static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int
         if (PTE_TABLE(pte)) { /* next level of page table */
             base = ppn << PGSHIFT;
         } else if ((pte & PTE_U) && (mode == PRV_S) &&
-                   (!sum || ((env->privilege_architecture >= RISCV_PRIV1_11) && access_type == MMU_INST_FETCH))) {
+                   (!sum || ((env->privilege_architecture >= RISCV_PRIV1_11) && access_type == ACCESS_INST_FETCH))) {
             break;
         } else if (!(pte & PTE_U) && (mode != PRV_S)) {
             break;
         } else if (!(pte & PTE_V) || (!(pte & PTE_R) && (pte & PTE_W))) {
             break;
-        } else if (access_type == MMU_INST_FETCH ? !(pte & PTE_X) : access_type == MMU_DATA_LOAD ?  !(pte & PTE_R) &&
+        } else if (access_type == ACCESS_INST_FETCH ? !(pte & PTE_X) : access_type == ACCESS_DATA_LOAD ?  !(pte & PTE_R) &&
                    !(mxr && (pte & PTE_X)) : !((pte & PTE_R) && (pte & PTE_W))) {
             break;
         } else {
-            target_ulong updated_pte = pte | PTE_A | ((access_type == MMU_DATA_STORE) * PTE_D);
+            target_ulong updated_pte = pte | PTE_A | ((access_type == ACCESS_DATA_STORE) * PTE_D);
             if (pte != updated_pte) {
                 /* set accessed and possibly dirty bits.
                    we only put it in the TLB if it has the right stuff */
@@ -274,11 +274,11 @@ static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int
              * dirty bit on the PTE
              *
              * at this point, we assume that protection checks have occurred */
-            if ((pte & PTE_X) && access_type == MMU_INST_FETCH) {
+            if ((pte & PTE_X) && access_type == ACCESS_INST_FETCH) {
                 *prot |= PAGE_EXEC;
-            } else if ((pte & PTE_W) && access_type == MMU_DATA_STORE) {
+            } else if ((pte & PTE_W) && access_type == ACCESS_DATA_STORE) {
                 *prot |= PAGE_WRITE;
-            } else if ((pte & PTE_R) && access_type == MMU_DATA_LOAD) {
+            } else if ((pte & PTE_R) && access_type == ACCESS_DATA_LOAD) {
                 *prot |= PAGE_READ;
             } else {
                 tlib_abort("err in translation prots");
@@ -294,13 +294,13 @@ static void raise_mmu_exception(CPUState *env, target_ulong address, int access_
     int page_fault_exceptions =
         (env->privilege_architecture >= RISCV_PRIV1_10) && get_field(env->satp, SATP_MODE) != VM_1_10_MBARE;
     int exception = 0;
-    if (access_type == MMU_INST_FETCH) {        /* inst access */
+    if (access_type == ACCESS_INST_FETCH) {        /* inst access */
         exception = page_fault_exceptions ? RISCV_EXCP_INST_PAGE_FAULT : RISCV_EXCP_INST_ACCESS_FAULT;
         env->badaddr = address;
-    } else if (access_type == MMU_DATA_STORE) { /* store access */
+    } else if (access_type == ACCESS_DATA_STORE) { /* store access */
         exception = page_fault_exceptions ? RISCV_EXCP_STORE_PAGE_FAULT : RISCV_EXCP_STORE_AMO_ACCESS_FAULT;
         env->badaddr = address;
-    } else if (access_type == MMU_DATA_LOAD) {  /* load access */
+    } else if (access_type == ACCESS_DATA_LOAD) {  /* load access */
         exception = page_fault_exceptions ? RISCV_EXCP_LOAD_PAGE_FAULT : RISCV_EXCP_LOAD_ACCESS_FAULT;
         env->badaddr = address;
     } else {
@@ -315,7 +315,7 @@ target_phys_addr_t cpu_get_phys_page_debug(CPUState *env, target_ulong addr)
     int prot;
     int mem_idx = cpu_mmu_index(env);
 
-    if (get_physical_address(env, &phys_addr, &prot, addr, MMU_DATA_LOAD, mem_idx)) {
+    if (get_physical_address(env, &phys_addr, &prot, addr, ACCESS_DATA_LOAD, mem_idx)) {
         return -1;
     }
     return phys_addr;

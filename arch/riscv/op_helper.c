@@ -900,13 +900,13 @@ void do_unaligned_access(target_ulong addr, int access_type, int mmu_idx, void *
 {
     env->badaddr = addr;
     switch (access_type) {
-    case MMU_DATA_LOAD:
+    case ACCESS_DATA_LOAD:
         do_raise_exception_err(env,  RISCV_EXCP_LOAD_ADDR_MIS, (uintptr_t)retaddr, 1);
         break;
-    case MMU_DATA_STORE:
+    case ACCESS_DATA_STORE:
         do_raise_exception_err(env, RISCV_EXCP_STORE_AMO_ADDR_MIS, (uintptr_t)retaddr, 1);
         break;
-    case MMU_INST_FETCH:
+    case ACCESS_INST_FETCH:
         // we don't restore intructions count / fire block_end hooks on translation
         do_raise_exception_err(env, RISCV_EXCP_INST_ADDR_MIS, 0, 0);
         break;
@@ -916,13 +916,13 @@ void do_unaligned_access(target_ulong addr, int access_type, int mmu_idx, void *
 }
 
 /* called to fill tlb */
-int tlb_fill(CPUState *env, target_ulong addr, int is_write, int mmu_idx, void *retaddr, int no_page_fault, int access_width)
+int tlb_fill(CPUState *env, target_ulong addr, int access_type, int mmu_idx, void *retaddr, int no_page_fault, int access_width)
 {
     int ret;
-    ret = cpu_handle_mmu_fault(env, addr, is_write, mmu_idx, access_width);
+    ret = cpu_handle_mmu_fault(env, addr, access_type, mmu_idx, access_width);
     if (ret == TRANSLATE_FAIL && !no_page_fault) {
-        // is_write == 2 ==> CODE ACCESS - do not fire block_end hooks!
-        do_raise_exception_err(env, env->exception_index, (uintptr_t)retaddr, is_write != 2);
+        // access_type == 2 ==> CODE ACCESS - do not fire block_end hooks!
+        do_raise_exception_err(env, env->exception_index, (uintptr_t)retaddr, access_type != 2);
     }
     return ret;
 }

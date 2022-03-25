@@ -5,11 +5,6 @@
 #include "softfloat.h"
 #include "host-utils.h"
 
-// This could possibly be generalized. 0 and 1 values are used as "is_write". This conflicts in a way with READ_ACCESS_TYPE et al.
-#define MMU_DATA_LOAD               0
-#define MMU_DATA_STORE              1
-#define MMU_INST_FETCH              2
-
 #define TARGET_PAGE_BITS            12/* 4 KiB Pages */
 #if TARGET_LONG_BITS == 64
 #define TARGET_RISCV64
