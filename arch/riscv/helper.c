@@ -154,6 +154,10 @@ int riscv_cpu_hw_interrupts_pending(CPUState *env)
 static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int *prot, target_ulong address, int access_type,
                                 int mmu_idx)
 {
+    if(unlikely(cpu->external_mmu_enabled))
+    {
+        return get_external_mmu_phys_addr(env, address, access_type, physical, prot);
+    }
     /* NOTE: the env->pc value visible here will not be
      * correct, but the value visible to the exception handler
      * (riscv_cpu_do_interrupt) is correct */
