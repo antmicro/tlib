@@ -695,11 +695,11 @@ static bool is_access_granted(unsigned access, int is_write)
 static bool get_pte(CPUState *env, uint32_t vaddr, uint32_t *pte);
 
 static int get_physical_addr_mmu(CPUState *env, bool update_tlb,
-                                 uint32_t vaddr, int is_write, int mmu_idx,
+                                 uint32_t vaddr, int access_type, int mmu_idx,
                                  uint32_t *paddr, uint32_t *page_size,
                                  unsigned *access, bool may_lookup_pt)
 {
-    bool dtlb = is_write != 2;
+    bool dtlb = access_type != ACCESS_INST_FETCH;
     uint32_t wi;
     uint32_t ei;
     uint8_t ring;
@@ -730,7 +730,7 @@ static int get_physical_addr_mmu(CPUState *env, bool update_tlb,
         ret = 0;
     }
     if (ret != 0) {
-        return ret;
+        return ret;   // TRANSLATE_FAIL
     }
 
     if (entry == NULL) {
@@ -738,16 +738,16 @@ static int get_physical_addr_mmu(CPUState *env, bool update_tlb,
     }
 
     if (ring < mmu_idx) {
-        return dtlb ?
+        return dtlb ?   // TRANSLATE_FAIL
             LOAD_STORE_PRIVILEGE_CAUSE :
             INST_FETCH_PRIVILEGE_CAUSE;
     }
 
     *access = mmu_attr_to_access(entry->attr) &
         ~(dtlb ? PAGE_EXEC : PAGE_READ | PAGE_WRITE);
-    if (!is_access_granted(*access, is_write)) {
-        return dtlb ?
-            (is_write ?
+    if (!is_access_granted(*access, access_type)) {
+        return dtlb ?   // TRANSLATE_FAIL
+            (access_type ?
              STORE_PROHIBITED_CAUSE :
              LOAD_PROHIBITED_CAUSE) :
             INST_FETCH_PROHIBITED_CAUSE;
@@ -756,7 +756,7 @@ static int get_physical_addr_mmu(CPUState *env, bool update_tlb,
     *paddr = entry->paddr | (vaddr & ~xtensa_tlb_get_addr_mask(env, dtlb, wi));
     *page_size = ~xtensa_tlb_get_addr_mask(env, dtlb, wi) + 1;
 
-    return 0;
+    return TRANSLATE_SUCCESS;
 }
 
 static bool get_pte(CPUState *env, uint32_t vaddr, uint32_t *pte)
@@ -801,20 +801,20 @@ static bool get_pte(CPUState *env, uint32_t vaddr, uint32_t *pte)
 }
 
 static int get_physical_addr_region(CPUState *env,
-                                    uint32_t vaddr, int is_write, int mmu_idx,
+                                    uint32_t vaddr, int access_type, int mmu_idx,
                                     uint32_t *paddr, uint32_t *page_size,
                                     unsigned *access)
 {
-    bool dtlb = is_write != 2;
+    bool dtlb = access_type != ACCESS_INST_FETCH;
     uint32_t wi = 0;
     uint32_t ei = (vaddr >> 29) & 0x7;
     const xtensa_tlb_entry *entry =
         xtensa_tlb_get_entry(env, dtlb, wi, ei);
 
     *access = region_attr_to_access(entry->attr);
-    if (!is_access_granted(*access, is_write)) {
-        return dtlb ?
-            (is_write ?
+    if (!is_access_granted(*access, access_type)) {
+        return dtlb ?  // TRANSLATE_FAIL
+            (access_type ?
              STORE_PROHIBITED_CAUSE :
              LOAD_PROHIBITED_CAUSE) :
             INST_FETCH_PROHIBITED_CAUSE;
@@ -823,7 +823,7 @@ static int get_physical_addr_region(CPUState *env,
     *paddr = entry->paddr | (vaddr & ~REGION_PAGE_MASK);
     *page_size = ~REGION_PAGE_MASK + 1;
 
-    return 0;
+    return TRANSLATE_SUCCESS;
 }
 
 static int xtensa_mpu_lookup(const xtensa_mpu_entry *entry, unsigned n,
@@ -915,7 +915,7 @@ uint32_t HELPER(pptlb)(CPUState *env, uint32_t v)
 }
 
 static int get_physical_addr_mpu(CPUState *env,
-                                 uint32_t vaddr, int is_write, int mmu_idx,
+                                 uint32_t vaddr, int access_type, int mmu_idx,
                                  uint32_t *paddr, uint32_t *page_size,
                                  unsigned *access)
 {
@@ -926,7 +926,7 @@ static int get_physical_addr_mpu(CPUState *env,
     nhits = xtensa_mpu_lookup(env->mpu_fg, env->config->n_mpu_fg_segments,
                               vaddr, &segment);
     if (nhits > 1) {
-        return is_write < 2 ?
+        return access_type < 2 ? // TRANSLATE_FAIL
             LOAD_STORE_TLB_MULTI_HIT_CAUSE :
             INST_TLB_MULTI_HIT_CAUSE;
     } else if (nhits == 1 && (env->sregs[MPUENB] & (1u << segment))) {
@@ -943,16 +943,16 @@ static int get_physical_addr_mpu(CPUState *env,
     }
 
     *access = mpu_attr_to_access(attr, mmu_idx);
-    if (!is_access_granted(*access, is_write)) {
-        return is_write < 2 ?
-            (is_write ?
+    if (!is_access_granted(*access, access_type)) {
+        return access_type < 2 ? // TRANSLATE_FAIL
+            (access_type ?
              STORE_PROHIBITED_CAUSE :
              LOAD_PROHIBITED_CAUSE) :
             INST_FETCH_PROHIBITED_CAUSE;
     }
     *paddr = vaddr;
     *page_size = env->config->mpu_align;
-    return 0;
+    return TRANSLATE_SUCCESS;
 }
 
 /*!
@@ -964,7 +964,7 @@ static int get_physical_addr_mpu(CPUState *env,
 int get_physical_address(CPUState *env, bool update_tlb,
                              uint32_t vaddr, int is_write, int mmu_idx,
                              uint32_t *paddr, uint32_t *page_size,
-                             unsigned *access)
+                              int *access)
 {
     if (xtensa_option_enabled(env->config, XTENSA_OPTION_MMU)) {
         return get_physical_addr_mmu(env, update_tlb,
@@ -983,7 +983,7 @@ int get_physical_address(CPUState *env, bool update_tlb,
         *page_size = TARGET_PAGE_SIZE;
         *access = cacheattr_attr_to_access(env->sregs[CACHEATTR] >>
                                            ((vaddr & 0xe0000000) >> 27));
-        return 0;
+        return TRANSLATE_SUCCESS;
     }
 }
 
