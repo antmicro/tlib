@@ -1653,11 +1653,11 @@ void do_unaligned_access(target_ulong addr, int is_write, int is_user, void *ret
    NULL, it means that the function was called in C code (i.e. not
    from generated code or from helper.c) */
 /* XXX: fix it to restore all registers */
-int tlb_fill(CPUState *env, target_ulong addr, int is_write, int mmu_idx, void *retaddr, int no_page_fault, int access_width)
+int tlb_fill(CPUState *env, target_ulong addr, int access_type, int mmu_idx, void *retaddr, int no_page_fault, int access_width)
 {
     int ret;
-    ret = cpu_handle_mmu_fault(env, addr, is_write, mmu_idx, 1);
-    if (ret && !no_page_fault) {
+    ret = cpu_handle_mmu_fault(env, addr, access_type, mmu_idx, 1);
+    if (ret == TRANSLATE_FAIL && !no_page_fault) {
         cpu_restore_state(env, retaddr);
         cpu_loop_exit(env);
     }

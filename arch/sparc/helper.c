@@ -48,7 +48,7 @@ static const int perm_table[2][8] = {
 };
 
 static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int *prot, int *access_index, target_ulong address,
-                                int rw, int mmu_idx, target_ulong *page_size)
+                                int access_type, int mmu_idx, target_ulong *page_size)
 {
     int access_perms = 0;
     target_phys_addr_t pde_ptr;
@@ -61,17 +61,17 @@ static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int
     if ((env->mmuregs[0] & MMU_E) == 0) { /* MMU disabled */
         *page_size = TARGET_PAGE_SIZE;
         // Boot mode: instruction fetches are taken from PROM
-        if (rw == 2 && (env->mmuregs[0] & env->def->mmu_bm)) {
+        if (access_type == ACCESS_INST_FETCH && (env->mmuregs[0] & env->def->mmu_bm)) {
             *physical = env->prom_addr | (address & 0x7ffffULL);
             *prot = PAGE_READ | PAGE_EXEC;
-            return 0;
+            return TRANSLATE_SUCCESS;
         }
         *physical = address;
         *prot = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
-        return 0;
+        return TRANSLATE_SUCCESS;
     }
 
-    *access_index = ((rw & 1) << 2) | (rw & 2) | (is_user ? 0 : 1);
+    *access_index = ((access_type & ACCESS_DATA_STORE) << 2) | (access_type & ACCESS_INST_FETCH) | (is_user ? 0 : 1);
     *physical = 0xffffffffffff0000ULL;
 
     /* SPARC reference MMU table walk: Context table->L1->L2->PTE */
@@ -83,10 +83,10 @@ static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int
     switch (pde & PTE_ENTRYTYPE_MASK) {
     default:
     case 0: /* Invalid */
-        return 1 << 2;
+        return 1 << 2; // TRANSLATE_FAIL
     case 2: /* L0 PTE, maybe should not happen? */
     case 3: /* Reserved */
-        return 4 << 2;
+        return 4 << 2; // TRANSLATE_FAIL
     case 1: /* L0 PDE */
         pde_ptr = ((address >> 22) & ~3) + ((pde & ~3) << 4);
         pde = ldl_phys(pde_ptr);
@@ -94,9 +94,9 @@ static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int
         switch (pde & PTE_ENTRYTYPE_MASK) {
         default:
         case 0: /* Invalid */
-            return (1 << 8) | (1 << 2);
+            return (1 << 8) | (1 << 2); // TRANSLATE_FAIL
         case 3: /* Reserved */
-            return (1 << 8) | (4 << 2);
+            return (1 << 8) | (4 << 2); // TRANSLATE_FAIL
         case 1: /* L1 PDE */
             pde_ptr = ((address & 0xfc0000) >> 16) + ((pde & ~3) << 4);
             pde = ldl_phys(pde_ptr);
@@ -104,9 +104,9 @@ static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int
             switch (pde & PTE_ENTRYTYPE_MASK) {
             default:
             case 0: /* Invalid */
-                return (2 << 8) | (1 << 2);
+                return (2 << 8) | (1 << 2); // TRANSLATE_FAIL
             case 3: /* Reserved */
-                return (2 << 8) | (4 << 2);
+                return (2 << 8) | (4 << 2); // TRANSLATE_FAIL
             case 1: /* L2 PDE */
                 pde_ptr = ((address & 0x3f000) >> 10) + ((pde & ~3) << 4);
                 pde = ldl_phys(pde_ptr);
@@ -114,10 +114,10 @@ static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int
                 switch (pde & PTE_ENTRYTYPE_MASK) {
                 default:
                 case 0: /* Invalid */
-                    return (3 << 8) | (1 << 2);
+                    return (3 << 8) | (1 << 2); // TRANSLATE_FAIL
                 case 1: /* PDE, should not happen */
                 case 3: /* Reserved */
-                    return (3 << 8) | (4 << 2);
+                    return (3 << 8) | (4 << 2); // TRANSLATE_FAIL
                 case 2: /* L3 PTE */
                     page_offset = (address & TARGET_PAGE_MASK) & (TARGET_PAGE_SIZE - 1);
                 }
@@ -138,11 +138,11 @@ static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int
     access_perms = (pde & PTE_ACCESS_MASK) >> PTE_ACCESS_SHIFT;
     error_code = access_table[*access_index][access_perms];
     if (error_code && !((env->mmuregs[0] & MMU_NF) && is_user)) {
-        return error_code;
+        return error_code; // TRANSLATE_FAIL
     }
 
     /* update page modified and dirty bits */
-    is_dirty = (rw & 1) && !(pde & PG_MODIFIED_MASK);
+    is_dirty = (access_type & ACCESS_DATA_STORE) && !(pde & PG_MODIFIED_MASK);
     if (!(pde & PG_ACCESSED_MASK) || is_dirty) {
         pde |= PG_ACCESSED_MASK;
         if (is_dirty) {
@@ -162,23 +162,23 @@ static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int
     /* Even if large ptes, we map only one 4KB page in the cache to
        avoid filling it too fast */
     *physical = ((target_phys_addr_t)(pde & PTE_ADDR_MASK) << 4) + page_offset;
-    return error_code;
+    return error_code; // TRANSLATE_FAIL
 }
 
 /* Perform address translation */
-int cpu_handle_mmu_fault (CPUState *env, target_ulong address, int rw, int mmu_idx, int is_softmmu)
+int cpu_handle_mmu_fault (CPUState *env, target_ulong address, int access_type, int mmu_idx, int is_softmmu)
 {
     target_phys_addr_t paddr;
     target_ulong vaddr;
     target_ulong page_size;
     int error_code = 0, prot, access_index;
 
-    error_code = get_physical_address(env, &paddr, &prot, &access_index, address, rw, mmu_idx, &page_size);
+    error_code = get_physical_address(env, &paddr, &prot, &access_index, address, access_type, mmu_idx, &page_size);
     if (error_code == 0) {
         vaddr = address & TARGET_PAGE_MASK;
         paddr &= TARGET_PAGE_MASK;
         tlb_set_page(env, vaddr, paddr, prot, mmu_idx, page_size);
-        return 0;
+        return TRANSLATE_SUCCESS;
     }
 
     if (env->mmuregs[3]) {     /* Fault status register */
@@ -195,14 +195,14 @@ int cpu_handle_mmu_fault (CPUState *env, target_ulong address, int rw, int mmu_i
         vaddr = address & TARGET_PAGE_MASK;
         prot = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
         tlb_set_page(env, vaddr, paddr, prot, mmu_idx, TARGET_PAGE_SIZE);
-        return 0;
+        return TRANSLATE_SUCCESS;
     } else {
-        if (rw & 2) {
+        if (access_type == ACCESS_INST_FETCH) {
             env->exception_index = TT_TFAULT;
         } else {
             env->exception_index = TT_DFAULT;
         }
-        return 1;
+        return TRANSLATE_FAIL;
     }
 }
 

@@ -3629,7 +3629,7 @@ uint32_t helper_efdcmpeq (uint64_t op1, uint64_t op2)
    NULL, it means that the function was called in C code (i.e. not
    from generated code or from helper.c) */
 /* XXX: fix it to restore all registers */
-int tlb_fill(CPUState *env1, target_ulong addr, int is_write, int mmu_idx, void *retaddr, int no_page_fault, int access_width)
+int tlb_fill(CPUState *env1, target_ulong addr, int access_type, int mmu_idx, void *retaddr, int no_page_fault, int access_width)
 {
     TranslationBlock *tb;
     CPUState *saved_env;
@@ -3638,8 +3638,8 @@ int tlb_fill(CPUState *env1, target_ulong addr, int is_write, int mmu_idx, void 
 
     saved_env = env;
     env = env1;
-    ret = cpu_handle_mmu_fault(env, addr, is_write, mmu_idx);
-    if (unlikely(ret != 0 && !no_page_fault)) {
+    ret = cpu_handle_mmu_fault(env, addr, access_type, mmu_idx);
+    if (unlikely(ret != TRANSLATE_SUCCESS && !no_page_fault)) {
         if (likely(retaddr)) {
             /* now we have a real cpu fault */
             pc = (uintptr_t)retaddr;
