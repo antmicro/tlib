@@ -48,17 +48,17 @@ uint32_t HELPER(neon_tbl)(uint32_t ireg, uint32_t def, uint32_t rn, uint32_t max
    NULL, it means that the function was called in C code (i.e. not
    from generated code or from helper.c) */
 /* XXX: fix it to restore all registers */
-int tlb_fill(CPUState *env1, target_ulong addr, int is_write, int mmu_idx, void *retaddr, int no_page_fault, int access_width)
+int tlb_fill(CPUState *env1, target_ulong addr, int access_type, int mmu_idx, void *retaddr, int no_page_fault, int access_width)
 {
     CPUState *saved_env;
     int ret;
 
     saved_env = env;
     env = env1;
-    ret = cpu_handle_mmu_fault(env, addr, is_write, mmu_idx);
-    if (unlikely(ret && !no_page_fault)) {
-        // is_write == 2 ==> CODE ACCESS - do not fire block_end hooks!
-        cpu_loop_exit_restore(env, (uintptr_t)retaddr, is_write != 2);
+    ret = cpu_handle_mmu_fault(env, addr, access_type, mmu_idx);
+    if (unlikely(ret == TRANSLATE_FAIL && !no_page_fault)) {
+        // access_type == CODE ACCESS - do not fire block_end hooks!
+        cpu_loop_exit_restore(env, (uintptr_t)retaddr, access_type != ACCESS_INST_FETCH);
     }
     env = saved_env;
     return ret;

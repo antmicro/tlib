@@ -881,7 +881,7 @@ static inline int check_ap(CPUState *env, int ap, int domain, int access_type, i
         return PAGE_READ | PAGE_WRITE;
     }
 
-    if (access_type == 1) {
+    if (access_type == ACCESS_DATA_STORE) {
         prot_ro = 0;
     } else {
         prot_ro = PAGE_READ;
@@ -889,7 +889,7 @@ static inline int check_ap(CPUState *env, int ap, int domain, int access_type, i
 
     switch (ap) {
     case 0:
-        if (access_type == 1) {
+        if (access_type == ACCESS_DATA_STORE) {
             return 0;
         }
         switch ((env->cp15.c1_sys >> 8) & 3) {
@@ -1028,9 +1028,9 @@ static int get_phys_addr_v5(CPUState *env, uint32_t address, int access_type, in
     }
     *prot |= PAGE_EXEC;
     *phys_ptr = phys_addr;
-    return 0;
+    return TRANSLATE_SUCCESS;
 do_fault:
-    return code | (domain << 4);
+    return code | (domain << 4); //TRANSLATE_FAIL
 }
 
 static int get_phys_addr_v6(CPUState *env, uint32_t address, int access_type, int is_user, uint32_t *phys_ptr, int *prot,
@@ -1112,7 +1112,7 @@ static int get_phys_addr_v6(CPUState *env, uint32_t address, int access_type, in
     if (domain == 3) {
         *prot = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
     } else {
-        if (xn && access_type == 2) {
+        if (xn && access_type == ACCESS_INST_FETCH) {
             goto do_fault;
         }
 
@@ -1132,9 +1132,9 @@ static int get_phys_addr_v6(CPUState *env, uint32_t address, int access_type, in
         }
     }
     *phys_ptr = phys_addr;
-    return 0;
+    return TRANSLATE_SUCCESS;
 do_fault:
-    return code | (domain << 4);
+    return code | (domain << 4); //TRANSLATE_FAIL
 }
 
 static int get_phys_addr_mpu(CPUState *env, uint32_t address, int access_type, int is_user, uint32_t *phys_ptr, int *prot)
@@ -1158,10 +1158,10 @@ static int get_phys_addr_mpu(CPUState *env, uint32_t address, int access_type, i
         }
     }
     if (n < 0) {
-        return 2;
+        return 2; //TRANSLATE_FAIL
     }
 
-    if (access_type == 2) {
+    if (access_type == ACCESS_INST_FETCH) {
         mask = env->cp15.c5_insn;
     } else {
         mask = env->cp15.c5_data;
@@ -1169,10 +1169,10 @@ static int get_phys_addr_mpu(CPUState *env, uint32_t address, int access_type, i
     mask = (mask >> (n * 4)) & 0xf;
     switch (mask) {
     case 0:
-        return 1;
+        return TRANSLATE_FAIL;
     case 1:
         if (is_user) {
-            return 1;
+            return TRANSLATE_FAIL;
         }
         *prot = PAGE_READ | PAGE_WRITE;
         break;
@@ -1187,7 +1187,7 @@ static int get_phys_addr_mpu(CPUState *env, uint32_t address, int access_type, i
         break;
     case 5:
         if (is_user) {
-            return 1;
+            return TRANSLATE_FAIL;
         }
         *prot = PAGE_READ;
         break;
@@ -1196,10 +1196,10 @@ static int get_phys_addr_mpu(CPUState *env, uint32_t address, int access_type, i
         break;
     default:
         /* Bad permission.  */
-        return 1;
+        return TRANSLATE_FAIL;
     }
     *prot |= PAGE_EXEC;
-    return 0;
+    return TRANSLATE_SUCCESS;
 }
 
 static inline int get_phys_addr(CPUState *env, uint32_t address, int access_type, int is_user, uint32_t *phys_ptr, int *prot,
@@ -1215,7 +1215,7 @@ static inline int get_phys_addr(CPUState *env, uint32_t address, int access_type
         *phys_ptr = address;
         *prot = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
         *page_size = TARGET_PAGE_SIZE;
-        return 0;
+        return TRANSLATE_SUCCESS;
     } else if (arm_feature(env, ARM_FEATURE_MPU)) {
         *page_size = TARGET_PAGE_SIZE;
         return get_phys_addr_mpu(env, address, access_type, is_user, phys_ptr, prot);
@@ -1235,27 +1235,27 @@ int cpu_handle_mmu_fault (CPUState *env, target_ulong address, int access_type, 
 
     is_user = mmu_idx == MMU_USER_IDX;
     ret = get_phys_addr(env, address, access_type, is_user, &phys_addr, &prot, &page_size);
-    if (ret == 0) {
+    if (ret == TRANSLATE_SUCCESS) {
         /* Map a single [sub]page.  */
         phys_addr &= ~(uint32_t)0x3ff;
         address &= ~(uint32_t)0x3ff;
         tlb_set_page(env, address, phys_addr, prot, mmu_idx, page_size);
-        return 0;
+        return TRANSLATE_SUCCESS;
     }
 
-    if (access_type == 2) {
+    if (access_type == ACCESS_INST_FETCH) {
         env->cp15.c5_insn = ret;
         env->cp15.c6_insn = address;
         env->exception_index = EXCP_PREFETCH_ABORT;
     } else {
         env->cp15.c5_data = ret;
-        if (access_type == 1 && arm_feature(env, ARM_FEATURE_V6)) {
+        if (access_type == ACCESS_DATA_STORE && arm_feature(env, ARM_FEATURE_V6)) {
             env->cp15.c5_data |= (1 << 11);
         }
         env->cp15.c6_data = address;
         env->exception_index = EXCP_DATA_ABORT;
     }
-    return 1;
+    return TRANSLATE_FAIL;
 }
 
 target_phys_addr_t cpu_get_phys_page_debug(CPUState *env, target_ulong addr)
