@@ -73,7 +73,8 @@ void HELPER(update_ccompare)(CPUState *env, uint32_t i)
  */
 void HELPER(check_atomctl)(CPUState *env, uint32_t pc, uint32_t vaddr)
 {
-    uint32_t paddr, page_size, access;
+    uint32_t paddr, page_size;
+    int access;
     uint32_t atomctl = env->sregs[ATOMCTL];
     int rc = get_physical_address(env, true, vaddr, 1,
             xtensa_get_cring(env), &paddr, &page_size, &access);
@@ -127,7 +128,8 @@ void HELPER(check_atomctl)(CPUState *env, uint32_t pc, uint32_t vaddr)
 void HELPER(check_exclusive)(CPUState *env, uint32_t pc, uint32_t vaddr,
                              uint32_t is_write)
 {
-    uint32_t paddr, page_size, access;
+    uint32_t paddr, page_size;
+    int access;
     uint32_t atomctl = env->sregs[ATOMCTL];
     int rc = get_physical_address(env, true, vaddr, is_write,
                                       xtensa_get_cring(env), &paddr,

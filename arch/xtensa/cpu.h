@@ -618,7 +618,7 @@ static inline int xtensa_get_cring(const CPUState *env)
 
 int get_physical_address(CPUState *env, bool update_tlb,
         uint32_t vaddr, int is_write, int mmu_idx,
-        uint32_t *paddr, uint32_t *page_size, unsigned *access);
+        uint32_t *paddr, uint32_t *page_size, int *access);
 void reset_mmu(CPUState *env);
 
 static inline uint32_t xtensa_replicate_windowstart(CPUState *env)

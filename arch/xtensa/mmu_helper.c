@@ -555,7 +555,7 @@ static unsigned mmu_attr_to_access(uint32_t attr)
  * Convert region protection ATTR to PAGE_{READ,WRITE,EXEC} mask.
  * See ISA, 4.6.3.3
  */
-static unsigned region_attr_to_access(uint32_t attr)
+static int region_attr_to_access(uint32_t attr)
 {
     static const unsigned access[16] = {
          [0] = PAGE_READ | PAGE_WRITE             | PAGE_CACHE_WT,
@@ -675,7 +675,7 @@ static unsigned mpu_attr_to_access(uint32_t attr, unsigned ring)
     return rv;
 }
 
-static bool is_access_granted(unsigned access, int is_write)
+static bool is_access_granted(int access, int is_write)
 {
     switch (is_write) {
     case 0:
@@ -697,7 +697,7 @@ static bool get_pte(CPUState *env, uint32_t vaddr, uint32_t *pte);
 static int get_physical_addr_mmu(CPUState *env, bool update_tlb,
                                  uint32_t vaddr, int access_type, int mmu_idx,
                                  uint32_t *paddr, uint32_t *page_size,
-                                 unsigned *access, bool may_lookup_pt)
+                                 int *access, bool may_lookup_pt)
 {
     bool dtlb = access_type != ACCESS_INST_FETCH;
     uint32_t wi;
@@ -763,7 +763,7 @@ static bool get_pte(CPUState *env, uint32_t vaddr, uint32_t *pte)
 {
     uint32_t paddr;
     uint32_t page_size;
-    unsigned access;
+    int access;
     uint32_t pt_vaddr =
         (env->sregs[PTEVADDR] | (vaddr >> 10)) & 0xfffffffc;
     int ret = get_physical_addr_mmu(env, false, pt_vaddr, 0, 0,
@@ -803,7 +803,7 @@ static bool get_pte(CPUState *env, uint32_t vaddr, uint32_t *pte)
 static int get_physical_addr_region(CPUState *env,
                                     uint32_t vaddr, int access_type, int mmu_idx,
                                     uint32_t *paddr, uint32_t *page_size,
-                                    unsigned *access)
+                                    int *access)
 {
     bool dtlb = access_type != ACCESS_INST_FETCH;
     uint32_t wi = 0;
@@ -917,7 +917,7 @@ uint32_t HELPER(pptlb)(CPUState *env, uint32_t v)
 static int get_physical_addr_mpu(CPUState *env,
                                  uint32_t vaddr, int access_type, int mmu_idx,
                                  uint32_t *paddr, uint32_t *page_size,
-                                 unsigned *access)
+                                 int *access)
 {
     unsigned nhits;
     unsigned segment;
@@ -990,7 +990,7 @@ int get_physical_address(CPUState *env, bool update_tlb,
 target_phys_addr_t cpu_get_phys_page_debug(CPUState *cpu, target_ulong addr)
 {
     target_phys_addr_t phys_addr;
-    unsigned int prot;
+    int prot;
     uint32_t page_size;
     int mem_idx = cpu_mmu_index(env);
 

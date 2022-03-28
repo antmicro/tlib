@@ -265,8 +265,7 @@ int xtensa_cpu_tlb_fill(CPUState *env, vaddr address, int size,
 {
     uint32_t paddr;
     uint32_t page_size;
-    unsigned access;
-    int ret;
+    int access, ret;
 
     if(unlikely(cpu->external_mmu_enabled))
     {
