@@ -1260,6 +1260,10 @@ int cpu_handle_mmu_fault (CPUState *env, target_ulong address, int access_type, 
         env->cp15.c6_data = address;
         env->exception_index = EXCP_DATA_ABORT;
     }
+    if(env->external_mmu_enabled)
+    {
+        tlib_mmu_fault_thrown_at(address, access_type);
+    }
     return TRANSLATE_FAIL;
 }
 

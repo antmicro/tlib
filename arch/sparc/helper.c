@@ -180,6 +180,7 @@ int cpu_handle_mmu_fault (CPUState *env, target_ulong address, int access_type, 
             page_size = TARGET_PAGE_SIZE;
             goto set_page;
         }
+        tlib_mmu_fault_thrown_at(address, access_type);
         return TRANSLATE_FAIL;
     }
 

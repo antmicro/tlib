@@ -1383,6 +1383,7 @@ int cpu_handle_mmu_fault (CPUState *env, target_ulong address, int access_type, 
             tlb_set_page(env, address & TARGET_PAGE_MASK, phys_addr & TARGET_PAGE_MASK, prot, mmu_idx, TARGET_PAGE_SIZE);
             return TRANSLATE_SUCCESS;
         }
+        tlib_mmu_fault_thrown_at(address, access_type);
         return TRANSLATE_FAIL;
     }
 

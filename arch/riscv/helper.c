@@ -357,6 +357,9 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, i
 
         tlb_set_page(env, address & TARGET_PAGE_MASK, pa & TARGET_PAGE_MASK, prot, mmu_idx, page_size);
     } else if (ret == TRANSLATE_FAIL) {
+        if(cpu->external_mmu_enabled) {
+            tlib_mmu_fault_thrown_at(address, access_type);
+        }
         raise_mmu_exception(env, address, access_type);
     }
     return ret;

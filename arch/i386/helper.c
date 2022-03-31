@@ -516,6 +516,7 @@ do_external_mmu_mapping:
     if(get_external_mmu_phys_addr(env, addr, access_type, &paddr, &prot) == TRANSLATE_FAIL)
     {
         error_code = 0;
+        tlib_mmu_fault_thrown_at(addr, access_type);
         return TRANSLATE_FAIL;
     }
     page_size = TARGET_PAGE_SIZE;
