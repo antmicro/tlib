@@ -1255,23 +1255,23 @@ static inline int check_physical(CPUState *env, mmu_ctx_t *mmu_ctx, target_ulong
     return ret;
 }
 
-int get_physical_address (CPUState *env, mmu_ctx_t *mmu_ctx, target_ulong eaddr, int rw, int access_type)
+int get_physical_address (CPUState *env, mmu_ctx_t *mmu_ctx, target_ulong eaddr, int rw, int access_type_code)
 {
     int ret;
 
-    if ((access_type == ACCESS_CODE && msr_ir == 0) || (access_type != ACCESS_CODE && msr_dr == 0)) {
+    if ((access_type_code == ACCESS_CODE && msr_ir == 0) || (access_type_code != ACCESS_CODE && msr_dr == 0)) {
         if (env->mmu_model == POWERPC_MMU_BOOKE) {
             /* The BookE MMU always performs address translation. The
                IS and DS bits only affect the address space.  */
-            ret = mmubooke_get_physical_address(env, mmu_ctx, eaddr, rw, access_type);
+            ret = mmubooke_get_physical_address(env, mmu_ctx, eaddr, rw, access_type_code);
         } else if (env->mmu_model == POWERPC_MMU_BOOKE206) {
-            ret = mmubooke206_get_physical_address(env, mmu_ctx, eaddr, rw, access_type);
+            ret = mmubooke206_get_physical_address(env, mmu_ctx, eaddr, rw, access_type_code);
         } else {
             /* No address translation.  */
             ret = check_physical(env, mmu_ctx, eaddr, rw);
         }
     } else {
-        ret = -1;
+        ret = -1; // TRANSLATE_FAIL
         switch (env->mmu_model) {
         case POWERPC_MMU_32B:
         case POWERPC_MMU_601:
@@ -1279,7 +1279,7 @@ int get_physical_address (CPUState *env, mmu_ctx_t *mmu_ctx, target_ulong eaddr,
         case POWERPC_MMU_SOFT_74xx:
             /* Try to find a BAT */
             if (env->nb_BATs != 0) {
-                ret = get_bat(env, mmu_ctx, eaddr, rw, access_type);
+                ret = get_bat(env, mmu_ctx, eaddr, rw, access_type_code);
             }
 #if defined(TARGET_PPC64)
             goto gph_nofallthrough;
@@ -1289,20 +1289,20 @@ int get_physical_address (CPUState *env, mmu_ctx_t *mmu_ctx, target_ulong eaddr,
 
 gph_nofallthrough:
 #endif
-            if (ret < 0) {
+            if (ret < 0) { // TRANSLATE_FAIL
                 /* We didn't match any BAT entry or don't have BATs */
-                ret = get_segment(env, mmu_ctx, eaddr, rw, access_type);
+                ret = get_segment(env, mmu_ctx, eaddr, rw, access_type_code);
             }
             break;
         case POWERPC_MMU_SOFT_4xx:
         case POWERPC_MMU_SOFT_4xx_Z:
-            ret = mmu40x_get_physical_address(env, mmu_ctx, eaddr, rw, access_type);
+            ret = mmu40x_get_physical_address(env, mmu_ctx, eaddr, rw, access_type_code);
             break;
         case POWERPC_MMU_BOOKE:
-            ret = mmubooke_get_physical_address(env, mmu_ctx, eaddr, rw, access_type);
+            ret = mmubooke_get_physical_address(env, mmu_ctx, eaddr, rw, access_type_code);
             break;
         case POWERPC_MMU_BOOKE206:
-            ret = mmubooke206_get_physical_address(env, mmu_ctx, eaddr, rw, access_type);
+            ret = mmubooke206_get_physical_address(env, mmu_ctx, eaddr, rw, access_type_code);
             break;
         case POWERPC_MMU_MPC8xx:
             /* XXX: TODO */
@@ -1310,10 +1310,10 @@ gph_nofallthrough:
             break;
         case POWERPC_MMU_REAL:
             cpu_abort(env, "PowerPC in real mode do not do any translation\n");
-            return -1;
+            return -1; // TRANSLATE_FAIL
         default:
             cpu_abort(env, "Unknown or invalid MMU model\n");
-            return -1;
+            return -1; // TRANSLATE_FAIL
         }
     }
     return ret;
@@ -1371,27 +1371,26 @@ static void booke206_update_mas_tlb_miss(CPUState *env, target_ulong address, in
 }
 
 /* Perform address translation */
-int cpu_handle_mmu_fault (CPUState *env, target_ulong address, int rw, int mmu_idx)
+int cpu_handle_mmu_fault (CPUState *env, target_ulong address, int access_type, int mmu_idx)
 {
     mmu_ctx_t mmu_ctx;
-    int access_type;
-    int ret = 0;
+    int ret = TRANSLATE_SUCCESS;
+    int is_write = access_type == ACCESS_DATA_STORE ? 1 : 0;
+    int ppc_access_type;
 
-    if (rw == 2) {
+    if (access_type == ACCESS_INST_FETCH) {
         /* code access */
-        rw = 0;
-        access_type = ACCESS_CODE;
+        ppc_access_type = ACCESS_CODE;
     } else {
         /* data access */
-        access_type = env->access_type;
+        ppc_access_type = env->access_type;
     }
-    ret = get_physical_address(env, &mmu_ctx, address, rw, access_type);
-    if (ret == 0) {
+    ret = get_physical_address(env, &mmu_ctx, address, is_write, ppc_access_type);
+    if (ret == TRANSLATE_SUCCESS) {
         tlb_set_page(env, address & TARGET_PAGE_MASK, mmu_ctx.raddr & TARGET_PAGE_MASK, mmu_ctx.prot, mmu_idx, TARGET_PAGE_SIZE);
-        ret = 0;
-    } else if (ret < 0) {
-        tlib_printf(LOG_LEVEL_WARNING, "we got mmu fail @ %X on %s\n", address, (access_type == ACCESS_CODE) ? "CODE" : "DATA");
-        if (access_type == ACCESS_CODE) {
+    } else if (ret < 0) { // TRANSLATE_FAIL
+        tlib_printf(LOG_LEVEL_WARNING, "we got mmu fail @ %X on %s\n", address, (ppc_access_type == ACCESS_CODE) ? "CODE" : "DATA");
+        if (ppc_access_type == ACCESS_CODE) {
             tlib_printf(LOG_LEVEL_WARNING, "ret is %d\n", ret);
             switch (ret) {
             case -1:
@@ -1424,13 +1423,13 @@ int cpu_handle_mmu_fault (CPUState *env, target_ulong address, int rw, int mmu_i
                     env->error_code = 0x40000000;
                     break;
                 case POWERPC_MMU_BOOKE206:
-                    booke206_update_mas_tlb_miss(env, address, rw);
+                    booke206_update_mas_tlb_miss(env, address, is_write);
                 /* fall through */
                 case POWERPC_MMU_BOOKE:
                     env->exception_index = POWERPC_EXCP_ITLB;
                     env->error_code = 0;
                     env->spr[SPR_BOOKE_DEAR] = address;
-                    return -1;
+                    return -1; // TRANSLATE_FAIL
                 case POWERPC_MMU_MPC8xx:
                     /* XXX: TODO */
                     cpu_abort(env, "MPC8xx MMU model is not implemented\n");
@@ -1438,10 +1437,10 @@ int cpu_handle_mmu_fault (CPUState *env, target_ulong address, int rw, int mmu_i
                 case POWERPC_MMU_REAL:
                     cpu_abort(env, "PowerPC in real mode should never raise "
                               "any MMU exceptions\n");
-                    return -1;
+                    return -1; // TRANSLATE_FAIL
                 default:
                     cpu_abort(env, "Unknown or invalid MMU model\n");
-                    return -1;
+                    return -1; // TRANSLATE_FAIL
                 }
                 break;
             case -2:
@@ -1483,7 +1482,7 @@ int cpu_handle_mmu_fault (CPUState *env, target_ulong address, int rw, int mmu_i
                 /* No matches in page tables or TLB */
                 switch (env->mmu_model) {
                 case POWERPC_MMU_SOFT_6xx:
-                    if (rw == 1) {
+                    if (is_write) {
                         env->exception_index = POWERPC_EXCP_DSTLB;
                         env->error_code = 1 << 16;
                     } else {
@@ -1498,7 +1497,7 @@ tlb_miss:
                     env->spr[SPR_HASH2] = env->htab_base + get_pteg_offset(env, mmu_ctx.hash[1], HASH_PTE_SIZE_32);
                     break;
                 case POWERPC_MMU_SOFT_74xx:
-                    if (rw == 1) {
+                    if (is_write) {
                         env->exception_index = POWERPC_EXCP_DSTLB;
                     } else {
                         env->exception_index = POWERPC_EXCP_DLTLB;
@@ -1514,7 +1513,7 @@ tlb_miss_74xx:
                     env->exception_index = POWERPC_EXCP_DTLB;
                     env->error_code = 0;
                     env->spr[SPR_40x_DEAR] = address;
-                    if (rw) {
+                    if (is_write) {
                         env->spr[SPR_40x_ESR] = 0x00800000;
                     } else {
                         env->spr[SPR_40x_ESR] = 0x00000000;
@@ -1530,7 +1529,7 @@ tlb_miss_74xx:
                     env->exception_index = POWERPC_EXCP_DSI;
                     env->error_code = 0;
                     env->spr[SPR_DAR] = address;
-                    if (rw == 1) {
+                    if (is_write) {
                         env->spr[SPR_DSISR] = 0x42000000;
                     } else {
                         env->spr[SPR_DSISR] = 0x40000000;
@@ -1541,21 +1540,21 @@ tlb_miss_74xx:
                     cpu_abort(env, "MPC8xx MMU model is not implemented\n");
                     break;
                 case POWERPC_MMU_BOOKE206:
-                    booke206_update_mas_tlb_miss(env, address, rw);
+                    booke206_update_mas_tlb_miss(env, address, is_write);
                 /* fall through */
                 case POWERPC_MMU_BOOKE:
                     env->exception_index = POWERPC_EXCP_DTLB;
                     env->error_code = 0;
                     env->spr[SPR_BOOKE_DEAR] = address;
-                    env->spr[SPR_BOOKE_ESR] = rw ? ESR_ST : 0;
-                    return -1;
+                    env->spr[SPR_BOOKE_ESR] = is_write ? ESR_ST : 0;
+                    return -1; // TRANSLATE_FAIL
                 case POWERPC_MMU_REAL:
                     cpu_abort(env, "PowerPC in real mode should never raise "
                               "any MMU exceptions\n");
-                    return -1;
+                    return -1; // TRANSLATE_FAIL
                 default:
                     cpu_abort(env, "Unknown or invalid MMU model\n");
-                    return -1;
+                    return -1; // TRANSLATE_FAIL
                 }
                 break;
             case -2:
@@ -1564,15 +1563,15 @@ tlb_miss_74xx:
                 env->error_code = 0;
                 if (env->mmu_model == POWERPC_MMU_SOFT_4xx || env->mmu_model == POWERPC_MMU_SOFT_4xx_Z) {
                     env->spr[SPR_40x_DEAR] = address;
-                    if (rw) {
+                    if (is_write) {
                         env->spr[SPR_40x_ESR] |= 0x00800000;
                     }
                 } else if ((env->mmu_model == POWERPC_MMU_BOOKE) || (env->mmu_model == POWERPC_MMU_BOOKE206)) {
                     env->spr[SPR_BOOKE_DEAR] = address;
-                    env->spr[SPR_BOOKE_ESR] = rw ? ESR_ST : 0;
+                    env->spr[SPR_BOOKE_ESR] = is_write ? ESR_ST : 0;
                 } else {
                     env->spr[SPR_DAR] = address;
-                    if (rw == 1) {
+                    if (is_write) {
                         env->spr[SPR_DSISR] = 0x0A000000;
                     } else {
                         env->spr[SPR_DSISR] = 0x08000000;
@@ -1581,7 +1580,7 @@ tlb_miss_74xx:
                 break;
             case -4:
                 /* Direct store exception */
-                switch (access_type) {
+                switch (ppc_access_type) {
                 case ACCESS_FLOAT:
                     /* Floating point load/store */
                     env->exception_index = POWERPC_EXCP_ALIGN;
@@ -1593,7 +1592,7 @@ tlb_miss_74xx:
                     env->exception_index = POWERPC_EXCP_DSI;
                     env->error_code = 0;
                     env->spr[SPR_DAR] = address;
-                    if (rw == 1) {
+                    if (is_write) {
                         env->spr[SPR_DSISR] = 0x06000000;
                     } else {
                         env->spr[SPR_DSISR] = 0x04000000;
@@ -1604,7 +1603,7 @@ tlb_miss_74xx:
                     env->exception_index = POWERPC_EXCP_DSI;
                     env->error_code = 0;
                     env->spr[SPR_DAR] = address;
-                    if (rw == 1) {
+                    if (is_write) {
                         env->spr[SPR_DSISR] = 0x06100000;
                     } else {
                         env->spr[SPR_DSISR] = 0x04100000;
@@ -1627,7 +1626,7 @@ tlb_miss_74xx:
                     env->error_code = 0;
                     env->spr[SPR_DAR] = address;
                     /* XXX: this might be incorrect */
-                    if (rw == 1) {
+                    if (is_write) {
                         env->spr[SPR_DSISR] = 0x42000000;
                     } else {
                         env->spr[SPR_DSISR] = 0x40000000;
@@ -1642,7 +1641,7 @@ tlb_miss_74xx:
             }
         }
         tlib_printf(LOG_LEVEL_WARNING, "%s: set exception to %02x\n", __func__, env->error_code);
-        ret = 1;
+        ret = TRANSLATE_FAIL;
     }
     return ret;
 }
