@@ -1373,6 +1373,19 @@ static void booke206_update_mas_tlb_miss(CPUState *env, target_ulong address, in
 /* Perform address translation */
 int cpu_handle_mmu_fault (CPUState *env, target_ulong address, int access_type, int mmu_idx)
 {
+    if(unlikely(cpu->external_mmu_enabled))
+    {
+        target_phys_addr_t phys_addr;
+        int prot;
+
+        if(TRANSLATE_SUCCESS == get_external_mmu_phys_addr(env,address, access_type, &phys_addr, &prot))
+        {
+            tlb_set_page(env, address & TARGET_PAGE_MASK, phys_addr & TARGET_PAGE_MASK, prot, mmu_idx, TARGET_PAGE_SIZE);
+            return TRANSLATE_SUCCESS;
+        }
+        return TRANSLATE_FAIL;
+    }
+
     mmu_ctx_t mmu_ctx;
     int ret = TRANSLATE_SUCCESS;
     int is_write = access_type == ACCESS_DATA_STORE ? 1 : 0;
