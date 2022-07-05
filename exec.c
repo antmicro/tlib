@@ -1397,10 +1397,10 @@ static void tlb_add_large_page(CPUState *env, target_ulong vaddr, target_ulong s
     env->tlb_flush_mask = mask;
 }
 
-static inline int is_io_accessed(CPUState *env, target_ulong vaddr)
+static inline int is_io_accessed(CPUState *env, target_ulong paddr)
 {
     target_ulong v;
-    target_ulong page_address = vaddr & ~(TARGET_PAGE_SIZE - 1);
+    target_ulong page_address = paddr & ~(TARGET_PAGE_SIZE - 1);
 
     /* binary search (cf Knuth) */
     int32_t m_min = 0;
@@ -1412,7 +1412,7 @@ static inline int is_io_accessed(CPUState *env, target_ulong vaddr)
         v = env->io_access_regions[m];
         if (v == page_address) {
             return 1;
-        } else if (vaddr < v) {
+        } else if (paddr < v) {
             m_max = m - 1;
         } else {
             m_min = m + 1;
@@ -1487,7 +1487,7 @@ void tlb_set_page(CPUState *env, target_ulong vaddr, target_phys_addr_t paddr, i
 
     code_address = address;
 
-    if (is_io_accessed(env, vaddr)) {
+    if (is_io_accessed(env, paddr)) {
         iotlb = paddr;
         address |= TLB_MMIO;
     }
