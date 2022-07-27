@@ -96,6 +96,8 @@ uint32_t tlib_get_register_value_32_with_security(int reg_number, bool is_secure
     } else if(reg_number == PRIMASK_32) {
         //  PRIMASK: b0: IRQ mask enabled/disabled, b1-b31: reserved.
         return cpu->v7m.primask[is_secure] & PRIMASK_EN ? 1 : 0;
+    } else if(reg_number == FPSCR_32) {
+        return vfp_get_fpscr(cpu);
     }
 #endif
 
@@ -158,6 +160,8 @@ void tlib_set_register_value_32_with_security(int reg_number, uint32_t value, bo
             tlib_nvic_find_pending_irq();
         }
         return;
+    } else if(reg_number == FPSCR_32) {
+        vfp_set_fpscr(cpu, value);
     }
 #endif
 
@@ -196,4 +200,43 @@ void tlib_set_register_value_32(int reg_number, uint32_t value)
 }
 
 EXC_VOID_2(tlib_set_register_value_32, int, reg_number, uint32_t, value)
+
+//  64 bit support for VFP (Floating-Point coprocessor)
+#if defined(TARGET_PROTO_ARM_M)
+uint64_t *get_reg_pointer_64(int reg)
+{
+    switch(reg) {
+        case D_0_64 ... D_31_64:
+            return &(cpu->vfp.regs[reg - D_0_64]);
+        default:
+            return NULL;
+    }
+}
+
+uint64_t tlib_get_register_value_64(int reg_number)
+{
+    uint64_t *ptr = get_reg_pointer_64(reg_number);
+    if(ptr == NULL) {
+        tlib_abortf("Read from undefined CPU register number %d detected", reg_number);
+    }
+
+    return *ptr;
+}
+
+EXC_INT_1(uint64_t, tlib_get_register_value_64, int, reg_number)
+
+void tlib_set_register_value_64(int reg_number, uint64_t value)
+{
+    uint64_t *ptr = get_reg_pointer_64(reg_number);
+    if(ptr == NULL) {
+        tlib_abortf("Write to undefined CPU register number %d detected", reg_number);
+    }
+
+    *ptr = value;
+}
+
+EXC_VOID_2(tlib_set_register_value_64, int, reg_number, uint64_t, value)
+
+#endif
+
 #endif
