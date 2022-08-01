@@ -715,7 +715,7 @@ void tlib_set_page_io_accessed(uint64_t address)
     env->io_access_regions[i] = page_address;
     env->io_access_regions_count++;
 
-    tlb_flush_page(env, address, false);
+    tlb_flush_phys_pages(env, address);
 }
 
 EXC_VOID_1(tlib_set_page_io_accessed, uint64_t, address)
@@ -746,7 +746,7 @@ void tlib_clear_page_io_accessed(uint64_t address)
     env->io_access_regions[j] = 0;
 
     env->io_access_regions_count--;
-    tlb_flush_page(env, address, false);
+    tlb_flush_phys_pages(env, address);
 }
 
 EXC_VOID_1(tlib_clear_page_io_accessed, uint64_t, address)
