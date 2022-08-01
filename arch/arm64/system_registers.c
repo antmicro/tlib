@@ -1637,7 +1637,7 @@ WRITE_FUNCTION(64, tlbi_va,
 
     uint64_t pageaddr = sextract64(value << 12, 0, 56);
     uint32_t indexes_mask = tlbi_get_mmu_indexes_mask(env, info);
-    tlb_flush_page_masked(env, pageaddr, indexes_mask, true);
+    tlb_flush_page_masked(env, pageaddr, indexes_mask, true, false);
 })
 
 WRITE_FUNCTION(64, tlbi_vmall,

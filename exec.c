@@ -1270,6 +1270,40 @@ static inline void tlb_try_flush_virt_entry(CPUTLBEntry *tlb_entry, target_ulong
     }
 }
 
+static inline void tlb_try_flush_phys_entry(int mmu_idx, int entry_idx, target_ulong paddr)
+{
+    CPUTLBEntry *te = &env->tlb_table[mmu_idx][entry_idx];
+
+    /* Handle the IO case. We use the fact that for TLB_MMIO pages the iotlb
+       entry contains paddr - vaddr. */
+    if ((te->addr_read | te->addr_write | te->addr_code) & TLB_MMIO) {
+        target_ulong ioaddr = env->iotlb[mmu_idx][entry_idx] & TARGET_PAGE_MASK;
+        tlb_try_flush_virt_entry(te, paddr - ioaddr); /* paddr - (paddr - vaddr) */
+    } else {
+        /* Find a valid address. If all of these are present, they will be the
+           same modulo flags like TLB_MMIO or TLB_NOTDIRTY, but not all of them
+           may be present (read-only mappings won't have write/code, etc.) */
+        target_ulong entry_addr = te->addr_read;
+        if (entry_addr & TLB_INVALID_MASK) {
+            entry_addr = te->addr_write;
+        }
+        if (entry_addr & TLB_INVALID_MASK) {
+            entry_addr = te->addr_code;
+        }
+
+        /* If we still have nothing, there is no page in this TLB slot. */
+        if (entry_addr & TLB_INVALID_MASK) {
+            return;
+        }
+
+        entry_addr &= TARGET_PAGE_MASK;
+        target_ulong entry_paddr = tlib_host_ptr_to_guest_offset((void *)((uintptr_t)entry_addr + te->addend));
+        if (entry_paddr == paddr) {
+            tlb_flush_entry(te);
+        }
+    }
+}
+
 void tlb_flush_masked(CPUState *env, uint32_t mmu_indexes_mask)
 {
     /* must reset current TB so that interrupts cannot modify the
@@ -1286,7 +1320,7 @@ void tlb_flush_masked(CPUState *env, uint32_t mmu_indexes_mask)
     memset(env->tb_jmp_cache, 0, TB_JMP_CACHE_SIZE * sizeof (void *));
 }
 
-void tlb_flush_page_masked(CPUState *env, target_ulong addr, uint32_t mmu_indexes_mask, bool from_generated_code)
+void tlb_flush_page_masked(CPUState *env, target_ulong addr, uint32_t mmu_indexes_mask, bool from_generated_code, bool physical)
 {
     int i;
     int mmu_idx;
@@ -1305,7 +1339,17 @@ void tlb_flush_page_masked(CPUState *env, target_ulong addr, uint32_t mmu_indexe
     addr &= TARGET_PAGE_MASK;
     i = (addr >> TARGET_PAGE_BITS) & (CPU_TLB_SIZE - 1);
     for (mmu_idx = 0; mmu_idx < NB_MMU_MODES; mmu_idx += 1) {
-        if (extract32(mmu_indexes_mask, mmu_idx, 1)) {
+        if (!extract32(mmu_indexes_mask, mmu_idx, 1)) {
+            continue;
+        }
+
+        if (physical) {
+            /* must look through all TLB entries because it is indexed
+               with virtual, not physical addresses */
+            for (i = 0; i < CPU_TLB_SIZE; i++) {
+                tlb_try_flush_phys_entry(mmu_idx, i, addr);
+            }
+        } else {
             tlb_try_flush_virt_entry(&env->tlb_table[mmu_idx][i], addr);
         }
     }
@@ -1315,7 +1359,13 @@ void tlb_flush_page_masked(CPUState *env, target_ulong addr, uint32_t mmu_indexe
 
 void tlb_flush_page(CPUState *env, target_ulong addr, bool from_generated_code)
 {
-    tlb_flush_page_masked(env, addr, UINT32_MAX, from_generated_code);
+    tlb_flush_page_masked(env, addr, UINT32_MAX, from_generated_code, false);
+}
+
+/* flush the TLB entries that map the provided physical page */
+void tlb_flush_phys_pages(CPUState *env, target_ulong paddr)
+{
+    tlb_flush_page_masked(env, paddr, UINT32_MAX, false, true);
 }
 
 /* update the TLB so that writes in physical page 'phys_addr' are no longer

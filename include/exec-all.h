@@ -75,7 +75,8 @@ void tb_invalidate_phys_page_range(tb_page_addr_t start, tb_page_addr_t end, int
 void tlb_flush(CPUState *env, int flush_global, bool from_generated_code);
 void tlb_flush_masked(CPUState *env, uint32_t mmu_indexes_mask);
 void tlb_flush_page(CPUState *env, target_ulong addr, bool from_generated_code);
-void tlb_flush_page_masked(CPUState *env, target_ulong addr, uint32_t mmu_indexes_mask, bool from_generated_code);
+void tlb_flush_phys_pages(CPUState *env, target_ulong paddr);
+void tlb_flush_page_masked(CPUState *env, target_ulong addr, uint32_t mmu_indexes_mask, bool from_generated_code, bool physical);
 void tlb_set_page(CPUState *env, target_ulong vaddr, target_phys_addr_t paddr, int prot, int mmu_idx, target_ulong size);
 void interrupt_current_translation_block(CPUState *env, int exception_type);
 int get_external_mmu_phys_addr(CPUState *env, uint32_t address, int access_type,
