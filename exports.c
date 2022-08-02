@@ -682,14 +682,14 @@ uint32_t tlib_get_current_tb_disas_flags()
 
 EXC_INT_0(uint32_t, tlib_get_current_tb_disas_flags)
 
-void tlib_set_page_io_accessed(uint64_t address)
+void tlib_set_page_io_accessed(uint64_t paddr)
 {
     if(env->io_access_regions_count == MAX_IO_ACCESS_REGIONS_COUNT)
     {
-        tlib_abortf("Couldn't register an IO accessible page 0x%x", address);
+        tlib_abortf("Couldn't register an IO accessible page 0x%x", paddr);
     }
 
-    target_ulong page_address = address & ~(TARGET_PAGE_SIZE - 1);
+    target_ulong page_address = paddr & ~(TARGET_PAGE_SIZE - 1);
 
     int i, j;
     for(i = 0; i < env->io_access_regions_count; i++)
@@ -715,14 +715,14 @@ void tlib_set_page_io_accessed(uint64_t address)
     env->io_access_regions[i] = page_address;
     env->io_access_regions_count++;
 
-    tlb_flush_phys_pages(env, address);
+    tlb_flush_phys_pages(env, paddr);
 }
 
-EXC_VOID_1(tlib_set_page_io_accessed, uint64_t, address)
+EXC_VOID_1(tlib_set_page_io_accessed, uint64_t, paddr)
 
-void tlib_clear_page_io_accessed(uint64_t address)
+void tlib_clear_page_io_accessed(uint64_t paddr)
 {
-    target_ulong page_address = address & ~(TARGET_PAGE_SIZE - 1);
+    target_ulong page_address = paddr & ~(TARGET_PAGE_SIZE - 1);
 
     int i, j;
     for(i = 0; i < env->io_access_regions_count; i++)
@@ -746,10 +746,10 @@ void tlib_clear_page_io_accessed(uint64_t address)
     env->io_access_regions[j] = 0;
 
     env->io_access_regions_count--;
-    tlb_flush_phys_pages(env, address);
+    tlb_flush_phys_pages(env, paddr);
 }
 
-EXC_VOID_1(tlib_clear_page_io_accessed, uint64_t, address)
+EXC_VOID_1(tlib_clear_page_io_accessed, uint64_t, paddr)
 
 #define ASSERT_EXTERNAL_MMU_ENABLED                                                                                \
 if(!cpu->external_mmu_enabled)                                                                                     \
