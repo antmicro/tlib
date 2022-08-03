@@ -1256,12 +1256,17 @@ void tlb_flush(CPUState *env, int flush_global, bool from_generated_code)
     tlb_flush_count++;
 }
 
-static inline void tlb_flush_entry(CPUTLBEntry *tlb_entry, target_ulong addr)
+static inline void tlb_flush_entry(CPUTLBEntry *tlb_entry)
+{
+    *tlb_entry = s_cputlb_empty_entry;
+}
+
+static inline void tlb_try_flush_virt_entry(CPUTLBEntry *tlb_entry, target_ulong addr)
 {
     if (addr == (tlb_entry->addr_read & (TARGET_PAGE_MASK | TLB_INVALID_MASK)) ||
         addr == (tlb_entry->addr_write & (TARGET_PAGE_MASK | TLB_INVALID_MASK)) ||
         addr == (tlb_entry->addr_code & (TARGET_PAGE_MASK | TLB_INVALID_MASK))) {
-        *tlb_entry = s_cputlb_empty_entry;
+        tlb_flush_entry(tlb_entry);
     }
 }
 
@@ -1301,7 +1306,7 @@ void tlb_flush_page_masked(CPUState *env, target_ulong addr, uint32_t mmu_indexe
     i = (addr >> TARGET_PAGE_BITS) & (CPU_TLB_SIZE - 1);
     for (mmu_idx = 0; mmu_idx < NB_MMU_MODES; mmu_idx += 1) {
         if (extract32(mmu_indexes_mask, mmu_idx, 1)) {
-            tlb_flush_entry(&env->tlb_table[mmu_idx][i], addr);
+            tlb_try_flush_virt_entry(&env->tlb_table[mmu_idx][i], addr);
         }
     }
 
