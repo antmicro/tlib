@@ -106,3 +106,5 @@ DEFAULT_INT_HANDLER1(uint64_t tlib_host_ptr_to_guest_offset, void *ptr)
 DEFAULT_VOID_HANDLER3(void tlib_mmu_fault_external_handler, uint64_t addr, int32_t access_type, int32_t window_index)
 
 DEFAULT_VOID_HANDLER4(void tlib_profiler_announce_stack_change, uint64_t current_address, uint64_t return_address, uint64_t instructions_count, int32_t is_frame_add)
+
+DEFAULT_VOID_HANDLER1(void tlib_profiler_announce_thread_change, uint64_t thread_id)

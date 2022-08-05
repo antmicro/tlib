@@ -383,6 +383,9 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
                                   SATP_MODE)) && ((val_to_write ^ env->satp) & (SATP_MODE | SATP_ASID | SATP_PPN))) {
             helper_tlb_flush(env);
             env->satp = val_to_write;
+            if (unlikely(env->guest_profiler_enabled)) {
+                tlib_announce_thread_change(env->satp);
+            }
         }
         break;
     }

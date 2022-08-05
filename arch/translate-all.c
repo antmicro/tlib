@@ -428,3 +428,8 @@ void tlib_announce_stack_change(target_ulong address, int change_type)
     tlib_abortf("This architecture does not support the profiler");
     #endif
 }
+
+void tlib_announce_thread_change(target_ulong thread_id)
+{
+    tlib_profiler_announce_thread_change(thread_id);
+}
