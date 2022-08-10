@@ -431,5 +431,9 @@ void tlib_announce_stack_change(target_ulong address, int change_type)
 
 void tlib_announce_thread_change(target_ulong thread_id)
 {
+    #ifdef SUPPORTS_GUEST_PROFILING
     tlib_profiler_announce_thread_change(thread_id);
+    #else
+    tlib_abortf("This architecture does not support the profiler");
+    #endif
 }
