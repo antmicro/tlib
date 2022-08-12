@@ -376,6 +376,9 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
             helper_tlb_flush(env);
             env->sptbr = val_to_write & (((target_ulong)
                                           1 << (TARGET_PHYS_ADDR_SPACE_BITS - PGSHIFT)) - 1);
+            if (unlikely(env->guest_profiler_enabled)) {
+                tlib_announce_thread_change(env->sptbr);
+            }
         }
         if (env->privilege_architecture >= RISCV_PRIV1_10 &&
             validate_vm(env,
