@@ -6,6 +6,7 @@
 uint32_t tlib_get_cpu_model_id(void);
 uint32_t tlib_get_it_state(void);
 uint32_t tlib_evaluate_condition_code(uint32_t);
+uint32_t tlib_get_arm_feature(uint32_t feature);
 
 void tlib_set_cpu_model_id(uint32_t value);
 void tlib_toggle_fpu(int32_t enabled);

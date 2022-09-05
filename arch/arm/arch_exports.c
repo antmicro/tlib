@@ -191,6 +191,13 @@ void tlib_set_exception_vector_address(uint32_t address)
 }
 EXC_VOID_1(tlib_set_exception_vector_address, uint32_t, address)
 
+uint32_t tlib_get_arm_feature(int32_t feature)
+{
+    return arm_feature(cpu, feature);
+}
+
+EXC_INT_1(uint32_t, tlib_get_arm_feature, int32_t, feature)
+
 #ifdef TARGET_PROTO_ARM_M
 
 void tlib_set_security_state(uint32_t state)
