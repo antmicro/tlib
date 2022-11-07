@@ -75,7 +75,7 @@ uint32_t tlib_get_mmu_windows_count(void);
 
 void tlib_enable_external_window_mmu(uint32_t value);
 
-int32_t tlib_acquire_mmu_window();
+int32_t tlib_acquire_mmu_window(uint32_t type);
 
 void tlib_set_mmu_window_start(uint32_t index, uint64_t addr_start);
 

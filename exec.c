@@ -1168,6 +1168,21 @@ int get_external_mmu_phys_addr(CPUState *env, uint32_t address, int access_type,
     bool found = false;
     int window_index = 0;
     ExtMmuRange *mmu_window = env->external_mmu_window;
+    uint32_t access_type_mask = 0;
+    switch (access_type) {
+        case ACCESS_DATA_LOAD:
+            access_type_mask = PAGE_READ;
+            break;
+        case ACCESS_DATA_STORE:
+            access_type_mask = PAGE_WRITE;
+            break;
+        case ACCESS_INST_FETCH:
+            access_type_mask = PAGE_EXEC;
+            break;
+        default:
+            tlib_abortf("Incorrect access type %d", access_type);
+            break;
+    }
 
     *phys_ptr = address;
     *prot = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
@@ -1175,7 +1190,9 @@ int get_external_mmu_phys_addr(CPUState *env, uint32_t address, int access_type,
     for (; window_index < MAX_EXTERNAL_MMU_RANGES; window_index++) {
         if (!mmu_window[window_index].active) {
             break;
-        } else if (address >= mmu_window[window_index].range_start && address < mmu_window[window_index].range_end) {
+        } else if ((mmu_window[window_index].type & access_type_mask) &&
+                   (address >= mmu_window[window_index].range_start) &&
+                   (address < mmu_window[window_index].range_end)) {
             found = true;
             break;
         }
@@ -1184,22 +1201,7 @@ int get_external_mmu_phys_addr(CPUState *env, uint32_t address, int access_type,
     if (found) {
         *phys_ptr += mmu_window[window_index].addend;
         *prot = mmu_window[window_index].priv;
-        bool allowed = false;
-        switch(access_type) {
-            case ACCESS_DATA_LOAD:
-                allowed = *prot & PAGE_READ;
-                break;
-            case ACCESS_DATA_STORE:
-                allowed = *prot & PAGE_WRITE;
-                break;
-            case ACCESS_INST_FETCH:
-                allowed = *prot & PAGE_EXEC;
-                break;
-            default:
-                tlib_abortf("Incorrect access type %d", access_type);
-                break;
-        }
-        if (allowed) {
+        if (*prot & access_type_mask) {
             return TRANSLATE_SUCCESS;
         }
     }

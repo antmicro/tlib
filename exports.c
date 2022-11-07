@@ -833,19 +833,20 @@ void tlib_reset_mmu_window(uint32_t index)
 }
 EXC_VOID_1(tlib_reset_mmu_window, uint32_t, index)
 
-int32_t tlib_acquire_mmu_window()
+int32_t tlib_acquire_mmu_window(uint32_t type)
 {
     ASSERT_EXTERNAL_MMU_ENABLED
     for (int window_index = 0; window_index < MAX_EXTERNAL_MMU_RANGES; window_index++) {
         if (!cpu->external_mmu_window[window_index].active) {
             cpu->external_mmu_window[window_index].active = true;
+            cpu->external_mmu_window[window_index].type = (uint8_t)type;
             return window_index;
         }
     }
     // Failed
     return -1;
 }
-EXC_INT_0(int32_t, tlib_acquire_mmu_window)
+EXC_INT_1(int32_t, tlib_acquire_mmu_window, uint32_t, type)
 
 void tlib_set_mmu_window_start(uint32_t index, uint64_t addr_start)
 {
