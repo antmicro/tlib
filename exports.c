@@ -795,7 +795,7 @@ if(index > MAX_EXTERNAL_MMU_RANGES)                                             
 #define ASSERT_ALIGNED_TO_PAGE_SIZE(addr) \
 if(addr & (~TARGET_PAGE_MASK)) tlib_abortf("MMU ranges must be aligned to the page size (0x%lx), the address 0x%lx is not.", TARGET_PAGE_SIZE, addr);
 
-#define ASSERT_NO_OVERLAP(value)                                                                                                                             \
+#define ASSERT_NO_OVERLAP(value, window_type)                                                                                                                \
 for(int window_index = 0; window_index < MAX_EXTERNAL_MMU_RANGES; window_index++)                                                                            \
 {                                                                                                                                                            \
     ExtMmuRange* current_window = &cpu->external_mmu_window[window_index];                                                                                   \
@@ -803,9 +803,10 @@ for(int window_index = 0; window_index < MAX_EXTERNAL_MMU_RANGES; window_index++
     {                                                                                                                                                        \
         break;                                                                                                                                               \
     }                                                                                                                                                        \
-    if(value >= current_window->range_start && value < current_window->range_end)                                                                            \
+    if(value >= current_window->range_start && value < current_window->range_end && current_window->type & window_type)                                      \
     {                                                                                                                                                        \
-        tlib_printf(LOG_LEVEL_DEBUG, "The addr 0x%lx is already a part of the MMU window with index %d. Resulting range will overlap!", value, window_index);\
+        tlib_printf(LOG_LEVEL_DEBUG, "The addr 0x%lx is already a part of the MMU window of the same type with index %d. Resulting range will overlap!",     \
+                    value, window_index);                                                                                                                    \
         break;                                                                                                                                               \
     }                                                                                                                                                        \
 }                                                                                                                                                            \
@@ -854,7 +855,7 @@ void tlib_set_mmu_window_start(uint32_t index, uint64_t addr_start)
     ASSERT_WINDOW_ACTIVE(index)
     ASSERT_ALIGNED_TO_PAGE_SIZE(addr_start)
 #ifdef DEBUG
-    ASSERT_NO_OVERLAP(addr_start)
+    ASSERT_NO_OVERLAP(addr_start, cpu->external_mmu_window[index].type)
 #endif
     cpu->external_mmu_window[index].range_start = addr_start;
 }
@@ -866,7 +867,7 @@ void tlib_set_mmu_window_end(uint32_t index, uint64_t addr_end)
     ASSERT_WINDOW_ACTIVE(index)
     ASSERT_ALIGNED_TO_PAGE_SIZE(addr_end)
 #ifdef DEBUG
-    ASSERT_NO_OVERLAP(addr_end)
+    ASSERT_NO_OVERLAP(addr_end, cpu->external_mmu_window[index].type)
 #endif
     cpu->external_mmu_window[index].range_end = addr_end;
 }
