@@ -916,3 +916,14 @@ uint64_t tlib_get_mmu_window_addend(uint32_t index)
     return cpu->external_mmu_window[index].addend;
 }
 EXC_INT_1(uint64_t, tlib_get_mmu_window_addend, uint32_t, index)
+
+void tlib_raise_exception(uint32_t exception)
+{
+    // note: this function does interrupt
+    // the execution of the block, so
+    // externally raised exceptions might
+    // not be handled precisely
+    env->exception_index = exception;
+    env->exit_request = 1;
+}
+EXC_VOID_1(tlib_raise_exception, uint32_t, exception)
