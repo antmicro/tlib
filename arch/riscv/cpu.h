@@ -204,6 +204,9 @@ struct CPUState {
     int8_t are_post_opcode_execution_hooks_enabled;
     int32_t post_opcode_execution_hooks_count;
     opcode_hook_mask_t post_opcode_execution_hook_masks[CPU_HOOKS_MASKS_LIMIT];
+
+    int8_t are_post_gpr_access_hooks_enabled;
+    uint32_t post_gpr_access_hook_mask;
 };
 
 void riscv_set_mode(CPUState *env, target_ulong newpriv);

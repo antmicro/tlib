@@ -417,3 +417,29 @@ void tlib_enable_post_opcode_execution_hooks(uint32_t value)
 }
 
 EXC_VOID_1(tlib_enable_post_opcode_execution_hooks, uint32_t, value)
+
+void tlib_enable_post_gpr_access_hooks(uint32_t value)
+{
+    env->are_post_gpr_access_hooks_enabled = !! value;
+    tb_flush(env);
+}
+
+EXC_VOID_1(tlib_enable_post_gpr_access_hooks, uint32_t, value)
+
+void tlib_enable_post_gpr_access_hook_on(uint32_t register_index, uint32_t value)
+{
+    if(register_index > 31)
+    {
+        tlib_abort("Unable to add GPR access hook on register with index higher than 31");
+    }
+    if(value)
+    {
+        env->post_gpr_access_hook_mask |= 1 << register_index;
+    }
+    else
+    {
+        env->post_gpr_access_hook_mask &= ~(1u << register_index);    
+    }
+}
+
+EXC_VOID_2(tlib_enable_post_gpr_access_hook_on, uint32_t, register_index, uint32_t, value)

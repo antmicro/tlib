@@ -543,3 +543,8 @@ void HELPER(handle_post_opcode_execution_hook)(uint32_t id, uint64_t pc)
 {
     tlib_handle_post_opcode_execution_hook(id, pc);
 }
+
+void HELPER(handle_post_gpr_access_hook)(uint32_t register_index, uint32_t isWrite)
+{
+    tlib_handle_post_gpr_access_hook(register_index, isWrite);
+}

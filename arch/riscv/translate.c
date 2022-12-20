@@ -169,11 +169,28 @@ static inline void gen_goto_tb(DisasContext *dc, int n, target_ulong dest)
     }
 }
 
+static inline void try_run_gpr_access_hook(int reg_num, int is_write)
+{
+    if(unlikely(env->are_post_gpr_access_hooks_enabled))
+    {
+        if(env->post_gpr_access_hook_mask & (1u << reg_num))
+        {
+            TCGv_i32 register_index = tcg_const_i32(reg_num);
+            TCGv_i32 is_write_const = tcg_const_i32(is_write);
+            gen_helper_handle_post_gpr_access_hook(register_index, is_write_const);
+            tcg_temp_free_i32(register_index);
+            tcg_temp_free_i32(is_write_const);
+        }
+    }
+}
+
 /* Wrapper for getting reg values - need to check of reg is zero since
  * cpu_gpr[0] is not actually allocated
  */
 static inline void gen_get_gpr(TCGv t, int reg_num)
 {
+    try_run_gpr_access_hook(reg_num, 0);
+
     if (reg_num == 0) {
         tcg_gen_movi_tl(t, 0);
     } else {
@@ -196,6 +213,8 @@ static inline void gen_set_gpr(int reg_num_dst, TCGv t)
     if (reg_num_dst != 0) {
         tcg_gen_mov_tl(cpu_gpr[reg_num_dst], t);
     }
+
+    try_run_gpr_access_hook(reg_num_dst, 1);
 }
 
 static inline void get_set_gpr_imm(int reg_num_dst, int value)
@@ -203,6 +222,8 @@ static inline void get_set_gpr_imm(int reg_num_dst, int value)
     if (reg_num_dst != 0) {
         tcg_gen_movi_tl(cpu_gpr[reg_num_dst], value);
     }
+
+    try_run_gpr_access_hook(reg_num_dst, 1);
 }
 
 /* Some instructions don't allow NFIELDS value to be different from 1, 2, 4 or 8.
