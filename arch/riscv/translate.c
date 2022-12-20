@@ -198,6 +198,13 @@ static inline void gen_set_gpr(int reg_num_dst, TCGv t)
     }
 }
 
+static inline void get_set_gpr_imm(int reg_num_dst, int value)
+{
+    if (reg_num_dst != 0) {
+        tcg_gen_movi_tl(cpu_gpr[reg_num_dst], value);
+    }
+}
+
 /* Some instructions don't allow NFIELDS value to be different from 1, 2, 4 or 8.
  * As NFIELDS can be expressed as `nf + 1` this function checks if the above condition is true, while saving a few clock cycles
  * */
@@ -635,9 +642,8 @@ static void gen_jal(CPUState *env, DisasContext *dc, int rd, target_ulong imm)
             generate_exception_mbadaddr(dc, RISCV_EXCP_INST_ADDR_MIS);
         }
     }
-    if (rd != 0) {
-        tcg_gen_movi_tl(cpu_gpr[rd], dc->npc);
-    }
+
+    get_set_gpr_imm(rd, dc->npc);
 
     if (unlikely(dc->base.guest_profile)) {
         announce_if_jump_or_ret(rd, RA, imm, next_pc);
@@ -666,10 +672,7 @@ static void gen_jalr(CPUState *env, DisasContext *dc, uint32_t opc, int rd, int 
             tcg_gen_brcondi_tl(TCG_COND_NE, t0, 0x0, misaligned);
         }
 
-        if (rd != 0) {
-            tcg_gen_movi_tl(cpu_gpr[rd], dc->npc);
-        }
-
+        get_set_gpr_imm(rd, dc->npc);
         if (unlikely(dc->base.guest_profile)) {
             announce_if_jump_or_ret(rd, rs1, imm, PROFILER_TCG_PC);
         }
@@ -4370,7 +4373,7 @@ static void decode_RV32_64C1(CPUState *env, DisasContext *dc)
             gen_arith_imm(dc, OPC_RISC_ADDI, 2, 2, GET_C_ADDI16SP_IMM(dc->opcode));
         } else if (rd_rs1 != 0) {
             /* C.LUI (rs1/rd =/= {0,2}) -> lui rd, nzimm[17:12]*/
-            tcg_gen_movi_tl(cpu_gpr[rd_rs1], GET_C_IMM(dc->opcode) << 12);
+            get_set_gpr_imm(rd_rs1, GET_C_IMM(dc->opcode) << 12);
         }
         break;
     case 4:
@@ -4562,13 +4565,13 @@ static void decode_RV32_64G(CPUState *env, DisasContext *dc)
         if (rd == 0) {
             break; /* NOP */
         }
-        tcg_gen_movi_tl(cpu_gpr[rd], sextract64(dc->opcode, 12, 20) << 12);
+        get_set_gpr_imm(rd, sextract64(dc->opcode, 12, 20) << 12);
         break;
     case OPC_RISC_AUIPC:
         if (rd == 0) {
             break; /* NOP */
         }
-        tcg_gen_movi_tl(cpu_gpr[rd], (sextract64(dc->opcode, 12, 20) << 12) + dc->base.pc);
+        get_set_gpr_imm(rd, (sextract64(dc->opcode, 12, 20) << 12) + dc->base.pc);
         break;
     case OPC_RISC_JAL:
         imm = GET_JAL_IMM(dc->opcode);
