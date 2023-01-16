@@ -223,7 +223,9 @@ extern int tb_invalidated_flag;
 
 int tlb_fill(CPUState *env1, target_ulong addr, int is_write, int mmu_idx, void *retaddr, int no_page_fault, int access_width);
 
-void mark_tbs_containing_pc_as_dirty(target_ulong addr);
+void mark_tbs_containing_pc_as_dirty(target_ulong addr, int broadcast);
+void flush_dirty_addresses_list(void);
+void append_dirty_address(uint64_t address);
 
 #include "softmmu_defs.h"
 

@@ -96,6 +96,8 @@ void tlib_profiler_announce_stack_change(uint64_t current_address, uint64_t curr
 void tlib_profiler_announce_context_change(uint64_t context_id);
 void tlib_on_memory_access(uint64_t pc, uint32_t operation, uint64_t addr);
 void tlib_on_memory_access_event_enabled(int32_t value);
+void tlib_mass_broadcast_dirty(void* list_start, int size);
+void *get_dirty_addresses_list(void *size);
 
 uint32_t tlib_is_in_debug_mode(void);
 

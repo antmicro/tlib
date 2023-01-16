@@ -4,9 +4,37 @@
 #include "debug.h"
 #include "atomic.h"
 
-void mark_tbs_containing_pc_as_dirty(target_ulong addr)
+// Dirty addresses handling
+#define MAX_DIRTY_ADDRESSES_LIST_COUNT 100
+static uint64_t dirty_addresses_list[MAX_DIRTY_ADDRESSES_LIST_COUNT];
+static short current_dirty_addresses_list_index = 0;
+
+void flush_dirty_addresses_list()
 {
-    helper_mark_tbs_as_dirty(cpu, addr);
+    if (current_dirty_addresses_list_index==0) {
+        // list is empty
+        return;
+    }
+    tlib_mass_broadcast_dirty((void *)&dirty_addresses_list, current_dirty_addresses_list_index);
+    current_dirty_addresses_list_index = 0;
+}
+
+void append_dirty_address(uint64_t address)
+{
+    if (address == dirty_addresses_list[current_dirty_addresses_list_index-1]) {
+        return;
+    }
+    if (current_dirty_addresses_list_index == MAX_DIRTY_ADDRESSES_LIST_COUNT) {
+        // list is full
+        flush_dirty_addresses_list();
+    }
+    dirty_addresses_list[current_dirty_addresses_list_index++] = address;
+}
+
+// broadcast argument allows us to mark elements that we got from other cores without repeating the broadcast
+void mark_tbs_containing_pc_as_dirty(target_ulong addr, int broadcast)
+{
+    helper_mark_tbs_as_dirty(cpu, addr, broadcast);
 }
 
 // verify if there are instructions left to execute, update instructions count

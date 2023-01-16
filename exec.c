@@ -611,7 +611,7 @@ void tb_phys_invalidate(TranslationBlock *tb, tb_page_addr_t page_addr)
         tb1 = tb2;
     }
     tb->jmp_first = (TranslationBlock *)((uintptr_t)tb | EXIT_TB_FORCE); /* fail safe */
-
+    tb->dirty_flag = false;
     tb_phys_invalidate_count++;
 }
 
@@ -711,10 +711,15 @@ TranslationBlock *tb_gen_code(CPUState *env, target_ulong pc, target_ulong cs_ba
     return tb;
 }
 
-void helper_mark_tbs_as_dirty(CPUState *env, target_ulong pc)
+void helper_mark_tbs_as_dirty(CPUState *env, target_ulong pc, int broadcast)
 {
     if (cpu->tb_cache_disabled) {
         return;
+    }
+
+    if (broadcast && cpu->tb_broadcast_dirty) {
+        target_ulong masked_address = pc & TARGET_PAGE_MASK;
+        append_dirty_address(masked_address);
     }
 
     int n;

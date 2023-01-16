@@ -112,3 +112,7 @@ DEFAULT_VOID_HANDLER3(void tlib_mmu_fault_external_handler, uint64_t addr, int32
 DEFAULT_VOID_HANDLER4(void tlib_profiler_announce_stack_change, uint64_t current_address, uint64_t return_address, uint64_t instructions_count, int32_t is_frame_add)
 
 DEFAULT_VOID_HANDLER1(void tlib_profiler_announce_context_change, uint64_t context_id)
+
+DEFAULT_VOID_HANDLER2(void tlib_mass_broadcast_dirty, void* list_start ,int32_t size)
+
+DEFAULT_PTR_HANDLER1(void *get_dirty_addresses_list, void *size)

@@ -68,6 +68,7 @@ void cpu_reset(CPUState *env)
     memcpy(env->custom_csrs, custom_csrs,
            sizeof(uint64_t) * CSRS_SLOTS);
     env->pmp_napot_grain = -1;
+    env->tb_broadcast_dirty = false;
 
     env->vlenb = vlenb ? vlenb : 64;
     env->elen = elen ? elen : 64;

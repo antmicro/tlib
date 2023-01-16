@@ -927,3 +927,10 @@ void tlib_raise_exception(uint32_t exception)
     env->exit_request = 1;
 }
 EXC_VOID_1(tlib_raise_exception, uint32_t, exception)
+
+void tlib_set_broadcast_dirty(int enable)
+{
+    cpu->tb_broadcast_dirty = enable == 0 ? false : true;
+}
+
+EXC_VOID_1(tlib_set_broadcast_dirty, int32_t, enable)

@@ -899,7 +899,14 @@ void helper_wfi(CPUState *env)
 
 void helper_fence_i(CPUState *env)
 {
-    // do nothing
+    if (unlikely(env->tb_broadcast_dirty)) {
+        uint64_t size = 0;
+        uint64_t *addresses = get_dirty_addresses_list(&size);
+
+        for (uint64_t i = 0; i < size; ++i) {
+            mark_tbs_containing_pc_as_dirty(addresses[i], 0);
+        }
+    }
 }
 
 void helper_tlb_flush(CPUState *env)
