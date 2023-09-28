@@ -31,7 +31,7 @@
 #include "bit_helper.h"
 #include "cpu-defs.h"
 #include "host-utils.h"
-#include "softfloat.h"
+#include "softfloat-2.h"
 #include "xtensa-isa.h"
 
 #define TARGET_LONG_BITS 32

@@ -36,7 +36,7 @@
 
 #include "cpu-defs.h"
 
-#include "softfloat.h"
+#include "softfloat-2.h"
 
 #define R_EAX                        0
 #define R_ECX                        1

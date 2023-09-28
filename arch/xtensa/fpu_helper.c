@@ -27,7 +27,7 @@
 
 #include "cpu.h"
 #include "osdep.h"
-#include "softfloat.h"
+#include "softfloat-2.h"
 #include "tb-helper.h"
 
 enum {

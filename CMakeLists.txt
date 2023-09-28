@@ -153,7 +153,7 @@ endif()
 
 include_directories (
     tcg
-    fpu
+    softfloat-2
     include
     include_empty
     tcg/${HOST_ARCH}
@@ -163,7 +163,7 @@ include_directories (
 
 file (GLOB SOURCES
     "*.c"
-    "fpu/*.c"
+    "softfloat-2/*.c"
     "arch/*.c"
     "external/*.c"
     "arch/${TARGET_ACTUAL_ARCH}/*.c"

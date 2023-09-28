@@ -77,14 +77,14 @@
 /* softfloat (and in particular the code in softfloat-specialize.h) is
  * target-dependent and needs the TARGET_* macros.
  */
-#include "softfloat.h"
+#include "softfloat-2.h"
 
 /*----------------------------------------------------------------------------
  | Primitive arithmetic functions, including multi-word arithmetic, and
  | division and square root approximations.  (Can be specialized to target if
  | desired.)
  *----------------------------------------------------------------------------*/
-#include "softfloat-macros.h"
+#include "softfloat-2-macros.h"
 
 /*----------------------------------------------------------------------------
  | Functions and definitions to determine:  (1) whether tininess for underflow
@@ -94,7 +94,7 @@
  | are propagated from function inputs to output.  These details are target-
  | specific.
  *----------------------------------------------------------------------------*/
-#include "softfloat-specialize.h"
+#include "softfloat-2-specialize.h"
 
 void set_float_rounding_mode(int val STATUS_PARAM)
 {

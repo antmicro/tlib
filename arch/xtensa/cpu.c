@@ -30,7 +30,7 @@
 
 #include "cpu.h"
 #include "osdep.h"
-#include "softfloat.h"
+#include "softfloat-2.h"
 
 static void xtensa_cpu_reset(CPUState *env)
 {
