@@ -72,7 +72,7 @@
 
 #include "cpu-defs.h"
 
-#include "softfloat.h"
+#include "softfloat-2.h"
 
 #if defined (TARGET_PPC64)
 #define ELF_MACHINE               EM_PPC64

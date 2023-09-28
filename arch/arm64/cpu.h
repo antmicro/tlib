@@ -32,7 +32,7 @@
 #include "cpu-param.h"
 #include "host-utils.h"
 #include "infrastructure.h"
-#include "softfloat.h"
+#include "softfloat-2.h"
 #include "stubs.h"
 #include "tcg-memop.h"  // MO_* definitions.
 #include "ttable.h"

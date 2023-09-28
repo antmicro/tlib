@@ -22,7 +22,7 @@
 #include "host-utils.h"
 #include "int128.h"
 #include "osdep.h"
-#include "softfloat.h"
+#include "softfloat-2.h"
 #include "syndrome.h"
 
 // Some silly MMU adjustments. Memops (mostly MO_128, MO_ALIGN_16 and MO_BE) are ignored.

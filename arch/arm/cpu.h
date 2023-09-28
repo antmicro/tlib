@@ -25,7 +25,7 @@
 #include "ttable.h"
 #include "pmu.h"
 
-#include "softfloat.h"
+#include "softfloat-2.h"
 #include "arch_callbacks.h"
 
 #define SUPPORTS_GUEST_PROFILING

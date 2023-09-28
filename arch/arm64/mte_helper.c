@@ -22,7 +22,7 @@
 #include "helper.h"
 #include "host-utils.h"
 #include "osdep.h"
-#include "softfloat.h"
+#include "softfloat-2.h"
 #include "syndrome.h"
 
 static int choose_nonexcluded_tag(int tag, int offset, uint16_t exclude)

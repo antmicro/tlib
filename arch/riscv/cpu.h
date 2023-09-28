@@ -2,7 +2,7 @@
 
 #include "bit_helper.h"
 #include "cpu-defs.h"
-#include "softfloat.h"
+#include "softfloat-2.h"
 #include "host-utils.h"
 
 #define SUPPORTS_GUEST_PROFILING

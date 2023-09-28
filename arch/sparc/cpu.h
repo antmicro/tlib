@@ -16,7 +16,7 @@
 
 #include "cpu-defs.h"
 
-#include "softfloat.h"
+#include "softfloat-2.h"
 
 /*#define EXCP_INTERRUPT 0x100*/
 
