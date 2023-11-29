@@ -147,6 +147,9 @@ static int ensure_additional_extension(DisasContext *dc, target_ulong ext)
     case RISCV_FEATURE_ZIFENCEI:
         encoding = "ifencei";
         break;
+    case RISCV_FEATURE_ZFH:
+        encoding = "fh";
+        break;
     default:
         tlib_printf(LOG_LEVEL_ERROR, "Unexpected additional extension encoding: %d", ext);
         break;
@@ -162,10 +165,36 @@ static int ensure_additional_extension(DisasContext *dc, target_ulong ext)
 
 static int ensure_fp_extension(DisasContext *dc, int precision_bit)
 {
-    /* distinguish between F/D (i.e., single/double precision) classes
-       by looking at the `precision bit` */
-    int is_double_precision = dc->opcode & (1 << precision_bit);
-    return ensure_extension(dc, is_double_precision ? RISCV_FEATURE_RVD : RISCV_FEATURE_RVF);
+    switch(extract64(dc->opcode, precision_bit, 2))
+    {
+        case 0b00:
+            return ensure_extension(dc, RISCV_FEATURE_RVF);
+        case 0b01:
+            return ensure_extension(dc, RISCV_FEATURE_RVD);
+        case 0b10:
+            return ensure_additional_extension(dc, RISCV_FEATURE_ZFH);
+        default:
+            tlib_printf(LOG_LEVEL_ERROR, "Unknown floating point instruction encoding! PC: 0x%llx", dc->base.pc);
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+            return false;
+    }
+}
+
+static int ensure_fp_extension_for_load_store(DisasContext *dc)
+{
+    switch(extract64(dc->opcode, 12, 3))
+    {
+        case 1:
+            return ensure_additional_extension(dc, RISCV_FEATURE_ZFH);
+        case 2:
+            return ensure_extension(dc, RISCV_FEATURE_RVF);
+        case 3:
+            return ensure_extension(dc, RISCV_FEATURE_RVD);
+        default:
+            tlib_printf(LOG_LEVEL_ERROR, "Unknown floating point instruction encoding! PC: 0x%llx", dc->base.pc);
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+            return false;
+    }
 }
 
 static inline void gen_sync_pc(DisasContext *dc)
@@ -1147,13 +1176,13 @@ static void gen_arith_imm(DisasContext *dc, uint32_t opc, int rd, int rs1, targe
         }
         break;
     case OPC_RISC_SLLI_UW:
-        if (!ensure_extension(dc, RISCV_FEATURE_ZBA)) {
+        if (!ensure_additional_extension(dc, RISCV_FEATURE_ZBA)) {
             return;
         }
         tcg_gen_shli_tl(rd, source1, imm);
         break;
     case OPC_RISC_RORI:
-        if (!ensure_extension(dc, RISCV_FEATURE_ZBB)) {
+        if (!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
             return;
         }
 #if defined(TARGET_RISCV32)
@@ -1163,7 +1192,7 @@ static void gen_arith_imm(DisasContext *dc, uint32_t opc, int rd, int rs1, targe
 #endif
         break;
     case OPC_RISC_RORIW:
-        if (!ensure_extension(dc, RISCV_FEATURE_ZBB)) {
+        if (!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
             return;
         }
         tcg_gen_movi_tl(source1, sextract64(ror32(source1, imm), 0, 32));
@@ -1396,7 +1425,7 @@ static void gen_store(DisasContext *dc, uint32_t opc, int rs1, int rs2, target_l
 
 static void gen_fp_load(DisasContext *dc, uint32_t opc, int rd, int rs1, target_long imm)
 {
-    if (!ensure_fp_extension(dc, 12)) {
+    if (!ensure_fp_extension_for_load_store(dc)) {
         return;
     }
 
@@ -1418,6 +1447,10 @@ static void gen_fp_load(DisasContext *dc, uint32_t opc, int rd, int rs1, target_
     tcg_gen_addi_tl(t0, t0, imm);
 
     switch (opc) {
+    case OPC_RISC_FLH:
+        tcg_gen_qemu_ld16u(cpu_fpr[rd], t0, dc->base.mem_idx);
+        tcg_gen_ori_i64(cpu_fpr[rd], cpu_fpr[rd], ~(int64_t)UINT16_MAX);
+        break;
     case OPC_RISC_FLW:
         tcg_gen_qemu_ld32u(cpu_fpr[rd], t0, dc->base.mem_idx);
         tcg_gen_ori_i64(cpu_fpr[rd], cpu_fpr[rd], ~(int64_t)UINT32_MAX);
@@ -1621,7 +1654,7 @@ static void gen_v_load(DisasContext *dc, uint32_t opc, uint32_t rest, uint32_t v
 
 static void gen_fp_store(DisasContext *dc, uint32_t opc, int rs1, int rs2, target_long imm)
 {
-    if (!ensure_fp_extension(dc, 12)) {
+    if (!ensure_fp_extension_for_load_store(dc)) {
         return;
     }
 
@@ -1644,6 +1677,9 @@ static void gen_fp_store(DisasContext *dc, uint32_t opc, int rs1, int rs2, targe
     tcg_gen_addi_tl(t0, t0, imm);
 
     switch (opc) {
+    case OPC_RISC_FLH:
+        tcg_gen_qemu_st16(cpu_fpr[rs2], t0, dc->base.mem_idx);
+        break;
     case OPC_RISC_FSW:
         tcg_gen_qemu_st32(cpu_fpr[rs2], t0, dc->base.mem_idx);
         break;
@@ -1989,6 +2025,9 @@ static void gen_fp_fmadd(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs
     case OPC_RISC_FMADD_D:
         gen_helper_fmadd_d(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2], cpu_fpr[rs3], rm_reg);
         break;
+    case OPC_RISC_FMADD_H:
+        gen_helper_fmadd_h(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2], cpu_fpr[rs3], rm_reg);
+        break;
     default:
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         break;
@@ -2011,6 +2050,9 @@ static void gen_fp_fmsub(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs
         break;
     case OPC_RISC_FMSUB_D:
         gen_helper_fmsub_d(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2], cpu_fpr[rs3], rm_reg);
+        break;
+    case OPC_RISC_FMSUB_H:
+        gen_helper_fmsub_h(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2], cpu_fpr[rs3], rm_reg);
         break;
     default:
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
@@ -2035,6 +2077,9 @@ static void gen_fp_fnmsub(DisasContext *dc, uint32_t opc, int rd, int rs1, int r
     case OPC_RISC_FNMSUB_D:
         gen_helper_fnmsub_d(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2], cpu_fpr[rs3], rm_reg);
         break;
+    case OPC_RISC_FNMSUB_H:
+        gen_helper_fnmsub_h(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2], cpu_fpr[rs3], rm_reg);
+        break;
     default:
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         break;
@@ -2057,6 +2102,9 @@ static void gen_fp_fnmadd(DisasContext *dc, uint32_t opc, int rd, int rs1, int r
         break;
     case OPC_RISC_FNMADD_D:
         gen_helper_fnmadd_d(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2], cpu_fpr[rs3], rm_reg);
+        break;
+    case OPC_RISC_FNMADD_H:
+        gen_helper_fnmadd_h(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2], cpu_fpr[rs3], rm_reg);
         break;
     default:
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
@@ -2245,6 +2293,8 @@ static void gen_fp_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs
     case OPC_RISC_FCVT_S_D:
         if (rs2 == 0x1) {
             gen_helper_fcvt_s_d(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], rm_reg);
+        } else if (rs2 == 0x2) {
+            gen_helper_fcvt_s_h(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], rm_reg);
         } else {
             kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         }
@@ -2252,6 +2302,8 @@ static void gen_fp_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs
     case OPC_RISC_FCVT_D_S:
         if (rs2 == 0x0) {
             gen_helper_fcvt_d_s(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], rm_reg);
+        } else if (rs2 == 0x2) {
+            gen_helper_fcvt_d_h(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], rm_reg);
         } else {
             kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         }
@@ -2367,6 +2419,117 @@ static void gen_fp_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs
         break;
     }
 #endif
+    /* half-precision */
+    case OPC_RISC_FADD_H:
+        gen_helper_fadd_h(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2], rm_reg);
+        break;
+    case OPC_RISC_FSUB_H:
+        gen_helper_fsub_h(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2], rm_reg);
+        break;
+    case OPC_RISC_FMUL_H:
+        gen_helper_fmul_h(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2], rm_reg);
+        break;
+    case OPC_RISC_FDIV_H:
+        gen_helper_fdiv_h(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2], rm_reg);
+        break;
+    case OPC_RISC_FSGNJ_H:
+        gen_fsgnj(dc, rd, rs1, rs2, rm, INT16_MIN);
+        break;
+    case OPC_RISC_FMIN_H:
+        /* also OPC_RISC_FMAX_H */
+        if (rm == 0x0) {
+            gen_helper_fmin_h(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2]);
+        } else if (rm == 0x1) {
+            gen_helper_fmax_h(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2]);
+        } else {
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        }
+        break;
+    case OPC_RISC_FCVT_H_S:
+        if (rs2 == 0x0) {
+            gen_helper_fcvt_h_s(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], rm_reg);
+        } else if (rs2 == 0x1) {
+            gen_helper_fcvt_h_d(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], rm_reg);
+        } else {
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        }
+        break;
+    case OPC_RISC_FSQRT_H:
+        gen_helper_fsqrt_h(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], rm_reg);
+        break;
+    case OPC_RISC_FEQ_H:
+        /* also OPC_RISC_FLT_H, OPC_RISC_FLE_H */
+        if (rm == 0x0) {
+            gen_helper_fle_h(write_int_rd, cpu_env, cpu_fpr[rs1], cpu_fpr[rs2]);
+        } else if (rm == 0x1) {
+            gen_helper_flt_h(write_int_rd, cpu_env, cpu_fpr[rs1], cpu_fpr[rs2]);
+        } else if (rm == 0x2) {
+            gen_helper_feq_h(write_int_rd, cpu_env, cpu_fpr[rs1], cpu_fpr[rs2]);
+        } else {
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        }
+        gen_set_gpr(rd, write_int_rd);
+        break;
+    case OPC_RISC_FCVT_W_H:
+        /* also OPC_RISC_FCVT_WU_H, OPC_RISC_FCVT_L_H, OPC_RISC_FCVT_LU_H */
+        if (rs2 == 0x0) {
+            gen_helper_fcvt_w_h(write_int_rd, cpu_env, cpu_fpr[rs1], rm_reg);
+        } else if (rs2 == 0x1) {
+            gen_helper_fcvt_wu_h(write_int_rd, cpu_env, cpu_fpr[rs1], rm_reg);
+        } else if (rs2 == 0x2) {
+#if defined(TARGET_RISCV64)
+            gen_helper_fcvt_l_h(write_int_rd, cpu_env, cpu_fpr[rs1], rm_reg);
+#else
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+#endif
+        } else if (rs2 == 0x3) {
+#if defined(TARGET_RISCV64)
+            gen_helper_fcvt_lu_h(write_int_rd, cpu_env, cpu_fpr[rs1], rm_reg);
+#else
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+#endif
+        } else {
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        }
+        gen_set_gpr(rd, write_int_rd);
+        break;
+    case OPC_RISC_FCVT_H_W:
+        /* also OPC_RISC_FCVT_H_WU, OPC_RISC_FCVT_H_L, OPC_RISC_FCVT_H_LU */
+        gen_get_gpr(write_int_rd, rs1);
+        if (rs2 == 0x0) {
+            gen_helper_fcvt_h_w(cpu_fpr[rd], cpu_env, write_int_rd, rm_reg);
+        } else if (rs2 == 0x1) {
+            gen_helper_fcvt_h_wu(cpu_fpr[rd], cpu_env, write_int_rd, rm_reg);
+        } else if (rs2 == 0x2) {
+#if defined(TARGET_RISCV64)
+            gen_helper_fcvt_h_l(cpu_fpr[rd], cpu_env, write_int_rd, rm_reg);
+#else
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+#endif
+        } else if (rs2 == 0x3) {
+#if defined(TARGET_RISCV64)
+            gen_helper_fcvt_h_lu(cpu_fpr[rd], cpu_env, write_int_rd, rm_reg);
+#else
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+#endif
+        } else {
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        }
+        break;
+    case OPC_RISC_FMV_X_H:
+        /* also OPC_RISC_FCLASS_H */
+        if (rm == 0x0) {     /* FMV */
+            gen_helper_fmv_x_h(write_int_rd, cpu_env, cpu_fpr[rs1], rm_reg);
+        } else if (rm == 0x1) {
+            gen_helper_fclass_h(write_int_rd, cpu_env, cpu_fpr[rs1]);
+        } else {
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        }
+        gen_set_gpr(rd, write_int_rd);
+        break;
+    case OPC_RISC_FMV_H_X:
+        gen_helper_fmv_h_x(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], rm_reg);
+        break;
     default:
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         break;
