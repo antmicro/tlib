@@ -573,11 +573,13 @@ static ARMCPRegInfo general_coprocessor_registers[] = {
     ARM32_CP_REG_DEFINE(L2AUXCCTRL,    15,   1,   9,   0,   2,   1,  RW, RW_FNS(c9_l2auxcctrl))    // L2 Cache auxiliary control (A8) or control (A15)
     ARM32_CP_REG_DEFINE(L2EXCTRL,      15,   1,   9,   0,   3,   1,  RW | CONST(0))                // L2 Cache extended control (A15)
 
-    /*  branch predictor, cache, and TCM operations */
-    ARM32_CP_REG_DEFINE(TCMREGION0,    15, ANY,   9,   1,   0,   1,  RW, RW_FNS(c9_tcmregion_0))   // TCM memory region registers
-    ARM32_CP_REG_DEFINE(TCMREGION1,    15, ANY,   9,   1,   1,   1,  RW, RW_FNS(c9_tcmregion_1))
+    ARM32_CP_REG_DEFINE(DTCMRR,        15,   0,   9,   1,   0,   1,  RW, RW_FNS(c9_tcmregion_0))   // Data TCM Region Register (also BTCM)
+    ARM32_CP_REG_DEFINE(ITCMRR,        15,   0,   9,   1,   1,   1,  RW, RW_FNS(c9_tcmregion_1))   // Instruction or unified TCM Region Register (also ATCM)
 
-    ARM32_CP_REG_DEFINE(TCMSEL,        15, ANY,   9,   2,   0,   1,  RW, RW_FNS(c9_tcmsel))
+    ARM32_CP_REG_DEFINE(DTCM-NSACR,    15,   0,   9,   1,   2,   1,  RW)                           // Data TCM Non-Secure Access Control Register
+    ARM32_CP_REG_DEFINE(ITCM-NSACR,    15,   0,   9,   1,   3,   1,  RW)                           // Instruction TCM Non-Secure Access Control Register
+
+    ARM32_CP_REG_DEFINE(TCMSR,         15,   0,   9,   2,   0,   1,  RW, RW_FNS(c9_tcmsel))        // TCM Selection Register
 
     // crn == 10
     ARM32_CP_REG_DEFINE(TLB_LOCKDOWN,  15, ANY,  10, ANY, ANY,   1,  RW, RW_FNS(c10_tlb_lockdown)) // MMU TLB lockdown
