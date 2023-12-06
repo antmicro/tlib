@@ -45,7 +45,7 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
             raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                       \
             return;                                                                                     \
         }                                                                                               \
-        imm = unbox_float32(env, imm);                                                                  \
+        imm = unbox_float(RISCV_SINGLE_PRECISION, env, imm);                                            \
         break;                                                                                          \
     case 64:                                                                                            \
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {                                                   \
@@ -120,7 +120,7 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
             raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                       \
             return;                                                                                                                     \
         }                                                                                                                               \
-        imm = helper_fcvt_d_s(env, unbox_float32(env, imm), env->frm);                                                                       \
+        imm = helper_fcvt_d_s(env, unbox_float(RISCV_SINGLE_PRECISION, env, imm), env->frm);                                            \
         break;                                                                                                                          \
     default:                                                                                                                            \
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                           \
@@ -178,7 +178,7 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
             raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                       \
             return;                                                                                     \
         }                                                                                               \
-        imm = helper_fcvt_d_s(env, unbox_float32(env, imm), env->frm);                                  \
+        imm = helper_fcvt_d_s(env, unbox_float(RISCV_SINGLE_PRECISION, env, imm), env->frm);            \
         break;                                                                                          \
     default:                                                                                            \
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                           \
@@ -235,7 +235,7 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
             raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                           \
             return;                                                                                                                         \
         }                                                                                                                                   \
-        imm = unbox_float32(env, imm);                                                                                                      \
+        imm = unbox_float(RISCV_SINGLE_PRECISION, env, imm);                                                                                \
         break;                                                                                                                              \
     case 64:                                                                                                                                \
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {                                                                                       \
@@ -310,7 +310,7 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
             raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                   \
             return;                                                                                 \
         }                                                                                           \
-        imm = helper_fcvt_d_s(env, unbox_float32(env, imm), env->frm);                              \
+        imm = helper_fcvt_d_s(env, unbox_float(RISCV_SINGLE_PRECISION, env, imm), env->frm);        \
         break;                                                                                      \
     default:                                                                                        \
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                       \
@@ -393,7 +393,7 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
             raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                               \
             return;                                                                             \
         }                                                                                       \
-        imm = unbox_float32(env, imm);                                                          \
+        imm = unbox_float(RISCV_SINGLE_PRECISION, env, imm);                                    \
         break;                                                                                  \
     case 64:                                                                                    \
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {                                           \
@@ -805,7 +805,7 @@ void glue(helper_vfslide1up, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, f
     ) {
         switch (eew) {
         case 32:
-            ((float32 *)V(vd))[0] = unbox_float32(env, imm);
+            ((float32 *)V(vd))[0] = unbox_float(RISCV_SINGLE_PRECISION, env, imm);
             break;
         case 64:
             ((float64 *)V(vd))[0] = imm;
@@ -879,7 +879,7 @@ void glue(helper_vfslide1down, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2,
 #endif
         switch (eew) {
         case 32:
-            ((float32 *)V(vd))[src_max] = unbox_float32(env, imm);
+            ((float32 *)V(vd))[src_max] = unbox_float(RISCV_SINGLE_PRECISION, env, imm);
             break;
         case 64:
             ((float64 *)V(vd))[src_max] = imm;

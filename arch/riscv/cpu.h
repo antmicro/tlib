@@ -309,6 +309,14 @@ enum privilege_architecture {
     RISCV_PRIV1_11
 };
 
+// The enum encodes the fmt field of opcode
+enum riscv_floating_point_precision {
+    RISCV_SINGLE_PRECISION = 0b00,
+    RISCV_DOUBLE_PRECISION = 0b01,
+    RISCV_HALF_PRECISION = 0b10,
+    RISCV_QUAD_PRECISION = 0b11
+};
+
 static inline int riscv_has_ext(CPUState *env, target_ulong ext)
 {
     return (env->misa & ext) != 0;
@@ -369,6 +377,79 @@ static inline void set_default_mstatus()
 static inline int supported_fpu_extensions_count(CPUState *env)
 {
     return !!riscv_has_ext(env, RISCV_FEATURE_RVF) + !!riscv_has_ext(env, RISCV_FEATURE_RVD);
+}
+
+static inline bool is_unboxing_needed(enum riscv_floating_point_precision float_precision, CPUState* env)
+{
+    return float_precision != RISCV_DOUBLE_PRECISION && supported_fpu_extensions_count(env) != 1;
+}
+
+static inline uint64_t get_float_mask(enum riscv_floating_point_precision float_precision)
+{
+    switch (float_precision) {
+    case RISCV_DOUBLE_PRECISION:
+        return UINT64_MAX;
+    case RISCV_SINGLE_PRECISION:
+        return UINT32_MAX;
+    case RISCV_HALF_PRECISION:
+        return UINT16_MAX;
+    default:
+        // Should never happen.
+        return 0;
+    }
+}
+
+static inline float64 get_float_default_nan(enum riscv_floating_point_precision float_precision)
+{
+    switch (float_precision) {
+    case RISCV_DOUBLE_PRECISION:
+        return float64_default_nan;
+    case RISCV_SINGLE_PRECISION:
+        return float32_default_nan;
+    case RISCV_HALF_PRECISION:
+        return float16_default_nan;
+    default:
+        // Should never happen.
+        return 0;
+    }
+}
+
+static inline float64 unbox_float(enum riscv_floating_point_precision float_precision, CPUState* env, float64 value)
+{
+    if (!is_unboxing_needed(float_precision, env)) {
+        return value;
+    }
+
+    bool is_box_valid = ((uint64_t)value | get_float_mask(float_precision)) == UINT64_MAX;
+    return is_box_valid ? value : get_float_default_nan(float_precision);
+}
+
+static inline float64 box_float(enum riscv_floating_point_precision float_precision, float64 value)
+{
+    return value | ~get_float_mask(float_precision);
+}
+
+static inline void gen_unbox_float(enum riscv_floating_point_precision float_precision, CPUState* env, TCGv_i64 destination, TCGv_i64 source)
+{
+    // The function consists of more than one basic block, because there is a branch inside it.
+    // The destination variable must be at least local temporary.
+    tcg_gen_mov_i64(destination, source);
+    if (!is_unboxing_needed(float_precision, env)) {
+        return;
+    }
+
+    int valid_box = gen_new_label();
+    TCGv_i64 temp = tcg_temp_new_i64();
+    tcg_gen_ori_i64(temp, source, get_float_mask(float_precision));
+    tcg_gen_brcondi_i64(TCG_COND_EQ, temp, UINT64_MAX, valid_box);
+    tcg_gen_movi_i64(destination, get_float_default_nan(float_precision));
+    gen_set_label(valid_box);
+    tcg_temp_free_i64(temp);
+}
+
+static inline void gen_box_float(enum riscv_floating_point_precision float_precision, TCGv_i64 value)
+{
+    tcg_gen_ori_i64(value, value, ~get_float_mask(float_precision));
 }
 
 #define GET_VTYPE_VLMUL(inst)    extract32(inst, 0, 3)

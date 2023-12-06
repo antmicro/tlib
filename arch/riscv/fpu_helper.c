@@ -94,17 +94,6 @@ ieee_rm[rm]; })
     raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST); \
 }
 
-static inline float64 unbox_float32(CPUState *env, float64 value)
-{
-    if(supported_fpu_extensions_count(env) == 1)
-    {
-        // single float width platform -- no need for boxing
-        return value;
-    }
-    bool is_box_valid_float32 = ((uint64_t) value >> 32) == UINT32_MAX;
-    return is_box_valid_float32 ? (float32) value : float32_default_nan;
-}
-
 /* convert softfloat library flag numbers to RISC-V */
 unsigned int softfloat_flags_to_riscv(unsigned int flags)
 {
@@ -773,7 +762,7 @@ void helper_vfmv_vf(CPUState *env, uint32_t vd, uint64_t f1)
             raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
             return;
         }
-        f1 = unbox_float32(env, f1);
+        f1 = unbox_float(RISCV_SINGLE_PRECISION, env, f1);
         break;
     case 64:
         if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
@@ -841,7 +830,7 @@ void helper_vfmv_sf(CPUState *env, uint32_t vd, float64 rs1)
                raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
                break;
            }
-           ((int32_t *)V(vd))[0] = unbox_float32(env, rs1);
+           ((int32_t *)V(vd))[0] = unbox_float(RISCV_SINGLE_PRECISION, env, rs1);
            break;
         case 64:
            if (!riscv_has_ext(env, RISCV_FEATURE_RVD))
