@@ -148,7 +148,7 @@ void TLIB_NORETURN cpu_loop_exit_restore(CPUState *cpu, uintptr_t pc, uint32_t c
     cpu_loop_exit_without_hook(cpu);
 }
 
-static TranslationBlock *tb_find_slow(CPUState *env, target_ulong pc, target_ulong cs_base, uint64_t flags, uint32_t force_translation)
+static TranslationBlock *tb_find_slow(CPUState *env, target_ulong pc, target_ulong cs_base, uint64_t flags)
 {
     tlib_on_translation_block_find_slow(pc);
     TranslationBlock *tb, **ptb1;
@@ -164,7 +164,9 @@ static TranslationBlock *tb_find_slow(CPUState *env, target_ulong pc, target_ulo
     h = tb_phys_hash_func(phys_pc);
     ptb1 = &tb_phys_hash[h];
 
-    if (unlikely(env->tb_cache_disabled || force_translation)) {
+    uint32_t max_icount = env->instructions_count_limit - env->instructions_count_value;
+
+    if (unlikely(env->tb_cache_disabled)) {
         goto not_found;
     }
 
@@ -173,7 +175,7 @@ static TranslationBlock *tb_find_slow(CPUState *env, target_ulong pc, target_ulo
         if (!tb) {
             goto not_found;
         }
-        if (tb->pc == pc && tb->page_addr[0] == phys_page1 && tb->cs_base == cs_base && tb->flags == flags) {
+        if (tb->pc == pc && tb->page_addr[0] == phys_page1 && tb->cs_base == cs_base && tb->flags == flags && tb->icount <= max_icount) {
             /* check next page if needed */
             if (tb->page_addr[1] != -1) {
                 tb_page_addr_t phys_page2;
@@ -220,11 +222,10 @@ static inline TranslationBlock *tb_find_fast(CPUState *env)
     cpu_get_tb_cpu_state(env, &pc, &cs_base, &flags);
     tb = env->tb_jmp_cache[tb_jmp_cache_hash_func(pc)];
     if (unlikely(!tb || tb->pc != pc || tb->cs_base != cs_base || tb->flags != flags || env->tb_cache_disabled)) {
-        tb = tb_find_slow(env, pc, cs_base, flags, 0);
-    } else if (tb->was_cut && tb->icount < max_icount) {
-        // force translation
+        tb = tb_find_slow(env, pc, cs_base, flags);
+    } else if ((tb->was_cut && tb->icount < max_icount) || (tb->icount > max_icount)) {
         tb_phys_invalidate(tb, -1);
-        tb = tb_find_slow(env, pc, cs_base, flags, 1);
+        tb = tb_find_slow(env, pc, cs_base, flags);
     }
     return tb;
 }

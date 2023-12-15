@@ -561,6 +561,16 @@ static inline void tb_reset_jump(TranslationBlock *tb, int n)
     tb_set_jmp_target(tb, n, (uintptr_t)(tb->tc_ptr + tb->tb_next_offset[n]));
 }
 
+void tb_phys_remove(TranslationBlock *tb, tb_page_addr_t page_addr)
+{
+    unsigned int h;
+
+    tb_page_addr_t phys_pc;
+    phys_pc = tb->page_addr[0] + (tb->pc & ~TARGET_PAGE_MASK);
+    h = tb_phys_hash_func(phys_pc);
+    tb_remove(&tb_phys_hash[h], tb, offsetof(TranslationBlock, phys_hash_next));
+}
+
 void tb_phys_invalidate(TranslationBlock *tb, tb_page_addr_t page_addr)
 {
     PageDesc *p;
@@ -571,7 +581,12 @@ void tb_phys_invalidate(TranslationBlock *tb, tb_page_addr_t page_addr)
     /* remove the TB from the hash list */
     phys_pc = tb->page_addr[0] + (tb->pc & ~TARGET_PAGE_MASK);
     h = tb_phys_hash_func(phys_pc);
-    tb_remove(&tb_phys_hash[h], tb, offsetof(TranslationBlock, phys_hash_next));
+
+    if (tb->was_invalidated) {
+        return;
+    }
+
+    tb->was_invalidated = true;
 
     /* remove the TB from the page list */
     if (tb->page_addr[0] != page_addr) {
@@ -693,6 +708,7 @@ TranslationBlock *tb_gen_code(CPUState *env, target_ulong pc, target_ulong cs_ba
     tb->cs_base = cs_base;
     tb->flags = flags;
     tb->cflags = cflags;
+    tb->was_invalidated = false;
     cpu_gen_code(env, tb, &code_gen_size, &search_size);
     code_gen_ptr = (void *)(((uintptr_t)code_gen_ptr + code_gen_size
         + search_size + CODE_GEN_ALIGN - 1) & ~(CODE_GEN_ALIGN - 1));
@@ -835,6 +851,7 @@ void tb_invalidate_phys_page_range_inner(tb_page_addr_t start, tb_page_addr_t en
                 env->current_tb = NULL;
             }
             tb_phys_invalidate(tb, -1);
+            tb_phys_remove(tb, -1);
             if (env) {
                 env->current_tb = saved_tb;
                 if (env->interrupt_request && env->current_tb) {
@@ -1047,6 +1064,7 @@ void interrupt_current_translation_block(CPUState *env, int exeception_type)
 
     cpu_get_tb_cpu_state(cpu, &pc, &cs_base, &cpu_flags);
     tb_phys_invalidate(cpu->current_tb, -1);
+    tb_phys_remove(cpu->current_tb, -1);
     tb_gen_code(cpu, pc, cs_base, cpu_flags, 0);
 
     if (cpu->block_finished_hook_present) {

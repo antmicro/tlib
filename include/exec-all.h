@@ -137,6 +137,7 @@ struct TranslationBlock {
     // in case of exiting this tb before the end (e.g., in case of an exception, watchpoint etc.) the value of counters must be rebuilt
     // the type of this field needs to match the TCG-generated access in `gen_update_instructions_count` in translate-all.c
     uint32_t instructions_count_dirty;
+    bool was_invalidated;
 #if DEBUG
     uint32_t lock_active;
     char *lock_file;
@@ -166,6 +167,7 @@ static inline unsigned int tb_phys_hash_func(tb_page_addr_t pc)
 void tb_free(TranslationBlock *tb);
 void tb_flush(CPUState *env);
 void tb_link_page(TranslationBlock *tb, tb_page_addr_t phys_pc, tb_page_addr_t phys_page2);
+void tb_phys_remove(TranslationBlock *tb, tb_page_addr_t page_addr);
 void tb_phys_invalidate(TranslationBlock *tb, tb_page_addr_t page_addr);
 
 extern TranslationBlock *tb_phys_hash[CODE_GEN_PHYS_HASH_SIZE];

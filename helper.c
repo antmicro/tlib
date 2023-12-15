@@ -52,9 +52,13 @@ uint32_t HELPER(prepare_block_for_execution)(void *tb)
     if (instructions_left == 0) {
         // setting `tb_restart_request` to 1 will stop executing this block at the end of the header
         cpu->tb_restart_request = 1;
-    } else if (cpu->current_tb->icount > instructions_left || cpu->current_tb->dirty_flag) {
+    } else if (cpu->current_tb->icount > instructions_left) {
         // invalidate this block and jump back to the main loop
         tb_phys_invalidate(cpu->current_tb, -1);
+        cpu->tb_restart_request = 1;
+    } else if (cpu->current_tb->dirty_flag) {
+        tb_phys_invalidate(cpu->current_tb, -1);
+        tb_phys_remove(cpu->current_tb, -1);
         cpu->tb_restart_request = 1;
     }
     return cpu->tb_restart_request;
