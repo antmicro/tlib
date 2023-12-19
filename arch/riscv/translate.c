@@ -1147,7 +1147,7 @@ static void gen_arith_imm(DisasContext *dc, uint32_t opc, int rd, int rs1, targe
         }
         break;
     case OPC_RISC_SLLI_UW:
-        if (!ensure_extension(dc, RISCV_FEATURE_ZBA)) {
+        if (!ensure_additional_extension(dc, RISCV_FEATURE_ZBA)) {
             return;
         }
         tcg_gen_shli_tl(rd, source1, imm);
