@@ -162,10 +162,32 @@ static int ensure_additional_extension(DisasContext *dc, target_ulong ext)
 
 static int ensure_fp_extension(DisasContext *dc, int precision_bit)
 {
-    /* distinguish between F/D (i.e., single/double precision) classes
-       by looking at the `precision bit` */
-    int is_double_precision = dc->opcode & (1 << precision_bit);
-    return ensure_extension(dc, is_double_precision ? RISCV_FEATURE_RVD : RISCV_FEATURE_RVF);
+    switch((enum riscv_floating_point_precision)extract64(dc->opcode, precision_bit, 2))
+    {
+        case RISCV_SINGLE_PRECISION:
+            return ensure_extension(dc, RISCV_FEATURE_RVF);
+        case RISCV_DOUBLE_PRECISION:
+            return ensure_extension(dc, RISCV_FEATURE_RVD);
+        default:
+            tlib_printf(LOG_LEVEL_ERROR, "Unknown floating point instruction encoding! PC: 0x%llx", dc->base.pc);
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+            return false;
+    }
+}
+
+static int ensure_fp_extension_for_load_store(DisasContext *dc)
+{
+    switch(extract64(dc->opcode, 12, 3))
+    {
+        case 2:
+            return ensure_extension(dc, RISCV_FEATURE_RVF);
+        case 3:
+            return ensure_extension(dc, RISCV_FEATURE_RVD);
+        default:
+            tlib_printf(LOG_LEVEL_ERROR, "Unknown floating point instruction encoding! PC: 0x%llx", dc->base.pc);
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+            return false;
+    }
 }
 
 static inline void gen_sync_pc(DisasContext *dc)
@@ -1396,7 +1418,7 @@ static void gen_store(DisasContext *dc, uint32_t opc, int rs1, int rs2, target_l
 
 static void gen_fp_load(DisasContext *dc, uint32_t opc, int rd, int rs1, target_long imm)
 {
-    if (!ensure_fp_extension(dc, 12)) {
+    if (!ensure_fp_extension_for_load_store(dc)) {
         return;
     }
 
@@ -1621,7 +1643,7 @@ static void gen_v_load(DisasContext *dc, uint32_t opc, uint32_t rest, uint32_t v
 
 static void gen_fp_store(DisasContext *dc, uint32_t opc, int rs1, int rs2, target_long imm)
 {
-    if (!ensure_fp_extension(dc, 12)) {
+    if (!ensure_fp_extension_for_load_store(dc)) {
         return;
     }
 
