@@ -1432,7 +1432,7 @@ static void gen_fp_load(DisasContext *dc, uint32_t opc, int rd, int rs1, target_
         return;
     }
 
-    TCGv t0 = tcg_temp_new();
+    TCGv t0 = tcg_temp_local_new();
     int fp_ok = gen_new_label();
     int done = gen_new_label();
 
@@ -1449,10 +1449,12 @@ static void gen_fp_load(DisasContext *dc, uint32_t opc, int rd, int rs1, target_
     gen_get_gpr(t0, rs1);
     tcg_gen_addi_tl(t0, t0, imm);
 
+    TCGv destination = tcg_temp_new();
     switch (opc) {
     case OPC_RISC_FLW:
-        tcg_gen_qemu_ld32u(cpu_fpr[rd], t0, dc->base.mem_idx);
-        tcg_gen_ori_i64(cpu_fpr[rd], cpu_fpr[rd], ~(int64_t)UINT32_MAX);
+        tcg_gen_qemu_ld32u(destination, t0, dc->base.mem_idx);
+        tcg_gen_extu_tl_i64(cpu_fpr[rd], destination);
+        gen_box_float(RISCV_SINGLE_PRECISION, cpu_fpr[rd]);
         break;
     case OPC_RISC_FLD:
         tcg_gen_qemu_ld64(cpu_fpr[rd], t0, dc->base.mem_idx);
@@ -1461,6 +1463,7 @@ static void gen_fp_load(DisasContext *dc, uint32_t opc, int rd, int rs1, target_
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         break;
     }
+    tcg_temp_free(destination);
     gen_set_label(done);
     tcg_temp_free(t0);
 }
