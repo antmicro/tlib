@@ -1153,7 +1153,7 @@ static void gen_arith_imm(DisasContext *dc, uint32_t opc, int rd, int rs1, targe
         tcg_gen_shli_tl(rd, source1, imm);
         break;
     case OPC_RISC_RORI:
-        if (!ensure_extension(dc, RISCV_FEATURE_ZBB)) {
+        if (!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
             return;
         }
 #if defined(TARGET_RISCV32)
@@ -1163,7 +1163,7 @@ static void gen_arith_imm(DisasContext *dc, uint32_t opc, int rd, int rs1, targe
 #endif
         break;
     case OPC_RISC_RORIW:
-        if (!ensure_extension(dc, RISCV_FEATURE_ZBB)) {
+        if (!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
             return;
         }
         tcg_gen_movi_tl(source1, sextract64(ror32(source1, imm), 0, 32));
