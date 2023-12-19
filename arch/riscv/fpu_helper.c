@@ -133,6 +133,22 @@ uint64_t helper_fmadd_d(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t fr
     return frs1;
 }
 
+uint64_t helper_fmadd_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t frs3, uint64_t rm)
+{
+    require_fp;
+    set_float_rounding_mode(RM, &env->fp_status);
+
+    float16_t f1, f2, f3;
+    f1.v = (uint16_t)frs1;
+    f2.v = (uint16_t)frs2;
+    f3.v = (uint16_t)frs3;
+    frs1 = f16_mulAdd(f1, f2, f3).v;
+    
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return frs1;
+}
+
 uint64_t helper_fmsub_s(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t frs3, uint64_t rm)
 {
     require_fp;
@@ -148,6 +164,22 @@ uint64_t helper_fmsub_d(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t fr
     require_fp;
     set_float_rounding_mode(RM, &env->fp_status);
     frs1 = float64_muladd(frs1, frs2, frs3 ^ (uint64_t)INT64_MIN, 0, &env->fp_status);
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return frs1;
+}
+
+uint64_t helper_fmsub_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t frs3, uint64_t rm)
+{
+    require_fp;
+    set_float_rounding_mode(RM, &env->fp_status);
+
+    float16_t f1, f2, f3;
+    f1.v = (uint16_t)frs1;
+    f2.v = (uint16_t)frs2;
+    f3.v = (uint16_t)(frs3 ^ (uint64_t)INT16_MIN);
+    frs1 = f16_mulAdd(f1, f2, f3).v;
+    
     set_fp_exceptions();
     mark_fs_dirty();
     return frs1;
@@ -173,6 +205,22 @@ uint64_t helper_fnmsub_d(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t f
     return frs1;
 }
 
+uint64_t helper_fnmsub_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t frs3, uint64_t rm)
+{
+    require_fp;
+    set_float_rounding_mode(RM, &env->fp_status);
+ 
+    float16_t f1, f2, f3;
+    f1.v = (uint16_t)(frs1 ^ (uint64_t)INT16_MIN);
+    f2.v = (uint16_t)frs2;
+    f3.v = (uint16_t)frs3;
+    frs1 = f16_mulAdd(f1, f2, f3).v;
+ 
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return frs1;
+}
+
 uint64_t helper_fnmadd_s(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t frs3, uint64_t rm)
 {
     require_fp;
@@ -188,6 +236,22 @@ uint64_t helper_fnmadd_d(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t f
     require_fp;
     set_float_rounding_mode(RM, &env->fp_status);
     frs1 = float64_muladd(frs1 ^ (uint64_t)INT64_MIN, frs2, frs3 ^ (uint64_t)INT64_MIN, 0, &env->fp_status);
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return frs1;
+}
+
+uint64_t helper_fnmadd_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t frs3, uint64_t rm)
+{
+    require_fp;
+    set_float_rounding_mode(RM, &env->fp_status);
+ 
+    float16_t f1, f2, f3;
+    f1.v = (uint16_t)(frs1 ^ (uint64_t)INT16_MIN);
+    f2.v = (uint16_t)frs2;
+    f3.v = (uint16_t)(frs3 ^ (uint64_t)INT16_MIN);
+    frs1 = f16_mulAdd(f1, f2, f3).v;
+ 
     set_fp_exceptions();
     mark_fs_dirty();
     return frs1;
@@ -747,6 +811,353 @@ uint64_t helper_fcvt_s_d_rod(CPUState *env, uint64_t rs1)
     set_fp_exceptions();
     mark_fs_dirty();
     return rs1;
+}
+
+uint64_t helper_fadd_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t rm)
+{
+    require_fp;
+    set_float_rounding_mode(RM, &env->fp_status);
+
+    float16_t f1, f2;
+    f1.v = (uint16_t)frs1;
+    f2.v = (uint16_t)frs2;
+    frs1 = f16_add(f1, f2).v;
+
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return frs1;
+}
+
+uint64_t helper_fsub_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t rm)
+{
+    require_fp;
+    set_float_rounding_mode(RM, &env->fp_status);
+
+    float16_t f1, f2;
+    f1.v = (uint16_t)frs1;
+    f2.v = (uint16_t)frs2;
+    frs1 = f16_sub(f1, f2).v;
+    
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return frs1;
+}
+
+uint64_t helper_fmul_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t rm)
+{
+    require_fp;
+    set_float_rounding_mode(RM, &env->fp_status);
+    
+    float16_t f1, f2;
+    f1.v = (uint16_t)frs1;
+    f2.v = (uint16_t)frs2;
+    frs1 = f16_mul(f1, f2).v;
+
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return frs1;
+}
+
+uint64_t helper_fdiv_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t rm)
+{
+    require_fp;
+    set_float_rounding_mode(RM, &env->fp_status);
+
+    float16_t f1, f2;
+    f1.v = (uint16_t)frs1;
+    f2.v = (uint16_t)frs2;
+    frs1 = f16_div(f1, f2).v;
+
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return frs1;
+}
+
+uint64_t helper_fmin_h(CPUState *env, uint64_t frs1, uint64_t frs2)
+{
+    require_fp;
+    
+    float16_t f1, f2;
+    f1.v = (uint16_t)frs1;
+    f2.v = (uint16_t)frs2;
+
+    frs1 = f16_min(f1, f2).v;
+
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return frs1;
+}
+
+uint64_t helper_fmax_h(CPUState *env, uint64_t frs1, uint64_t frs2)
+{
+    require_fp;
+    
+    float16_t f1, f2;
+    f1.v = (uint16_t)frs1;
+    f2.v = (uint16_t)frs2;
+
+    frs1 = f16_max(f1, f2).v;
+
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return frs1;
+}
+
+uint64_t helper_fcvt_s_h(CPUState *env, uint64_t rs1, uint64_t rm)
+{
+    require_fp;
+    set_float_rounding_mode(RM, &env->fp_status);
+    
+    float16_t f1;
+    f1.v = (uint16_t)rs1;
+    rs1 = f16_to_f32(f1).v;
+    
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return rs1;
+}
+
+uint64_t helper_fcvt_h_s(CPUState *env, uint64_t rs1, uint64_t rm)
+{
+    require_fp;
+    set_float_rounding_mode(RM, &env->fp_status);
+    
+    float32_t f1;
+    f1.v = (uint32_t)rs1;
+    rs1 = f32_to_f16(f1).v;
+    
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return rs1;
+}
+
+uint64_t helper_fcvt_d_h(CPUState *env, uint64_t rs1, uint64_t rm)
+{
+    require_fp;
+    set_float_rounding_mode(RM, &env->fp_status);
+    
+    float16_t f1;
+    f1.v = (uint16_t)rs1;
+    rs1 = f16_to_f64(f1).v;
+    
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return rs1;
+}
+
+uint64_t helper_fcvt_h_d(CPUState *env, uint64_t rs1, uint64_t rm)
+{
+    require_fp;
+    set_float_rounding_mode(RM, &env->fp_status);
+    
+    float64_t f1;
+    f1.v = rs1;
+    rs1 = f64_to_f16(f1).v;
+    
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return rs1;
+}
+
+uint64_t helper_fsqrt_h(CPUState *env, uint64_t frs1, uint64_t rm)
+{
+    require_fp;
+    set_float_rounding_mode(RM, &env->fp_status);
+
+    float16_t f1;
+    f1.v = (uint16_t)frs1;
+    frs1 = f16_sqrt(f1).v;
+
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return frs1;
+}
+
+target_ulong helper_fle_h(CPUState *env, uint64_t frs1, uint64_t frs2)
+{
+    require_fp;
+
+    float16_t f1, f2;
+    f1.v = (uint16_t)frs1;
+    f2.v = (uint16_t)frs2;
+    frs1 = f16_le(f1, f2);
+    
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return frs1;
+}
+
+target_ulong helper_flt_h(CPUState *env, uint64_t frs1, uint64_t frs2)
+{
+    require_fp;
+    
+    float16_t f1, f2;
+    f1.v = (uint16_t)frs1;
+    f2.v = (uint16_t)frs2;
+    frs1 = f16_lt(f1, f2);
+    
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return frs1;
+}
+
+target_ulong helper_feq_h(CPUState *env, uint64_t frs1, uint64_t frs2)
+{
+    require_fp;
+
+    float16_t f1, f2;
+    f1.v = (uint16_t)frs1;
+    f2.v = (uint16_t)frs2;
+    frs1 = f16_eq(f1, f2);
+    
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return frs1;
+}
+
+target_ulong helper_fcvt_w_h(CPUState *env, uint64_t frs1, uint64_t rm)
+{
+    require_fp;
+    set_float_rounding_mode(RM, &env->fp_status);
+
+    float16_t f1;
+    f1.v = (uint16_t)frs1;
+    frs1 = (int64_t)((int32_t)f16_to_i32(f1, RM, true));
+
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return frs1;
+}
+
+target_ulong helper_fcvt_wu_h(CPUState *env, uint64_t frs1, uint64_t rm)
+{
+    require_fp;
+    set_float_rounding_mode(RM, &env->fp_status);
+
+    float16_t f1;
+    f1.v = (uint16_t)frs1;
+    frs1 = (int64_t)((int32_t)f16_to_ui32(f1, RM, true));
+
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return frs1;
+}
+
+uint64_t helper_fcvt_l_h(CPUState *env, uint64_t frs1, uint64_t rm)
+{
+    require_fp;
+    set_float_rounding_mode(RM, &env->fp_status);
+    
+    float16_t f1;
+    f1.v = (uint16_t)frs1;
+    frs1 = f16_to_i64(f1, RM, true);
+
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return frs1;
+}
+
+uint64_t helper_fcvt_lu_h(CPUState *env, uint64_t frs1, uint64_t rm)
+{
+    require_fp;
+    set_float_rounding_mode(RM, &env->fp_status);
+
+    float16_t f1;
+    f1.v = (uint16_t)frs1;
+    frs1 = f16_to_ui64(f1, RM, true);
+
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return frs1;
+}
+
+uint64_t helper_fcvt_h_w(CPUState *env, target_ulong rs1, uint64_t rm)
+{
+    require_fp;
+    uint64_t res;
+    set_float_rounding_mode(RM, &env->fp_status);
+
+    res = i32_to_f16((uint32_t)rs1).v;
+
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return res;
+}
+
+uint64_t helper_fcvt_h_wu(CPUState *env, target_ulong rs1, uint64_t rm)
+{
+    require_fp;
+    uint64_t res;
+    set_float_rounding_mode(RM, &env->fp_status);
+
+    res = ui32_to_f16((uint32_t)rs1).v;
+
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return res;
+}
+
+uint64_t helper_fcvt_h_l(CPUState *env, uint64_t rs1, uint64_t rm)
+{
+    require_fp;
+    set_float_rounding_mode(RM, &env->fp_status);
+
+    rs1 = i64_to_f16(rs1).v;
+
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return rs1;
+}
+
+uint64_t helper_fcvt_h_lu(CPUState *env, uint64_t rs1, uint64_t rm)
+{
+    require_fp;
+    set_float_rounding_mode(RM, &env->fp_status);
+    
+    rs1 = ui64_to_f16(rs1).v;
+
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return rs1;
+}
+
+uint64_t helper_fmv_x_h(CPUState *env, uint64_t rs1, uint64_t rm)
+{
+    require_fp;
+    set_float_rounding_mode(RM, &env->fp_status);
+    
+    rs1 = (int64_t)((int32_t)((int16_t)rs1));
+
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return rs1;
+}
+
+uint64_t helper_fmv_h_x(CPUState *env, uint64_t rs1, uint64_t rm)
+{
+    require_fp;
+    set_float_rounding_mode(RM, &env->fp_status);
+    
+    // FMV.H.X moves the half-precision value encoded in IEEE 754-2008 standard encoding from the
+    // lower 16 bits of integer register rs1 to the floating-point register rd, NaN-boxing the result
+    rs1 = box_float(RISCV_HALF_PRECISION, rs1);
+
+    set_fp_exceptions();
+    mark_fs_dirty();
+    return rs1;
+}
+
+target_ulong helper_fclass_h(CPUState *env, uint64_t frs1)
+{
+    require_fp;
+
+    float16_t f1;
+    f1.v = (uint16_t)frs1;
+
+    frs1 = f16_classify(f1);
+
+    mark_fs_dirty();
+    return frs1;
 }
 
 void helper_vfmv_vf(CPUState *env, uint32_t vd, uint64_t f1)

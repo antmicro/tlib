@@ -93,7 +93,7 @@ static inline uint8_t no_signaling_nans(float_status *status)
 /*----------------------------------------------------------------------------
  | The pattern for a default generated half-precision NaN.
  *----------------------------------------------------------------------------*/
-#if defined(TARGET_ARM) || defined(TARGET_ARM64)
+#if defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_RISCV)
 const float16 float16_default_nan = const_float16(0x7E00);
 #else
 const float16 float16_default_nan = const_float16(0xFE00);

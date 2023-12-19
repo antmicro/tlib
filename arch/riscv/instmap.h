@@ -294,6 +294,7 @@ enum {
 
 #define MASK_OP_FP_LOAD(op) (MASK_OP_MAJOR(op) | (op & (0x7 << 12)))
 enum {
+    OPC_RISC_FLH = OPC_RISC_FP_LOAD | (0x1 << 12),
     OPC_RISC_FLW = OPC_RISC_FP_LOAD | (0x2 << 12),
     OPC_RISC_FLD = OPC_RISC_FP_LOAD | (0x3 << 12),
 };
@@ -315,6 +316,7 @@ enum {
 
 #define MASK_OP_FP_STORE(op) (MASK_OP_MAJOR(op) | (op & (0x7 << 12)))
 enum {
+    OPC_RISC_FSH = OPC_RISC_FP_STORE | (0x1 << 12),
     OPC_RISC_FSW = OPC_RISC_FP_STORE | (0x2 << 12),
     OPC_RISC_FSD = OPC_RISC_FP_STORE | (0x3 << 12),
 };
@@ -337,24 +339,28 @@ enum {
 enum {
     OPC_RISC_FMADD_S = OPC_RISC_FMADD | (0x0 << 25),
     OPC_RISC_FMADD_D = OPC_RISC_FMADD | (0x1 << 25),
+    OPC_RISC_FMADD_H = OPC_RISC_FMADD | (0x2 << 25),
 };
 
 #define MASK_OP_FP_FMSUB(op) (MASK_OP_MAJOR(op) | (op & (0x3 << 25)))
 enum {
     OPC_RISC_FMSUB_S = OPC_RISC_FMSUB | (0x0 << 25),
     OPC_RISC_FMSUB_D = OPC_RISC_FMSUB | (0x1 << 25),
+    OPC_RISC_FMSUB_H = OPC_RISC_FMSUB | (0x2 << 25),
 };
 
 #define MASK_OP_FP_FNMADD(op) (MASK_OP_MAJOR(op) | (op & (0x3 << 25)))
 enum {
     OPC_RISC_FNMADD_S = OPC_RISC_FNMADD | (0x0 << 25),
     OPC_RISC_FNMADD_D = OPC_RISC_FNMADD | (0x1 << 25),
+    OPC_RISC_FNMADD_H = OPC_RISC_FNMADD | (0x2 << 25),
 };
 
 #define MASK_OP_FP_FNMSUB(op) (MASK_OP_MAJOR(op) | (op & (0x3 << 25)))
 enum {
     OPC_RISC_FNMSUB_S = OPC_RISC_FNMSUB | (0x0 << 25),
     OPC_RISC_FNMSUB_D = OPC_RISC_FNMSUB | (0x1 << 25),
+    OPC_RISC_FNMSUB_H = OPC_RISC_FNMSUB | (0x2 << 25),
 };
 
 #define MASK_OP_FP_ARITH(op) (MASK_OP_MAJOR(op) | (op & (0x7F << 25)))
@@ -430,6 +436,42 @@ enum {
     OPC_RISC_FCLASS_D  = OPC_RISC_FP_ARITH | (0x71 << 25),
 
     OPC_RISC_FMV_D_X   = OPC_RISC_FP_ARITH | (0x79 << 25),
+
+    /* half-precision */
+    OPC_RISC_FADD_H    = OPC_RISC_FP_ARITH | (0x2 << 25),
+    OPC_RISC_FSUB_H    = OPC_RISC_FP_ARITH | (0x6 << 25),
+    OPC_RISC_FMUL_H    = OPC_RISC_FP_ARITH | (0xA << 25),
+    OPC_RISC_FDIV_H    = OPC_RISC_FP_ARITH | (0xE << 25),
+
+    OPC_RISC_FSGNJ_H   = OPC_RISC_FP_ARITH | (0x12 << 25),
+    OPC_RISC_FSGNJN_H  = OPC_RISC_FP_ARITH | (0x12 << 25),
+    OPC_RISC_FSGNJX_H  = OPC_RISC_FP_ARITH | (0x12 << 25),
+
+    OPC_RISC_FMIN_H    = OPC_RISC_FP_ARITH | (0x16 << 25),
+    OPC_RISC_FMAX_H    = OPC_RISC_FP_ARITH | (0x16 << 25),
+
+    OPC_RISC_FCVT_H_S  = OPC_RISC_FP_ARITH | (0x22 << 25),
+
+    OPC_RISC_FSQRT_H   = OPC_RISC_FP_ARITH | (0x2E << 25),
+
+    OPC_RISC_FEQ_H     = OPC_RISC_FP_ARITH | (0x52 << 25),
+    OPC_RISC_FLT_H     = OPC_RISC_FP_ARITH | (0x52 << 25),
+    OPC_RISC_FLE_H     = OPC_RISC_FP_ARITH | (0x52 << 25),
+
+    OPC_RISC_FCVT_W_H  = OPC_RISC_FP_ARITH | (0x62 << 25),
+    OPC_RISC_FCVT_WU_H = OPC_RISC_FP_ARITH | (0x62 << 25),
+    OPC_RISC_FCVT_L_H  = OPC_RISC_FP_ARITH | (0x62 << 25),
+    OPC_RISC_FCVT_LU_H = OPC_RISC_FP_ARITH | (0x62 << 25),
+
+    OPC_RISC_FCVT_H_W  = OPC_RISC_FP_ARITH | (0x6A << 25),
+    OPC_RISC_FCVT_H_WU = OPC_RISC_FP_ARITH | (0x6A << 25),
+    OPC_RISC_FCVT_H_L  = OPC_RISC_FP_ARITH | (0x6A << 25),
+    OPC_RISC_FCVT_H_LU = OPC_RISC_FP_ARITH | (0x6A << 25),
+
+    OPC_RISC_FMV_X_H   = OPC_RISC_FP_ARITH | (0x72 << 25),
+    OPC_RISC_FCLASS_H  = OPC_RISC_FP_ARITH | (0x72 << 25),
+
+    OPC_RISC_FMV_H_X   = OPC_RISC_FP_ARITH | (0x7A << 25),
 };
 
 #define MASK_OP_V(op) (MASK_OP_MAJOR(op) | (op & (0x7 << 12)))
