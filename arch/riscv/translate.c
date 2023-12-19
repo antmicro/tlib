@@ -350,11 +350,17 @@ static void gen_mulhsu(TCGv ret, TCGv arg1, TCGv arg2)
     tcg_temp_free(rh);
 }
 
-static void gen_fsgnj(DisasContext *dc, uint32_t rd, uint32_t rs1, uint32_t rs2, int rm, uint64_t min)
+static void gen_fsgnj(DisasContext *dc, uint32_t rd, uint32_t rs1, uint32_t rs2, int rm, enum riscv_floating_point_precision precision)
 {
     TCGv t0 = tcg_temp_new();
     int fp_ok = gen_new_label();
     int done = gen_new_label();
+    
+    int64_t sign_mask = INT64_MIN; // By default the mask for RISCV_DOUBLE_PRECISION
+    if(precision == RISCV_SINGLE_PRECISION)
+    {
+        sign_mask = INT32_MIN;
+    }
 
     // check MSTATUS.FS
     tcg_gen_ld_tl(t0, cpu_env, offsetof(CPUState, mstatus));
@@ -366,10 +372,10 @@ static void gen_fsgnj(DisasContext *dc, uint32_t rd, uint32_t rs1, uint32_t rs2,
 
     // proceed with operation
     gen_set_label(fp_ok);
-    TCGv_i64 src1 = tcg_temp_new_i64();
+    TCGv_i64 src1 = tcg_temp_local_new_i64();
     TCGv_i64 src2 = tcg_temp_new_i64();
 
-    tcg_gen_mov_i64(src1, cpu_fpr[rs1]);
+    gen_unbox_float(precision, env, src1, cpu_fpr[rs1]);
     tcg_gen_mov_i64(src2, cpu_fpr[rs2]);
 
     switch (rm) {
@@ -379,23 +385,27 @@ static void gen_fsgnj(DisasContext *dc, uint32_t rd, uint32_t rs1, uint32_t rs2,
             tcg_gen_mov_i64(cpu_fpr[rd], src1);
         }
 
-        tcg_gen_andi_i64(src1, src1, ~min);
-        tcg_gen_andi_i64(src2, src2, min);
+        tcg_gen_andi_i64(src1, src1, ~sign_mask);
+        tcg_gen_andi_i64(src2, src2, sign_mask);
         tcg_gen_or_i64(cpu_fpr[rd], src1, src2);
+        gen_box_float(precision, cpu_fpr[rd]);
         break;
     case 1: /* fsgnjn */
-        tcg_gen_andi_i64(src1, src1, ~min);
+        tcg_gen_andi_i64(src1, src1, ~sign_mask);
         tcg_gen_not_i64(src2, src2);
-        tcg_gen_andi_i64(src2, src2, min);
+        tcg_gen_andi_i64(src2, src2, sign_mask);
         tcg_gen_or_i64(cpu_fpr[rd], src1, src2);
+        gen_box_float(precision, cpu_fpr[rd]);
         break;
     case 2: /* fsgnjx */
-        tcg_gen_andi_i64(src2, src2, min);
+        tcg_gen_andi_i64(src2, src2, sign_mask);
         tcg_gen_xor_i64(cpu_fpr[rd], src1, src2);
+        gen_box_float(precision, cpu_fpr[rd]);
         break;
     default:
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
     }
+
     tcg_temp_free_i64(src1);
     tcg_temp_free_i64(src2);
     gen_set_label(done);
@@ -2204,7 +2214,7 @@ static void gen_fp_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs
         gen_fp_helper_fpr_2fpr_1tcg(gen_helper_fdiv_s, RISCV_SINGLE_PRECISION, rd, rs1, rs2, rm_reg);
         break;
     case OPC_RISC_FSGNJ_S:
-        gen_fsgnj(dc, rd, rs1, rs2, rm, INT32_MIN);
+        gen_fsgnj(dc, rd, rs1, rs2, rm, RISCV_SINGLE_PRECISION);
         break;
     case OPC_RISC_FMIN_S:
         /* also handles: OPC_RISC_FMAX_S */
@@ -2344,7 +2354,7 @@ static void gen_fp_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs
         gen_helper_fdiv_d(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2], rm_reg);
         break;
     case OPC_RISC_FSGNJ_D:
-        gen_fsgnj(dc, rd, rs1, rs2, rm, INT64_MIN);
+        gen_fsgnj(dc, rd, rs1, rs2, rm, RISCV_DOUBLE_PRECISION);
         break;
     case OPC_RISC_FMIN_D:
         /* also OPC_RISC_FMAX_D */
