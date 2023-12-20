@@ -35,10 +35,10 @@
 #include "softfloat.h"
 #include "stubs.h"
 #include "tcg-memop.h"  // MO_* definitions.
+#include "tightly_coupled_memory.h"
 #include "ttable.h"
 
 #define CPU_PC(env) (is_a64(env) ? env->pc : env->regs[15])
-#define MAX_TCM_REGIONS 3
 
 // Copied from our 'arm/helper.c'.
 struct arm_cpu_t {

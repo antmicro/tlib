@@ -59,3 +59,6 @@ DEFAULT_INT_HANDLER1(uint32_t tlib_do_semihosting, void)
 DEFAULT_VOID_HANDLER1(void tlib_set_system_event, int32_t value)
 
 DEFAULT_VOID_HANDLER1(void tlib_report_pmu_overflow, int32_t value)
+
+#include "configuration_signals.h"
+DEFAULT_VOID_HANDLER1(void tlib_fill_configuration_signals_state, void *state_pointer)

@@ -439,6 +439,11 @@ static void cpu_reset_model_id(CPUState *env, uint32_t id)
 void system_instructions_and_registers_reset(CPUState *env);
 void system_instructions_and_registers_init(CPUState *env);
 
+void cpu_resume_after_reset_or_init(CPUState *env)
+{
+    configuration_signals__on_resume_after_reset_or_init(env);
+}
+
 void cpu_reset(CPUState *env)
 {
     uint32_t id = env->cp15.c0_cpuid;

@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include "cpu-defs.h"
 #include "bit_helper.h" // extract32
+#include "tightly_coupled_memory.h"
 #include "ttable.h"
 #include "pmu.h"
 
@@ -96,8 +97,6 @@
 
 #define BACKGROUND_FAULT_STATUS_BITS        0b0000
 #define PERMISSION_FAULT_STATUS_BITS        0b1101
-
-#define MAX_TCM_REGIONS 4
 
 typedef struct DisasContext {
     DisasContextBase base;
@@ -179,6 +178,11 @@ typedef struct CPUState {
 
     bool wfe;
     bool sev_pending;
+
+    struct {
+        uint32_t c1_dbgdrar; /* Debug ROM Address Register */
+        uint32_t c2_dbgdsar; /* Debug Self Address Offset Register */
+    } cp14;
 
     /* System control coprocessor (cp15) */
     struct {
@@ -723,3 +727,32 @@ static inline enum arm_cpu_mode cpu_get_current_execution_mode()
 {
     return env->uncached_cpsr & CPSR_M;
 }
+
+// FIELD expands to constants:
+// * __REGISTER_<register>_<field>_START,
+// * __REGISTER_<register>_<field>_WIDTH.
+#define FIELD(register, field, start_bit, width) \
+        static const unsigned __REGISTER_ ## register ## _ ## field ## _START = start_bit; \
+        static const unsigned __REGISTER_ ## register ## _ ## field ## _WIDTH = width;
+
+#define FIELD_DP32(variable, register, field, value) \
+        deposit32(variable, __REGISTER_ ## register ## _ ## field ## _START, __REGISTER_ ## register ## _ ## field ## _WIDTH, value)
+
+#define FIELD_EX32(variable, register, field) \
+        extract32(variable, __REGISTER_ ## register ## _ ## field ## _START, __REGISTER_ ## register ## _ ## field ## _WIDTH)
+
+#define DEBUG_ADDRESS_VALID_VALUE 0b11
+
+FIELD(DBGDRAR, ROMADDR, 12, 20)
+FIELD(DBGDRAR, Valid, 0, 2)
+
+FIELD(DBGDSAR, SELFOFFSET, 12, 20)
+FIELD(DBGDSAR, Valid, 0, 2)
+
+FIELD(ITCMRR, BASE_ADDRESS, 12, 20)
+FIELD(ITCMRR, SIZE, 2, 5)
+FIELD(ITCMRR, ENABLE_BIT, 0, 1)
+
+FIELD(SCTLR, V, 13, 1)
+
+#undef FIELD
