@@ -178,7 +178,7 @@ static TranslationBlock *tb_find_slow(CPUState *env, target_ulong pc, target_ulo
         if (!tb) {
             goto not_found;
         }
-        if (tb->pc == pc && tb->page_addr[0] == phys_page1 && tb->cs_base == cs_base && tb->flags == flags && tb->icount <= max_icount) {
+        if (tb->pc == pc && tb->page_addr[0] == phys_page1 && tb->cs_base == cs_base && tb->flags == flags && (tb->icount == max_icount || (tb->icount < max_icount && !tb->was_cut))) {
             /* check next page if needed */
             if (tb->page_addr[1] != -1) {
                 tb_page_addr_t phys_page2;
@@ -191,6 +191,9 @@ static TranslationBlock *tb_find_slow(CPUState *env, target_ulong pc, target_ulo
             } else {
                 goto found;
             }
+        }
+        if (tb->pc == pc && tb->page_addr[0] == phys_page1 && tb->cs_base == cs_base && tb->flags == flags && (tb->icount < max_icount && tb->was_cut)) {
+            goto not_found;
         }
         if (tb->pc == pc && tb->page_addr[0] == phys_page1 && tb->cs_base == cs_base && tb->flags == flags) {
             prev_related_tb = tb;
