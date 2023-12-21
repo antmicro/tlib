@@ -934,17 +934,9 @@ static inline void tb_alloc_page(TranslationBlock *tb, unsigned int n, tb_page_a
    (-1) to indicate that only one page contains the TB. */
 void tb_link_page(TranslationBlock *tb, tb_page_addr_t phys_pc, tb_page_addr_t phys_page2)
 {
-    unsigned int h;
-    TranslationBlock **ptb;
-
     /* Grab the mmap lock to stop another thread invalidating this TB
        before we are done.  */
     mmap_lock();
-    /* add in the physical hash table */
-    h = tb_phys_hash_func(phys_pc);
-    ptb = &tb_phys_hash[h];
-    tb->phys_hash_next = *ptb;
-    *ptb = tb;
 
     /* add in the page list */
     tb_alloc_page(tb, 0, phys_pc & TARGET_PAGE_MASK);

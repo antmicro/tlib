@@ -152,6 +152,7 @@ static TranslationBlock *tb_find_slow(CPUState *env, target_ulong pc, target_ulo
 {
     tlib_on_translation_block_find_slow(pc);
     TranslationBlock *tb, **ptb1;
+    TranslationBlock *prev_related_tb;
     unsigned int h;
     tb_page_addr_t phys_pc, phys_page1;
     target_ulong virt_page2;
@@ -165,6 +166,8 @@ static TranslationBlock *tb_find_slow(CPUState *env, target_ulong pc, target_ulo
     ptb1 = &tb_phys_hash[h];
 
     uint32_t max_icount = env->instructions_count_limit - env->instructions_count_value;
+
+    prev_related_tb = NULL;
 
     if (unlikely(env->tb_cache_disabled)) {
         goto not_found;
@@ -189,18 +192,34 @@ static TranslationBlock *tb_find_slow(CPUState *env, target_ulong pc, target_ulo
                 goto found;
             }
         }
+        if (tb->pc == pc && tb->page_addr[0] == phys_page1 && tb->cs_base == cs_base && tb->flags == flags) {
+            prev_related_tb = tb;
+        }
         ptb1 = &tb->phys_hash_next;
     }
 not_found:
     /* if no translated code available, then translate it now */
     tb = tb_gen_code(env, pc, cs_base, flags, 0);
 
+    tb->phys_hash_next = NULL;
+
 found:
-    /* Move the last found TB to the head of the list */
-    if (likely(*ptb1)) {
+    /* Move the last found TB closer to the beginning of the list,
+     * but keeping related TBs sorted.
+     * 'related' means TBs generated from the same code, but with
+     * different icount */
+    if (!tb->was_cut || !prev_related_tb) {
+        /* TB wasn't cut or is the first in the list among related to it.
+         * It means it is the largest TB and can be
+         * inserted at the beginning of the list */
         *ptb1 = tb->phys_hash_next;
         tb->phys_hash_next = tb_phys_hash[h];
         tb_phys_hash[h] = tb;
+    }  else {
+        /* Move the TB just after previous related TB */
+        *ptb1 = tb->phys_hash_next;
+        tb->phys_hash_next = prev_related_tb->phys_hash_next;
+        prev_related_tb->phys_hash_next = tb;
     }
     /* we add the TB in the virtual pc hash table */
     env->tb_jmp_cache[tb_jmp_cache_hash_func(pc)] = tb;
