@@ -1973,27 +1973,121 @@ static void gen_atomic(CPUState *env, DisasContext *dc, uint32_t opc, int rd, in
     tcg_temp_free(dat);
 }
 
-static void gen_fp_fmadd(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2, int rs3, int rm)
+static void gen_fp_helper_fpr_3fpr_1imm(void (*gen_fp_helper)(TCGv_i64, TCGv_ptr, TCGv_i64, TCGv_i64, TCGv_i64, TCGv_i64), enum riscv_floating_point_precision float_precision, int rd, int rs1, int rs2, int rs3, uint64_t rm)
+{
+    TCGv_i64 rs1_boxed = tcg_temp_local_new_i64();
+    TCGv_i64 rs2_boxed = tcg_temp_local_new_i64();
+    TCGv_i64 rs3_boxed = tcg_temp_local_new_i64();
+    gen_unbox_float(float_precision, env, rs1_boxed, cpu_fpr[rs1]);
+    gen_unbox_float(float_precision, env, rs2_boxed, cpu_fpr[rs2]);
+    gen_unbox_float(float_precision, env, rs3_boxed, cpu_fpr[rs3]);
+
+    TCGv_i64 rm_reg = tcg_temp_new_i64();
+    tcg_gen_movi_i64(rm_reg, rm);
+
+    gen_fp_helper(cpu_fpr[rd], cpu_env, rs1_boxed, rs2_boxed, rs3_boxed, rm_reg);
+    gen_box_float(float_precision, cpu_fpr[rd]);
+
+    tcg_temp_free_i64(rm_reg);
+    tcg_temp_free_i64(rs1_boxed);
+    tcg_temp_free_i64(rs2_boxed);
+    tcg_temp_free_i64(rs3_boxed);
+}
+
+static void gen_fp_helper_fpr_2fpr_1tcg(void (*gen_fp_helper)(TCGv_i64, TCGv_ptr, TCGv_i64, TCGv_i64, TCGv_i64), enum riscv_floating_point_precision float_precision, int rd, int rs1, int rs2, TCGv_i64 rm_reg)
+{
+    TCGv_i64 rs1_boxed = tcg_temp_local_new_i64();
+    TCGv_i64 rs2_boxed = tcg_temp_local_new_i64();
+    gen_unbox_float(float_precision, env, rs1_boxed, cpu_fpr[rs1]);
+    gen_unbox_float(float_precision, env, rs2_boxed, cpu_fpr[rs2]);
+
+    gen_fp_helper(cpu_fpr[rd], cpu_env, rs1_boxed, rs2_boxed, rm_reg);
+
+    gen_box_float(float_precision, cpu_fpr[rd]);
+    tcg_temp_free_i64(rs1_boxed);
+    tcg_temp_free_i64(rs2_boxed);
+}
+
+static void gen_fp_helper_fpr_2fpr(void (*gen_fp_helper)(TCGv_i64, TCGv_ptr, TCGv_i64, TCGv_i64), enum riscv_floating_point_precision float_precision, int rd, int rs1, int rs2)
+{
+    TCGv_i64 rs1_boxed = tcg_temp_local_new_i64();
+    TCGv_i64 rs2_boxed = tcg_temp_local_new_i64();
+    gen_unbox_float(float_precision, env, rs1_boxed, cpu_fpr[rs1]);
+    gen_unbox_float(float_precision, env, rs2_boxed, cpu_fpr[rs2]);
+
+    gen_fp_helper(cpu_fpr[rd], cpu_env, rs1_boxed, rs2_boxed);
+
+    gen_box_float(float_precision, cpu_fpr[rd]);
+    tcg_temp_free_i64(rs1_boxed);
+    tcg_temp_free_i64(rs2_boxed);
+}
+
+static void gen_fp_helper_fpr_1fpr_1tcg(void (*gen_fp_helper)(TCGv_i64, TCGv_ptr, TCGv_i64, TCGv_i64), enum riscv_floating_point_precision float_precision, int rd, int rs1, TCGv_i64 rm_reg)
+{
+    TCGv_i64 rs1_boxed = tcg_temp_local_new_i64();
+    gen_unbox_float(float_precision, env, rs1_boxed, cpu_fpr[rs1]);
+
+    gen_fp_helper(cpu_fpr[rd], cpu_env, rs1_boxed, rm_reg);
+
+    gen_box_float(float_precision, cpu_fpr[rd]);
+    tcg_temp_free_i64(rs1_boxed);
+}
+
+static void gen_fp_helper_gpr_2fpr(void (*gen_fp_helper)(TCGv_i64, TCGv_ptr, TCGv_i64, TCGv_i64), enum riscv_floating_point_precision float_precision, TCGv_i64 rd_reg, int rd, int rs1, int rs2)
+{
+    TCGv_i64 rs1_boxed = tcg_temp_local_new_i64();
+    TCGv_i64 rs2_boxed = tcg_temp_local_new_i64();
+    gen_unbox_float(float_precision, env, rs1_boxed, cpu_fpr[rs1]);
+    gen_unbox_float(float_precision, env, rs2_boxed, cpu_fpr[rs2]);
+
+    gen_fp_helper(rd_reg, cpu_env, rs1_boxed, rs2_boxed);
+
+    gen_set_gpr(rd, rd_reg);
+    tcg_temp_free_i64(rs1_boxed);
+    tcg_temp_free_i64(rs2_boxed);
+}
+
+static void gen_fp_helper_gpr_1fpr_1tcg(void (*gen_fp_helper)(TCGv_i64, TCGv_ptr, TCGv_i64, TCGv_i64), enum riscv_floating_point_precision float_precision, TCGv_i64 rd_reg, int rd, int rs1, TCGv_i64 rm_reg)
+{
+    TCGv_i64 rs1_boxed = tcg_temp_local_new_i64();
+    gen_unbox_float(float_precision, env, rs1_boxed, cpu_fpr[rs1]);
+
+    gen_fp_helper(rd_reg, cpu_env, rs1_boxed, rm_reg);
+
+    gen_set_gpr(rd, rd_reg);
+    tcg_temp_free_i64(rs1_boxed);
+}
+
+static void gen_fp_helper_fpr_1gpr_1tcg(void (*gen_fp_helper)(TCGv_i64, TCGv_ptr, TCGv_i64, TCGv_i64), enum riscv_floating_point_precision float_precision, TCGv_i64 tmp_reg, int rd, int rs1, TCGv_i64 rm_reg)
+{
+    gen_get_gpr(tmp_reg, rs1);
+
+    gen_fp_helper(cpu_fpr[rd], cpu_env, tmp_reg, rm_reg);
+
+    gen_box_float(float_precision, cpu_fpr[rd]);
+}
+
+static void gen_fp_fmadd(DisasContext* dc, uint32_t opc, int rd, int rs1, int rs2, int rs3, int rm)
 {
     if (!ensure_fp_extension(dc, 25)) {
         return;
     }
 
-    TCGv_i64 rm_reg = tcg_temp_new_i64();
-    tcg_gen_movi_i64(rm_reg, rm);
-
     switch (opc) {
     case OPC_RISC_FMADD_S:
-        gen_helper_fmadd_s(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2], cpu_fpr[rs3], rm_reg);
+        gen_fp_helper_fpr_3fpr_1imm(gen_helper_fmadd_s, RISCV_SINGLE_PRECISION, rd, rs1, rs2, rs3, rm);
         break;
-    case OPC_RISC_FMADD_D:
+    case OPC_RISC_FMADD_D: {
+        TCGv_i64 rm_reg = tcg_temp_new_i64();
+        tcg_gen_movi_i64(rm_reg, rm);
         gen_helper_fmadd_d(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2], cpu_fpr[rs3], rm_reg);
+        tcg_temp_free_i64(rm_reg);
         break;
+    }
     default:
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         break;
     }
-    tcg_temp_free_i64(rm_reg);
 }
 
 static void gen_fp_fmsub(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2, int rs3, int rm)
@@ -2002,21 +2096,21 @@ static void gen_fp_fmsub(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs
         return;
     }
 
-    TCGv_i64 rm_reg = tcg_temp_new_i64();
-    tcg_gen_movi_i64(rm_reg, rm);
-
     switch (opc) {
     case OPC_RISC_FMSUB_S:
-        gen_helper_fmsub_s(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2], cpu_fpr[rs3], rm_reg);
+        gen_fp_helper_fpr_3fpr_1imm(gen_helper_fmsub_s, RISCV_SINGLE_PRECISION, rd, rs1, rs2, rs3, rm);
         break;
-    case OPC_RISC_FMSUB_D:
+    case OPC_RISC_FMSUB_D: {
+        TCGv_i64 rm_reg = tcg_temp_new_i64();
+        tcg_gen_movi_i64(rm_reg, rm);
         gen_helper_fmsub_d(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2], cpu_fpr[rs3], rm_reg);
+        tcg_temp_free_i64(rm_reg);
         break;
+    }
     default:
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         break;
     }
-    tcg_temp_free_i64(rm_reg);
 }
 
 static void gen_fp_fnmsub(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2, int rs3, int rm)
@@ -2025,21 +2119,21 @@ static void gen_fp_fnmsub(DisasContext *dc, uint32_t opc, int rd, int rs1, int r
         return;
     }
 
-    TCGv_i64 rm_reg = tcg_temp_new_i64();
-    tcg_gen_movi_i64(rm_reg, rm);
-
     switch (opc) {
     case OPC_RISC_FNMSUB_S:
-        gen_helper_fnmsub_s(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2], cpu_fpr[rs3], rm_reg);
+        gen_fp_helper_fpr_3fpr_1imm(gen_helper_fnmsub_s, RISCV_SINGLE_PRECISION, rd, rs1, rs2, rs3, rm);
         break;
-    case OPC_RISC_FNMSUB_D:
+    case OPC_RISC_FNMSUB_D: {
+        TCGv_i64 rm_reg = tcg_temp_new_i64();
+        tcg_gen_movi_i64(rm_reg, rm);
         gen_helper_fnmsub_d(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2], cpu_fpr[rs3], rm_reg);
+        tcg_temp_free_i64(rm_reg);
         break;
+    }
     default:
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         break;
     }
-    tcg_temp_free_i64(rm_reg);
 }
 
 static void gen_fp_fnmadd(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2, int rs3, int rm)
@@ -2048,21 +2142,21 @@ static void gen_fp_fnmadd(DisasContext *dc, uint32_t opc, int rd, int rs1, int r
         return;
     }
 
-    TCGv_i64 rm_reg = tcg_temp_new_i64();
-    tcg_gen_movi_i64(rm_reg, rm);
-
     switch (opc) {
     case OPC_RISC_FNMADD_S:
-        gen_helper_fnmadd_s(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2], cpu_fpr[rs3], rm_reg);
+        gen_fp_helper_fpr_3fpr_1imm(gen_helper_fnmadd_s, RISCV_SINGLE_PRECISION, rd, rs1, rs2, rs3, rm);
         break;
-    case OPC_RISC_FNMADD_D:
+    case OPC_RISC_FNMADD_D: {
+        TCGv_i64 rm_reg = tcg_temp_new_i64();
+        tcg_gen_movi_i64(rm_reg, rm);
         gen_helper_fnmadd_d(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2], cpu_fpr[rs3], rm_reg);
+        tcg_temp_free_i64(rm_reg);
         break;
+    }
     default:
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         break;
     }
-    tcg_temp_free_i64(rm_reg);
 }
 
 static void gen_fp_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2, int rm)
@@ -2071,21 +2165,21 @@ static void gen_fp_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs
         return;
     }
 
-    TCGv_i64 rm_reg = tcg_temp_new_i64();
-    TCGv write_int_rd = tcg_temp_new();
+    TCGv_i64 rm_reg = tcg_temp_local_new_i64();
+    TCGv write_int_rd = tcg_temp_local_new();
     tcg_gen_movi_i64(rm_reg, rm);
     switch (opc) {
     case OPC_RISC_FADD_S:
-        gen_helper_fadd_s(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2], rm_reg);
+        gen_fp_helper_fpr_2fpr_1tcg(gen_helper_fadd_s, RISCV_SINGLE_PRECISION, rd, rs1, rs2, rm_reg);
         break;
     case OPC_RISC_FSUB_S:
-        gen_helper_fsub_s(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2], rm_reg);
+        gen_fp_helper_fpr_2fpr_1tcg(gen_helper_fsub_s, RISCV_SINGLE_PRECISION, rd, rs1, rs2, rm_reg);
         break;
     case OPC_RISC_FMUL_S:
-        gen_helper_fmul_s(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2], rm_reg);
+        gen_fp_helper_fpr_2fpr_1tcg(gen_helper_fmul_s, RISCV_SINGLE_PRECISION, rd, rs1, rs2, rm_reg);
         break;
     case OPC_RISC_FDIV_S:
-        gen_helper_fdiv_s(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2], rm_reg);
+        gen_fp_helper_fpr_2fpr_1tcg(gen_helper_fdiv_s, RISCV_SINGLE_PRECISION, rd, rs1, rs2, rm_reg);
         break;
     case OPC_RISC_FSGNJ_S:
         gen_fsgnj(dc, rd, rs1, rs2, rm, INT32_MIN);
@@ -2093,68 +2187,65 @@ static void gen_fp_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs
     case OPC_RISC_FMIN_S:
         /* also handles: OPC_RISC_FMAX_S */
         if (rm == 0x0) {
-            gen_helper_fmin_s(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2]);
+            gen_fp_helper_fpr_2fpr(gen_helper_fmin_s, RISCV_SINGLE_PRECISION, rd, rs1, rs2);
         } else if (rm == 0x1) {
-            gen_helper_fmax_s(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], cpu_fpr[rs2]);
+            gen_fp_helper_fpr_2fpr(gen_helper_fmax_s, RISCV_SINGLE_PRECISION, rd, rs1, rs2);
         } else {
             kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         }
         break;
     case OPC_RISC_FSQRT_S:
-        gen_helper_fsqrt_s(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], rm_reg);
+        gen_fp_helper_fpr_1fpr_1tcg(gen_helper_fsqrt_s, RISCV_SINGLE_PRECISION, rd, rs1, rm_reg);
         break;
     case OPC_RISC_FEQ_S:
         /* also handles: OPC_RISC_FLT_S, OPC_RISC_FLE_S */
         if (rm == 0x0) {
-            gen_helper_fle_s(write_int_rd, cpu_env, cpu_fpr[rs1], cpu_fpr[rs2]);
+            gen_fp_helper_gpr_2fpr(gen_helper_fle_s, RISCV_SINGLE_PRECISION, write_int_rd, rd, rs1, rs2);
         } else if (rm == 0x1) {
-            gen_helper_flt_s(write_int_rd, cpu_env, cpu_fpr[rs1], cpu_fpr[rs2]);
+            gen_fp_helper_gpr_2fpr(gen_helper_flt_s, RISCV_SINGLE_PRECISION, write_int_rd, rd, rs1, rs2);
         } else if (rm == 0x2) {
-            gen_helper_feq_s(write_int_rd, cpu_env, cpu_fpr[rs1], cpu_fpr[rs2]);
+            gen_fp_helper_gpr_2fpr(gen_helper_feq_s, RISCV_SINGLE_PRECISION, write_int_rd, rd, rs1, rs2);
         } else {
             kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         }
-        gen_set_gpr(rd, write_int_rd);
         break;
     case OPC_RISC_FCVT_W_S:
         /* also OPC_RISC_FCVT_WU_S, OPC_RISC_FCVT_L_S, OPC_RISC_FCVT_LU_S */
         if (rs2 == 0x0) {        /* FCVT_W_S */
-            gen_helper_fcvt_w_s(write_int_rd, cpu_env, cpu_fpr[rs1], rm_reg);
+            gen_fp_helper_gpr_1fpr_1tcg(gen_helper_fcvt_w_s, RISCV_SINGLE_PRECISION, write_int_rd, rd, rs1, rm_reg);
         } else if (rs2 == 0x1) { /* FCVT_WU_S */
-            gen_helper_fcvt_wu_s(write_int_rd, cpu_env, cpu_fpr[rs1], rm_reg);
+            gen_fp_helper_gpr_1fpr_1tcg(gen_helper_fcvt_wu_s, RISCV_SINGLE_PRECISION, write_int_rd, rd, rs1, rm_reg);
         } else if (rs2 == 0x2) { /* FCVT_L_S */
 #if defined(TARGET_RISCV64)
-            gen_helper_fcvt_l_s(write_int_rd, cpu_env, cpu_fpr[rs1], rm_reg);
+            gen_fp_helper_gpr_1fpr_1tcg(gen_helper_fcvt_l_s, RISCV_SINGLE_PRECISION, write_int_rd, rd, rs1, rm_reg);
 #else
             kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
 #endif
         } else if (rs2 == 0x3) { /* FCVT_LU_S */
 #if defined(TARGET_RISCV64)
-            gen_helper_fcvt_lu_s(write_int_rd, cpu_env, cpu_fpr[rs1], rm_reg);
+            gen_fp_helper_gpr_1fpr_1tcg(gen_helper_fcvt_lu_s, RISCV_SINGLE_PRECISION, write_int_rd, rd, rs1, rm_reg);
 #else
             kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
 #endif
         } else {
             kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         }
-        gen_set_gpr(rd, write_int_rd);
         break;
     case OPC_RISC_FCVT_S_W:
         /* also OPC_RISC_FCVT_S_WU, OPC_RISC_FCVT_S_L, OPC_RISC_FCVT_S_LU */
-        gen_get_gpr(write_int_rd, rs1);
         if (rs2 == 0) {          /* FCVT_S_W */
-            gen_helper_fcvt_s_w(cpu_fpr[rd], cpu_env, write_int_rd, rm_reg);
+            gen_fp_helper_fpr_1gpr_1tcg(gen_helper_fcvt_s_w, RISCV_SINGLE_PRECISION, write_int_rd, rd, rs1, rm_reg);
         } else if (rs2 == 0x1) { /* FCVT_S_WU */
-            gen_helper_fcvt_s_wu(cpu_fpr[rd], cpu_env, write_int_rd, rm_reg);
+            gen_fp_helper_fpr_1gpr_1tcg(gen_helper_fcvt_s_wu, RISCV_SINGLE_PRECISION, write_int_rd, rd, rs1, rm_reg);
         } else if (rs2 == 0x2) { /* FCVT_S_L */
 #if defined(TARGET_RISCV64)
-            gen_helper_fcvt_s_l(cpu_fpr[rd], cpu_env, write_int_rd, rm_reg);
+            gen_fp_helper_fpr_1gpr_1tcg(gen_helper_fcvt_s_l, RISCV_SINGLE_PRECISION, write_int_rd, rd, rs1, rm_reg);
 #else
             kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
 #endif
         } else if (rs2 == 0x3) { /* FCVT_S_LU */
 #if defined(TARGET_RISCV64)
-            gen_helper_fcvt_s_lu(cpu_fpr[rd], cpu_env, write_int_rd, rm_reg);
+            gen_fp_helper_fpr_1gpr_1tcg(gen_helper_fcvt_s_lu, RISCV_SINGLE_PRECISION, write_int_rd, rd, rs1, rm_reg);
 #else
             kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
 #endif
@@ -2213,6 +2304,7 @@ static void gen_fp_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs
 #else
         tcg_gen_extu_i32_i64(cpu_fpr[rd], write_int_rd);
 #endif
+        gen_box_float(RISCV_SINGLE_PRECISION, cpu_fpr[rd]);
         gen_set_label(done);
         break;
     }
@@ -2242,20 +2334,28 @@ static void gen_fp_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs
             kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         }
         break;
-    case OPC_RISC_FCVT_S_D:
+    case OPC_RISC_FCVT_S_D: {
+        TCGv_i64 rs1_boxed = tcg_temp_local_new_i64();
         if (rs2 == 0x1) {
             gen_helper_fcvt_s_d(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], rm_reg);
+            gen_box_float(RISCV_SINGLE_PRECISION, cpu_fpr[rd]);
         } else {
             kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         }
+        tcg_temp_free_i64(rs1_boxed);
         break;
-    case OPC_RISC_FCVT_D_S:
+    }
+    case OPC_RISC_FCVT_D_S: {
+        TCGv_i64 rs1_boxed = tcg_temp_local_new_i64();
         if (rs2 == 0x0) {
-            gen_helper_fcvt_d_s(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], rm_reg);
+            gen_unbox_float(RISCV_SINGLE_PRECISION, env, rs1_boxed, cpu_fpr[rs1]);
+            gen_helper_fcvt_d_s(cpu_fpr[rd], cpu_env, rs1_boxed, rm_reg);
         } else {
             kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         }
+        tcg_temp_free_i64(rs1_boxed);
         break;
+    }
     case OPC_RISC_FSQRT_D:
         gen_helper_fsqrt_d(cpu_fpr[rd], cpu_env, cpu_fpr[rs1], rm_reg);
         break;
