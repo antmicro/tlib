@@ -824,6 +824,11 @@ static ARMCPRegInfo feature_v7sec_registers[] = {
     ARM32_CP_REG_DEFINE(VBAR,             15,   0,   12,   0,   0,  1,  RW, RW_FNS(c12_vbar)) // VBAR, Vector Base Address Register
 };
 
+static ARMCPRegInfo feature_cbar_ro[] = {
+    // The params are:  name              cp, op1, crn, crm, op2,  el,  extra_type, ...
+    ARM32_CP_REG_DEFINE(CBAR,             15,   4,   15,   0,   0,  1,  RO, FIELD(cp15.c15_cbar)) // CBAR, Configuration Base Address Register
+};
+
 // The keys are dynamically allocated so let's make TTable free them when removing the entry.
 static void entry_remove_callback(TTable_entry *entry)
 {
@@ -1002,6 +1007,10 @@ inline static int count_extra_registers(const CPUState *env)
         extra_regs += ARM_CP_ARRAY_COUNT_ANY(feature_v7sec_registers);
     }
 
+    if (arm_feature(env, ARM_FEATURE_CBAR_RO)) {
+        extra_regs += ARM_CP_ARRAY_COUNT_ANY(feature_cbar_ro);
+    }
+
     extra_regs += ARM_CP_ARRAY_COUNT_ANY(has_cp15_c13_registers);
     extra_regs += ARM_CP_ARRAY_COUNT_ANY(sctlr_register);
 
@@ -1077,6 +1086,10 @@ inline static void populate_ttable(CPUState *env)
 
     if (arm_feature(env, ARM_FEATURE_V7SEC)) {
         regs_array_add(env, feature_v7sec_registers);
+    }
+
+    if (arm_feature(env, ARM_FEATURE_CBAR_RO)) {
+        regs_array_add(env, feature_cbar_ro);
     }
 
     // c13 are always present, but without ARM_FEATURE_V6K should be read as 0

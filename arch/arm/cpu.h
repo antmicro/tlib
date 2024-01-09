@@ -230,6 +230,7 @@ typedef struct CPUState {
         uint32_t c13_tls1;       /* User RW Thread register.  */
         uint32_t c13_tls2;       /* User RO Thread register.  */
         uint32_t c13_tls3;       /* Privileged Thread register.  */
+        uint32_t c15_cbar;       /* Configuration Base Address Register */
         uint32_t c15_cpar;       /* XScale Coprocessor Access Register */
         uint32_t c15_ticonfig;   /* TI925T configuration byte.  */
         uint32_t c15_i_max;      /* Maximum D-cache dirty line index.  */
@@ -517,6 +518,7 @@ enum arm_features {
     ARM_FEATURE_GENERIC_TIMER,
     ARM_FEATURE_V8,      /* implies PMSAv8 MPU */
     ARM_FEATURE_PMSA,
+    ARM_FEATURE_CBAR_RO, /* has cp15 CBAR and it is read-only */
 };
 
 static inline int arm_feature(const CPUState *env, int feature)
