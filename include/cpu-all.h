@@ -643,6 +643,8 @@ int cpu_init(const char *cpu_model);
 void cpu_reset(CPUState *s);
 int cpu_exec(CPUState *env);
 
+void cpu_resume_after_reset_or_init(CPUState *env);
+
 /* Return the physical page corresponding to a virtual one. Use it
    only for debugging because no protection checks are done. Return -1
    if no page found. */

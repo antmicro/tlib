@@ -212,6 +212,7 @@ int32_t tlib_init(char *cpu_name)
     }
     tlib_set_maximum_block_size(TCG_MAX_INSNS);
     env->atomic_memory_state = NULL;
+    env->after_reset_or_init = true;
     return 0;
 }
 
@@ -286,6 +287,7 @@ void tlib_reset()
         }
     }
     cpu_reset(cpu);
+    cpu->after_reset_or_init = true;
 }
 
 EXC_VOID_0(tlib_reset)
@@ -294,6 +296,22 @@ void tlib_unwind()
 {
     longjmp(unwind_state.envs[unwind_state.env_idx], 1);
 }
+
+__attribute__((weak))
+void cpu_resume_after_reset_or_init(CPUState *env)
+{
+    // Empty function for architectures which don't have the function implemented.
+}
+
+void tlib_resume()
+{
+    if (cpu->after_reset_or_init) {
+        cpu->after_reset_or_init = false;
+        cpu_resume_after_reset_or_init(cpu);
+    }
+}
+
+EXC_VOID_0(tlib_resume)
 
 int32_t tlib_execute(uint32_t max_insns)
 {
