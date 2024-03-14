@@ -203,8 +203,6 @@ enum block_interrupt_cause {
     /* --------------------------------------- */                             \
     /* from this point: preserved by CPU reset */                             \
     /* --------------------------------------- */                             \
-    /* ice debug support */                                                   \
-    QTAILQ_HEAD(breakpoints_head, CPUBreakpoint) breakpoints;                 \
     /* Core interrupt code */                                                 \
     jmp_buf jmp_env;                                                          \
     int exception_index;                                                      \
@@ -243,6 +241,7 @@ enum block_interrupt_cause {
     /* STARTING FROM HERE FIELDS ARE NOT SERIALIZED */                        \
     struct TranslationBlock *current_tb; /* currently executing TB  */        \
     CPU_COMMON_TLB                                                            \
+    QTAILQ_HEAD(breakpoints_head, CPUBreakpoint) breakpoints;                 \
     struct TranslationBlock *tb_jmp_cache[TB_JMP_CACHE_SIZE];                 \
     /* buffer for temporaries in the code generator */                        \
     long temp_buf[CPU_TEMP_BUF_NLONGS];                                       \
