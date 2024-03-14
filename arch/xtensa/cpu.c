@@ -36,8 +36,7 @@ static void xtensa_cpu_reset(CPUState *env)
 {
     /* Reset the CPU_COMMON part */
     int common_offset = offsetof(CPUState, cpu_common_first_field);
-    int bp_offset = offsetof(CPUState, breakpoints);
-    memset((char *)env + common_offset, 0, bp_offset - common_offset);
+    memset((char *)env + common_offset, 0, RESET_OFFSET - common_offset);
     env->exception_index = -1;
 
     /* Reset Xtensa-specific parts */

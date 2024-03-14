@@ -948,7 +948,7 @@ typedef struct CPUState {
 
     ARMCoreConfig *arm_core_config;
 
-    // All the above fields will be reset along with the 'CPU_COMMON' fields up to 'breakpoints'.
+    // All the above fields will be reset along with the 'CPU_COMMON' fields up to 'jmp_env'.
     CPU_COMMON
 } CPUState;
 

@@ -515,7 +515,7 @@ void cpu_reset(CPUState *env)
 {
     uint32_t id = env->cp15.c0_cpuid;
     uint32_t number_of_mpu_regions = env->number_of_mpu_regions;
-    memset(env, 0, offsetof(CPUState, breakpoints));
+    memset(env, 0, RESET_OFFSET);
     if (id) {
         cpu_reset_model_id(env, id);
     }

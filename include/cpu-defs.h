@@ -250,6 +250,8 @@ enum block_interrupt_cause {
     bool guest_profiler_enabled;                                              \
                                                                               \
 
+#define RESET_OFFSET offsetof(CPUState, jmp_env)
+
 #define CPU_REGISTER_GETTER(width)                                                           \
     uint##width##_t tlib_get_register_value_##width(int reg_number)                          \
     {                                                                                        \

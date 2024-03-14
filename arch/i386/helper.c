@@ -47,7 +47,7 @@ void cpu_reset(CPUState *env)
     int cpuid_vendor_override = env->cpuid_vendor_override;
     memcpy(cpuid_model, env->cpuid_model, CPUID_MODEL_LENGTH * sizeof(uint32_t));
 
-    memset(env, 0, offsetof(CPUState, breakpoints));
+    memset(env, 0, RESET_OFFSET);
 
     env->old_exception = -1;
 

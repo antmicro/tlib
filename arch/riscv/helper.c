@@ -47,7 +47,7 @@ void cpu_reset(CPUState *env)
     target_ulong vlenb = env->vlenb;
     target_ulong elen = env->elen;
 
-    memset(env, 0, offsetof(CPUState, breakpoints));
+    memset(env, 0, RESET_OFFSET);
 
     env->interrupt_mode = interrupt_mode;
     env->csr_validation_level = csr_validation_level;

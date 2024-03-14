@@ -472,7 +472,7 @@ void cpu_reset_state(CPUState *env)
     uint64_t features = env->features;
     uint32_t id = env->cp15.c0_cpuid;
 
-    memset(env, 0, offsetof(CPUState, breakpoints));
+    memset(env, 0, RESET_OFFSET);
 
     // Based on 'gen_clrex' and 'gen_store_exclusive' it seems -1 means the address isn't valid.
     env->exclusive_addr = -1;
