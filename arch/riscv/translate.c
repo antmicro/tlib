@@ -122,7 +122,7 @@ static int ensure_extension(DisasContext *dc, target_ulong ext)
     return 0;
 }
 
-static int ensure_additional_extension(DisasContext *dc, target_ulong ext)
+static int ensure_additional_extension(DisasContext *dc, enum riscv_additional_feature ext)
 {
     if (riscv_has_additional_ext(cpu, ext)) {
         return 1;
@@ -150,6 +150,24 @@ static int ensure_additional_extension(DisasContext *dc, target_ulong ext)
         break;
     case RISCV_FEATURE_ZFH:
         encoding = "fh";
+        break;
+    case RISCV_FEATURE_ZVFH:
+        encoding = "vfh";
+        break;
+    case RISCV_FEATURE_ZVE32X:
+        encoding = "ve32x";
+        break;
+    case RISCV_FEATURE_ZVE32F:
+        encoding = "ve32f";
+        break;
+    case RISCV_FEATURE_ZVE64X:
+        encoding = "ve64x";
+        break;
+    case RISCV_FEATURE_ZVE64F:
+        encoding = "ve64f";
+        break;
+    case RISCV_FEATURE_ZVE64D:
+        encoding = "ve64d";
         break;
     default:
         tlib_printf(LOG_LEVEL_ERROR, "Unexpected additional extension encoding: %d", ext);

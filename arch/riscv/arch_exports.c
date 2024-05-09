@@ -66,58 +66,70 @@ EXC_VOID_4(tlib_set_clic_interrupt_state, int32_t, intno, uint32_t, vectored, ui
 
 void tlib_allow_feature(uint32_t feature_bit)
 {
+    enum riscv_feature extension = (1U << feature_bit);
+    if(extension == RISCV_FEATURE_RVD) {
+        tlib_allow_feature(RISCV_FEATURE_RVF);
+    }
+    if(extension == RISCV_FEATURE_RVV) {
+        tlib_allow_additional_feature(RISCV_FEATURE_ZVE64D);
 #if HOST_LONG_BITS == 32
-    if(feature_bit == 'V' - 'A')
-    {
         tlib_printf(LOG_LEVEL_ERROR, "Vector extension can't be enabled on 32-bit hosts.");
         return;
-    }
 #endif
+    }
 
-    cpu->misa_mask |= (1L << feature_bit);
-    cpu->misa |= (1L << feature_bit);
+    cpu->misa_mask |= extension;
+    cpu->misa |= extension;
 
     // availability of F/D extensions
     // is indicated by a bit in MSTATUS
-    if (feature_bit == 'F' - 'A' || feature_bit == 'D' - 'A') {
+    if (extension == RISCV_FEATURE_RVF || extension == RISCV_FEATURE_RVD) {
         set_default_mstatus();
     }
 }
 
 EXC_VOID_1(tlib_allow_feature, uint32_t, feature_bit)
 
-void tlib_allow_additional_feature(uint32_t feature_encoding)
+void tlib_allow_additional_feature(uint32_t feature)
 {
-    switch(feature_encoding)
+    if(feature > RISCV_FEATURE_HIGHEST_ADDITIONAL)
     {
-    case RISCV_FEATURE_ZBA:
-        cpu->instruction_extensions.enable_Zba = 1;
-        break;
-    case RISCV_FEATURE_ZBB:
-        cpu->instruction_extensions.enable_Zbb = 1;
-        break;
-    case RISCV_FEATURE_ZBC:
-        cpu->instruction_extensions.enable_Zbc = 1;
-        break;
-    case RISCV_FEATURE_ZBS:
-        cpu->instruction_extensions.enable_Zbs = 1;
-        break;
-    case RISCV_FEATURE_ZICSR:
-        cpu->instruction_extensions.enable_Zicsr = 1;
-        break;
-    case RISCV_FEATURE_ZIFENCEI:
-        cpu->instruction_extensions.enable_Zifencei = 1;
-        break;
-    case RISCV_FEATURE_ZFH:
-        cpu->instruction_extensions.enable_Zfh = 1;
-        break;
-    case RISCV_FEATURE_SMEPMP:
-        cpu->instruction_extensions.enable_Smepmp = 1;
-        break;
-    default:
         tlib_abort("Invalid architecture set extension.");
-        break;
+        return;
     }
+
+    enum riscv_additional_feature extension = feature;
+    if(extension == RISCV_FEATURE_ZVE64D) {
+        tlib_allow_feature(RISCV_FEATURE_RVD);
+        tlib_allow_additional_feature(RISCV_FEATURE_ZVE64F);
+    }
+    if(extension == RISCV_FEATURE_ZVE64F)
+    {
+        tlib_allow_additional_feature(RISCV_FEATURE_ZVE32F);
+        tlib_allow_additional_feature(RISCV_FEATURE_ZVE64X);
+    }
+    if(extension == RISCV_FEATURE_ZVE32F)
+    {
+        tlib_allow_feature(RISCV_FEATURE_RVF);
+        tlib_allow_additional_feature(RISCV_FEATURE_ZVE32X);
+    }
+    if(extension == RISCV_FEATURE_ZVE64X)
+    {
+        tlib_allow_additional_feature(RISCV_FEATURE_ZVE32X);
+    }
+    if(extension == RISCV_FEATURE_ZVE32X)
+    {
+        tlib_allow_additional_feature(RISCV_FEATURE_ZICSR);
+    }
+
+    if(extension == RISCV_FEATURE_ZFH) {
+        tlib_allow_feature(RISCV_FEATURE_RVF);
+    }
+    if(extension == RISCV_FEATURE_ZVFH) {
+        tlib_allow_additional_feature(RISCV_FEATURE_ZFH); // It should depends precisely on Zfhmin that isn't supported.
+        tlib_allow_additional_feature(RISCV_FEATURE_ZVE32F);
+    }
+    cpu->additional_extensions |= 1 << extension;
 }
 
 EXC_VOID_1(tlib_allow_additional_feature, uint32_t, feature_bit)
