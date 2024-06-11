@@ -35,12 +35,17 @@
 #define CSR_SIE                           0x104
 #define CSR_STVEC                         0x105
 #define CSR_SCOUNTEREN                    0x106
+#define CSR_STVT                          0x107 /* since: priv-?.?? */
 #define CSR_SSCRATCH                      0x140
 #define CSR_SEPC                          0x141
 #define CSR_SCAUSE                        0x142
 #define CSR_SBADADDR                      0x143 /* until: priv-1.9.1 */
 #define CSR_STVAL                         0x143 /* since: priv-1.10 */
 #define CSR_SIP                           0x144
+#define CSR_SNXTI                         0x145
+#define CSR_SINTTHRESH                    0x147 /* since: priv-?.??.? */
+#define CSR_SSCRATCHCSW                   0x148 /* since: priv-?.??.? */
+#define CSR_SSCRATCHCSWL                  0x149 /* since: priv-?.??.? */
 #define CSR_SPTBR                         0x180 /* until: priv-1.9.1 */
 #define CSR_SATP                          0x180 /* since: priv-1.10 */
 #define CSR_MSTATUS                       0x300
@@ -50,6 +55,7 @@
 #define CSR_MIE                           0x304
 #define CSR_MTVEC                         0x305
 #define CSR_MCOUNTEREN                    0x306
+#define CSR_MTVT                          0x307 /* since: priv-1.??.? */
 #define CSR_MCOUNTINHIBIT                 0x320 /* since: priv-1.11 */
 #define CSR_MUCOUNTEREN                   0x320 /* until: priv-1.10 */
 #define CSR_MSCOUNTEREN                   0x321
@@ -88,6 +94,10 @@
 #define CSR_MBADADDR                      0x343 /* until: priv-1.9.1 */
 #define CSR_MTVAL                         0x343 /* since: priv-1.10 */
 #define CSR_MIP                           0x344
+#define CSR_MNXTI                         0x345
+#define CSR_MINTTHRESH                    0x347 /* since: priv-?.??.? */
+#define CSR_MSCRATCHCSW                   0x348 /* since: priv-?.??.? */
+#define CSR_MSCRATCHCSWL                  0x349 /* since: priv-?.??.? */
 #define CSR_PMPCFG0                       0x3a0
 #define CSR_PMPCFG1                       0x3a1
 #define CSR_PMPCFG2                       0x3a2
@@ -252,6 +262,8 @@
 #define CSR_VL                            0xc20
 #define CSR_VTYPE                         0xc21
 #define CSR_VLENB                         0xc22
+#define CSR_SINTSTATUS                    0xdb1 /* since: priv-?.??.? */
+#define CSR_MINTSTATUS                    0xfb1 /* since: priv-?.??.? */
 #define CSR_UNHANDLED                     0xffff
 
 /* mstatus bits */
@@ -295,6 +307,26 @@
 #define MSTATUS_SXL                       MSTATUS64_SXL
 #define MSTATUS_SD                        MSTATUS64_SD
 #endif
+
+/* mcause bits */
+#define MCAUSE_EXCCODE                    0x00000fff
+#define MCAUSE_MPIL                       0x00ff0000
+#define MCAUSE_MPIE                       0x08000000 /* alias of mstatus.mpie */
+#define MCAUSE_MPP                        0x30000000 /* alias of mstatus.mpp */
+#define MCAUSE_MINHV                      0x40000000 /* 0: mepc is insn address, 1: mepc is table entry address */
+#if defined(TARGET_RISCV32)
+#define MCAUSE_INTERRUPT                  0x80000000
+#elif defined(TARGET_RISCV64)
+#define MCAUSE_INTERRUPT                  0x8000000000000000ULL
+#endif
+
+/* mintstatus bits */
+#define MINTSTATUS_MIL                    0xff000000
+#define MINTSTATUS_SIL                    0x0000ff00
+#define MINTSTATUS_UIL                    0x000000ff
+
+/* mintthresh bits */
+#define MINTTHRESH_TH                     0x000000ff
 
 /* sstatus bits */
 #define SSTATUS_UIE                       0x00000001

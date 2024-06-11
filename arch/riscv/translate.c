@@ -5725,7 +5725,7 @@ int process_interrupt(int interrupt_request, CPUState *env)
     if (tlib_is_in_debug_mode()) {
         return 0;
     }
-    if (interrupt_request & CPU_INTERRUPT_HARD) {
+    if (interrupt_request & (CPU_INTERRUPT_HARD | CPU_INTERRUPT_CLIC)) {
         int interruptno = riscv_cpu_hw_interrupts_pending(env);
         if (env->nmi_pending > NMI_NONE) {
             do_interrupt(env);

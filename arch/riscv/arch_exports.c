@@ -48,6 +48,16 @@ void tlib_set_mip_bit(uint32_t position, uint32_t value)
 
 EXC_VOID_2(tlib_set_mip_bit, uint32_t, position, uint32_t, value)
 
+void tlib_set_clic_data(int32_t intno, uint32_t vectored, uint32_t level, uint32_t mode)
+{
+    env->clic_interrupt_pending = intno;
+    env->clic_interrupt_vectored = vectored;
+    env->clic_interrupt_level = level;
+    env->clic_interrupt_mode = mode;
+}
+
+EXC_VOID_4(tlib_set_clic_data, int32_t, intno, uint32_t, vectored, uint32_t, level, uint32_t, mode)
+
 void tlib_allow_feature(uint32_t feature_bit)
 {
 #if HOST_LONG_BITS == 32
@@ -172,6 +182,22 @@ int32_t tlib_install_custom_csr(uint64_t id)
 }
 
 EXC_INT_1(int32_t, tlib_install_custom_csr, uint64_t, id)
+
+int32_t tlib_uninstall_custom_csr(uint64_t id)
+{
+    if (id > MAX_CSR_ID) {
+        return -1;
+    }
+
+    int slotId = id / CSRS_PER_SLOT;
+    int slotOffset = id % CSRS_PER_SLOT;
+
+    cpu->custom_csrs[slotId] &= ~(1 << slotOffset);
+
+    return 0;
+}
+
+EXC_INT_1(int32_t, tlib_uninstall_custom_csr, uint64_t, id)
 
 void helper_wfi(CPUState *env);
 void tlib_enter_wfi()

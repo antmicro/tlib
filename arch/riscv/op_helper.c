@@ -123,6 +123,8 @@ static inline uint64_t get_mcycles_current(CPUState *env)
 
 target_ulong priv_version_csr_filter(CPUState *env, target_ulong csrno)
 {
+    // STVT MTVT?
+    // SINTTHRESH MINTTHRESH?
     if (env->privilege_architecture == RISCV_PRIV1_11) {
         switch (csrno) {
         /* CSR_MUCOUNTEREN register is now used for CSR_MCOUNTINHIBIT */
@@ -177,7 +179,7 @@ static target_ulong mtvec_stvec_write_handler(target_ulong val_to_write, char* r
     {
         case INTERRUPT_MODE_AUTO:
             if (env->privilege_architecture >= RISCV_PRIV1_10) {
-                new_value = val_to_write & ~0x2;
+                new_value = val_to_write;
             } else {
                 new_value = val_to_write & ~0x3;
             }
@@ -300,20 +302,26 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
         break;
     }
     case CSR_MIP: {
-        target_ulong mask = IRQ_SS | IRQ_ST | IRQ_SE;
-        pthread_mutex_lock(&env->mip_lock);
-        env->mip = (env->mip & ~mask) | (val_to_write & mask);
-        pthread_mutex_unlock(&env->mip_lock);
-        tlib_mip_changed(env->mip);
-        if (env->mip != 0) {
-            set_interrupt_pending(env, CPU_INTERRUPT_HARD);
+        if ((env->mtvec & 2) == 0) { // MIP is inactive in CLIC mode
+            target_ulong mask = IRQ_SS | IRQ_ST | IRQ_SE;
+            pthread_mutex_lock(&env->mip_lock);
+            env->mip = (env->mip & ~mask) | (val_to_write & mask);
+            pthread_mutex_unlock(&env->mip_lock);
+            tlib_mip_changed(env->mip);
+            if (env->mip != 0) {
+                set_interrupt_pending(env, CPU_INTERRUPT_HARD);
+            }
         }
         break;
     }
     case CSR_MIE: {
-        env->mie = (env->mie & ~all_ints) | (val_to_write & all_ints);
+        if ((env->mtvec & 2) == 0) { // MIE is inactive in CLIC mode
+            env->mie = (env->mie & ~all_ints) | (val_to_write & all_ints);
+        }
         break;
     }
+    case CSR_MNXTI:
+        break; // TODO
     case CSR_MIDELEG:
         env->mideleg = (env->mideleg & ~delegable_ints) | (val_to_write & delegable_ints);
         break;
@@ -376,6 +384,8 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
         env->mie = (s & ~mask) | ((val_to_write & deleg) & mask);
         break;
     }
+    case CSR_SNXTI:
+        break; // TODO
     case CSR_SATP: /* CSR_SPTBR */ {
         if ((env->privilege_architecture < RISCV_PRIV1_10) && (val_to_write ^ env->sptbr)) {
             tlb_flush(env, 1, true);
@@ -407,6 +417,16 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
     case CSR_SCOUNTEREN:
         env->scounteren = val_to_write;
         break;
+    case CSR_STVT:
+        env->stvt = val_to_write & ~0x3f;
+        break;
+    case CSR_SINTTHRESH:
+        env->sintthresh = val_to_write;
+        break;
+    case CSR_SSCRATCHCSW:
+        break;
+    case CSR_SSCRATCHCSWL:
+        break; // TODO
     case CSR_SSCRATCH:
         env->sscratch = val_to_write;
         break;
@@ -425,6 +445,22 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
     case CSR_MCOUNTEREN:
         env->mcounteren = val_to_write;
         break;
+    case CSR_MTVT:
+        env->mtvt = val_to_write & ~0x3f;
+        break;
+    case CSR_SINTSTATUS:
+        env->sintstatus = val_to_write;
+        break;
+    case CSR_MINTSTATUS:
+        env->mintstatus = val_to_write;
+        break;
+    case CSR_MINTTHRESH:
+        env->mintthresh = val_to_write;
+        break;
+    case CSR_MSCRATCHCSW:
+        break; // TODO
+    case CSR_MSCRATCHCSWL:
+        break; // TODO
     case CSR_MSCRATCH:
         env->mscratch = val_to_write;
         break;
@@ -657,6 +693,8 @@ static inline target_ulong csr_read_helper(CPUState *env, target_ulong csrno)
         target_ulong mask = IRQ_US | IRQ_SS | IRQ_UT | IRQ_ST | IRQ_UE | IRQ_SE;
         return env->mie & env->mideleg & mask;
     }
+    case CSR_SNXTI:
+        return 0; // TODO
     case CSR_SEPC:
         return env->sepc;
     case CSR_STVAL:
@@ -665,6 +703,14 @@ static inline target_ulong csr_read_helper(CPUState *env, target_ulong csrno)
         return env->stvec;
     case CSR_SCOUNTEREN:
         return env->scounteren;
+    case CSR_STVT:
+        return env->stvt;
+    case CSR_SINTTHRESH:
+        return env->sintthresh;
+    //case CSR_SSCRATCHCSW:
+        //return 0; // TODO
+    case CSR_SSCRATCHCSWL:
+        return 0; // TODO
     case CSR_SCAUSE:
         return env->scause;
     case CSR_SATP: /* CSR_SPTBR */
@@ -678,9 +724,19 @@ static inline target_ulong csr_read_helper(CPUState *env, target_ulong csrno)
     case CSR_MSTATUS:
         return env->mstatus;
     case CSR_MIP:
-        return env->mip;
+        if ((env->mtvec & 2) == 2) { // MIP is hardwired to zero in CLIC mode
+            return 0;
+        } else {
+            return env->mip;
+        }
     case CSR_MIE:
-        return env->mie;
+        if ((env->mtvec & 2) == 2) { // MIE is hardwired to zero in CLIC mode
+            return 0;
+        } else {
+            return env->mie;
+        }
+    case CSR_MNXTI:
+        return env->mnxti;
     case CSR_MEPC:
         return env->mepc;
     case CSR_MSCRATCH:
@@ -704,6 +760,14 @@ static inline target_ulong csr_read_helper(CPUState *env, target_ulong csrno)
         return env->mtvec;
     case CSR_MCOUNTEREN:
         return env->mcounteren;
+    case CSR_MTVT:
+        return env->mtvt;
+    case CSR_MINTTHRESH:
+        return env->mintthresh;
+    case CSR_MSCRATCHCSW:
+        return env->mscratch;
+    case CSR_MSCRATCHCSWL:
+        return env->mscratch;
     case CSR_MEDELEG:
         return env->medeleg;
     case CSR_MIDELEG:
@@ -744,6 +808,10 @@ static inline target_ulong csr_read_helper(CPUState *env, target_ulong csrno)
         return env->vtype;
     case CSR_VLENB:
         return env->vlenb;
+    case CSR_SINTSTATUS:
+        return env->sintstatus;
+    case CSR_MINTSTATUS:
+        return env->mintstatus;
     default:
         /* used by e.g. MTIME read */
         warn_nonexistent_csr_read(csrno);
@@ -787,6 +855,32 @@ void validate_csr(CPUState *env, uint64_t which, uint64_t write)
 target_ulong helper_csrrw(CPUState *env, target_ulong src, target_ulong csr)
 {
     validate_csr(env, csr, 1);
+
+    /* These CSRs are only designed to be used with the csrrw instruction with neither rd nor rs1 set to x0.
+     * Accessing the xscratchcsw register with the csrrw instruction with either rd or rs1 set to x0, or
+     * using any other CSR instruction form (CSRRWI/CSRRS/CSRRC/CSRRSI/CSRRCI), is reserved.
+     */
+    if (csr == CSR_MSCRATCHCSW) {
+        target_ulong prev_priv = get_field(env->mstatus, MSTATUS_MPP);
+        /* If mpp == current priv, csr value and rd unchanged */
+        if (env->priv == prev_priv) {
+            return src;
+        } else {
+            target_ulong mscratch = env->mscratch;
+            env->mscratch = src;
+            return mscratch;
+        }
+    } else if (csr == CSR_MSCRATCHCSWL) {
+        /* If neither mpil nor mil are in an interrupt, or both are, csr value and rd unchanged */
+        if ((get_field(env->mcause, MCAUSE_MPIL) == 0) == (get_field(env->mintstatus, MINTSTATUS_MIL) == 0)) {
+            return src;
+        } else {
+            target_ulong mscratch = env->mscratch;
+            env->mscratch = src;
+            return mscratch;
+        }
+    }
+
     uint64_t csr_backup = csr_read_helper(env, csr);
     csr_write_helper(env, src, csr);
     return csr_backup;
@@ -795,6 +889,32 @@ target_ulong helper_csrrw(CPUState *env, target_ulong src, target_ulong csr)
 target_ulong helper_csrrs(CPUState *env, target_ulong src, target_ulong csr, target_ulong rs1_pass)
 {
     validate_csr(env, csr, rs1_pass != 0);
+    if (csr == CSR_MNXTI) {
+        src &= 0xf;
+        target_ulong ms = env->mstatus;
+        ms |= src;
+        csr_write_helper(env, ms, CSR_MSTATUS);
+
+        uint32_t clic_level = env->clic_interrupt_level;
+        if (env->clic_interrupt_pending != EXCP_NONE
+            && /* clic.priv == M */ 1
+            && clic_level > get_field(env->mcause, MCAUSE_MPIL)
+            && clic_level > get_field(env->mintthresh, MINTTHRESH_TH)
+            && !env->clic_interrupt_vectored
+        ) {
+            if (src) {
+                env->mintstatus = set_field(env->mintstatus, MINTSTATUS_MIL, clic_level);
+                target_ulong mc = env->mcause;
+                mc = set_field(mc, MCAUSE_EXCCODE, env->clic_interrupt_pending);
+                mc |= MCAUSE_INTERRUPT;
+                csr_write_helper(env, mc, CSR_MCAUSE);
+                tlib_clic_clear_edge_interrupt();
+            }
+            return env->mtvt + env->clic_interrupt_pending * sizeof(target_ulong);
+        }
+        return 0;
+    }
+
     uint64_t csr_backup = csr_read_helper(env, csr);
     if (rs1_pass != 0) {
         csr_write_helper(env, src | csr_backup, csr);
@@ -805,6 +925,33 @@ target_ulong helper_csrrs(CPUState *env, target_ulong src, target_ulong csr, tar
 target_ulong helper_csrrc(CPUState *env, target_ulong src, target_ulong csr, target_ulong rs1_pass)
 {
     validate_csr(env, csr, rs1_pass != 0);
+    if (csr == CSR_MNXTI) {
+        src &= 0xf;
+        target_ulong ms = env->mstatus;
+        ms &= ~src;
+        csr_write_helper(env, ms, CSR_MSTATUS);
+
+        /* TODO this is the same as in csrrs, (1) is this correct (2) then merge it */
+        uint32_t clic_level = env->clic_interrupt_level;
+        if (env->clic_interrupt_pending != EXCP_NONE
+            && /* clic.priv == M */ 1
+            && clic_level > get_field(env->mcause, MCAUSE_MPIL)
+            && clic_level > get_field(env->mintthresh, MINTTHRESH_TH)
+            && !env->clic_interrupt_vectored
+        ) {
+            if (src) {
+                env->mintstatus = set_field(env->mintstatus, MINTSTATUS_MIL, clic_level);
+                target_ulong mc = env->mcause;
+                mc = set_field(mc, MCAUSE_EXCCODE, env->clic_interrupt_pending);
+                mc |= MCAUSE_INTERRUPT;
+                csr_write_helper(env, mc, CSR_MCAUSE);
+                tlib_clic_clear_edge_interrupt();
+            }
+            return env->mtvt + env->clic_interrupt_pending * sizeof(target_ulong);
+        }
+        return 0;
+    }
+
     uint64_t csr_backup = csr_read_helper(env, csr);
     if (rs1_pass != 0) {
         csr_write_helper(env, (~src) & csr_backup, csr);
@@ -874,10 +1021,20 @@ target_ulong helper_mret(CPUState *env, target_ulong cpu_pc_deb)
         set_field(mstatus, env->privilege_architecture >= RISCV_PRIV1_10 ? MSTATUS_MIE : 1 << prev_priv,
             get_field(mstatus, MSTATUS_MPIE));
     mstatus = set_field(mstatus, MSTATUS_MPIE, 0);
-    mstatus = set_field(mstatus, MSTATUS_MPP, riscv_has_ext(env, RISCV_FEATURE_RVU) ? PRV_U : PRV_M);
-    mstatus = set_field(mstatus, MSTATUS_MPP, PRV_U);
+    mstatus = set_field(mstatus, MSTATUS_MPP, riscv_has_ext(env, RISCV_FEATURE_RVU) ? PRV_U : PRV_M); // ???
+    mstatus = set_field(mstatus, MSTATUS_MPP, PRV_U);                                                 // ???
     riscv_set_mode(env, prev_priv);
     csr_write_helper(env, mstatus, CSR_MSTATUS);
+    // TODO have this alias be done at read time, keeping it insync manually is bad
+    target_ulong mcause = env->mcause;
+    mcause = set_field(mcause, MCAUSE_MPP, PRV_U);
+    csr_write_helper(env, mcause, CSR_MCAUSE);
+
+    if ((env->mtvec & 2) == 2) {
+        target_ulong mintstatus = env->mintstatus;
+        mintstatus = set_field(mintstatus, MINTSTATUS_MIL, get_field(env->mcause, MCAUSE_MPIL));
+        csr_write_helper(env, mintstatus, CSR_MINTSTATUS);
+    }
 
     acquire_global_memory_lock(env);
     cancel_reservation(env);

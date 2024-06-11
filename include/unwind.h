@@ -148,3 +148,13 @@ extern __thread struct unwind_state {
         }                                                                   \
         POP_ENV();                                                          \
     }
+
+#define EXC_VOID_4(NAME, PARAMT1, PARAM1, PARAMT2, PARAM2, PARAMT3, PARAM3, PARAMT4, PARAM4) \
+    void NAME##_ex(PARAMT1 PARAM1, PARAMT2 PARAM2, PARAMT3 PARAM3, PARAMT4 PARAM4)           \
+    {                                                                                        \
+        DECLARE_ENV_PTR();                                                                   \
+        if (PUSH_ENV() == 0) {                                                               \
+            NAME(PARAM1, PARAM2, PARAM3, PARAM4);                                            \
+        }                                                                                    \
+        POP_ENV();                                                                           \
+    }

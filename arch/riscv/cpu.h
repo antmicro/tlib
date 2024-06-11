@@ -61,6 +61,8 @@ typedef struct opcode_hook_mask_t
 
 #define VLEN_MAX (1 << 16)
 
+#define CPU_INTERRUPT_CLIC CPU_INTERRUPT_TGT_EXT_0
+
 typedef struct DisasContext {
     struct DisasContextBase base;
     uint64_t opcode;
@@ -116,6 +118,8 @@ struct CPUState {
     target_ulong medeleg;
 
     target_ulong stvec;
+    target_ulong stvt;       /* since: priv-1.??.? */
+    target_ulong sintthresh; /* since: priv-1.??.? */
     target_ulong sepc;
     target_ulong scause;
     target_ulong stval;  /* renamed from sbadaddr since: priv-1.10.0 */
@@ -124,6 +128,9 @@ struct CPUState {
     target_ulong sideleg;
 
     target_ulong mtvec;
+    target_ulong mtvt;       /* since: priv-1.??.? */
+    target_ulong mintthresh; /* since: priv-1.??.? */
+    target_ulong mnxti;      /* since: priv-1.??.? */
     target_ulong mepc;
     target_ulong mcause;
     target_ulong mtval;      /*  renamed from mbadaddr since: priv-1.10.0 */
@@ -136,6 +143,8 @@ struct CPUState {
 
     target_ulong sscratch;
     target_ulong mscratch;
+    target_ulong sintstatus;
+    target_ulong mintstatus;
 
     target_ulong vstart;
     target_ulong vxsat;
@@ -217,6 +226,11 @@ struct CPUState {
      */
     int32_t interrupt_mode;
 
+    int32_t clic_interrupt_pending;
+    uint32_t clic_interrupt_vectored;
+    uint32_t clic_interrupt_level;
+    uint32_t clic_interrupt_mode;
+
     CPU_COMMON
 
     int8_t are_post_opcode_execution_hooks_enabled;
@@ -254,7 +268,7 @@ static inline void cpu_get_tb_cpu_state(CPUState *env, target_ulong *pc, target_
 static inline bool cpu_has_work(CPUState *env)
 {
     // clear WFI if waking up condition is met
-    env->wfi &= !(cpu->mip & cpu->mie);
+    env->wfi &= !((cpu->mip & cpu->mie) || cpu->clic_interrupt_pending != EXCP_NONE);
     return !env->wfi;
 }
 
