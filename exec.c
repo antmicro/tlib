@@ -1929,6 +1929,15 @@ uint64_t ldq_phys(target_phys_addr_t addr)
     return val;
 }
 
+target_ulong ldp_phys(target_phys_addr_t addr)
+{
+#if TARGET_LONG_BITS == 32
+    return ldl_phys(addr);
+#elif TARGET_LONG_BITS == 64
+    return ldq_phys(addr);
+#endif
+}
+
 /* XXX: optimize */
 uint32_t ldub_phys(target_phys_addr_t addr)
 {
