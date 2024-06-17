@@ -825,7 +825,7 @@ void riscv_set_mode(CPUState *env, target_ulong newpriv)
 
 target_ulong helper_sret(CPUState *env, target_ulong cpu_pc_deb)
 {
-    if (env->priv != PRV_S) {
+    if (env->priv < PRV_S) {
         tlib_printf(LOG_LEVEL_ERROR, "Trying to execute Sret from privilege level %u", env->priv);
         helper_raise_illegal_instruction(env);
     }
@@ -862,7 +862,7 @@ target_ulong helper_sret(CPUState *env, target_ulong cpu_pc_deb)
 
 target_ulong helper_mret(CPUState *env, target_ulong cpu_pc_deb)
 {
-    if (env->priv != PRV_M) {
+    if (env->priv < PRV_M) {
         tlib_printf(LOG_LEVEL_ERROR, "Trying to execute Mret from privilege level %u", env->priv);
         helper_raise_illegal_instruction(env);
     }
