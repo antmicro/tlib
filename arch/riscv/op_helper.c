@@ -841,7 +841,7 @@ target_ulong helper_sret(CPUState *env, target_ulong cpu_pc_deb)
         set_field(sstatus, (env->privilege_architecture >= RISCV_PRIV1_10) ? SSTATUS_SIE : 1 << prev_priv,
             get_field(sstatus, SSTATUS_SPIE));
     sstatus = set_field(sstatus, SSTATUS_SPIE, 1);
-    sstatus = set_field(sstatus, SSTATUS_SPP, prev_priv);
+    sstatus = set_field(sstatus, SSTATUS_SPP, PRV_U);
     if (env->privilege_architecture >= RISCV_PRIV1_12) {
         sstatus = set_field(sstatus, MSTATUS_MPRV, 0);
     }
