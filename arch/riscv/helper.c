@@ -440,6 +440,7 @@ void do_interrupt(CPUState *env)
     target_ulong fixed_cause = 0;
     target_ulong bit = 0;
     uint8_t is_interrupt = 0;
+    uint8_t is_in_clic_mode = get_field(env->mtvec, MTVEC_MODE) == MTVEC_MODE_CLIC;
 
     if (env->exception_index & (RISCV_EXCP_INT_FLAG)) {
         /* hacky for now. the MSB (bit 63) indicates interrupt but cs->exception
@@ -478,7 +479,12 @@ void do_interrupt(CPUState *env)
         (fixed_cause == RISCV_EXCP_STORE_AMO_ACCESS_FAULT) || (fixed_cause == RISCV_EXCP_INST_PAGE_FAULT) ||
         (fixed_cause == RISCV_EXCP_LOAD_PAGE_FAULT) || (fixed_cause == RISCV_EXCP_STORE_PAGE_FAULT);
 
-    if (env->priv == PRV_M || !((is_interrupt ? env->mideleg : env->medeleg) & (1 << bit))) {
+    target_ulong int_priv = env->priv;
+    if (is_in_clic_mode && is_interrupt) {
+        int_priv = env->clic_interrupt_priv;
+    }
+
+    if (int_priv == PRV_M || !((is_interrupt ? env->mideleg : env->medeleg) & (1 << bit))) {
         /* handle the trap in M-mode */
         env->mepc = env->pc;
         env->mcause = fixed_cause;
