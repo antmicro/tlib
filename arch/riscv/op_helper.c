@@ -407,6 +407,12 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
     case CSR_SCOUNTEREN:
         env->scounteren = val_to_write;
         break;
+    case CSR_STVT:
+        env->stvt = val_to_write & ~MTVEC_MODE_SUBMODE;
+        break;
+    case CSR_SINTTHRESH:
+        env->sintthresh = val_to_write;
+        break;
     case CSR_SSCRATCH:
         env->sscratch = val_to_write;
         break;
@@ -424,6 +430,18 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
         break;
     case CSR_MCOUNTEREN:
         env->mcounteren = val_to_write;
+        break;
+    case CSR_MTVT:
+        env->mtvt = val_to_write & ~MTVEC_MODE_SUBMODE;
+        break;
+    case CSR_SINTSTATUS:
+        env->mintstatus = set_field(env->mintstatus, SINTSTATUS_MASK, val_to_write);
+        break;
+    case CSR_MINTSTATUS:
+        env->mintstatus = val_to_write;
+        break;
+    case CSR_MINTTHRESH:
+        env->mintthresh = val_to_write;
         break;
     case CSR_MSCRATCH:
         env->mscratch = val_to_write;
@@ -665,6 +683,10 @@ static inline target_ulong csr_read_helper(CPUState *env, target_ulong csrno)
         return env->stvec;
     case CSR_SCOUNTEREN:
         return env->scounteren;
+    case CSR_STVT:
+        return env->stvt;
+    case CSR_SINTTHRESH:
+        return env->sintthresh;
     case CSR_SCAUSE:
         return env->scause;
     case CSR_SATP: /* CSR_SPTBR */
@@ -704,6 +726,10 @@ static inline target_ulong csr_read_helper(CPUState *env, target_ulong csrno)
         return env->mtvec;
     case CSR_MCOUNTEREN:
         return env->mcounteren;
+    case CSR_MTVT:
+        return env->mtvt;
+    case CSR_MINTTHRESH:
+        return env->mintthresh;
     case CSR_MEDELEG:
         return env->medeleg;
     case CSR_MIDELEG:
@@ -744,6 +770,10 @@ static inline target_ulong csr_read_helper(CPUState *env, target_ulong csrno)
         return env->vtype;
     case CSR_VLENB:
         return env->vlenb;
+    case CSR_SINTSTATUS:
+        return env->mintstatus & SINTSTATUS_MASK;
+    case CSR_MINTSTATUS:
+        return env->mintstatus;
     default:
         /* used by e.g. MTIME read */
         warn_nonexistent_csr_read(csrno);
