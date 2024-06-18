@@ -494,10 +494,8 @@ void do_interrupt(CPUState *env)
         }
 
         target_ulong ms = env->mstatus;
-        ms =
-            set_field(ms, MSTATUS_MPIE,
-                      (env->privilege_architecture >= RISCV_PRIV1_10) ? get_field(ms, MSTATUS_MIE) : get_field(ms,
-                                                                                                               1 << env->priv));
+        target_ulong mpie = (env->privilege_architecture >= RISCV_PRIV1_10) ? get_field(ms, MSTATUS_MIE) : get_field(ms, 1 << env->priv);
+        ms = set_field(ms, MSTATUS_MPIE, mpie);
         ms = set_field(ms, MSTATUS_MIE, 0);
         ms = set_field(ms, MSTATUS_MPP, env->priv);
         csr_write_helper(env, ms, CSR_MSTATUS);
@@ -518,9 +516,8 @@ void do_interrupt(CPUState *env)
         }
 
         target_ulong s = env->mstatus;
-        s =
-            set_field(s, SSTATUS_SPIE,
-                      (env->privilege_architecture >= RISCV_PRIV1_10) ? get_field(s, SSTATUS_SIE) : get_field(s, 1 << env->priv));
+        target_ulong spie = (env->privilege_architecture >= RISCV_PRIV1_10) ? get_field(s, SSTATUS_SIE) : get_field(s, 1 << env->priv);
+        s = set_field(s, SSTATUS_SPIE, spie);
         s = set_field(s, SSTATUS_SIE, 0);
         s = set_field(s, SSTATUS_SPP, env->priv);
         csr_write_helper(env, s, CSR_SSTATUS);
