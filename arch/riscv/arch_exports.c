@@ -48,6 +48,22 @@ void tlib_set_mip_bit(uint32_t position, uint32_t value)
 
 EXC_VOID_2(tlib_set_mip_bit, uint32_t, position, uint32_t, value)
 
+void tlib_set_clic_data(int32_t intno, uint32_t vectored, uint32_t level, uint32_t mode)
+{
+    env->clic_interrupt_pending = intno;
+    env->clic_interrupt_vectored = vectored;
+    env->clic_interrupt_level = level;
+    env->clic_interrupt_priv = mode;
+
+    if (intno != EXCP_NONE) {
+        set_interrupt_pending(env, RISCV_CPU_INTERRUPT_CLIC);
+    } else {
+        clear_interrupt_pending(env, RISCV_CPU_INTERRUPT_CLIC);
+    }
+}
+
+EXC_VOID_4(tlib_set_clic_data, int32_t, intno, uint32_t, vectored, uint32_t, level, uint32_t, mode)
+
 void tlib_allow_feature(uint32_t feature_bit)
 {
 #if HOST_LONG_BITS == 32
