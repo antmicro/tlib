@@ -216,11 +216,16 @@ struct CPUState {
     int32_t pmp_napot_grain;
 
     /* Supported modes:
-         * 0 (INTERRUPT_MODE_AUTO) - chceck mtvec's LSB to detect mode: 0->direct, 1->vectored
+         * 0 (INTERRUPT_MODE_AUTO) - check mtvec's LSB to detect mode: 0->direct, 1->vectored, 3->clic
          * 1 (INTERRUPT_MODE_DIRECT) - all exceptions set pc to mtvec's BASE
          * 2 (INTERRUPT_MODE_VECTORED) - asynchronous interrupts set pc to mtvec's BASE + 4 * cause
      */
     int32_t interrupt_mode;
+
+    int32_t clic_interrupt_pending;
+    uint32_t clic_interrupt_vectored;
+    uint32_t clic_interrupt_level;
+    uint32_t clic_interrupt_priv;
 
     CPU_COMMON
 
