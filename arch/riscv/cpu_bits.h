@@ -296,6 +296,16 @@
 #define MSTATUS_SD                        MSTATUS64_SD
 #endif
 
+/* mtvec bits */
+#define MTVEC_MODE                        0x00000003
+#define MTVEC_SUBMODE                     0x0000003c
+#define MTVEC_MODE_SUBMODE                0x0000003f
+
+/* mtvec modes (mtvec.mode) */
+#define MTVEC_MODE_CLINT_DIRECT           0x00000000
+#define MTVEC_MODE_CLINT_VECTORED         0x00000001
+#define MTVEC_MODE_CLIC                   0x00000003
+
 /* sstatus bits */
 #define SSTATUS_UIE                       0x00000001
 #define SSTATUS_SIE                       0x00000002
