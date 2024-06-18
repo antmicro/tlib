@@ -104,6 +104,51 @@ int get_interrupts_in_order(target_ulong pending_interrupts, target_ulong priv)
     }
 }
 
+static int riscv_clic_interrupt_pending(CPUState *env)
+{
+    target_ulong priv = env->priv;
+
+    if (get_field(env->mtvec, MTVEC_MODE) != MTVEC_MODE_CLIC) {
+        return EXCP_NONE;
+    }
+
+    uint32_t mil = get_field(env->mintstatus, MINTSTATUS_MIL);
+    uint32_t mintthresh = get_field(env->mintthresh, MINTTHRESH_TH);
+    uint32_t mlevel = mintthresh > mil ? mintthresh : mil;
+    /* all machine-mode interrupts are always enabled when at lower privilege levels */
+    if (priv < PRV_M) {
+        mlevel = 0;
+    }
+
+    uint32_t sil = get_field(env->mintstatus, MINTSTATUS_SIL);
+    uint32_t sintthresh = get_field(env->sintthresh, SINTTHRESH_TH);
+    uint32_t slevel = sintthresh > sil ? sintthresh : sil;
+    /* all supervisor-mode interrupts are always enabled when at lower privilege levels */
+    if (priv < PRV_S) {
+        slevel = 0;
+    }
+
+    /* mstatus.mie, sstatus.sie affects CLIC interrupts as well, but only at the relevant privilege */
+    bool mie = (priv == PRV_M && get_field(env->mstatus, MSTATUS_MIE)) || priv < PRV_M;
+    bool sie = (priv == PRV_S && get_field(env->mstatus, MSTATUS_SIE)) || priv < PRV_S;
+
+    if (sie &&
+        env->clic_interrupt_priv == PRV_S &&
+        env->interrupt_request & RISCV_CPU_INTERRUPT_CLIC &&
+        env->clic_interrupt_level > slevel) {
+        return env->clic_interrupt_pending;
+    }
+
+    if (mie &&
+        env->clic_interrupt_priv == PRV_M &&
+        env->interrupt_request & RISCV_CPU_INTERRUPT_CLIC &&
+        env->clic_interrupt_level > mlevel) {
+        return env->clic_interrupt_pending;
+    }
+
+    return EXCP_NONE;
+}
+
 /*
  * Return RISC-V IRQ number if an interrupt should be taken, else -1.
  * Used in cpu-exec.c
