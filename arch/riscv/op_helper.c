@@ -183,16 +183,16 @@ static target_ulong mtvec_stvec_write_handler(target_ulong val_to_write, char* r
             } else if (env->privilege_architecture >= RISCV_PRIV1_10) {
                 new_value = val_to_write & ~0x2;
             } else {
-                new_value = val_to_write & ~0x3;
+                new_value = val_to_write & ~MTVEC_MODE;
             }
         break;
 
         case INTERRUPT_MODE_DIRECT:
-            new_value = val_to_write & ~0x3;
+            new_value = val_to_write & ~MTVEC_MODE;
             break;
 
         case INTERRUPT_MODE_VECTORED:
-            new_value = (val_to_write & ~0x3) | 0x1;
+            new_value = (val_to_write & ~MTVEC_MODE) | MTVEC_MODE_CLINT_VECTORED;
             break;
 
         default:
