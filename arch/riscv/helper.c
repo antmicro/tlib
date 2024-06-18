@@ -400,7 +400,7 @@ void do_interrupt(CPUState *env)
            index is only 32 bits wide */
         fixed_cause = env->exception_index & RISCV_EXCP_INT_MASK;
         bit = fixed_cause;
-        fixed_cause |= ((target_ulong)1) << (TARGET_LONG_BITS - 1);
+        fixed_cause |= MCAUSE_INTERRUPT;
         is_interrupt = 1;
     } else {
         /* fixup User ECALL -> correct priv ECALL */
