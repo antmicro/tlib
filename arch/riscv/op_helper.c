@@ -878,7 +878,6 @@ target_ulong helper_mret(CPUState *env, target_ulong cpu_pc_deb)
         set_field(mstatus, env->privilege_architecture >= RISCV_PRIV1_10 ? MSTATUS_MIE : 1 << prev_priv,
             get_field(mstatus, MSTATUS_MPIE));
     mstatus = set_field(mstatus, MSTATUS_MPIE, 1);
-    mstatus = set_field(mstatus, MSTATUS_MPP, riscv_has_ext(env, RISCV_FEATURE_RVU) ? PRV_U : PRV_M);
     mstatus = set_field(mstatus, MSTATUS_MPP, PRV_U);
     if (env->privilege_architecture >= RISCV_PRIV1_12 && prev_priv != PRV_M) {
         mstatus = set_field(mstatus, MSTATUS_MPRV, 0);
