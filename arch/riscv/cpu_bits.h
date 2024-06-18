@@ -308,6 +308,26 @@
 #define MSTATUS_SD                        MSTATUS64_SD
 #endif
 
+/* mcause bits */
+#define MCAUSE_EXCCODE                    0x00000fff
+#define MCAUSE_MPIL                       0x00ff0000
+#define MCAUSE_MPIE                       0x08000000 /* alias of mstatus.mpie */
+#define MCAUSE_MPP                        0x30000000 /* alias of mstatus.mpp */
+#define MCAUSE_MINHV                      0x40000000 /* 0: mepc is insn address, 1: mepc is table entry address */
+#if defined(TARGET_RISCV32)
+#define MCAUSE_INTERRUPT                  0x80000000
+#elif defined(TARGET_RISCV64)
+#define MCAUSE_INTERRUPT                  0x8000000000000000ULL
+#endif
+
+/* scause bits */
+#define SCAUSE_EXCCODE                    MCAUSE_EXCCODE
+#define SCAUSE_SPIL                       MCAUSE_MPIL
+#define SCAUSE_SPIE                       MCAUSE_MPIE  /* alias of sstatus.spie */
+#define SCAUSE_SPP                        MCAUSE_MPP   /* alias of sstatus.spp */
+#define SCAUSE_SINHV                      MCAUSE_MINHV /* 0: sepc is insn address, 1: sepc is table entry address */
+#define SCAUSE_INTERRUPT                  MCAUSE_INTERRUPT
+
 /* mtvec bits */
 #define MTVEC_MODE                        0x00000003
 #define MTVEC_SUBMODE                     0x0000003c
