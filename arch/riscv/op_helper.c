@@ -123,6 +123,7 @@ static inline uint64_t get_mcycles_current(CPUState *env)
 
 target_ulong priv_version_csr_filter(CPUState *env, target_ulong csrno)
 {
+    // CLIC CSRs?
     if (env->privilege_architecture == RISCV_PRIV1_11) {
         switch (csrno) {
         /* CSR_MUCOUNTEREN register is now used for CSR_MCOUNTINHIBIT */
