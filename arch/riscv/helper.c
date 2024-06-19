@@ -161,6 +161,11 @@ int riscv_cpu_hw_interrupts_pending(CPUState *env)
     target_ulong priv = env->priv;
     target_ulong enabled_interrupts = (target_ulong) - 1UL;
 
+    int clic_interrupt = riscv_clic_interrupt_pending(env);
+    if (clic_interrupt != EXCP_NONE) {
+        return clic_interrupt;
+    }
+
     switch (priv) {
     /* Disable interrupts for lower privileges, if interrupt is not delegated it is for higher level */
     case PRV_M:
@@ -487,16 +492,26 @@ void do_interrupt(CPUState *env)
     if (int_priv == PRV_M || !((is_interrupt ? env->mideleg : env->medeleg) & (1 << bit))) {
         /* handle the trap in M-mode */
         env->mepc = env->pc;
-        env->mcause = fixed_cause;
         if (hasbadaddr) {
             env->mtval = env->badaddr;
         }
 
-        /* Lowest bit of MTVEC changes mode to vectored interrupt */
-        if ((env->mtvec & 1) && is_interrupt && env->privilege_architecture >= RISCV_PRIV1_10) {
-            env->pc = (env->mtvec & ~0x3) + (fixed_cause * 4);
+        /* Lowest 2 bits of MTVEC change mode to vectored (01) or CLIC (11) */
+        if (is_in_clic_mode) {
+            target_ulong vect_addr = env->mtvt + bit * sizeof(target_ulong);
+            if (is_interrupt && env->clic_interrupt_vectored) {
+                target_ulong vect = ldp_phys(vect_addr);
+                env->pc = vect;
+            } else {
+                /* CLIC mode exception or shv non-vectored interrupt */
+                env->pc = env->mtvec & ~MTVEC_MODE_SUBMODE;
+            }
+        } else if (get_field(env->mtvec, MTVEC_MODE) == MTVEC_MODE_CLINT_VECTORED && is_interrupt && env->privilege_architecture >= RISCV_PRIV1_10) {
+            /* CLINT vectored mode */
+            env->pc = (env->mtvec & ~MTVEC_MODE) + (fixed_cause * 4);
         } else {
-            env->pc = env->mtvec & ~0x3;
+            /* CLINT non-vectored mode */
+            env->pc = env->mtvec & ~MTVEC_MODE;
         }
 
         target_ulong ms = env->mstatus;
@@ -505,20 +520,47 @@ void do_interrupt(CPUState *env)
         ms = set_field(ms, MSTATUS_MIE, 0);
         ms = set_field(ms, MSTATUS_MPP, env->priv);
         csr_write_helper(env, ms, CSR_MSTATUS);
+
+        /* Use the fixed_cause as a base it has the interrupt bit set appropriately, see above. Then we fill in the other fields. */
+        target_ulong mc = fixed_cause;
+        /* These extra fields are present in mcause only in CLIC mode */
+        if (is_in_clic_mode) {
+            mc = set_field(mc, MCAUSE_MPIL, get_field(env->mintstatus, MINTSTATUS_MIL));
+            mc = set_field(mc, MCAUSE_MPIE, mpie);
+            mc = set_field(mc, MCAUSE_MPP, env->priv);
+            /* MINHV marks that the vector table fetch caused a fault, and mepc is set to the address of the
+               table entry that caused it. This is not implemented. */
+            mc = set_field(mc, MCAUSE_MINHV, 0);
+        }
+        csr_write_helper(env, mc, CSR_MCAUSE);
+
+        if (is_interrupt) {
+            env->mintstatus = set_field(env->mintstatus, MINTSTATUS_MIL, env->clic_interrupt_level);
+        }
         riscv_set_mode(env, PRV_M);
     } else {
         /* handle the trap in S-mode */
         env->sepc = env->pc;
-        env->scause = fixed_cause;
         if (hasbadaddr) {
             env->stval = env->badaddr;
         }
 
-        /* Lowest bit of STVEC changes mode to vectored interrupt */
-        if ((env->stvec & 1) && is_interrupt && (env->privilege_architecture >= RISCV_PRIV1_10)) {
-            env->pc = (env->stvec & ~0x3) + (fixed_cause * 4);
+        /* mtvec controls CLIC mode for all privileges, lowest bit of STVEC switches CLINT vectoring for S mode */
+        if (is_in_clic_mode) {
+            target_ulong vect_addr = env->stvt + bit * sizeof(target_ulong);
+            if (is_interrupt && env->clic_interrupt_vectored) {
+                target_ulong vect = ldp_phys(vect_addr);
+                env->pc = vect;
+            } else {
+                /* CLIC mode exception or shv non-vectored interrupt */
+                env->pc = env->stvec & ~MTVEC_MODE_SUBMODE;
+            }
+        } else if (get_field(env->stvec, MTVEC_MODE) == MTVEC_MODE_CLINT_VECTORED && is_interrupt && (env->privilege_architecture >= RISCV_PRIV1_10)) {
+            /* CLINT vectored mode */
+            env->pc = (env->stvec & ~MTVEC_MODE) + (fixed_cause * 4);
         } else {
-            env->pc = env->stvec & ~0x3;
+            /* CLINT non-vectored mode */
+            env->pc = env->stvec & ~MTVEC_MODE;
         }
 
         target_ulong s = env->mstatus;
@@ -527,6 +569,19 @@ void do_interrupt(CPUState *env)
         s = set_field(s, SSTATUS_SIE, 0);
         s = set_field(s, SSTATUS_SPP, env->priv);
         csr_write_helper(env, s, CSR_SSTATUS);
+        target_ulong sc = fixed_cause;
+        if (is_in_clic_mode) {
+            sc = set_field(sc, SCAUSE_SPIL, get_field(env->mintstatus, MINTSTATUS_SIL));
+            sc = set_field(sc, SCAUSE_SPIE, spie);
+            sc = set_field(sc, SCAUSE_SPP, env->priv);
+            /* SINHV marks that the vector table fetch caused a fault, and sepc is set to the address of the
+               table entry that caused it. This is not implemented. */
+            sc = set_field(sc, SCAUSE_SINHV, 0);
+        }
+        csr_write_helper(env, sc, CSR_SCAUSE);
+        if (is_interrupt) {
+            env->mintstatus = set_field(env->mintstatus, MINTSTATUS_SIL, env->clic_interrupt_level);
+        }
         riscv_set_mode(env, PRV_S);
     }
 

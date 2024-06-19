@@ -61,6 +61,8 @@ typedef struct opcode_hook_mask_t
 
 #define VLEN_MAX (1 << 16)
 
+#define RISCV_CPU_INTERRUPT_CLIC CPU_INTERRUPT_TGT_EXT_0
+
 typedef struct DisasContext {
     struct DisasContextBase base;
     uint64_t opcode;
