@@ -712,7 +712,7 @@ static inline target_ulong csr_read_helper(CPUState *env, target_ulong csrno)
     case CSR_STVAL:
         return env->stval;
     case CSR_STVEC:
-        return env->stvec;
+        return env->stvec | ((env->mtvec & MTVEC_MODE) == MTVEC_MODE_CLIC ? MTVEC_MODE_CLIC : 0);
     case CSR_SCOUNTEREN:
         return env->scounteren;
     case CSR_STVT:
