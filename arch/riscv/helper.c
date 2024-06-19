@@ -484,13 +484,18 @@ void do_interrupt(CPUState *env)
         (fixed_cause == RISCV_EXCP_STORE_AMO_ACCESS_FAULT) || (fixed_cause == RISCV_EXCP_INST_PAGE_FAULT) ||
         (fixed_cause == RISCV_EXCP_LOAD_PAGE_FAULT) || (fixed_cause == RISCV_EXCP_STORE_PAGE_FAULT);
 
+    bool is_clic_interrupt = is_in_clic_mode && is_interrupt;
+
     target_ulong int_priv = env->priv;
-    if (is_in_clic_mode && is_interrupt) {
+    if (is_clic_interrupt) {
         int_priv = env->clic_interrupt_priv;
+        tlib_clic_acknowledge_interrupt();
+        if(env->clic_interrupt_vectored) tlib_clic_clear_edge_interrupt();
     }
 
     /* if in CLIC mode then only medeleg is active (interrupt privilege mode is set in the CLIC instead of mideleg) */
-    if (int_priv == PRV_M || (!((is_interrupt ? env->mideleg : env->medeleg) & (1 << bit)) && (!is_in_clic_mode || !is_interrupt))) {
+    bool is_delegated = (is_interrupt ? env->mideleg : env->medeleg) & (1 << bit);
+    if (int_priv == PRV_M || !(is_delegated || is_clic_interrupt)) {
         /* handle the trap in M-mode */
         env->mepc = env->pc;
         if (hasbadaddr) {
