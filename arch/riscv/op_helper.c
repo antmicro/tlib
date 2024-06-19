@@ -914,6 +914,22 @@ target_ulong helper_sret(CPUState *env, target_ulong cpu_pc_deb)
     riscv_set_mode(env, prev_priv);
     csr_write_helper(env, sstatus, CSR_SSTATUS);
 
+    target_ulong scause = env->scause;
+    scause = set_field(scause, SCAUSE_SPP, PRV_U);
+    scause = set_field(scause, SCAUSE_SPIE, 1);
+    // SCAUSE_SPIL not affected by sret
+    csr_write_helper(env, scause, CSR_SCAUSE);
+
+    if (get_field(env->mtvec, MTVEC_MODE) == MTVEC_MODE_CLIC) {
+        target_ulong sintstatus = env->mintstatus;
+        sintstatus = set_field(sintstatus, MINTSTATUS_SIL, get_field(env->scause, SCAUSE_SPIL));
+        csr_write_helper(env, sintstatus, CSR_SINTSTATUS);
+
+        if (env->scause & SCAUSE_SINHV) {
+            retpc = ldp_phys(retpc) & ~1ULL;
+        }
+    }
+
     acquire_global_memory_lock(env);
     cancel_reservation(env);
     release_global_memory_lock(env);
@@ -949,6 +965,22 @@ target_ulong helper_mret(CPUState *env, target_ulong cpu_pc_deb)
     }
     riscv_set_mode(env, prev_priv);
     csr_write_helper(env, mstatus, CSR_MSTATUS);
+
+    target_ulong mcause = env->mcause;
+    mcause = set_field(mcause, MCAUSE_MPP, PRV_U);
+    mcause = set_field(mcause, MCAUSE_MPIE, 1);
+    // MCAUSE_MPIL not affected by mret
+    csr_write_helper(env, mcause, CSR_MCAUSE);
+
+    if (get_field(env->mtvec, MTVEC_MODE) == MTVEC_MODE_CLIC) {
+        target_ulong mintstatus = env->mintstatus;
+        mintstatus = set_field(mintstatus, MINTSTATUS_MIL, get_field(env->mcause, MCAUSE_MPIL));
+        csr_write_helper(env, mintstatus, CSR_MINTSTATUS);
+
+        if (env->mcause & MCAUSE_MINHV) {
+            retpc = ldp_phys(retpc) & ~1ULL;
+        }
+    }
 
     acquire_global_memory_lock(env);
     cancel_reservation(env);
