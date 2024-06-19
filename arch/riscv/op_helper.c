@@ -207,6 +207,50 @@ static target_ulong mtvec_stvec_write_handler(target_ulong val_to_write, char* r
     return new_value;
 }
 
+static target_ulong mnxti_read_handler(target_ulong src)
+{
+    uint32_t clic_level = env->clic_interrupt_level;
+    if (env->clic_interrupt_pending != EXCP_NONE
+        && env->clic_interrupt_priv == PRV_M
+        && clic_level > get_field(env->mcause, MCAUSE_MPIL)
+        && clic_level > get_field(env->mintthresh, MINTTHRESH_TH)
+        && !env->clic_interrupt_vectored
+    ) {
+        if (src) {
+            csr_write_helper(env, set_field(env->mintstatus, MINTSTATUS_MIL, clic_level), CSR_MINTSTATUS);
+            target_ulong mc = env->mcause;
+            mc = set_field(mc, MCAUSE_EXCCODE, env->clic_interrupt_pending);
+            mc |= MCAUSE_INTERRUPT;
+            csr_write_helper(env, mc, CSR_MCAUSE);
+            tlib_clic_clear_edge_interrupt();
+        }
+        return env->mtvt + env->clic_interrupt_pending * sizeof(target_ulong);
+    }
+    return 0;
+}
+
+static target_ulong snxti_read_handler(target_ulong src)
+{
+    uint32_t clic_level = env->clic_interrupt_level;
+    if (env->clic_interrupt_pending != EXCP_NONE
+        && env->clic_interrupt_priv == PRV_S
+        && clic_level > get_field(env->scause, SCAUSE_SPIL)
+        && clic_level > get_field(env->sintthresh, SINTTHRESH_TH)
+        && !env->clic_interrupt_vectored
+    ) {
+        if (src) {
+            csr_write_helper(env, set_field(env->mintstatus, MINTSTATUS_SIL, clic_level), CSR_MINTSTATUS);
+            target_ulong sc = env->scause;
+            sc = set_field(sc, SCAUSE_EXCCODE, env->clic_interrupt_pending);
+            sc |= SCAUSE_INTERRUPT;
+            csr_write_helper(env, sc, CSR_SCAUSE);
+            tlib_clic_clear_edge_interrupt();
+        }
+        return env->stvt + env->clic_interrupt_pending * sizeof(target_ulong);
+    }
+    return 0;
+}
+
 static inline void warn_nonexistent_csr_read(const int no)
 {
     tlib_printf(LOG_LEVEL_WARNING, "Reading from CSR #%d that is not implemented.", no);
@@ -900,6 +944,25 @@ target_ulong helper_csrrw(CPUState *env, target_ulong src, target_ulong csr)
 target_ulong helper_csrrs(CPUState *env, target_ulong src, target_ulong csr, target_ulong rs1_pass)
 {
     validate_csr(env, csr, rs1_pass != 0);
+
+    /* We implement these CSRs explicitly here because the value used in the RMW (mstatus) is different
+       from the result. */
+    if (csr == CSR_MNXTI) {
+        src &= 0x1f;
+        target_ulong ms = env->mstatus;
+        ms |= src;
+        csr_write_helper(env, ms, CSR_MSTATUS);
+
+        return mnxti_read_handler(src);
+    } else if (csr == CSR_SNXTI) {
+        src &= 0x1f;
+        target_ulong ss = env->mstatus;
+        ss |= src;
+        csr_write_helper(env, ss, CSR_SSTATUS);
+
+        return snxti_read_handler(src);
+    }
+
     uint64_t csr_backup = csr_read_helper(env, csr);
     if (rs1_pass != 0) {
         csr_write_helper(env, src | csr_backup, csr);
@@ -910,6 +973,23 @@ target_ulong helper_csrrs(CPUState *env, target_ulong src, target_ulong csr, tar
 target_ulong helper_csrrc(CPUState *env, target_ulong src, target_ulong csr, target_ulong rs1_pass)
 {
     validate_csr(env, csr, rs1_pass != 0);
+
+    if (csr == CSR_MNXTI) {
+        src &= 0x1f;
+        target_ulong ms = env->mstatus;
+        ms &= ~src;
+        csr_write_helper(env, ms, CSR_MSTATUS);
+
+        return mnxti_read_handler(src);
+    } else if (csr == CSR_SNXTI) {
+        src &= 0x1f;
+        target_ulong ss = env->mstatus;
+        ss &= ~src;
+        csr_write_helper(env, ss, CSR_SSTATUS);
+
+        return snxti_read_handler(src);
+    }
+
     uint64_t csr_backup = csr_read_helper(env, csr);
     if (rs1_pass != 0) {
         csr_write_helper(env, (~src) & csr_backup, csr);
