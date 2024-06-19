@@ -489,7 +489,8 @@ void do_interrupt(CPUState *env)
         int_priv = env->clic_interrupt_priv;
     }
 
-    if (int_priv == PRV_M || !((is_interrupt ? env->mideleg : env->medeleg) & (1 << bit))) {
+    /* if in CLIC mode then only medeleg is active (interrupt privilege mode is set in the CLIC instead of mideleg) */
+    if (int_priv == PRV_M || (!((is_interrupt ? env->mideleg : env->medeleg) & (1 << bit)) && (!is_in_clic_mode || !is_interrupt))) {
         /* handle the trap in M-mode */
         env->mepc = env->pc;
         if (hasbadaddr) {
