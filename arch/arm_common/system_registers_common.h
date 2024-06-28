@@ -347,21 +347,28 @@ static inline uint64_t sysreg_get_by_name(CPUState *env, const char *name, bool 
         return 0x0;
     }
 
+    uint64_t result;
     if(ri->type & ARM_CP_CONST) {
-        return ri->resetvalue;
+        result = ri->resetvalue;
     } else if(ri->readfn) {
-        return ri->readfn(env, ri);
+        result = ri->readfn(env, ri);
     } else if(ri->fieldoffset != 0) {
         if(ri->type & ARM_CP_64BIT) {
-            return *sysreg_field_ptr(env, ri);
+            result = *sysreg_field_ptr(env, ri);
         } else {
-            return *(uint32_t *)sysreg_field_ptr(env, ri);
+            result = *(uint32_t *)sysreg_field_ptr(env, ri);
         }
     } else {
         if(log_unhandled_access) {
             log_unhandled_sysreg_read(ri->name);
         }
         return 0x0;
+    }
+
+    if(ri->type & ARM_CP_64BIT) {
+        return result;
+    } else {
+        return (uint32_t)result;
     }
 }
 
@@ -373,13 +380,18 @@ static inline void sysreg_set_by_name(CPUState *env, const char *name, uint64_t 
         return;
     }
 
+    //  Truncate values written to 32-bit registers.
+    if(!(ri->type & ARM_CP_64BIT)) {
+        value = (uint32_t)value;
+    }
+
     if(ri->writefn) {
         ri->writefn(env, ri, value);
     } else if(ri->fieldoffset != 0) {
         if(ri->type & ARM_CP_64BIT) {
             *sysreg_field_ptr(env, ri) = value;
         } else {
-            *(uint32_t *)sysreg_field_ptr(env, ri) = (uint32_t)value;
+            *(uint32_t *)sysreg_field_ptr(env, ri) = value;
         }
     } else if(log_unhandled_access) {
         log_unhandled_sysreg_write(ri->name);
