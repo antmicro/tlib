@@ -1015,7 +1015,7 @@ void system_instructions_and_registers_reset(CPUState *env)
             continue;
         }
 
-        uint32_t width = ri->cp == (ri->type & ARM_CP_64BIT) ? 64 : 32;
+        uint32_t width = (ri->type & ARM_CP_64BIT) ? 64 : 32;
         uint64_t value = width == 64 ? ri->resetvalue : ri->resetvalue & UINT32_MAX;
 
         tlib_printf(LOG_LEVEL_NOISY, "Resetting value for '%s': 0x%" PRIx64, ri->name, value);
