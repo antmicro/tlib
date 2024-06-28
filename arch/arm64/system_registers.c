@@ -620,8 +620,8 @@ ARMCPRegInfo aarch32_registers[] = {
     ARM32_CP_REG_DEFINE(DBGDEVID1,        14,   0,   7,   1,   7,   1, RW)  // Debug Device ID register 1
     ARM32_CP_REG_DEFINE(DBGDEVID2,        14,   0,   7,   0,   7,   1, RW)  // Debug Device ID register 2
     ARM32_CP_REG_DEFINE(DBGDIDR,          14,   0,   0,   0,   0,   0, RO, READFN(dbgdidr))  // Debug ID Register
-    ARM32_CP_REG_DEFINE(DBGDRAR,          14,   0,   1,   0,   0,   0, RW)  // Debug ROM Address Register
-    ARM32_CP_REG_DEFINE(DBGDSAR,          14,   0,   2,   0,   0,   0, RW)  // Debug Self Address Register
+    ARM32_CP_REG_DEFINE(DBGDRAR_32,       14,   0,   1,   0,   0,   0, RW)  // Debug ROM Address Register
+    ARM32_CP_REG_DEFINE(DBGDSAR_32,       14,   0,   2,   0,   0,   0, RW)  // Debug Self Address Register
     ARM32_CP_REG_DEFINE(DBGDSCRext,       14,   0,   0,   2,   2,   1, RW, FIELD(cp15.mdscr_el1))  // Debug Status and Control Register, External View
     ARM32_CP_REG_DEFINE(DBGDSCRint,       14,   0,   0,   1,   0,   0, RW, FIELD(cp15.mdscr_el1))  // Debug Status and Control Register, Internal ViewAArch32 System Registers
     ARM32_CP_REG_DEFINE(DBGDTRRXext,      14,   0,   0,   0,   2,   1, RW)  // Debug OS Lock Data Transfer Register, Receive, External View
@@ -820,9 +820,9 @@ ARMCPRegInfo aarch32_registers[] = {
     ARM32_CP_REG_DEFINE(MIDR,             15,   0,   0,   0,   0,   1, RO, READFN(midr))  // Main ID Register
     ARM32_CP_REG_DEFINE(MPIDR,            15,   0,   0,   0,   5,   1, RO, READFN(mpidr_el1))  // Multiprocessor Affinity RegisterAArch32 System Registers
     ARM32_CP_REG_DEFINE(NSACR,            15,   0,   1,   1,   2,   1, RW, FIELD(cp15.nsacr), RESETVALUE(0xC00))  // Non-Secure Access Control Register
-    ARM32_CP_REG_DEFINE(PAR,              15,   0,   7,   4,   0,   1, RW, FIELD(cp15.par_ns))  // Physical Address Register
+    ARM32_CP_REG_DEFINE(PAR_32,           15,   0,   7,   4,   0,   1, RW, FIELD(cp15.par_ns))  // Physical Address Register
     ARM32_CP_REG_DEFINE(PMCCFILTR,        15,   0,  14,  15,   7,   0, RW, FIELD(cp15.pmccfiltr_el0))  // Performance Monitors Cycle Count Filter Register
-    ARM32_CP_REG_DEFINE(PMCCNTR,          15,   0,   9,  13,   0,   0, RW)  // Performance Monitors Cycle Count Register
+    ARM32_CP_REG_DEFINE(PMCCNTR_32,       15,   0,   9,  13,   0,   0, RW)  // Performance Monitors Cycle Count Register
     ARM32_CP_REG_DEFINE(PMCEID0,          15,   0,   9,  12,   6,   0, RO | ARM_CP_CONST, RESETVALUE(0x6E1FFFDB))  // Performance Monitors Common Event Identification register 0
     ARM32_CP_REG_DEFINE(PMCEID1,          15,   0,   9,  12,   7,   0, RO | ARM_CP_CONST, RESETVALUE(0x0000001E))  // Performance Monitors Common Event Identification register 1
     ARM32_CP_REG_DEFINE(PMCEID2,          15,   0,   9,  14,   4,   0, RO)  // Performance Monitors Common Event Identification register 2
@@ -919,8 +919,8 @@ ARMCPRegInfo aarch32_registers[] = {
     ARM32_CP_REG_DEFINE(TRFCR,            15,   0,   1,   2,   1,   1, RW)  // Trace Filter Control Register
     ARM32_CP_REG_DEFINE(TTBCR,            15,   0,   2,   0,   2,   1, RW)  // Translation Table Base Control Register
     ARM32_CP_REG_DEFINE(TTBCR2,           15,   0,   2,   0,   3,   1, RW)  // Translation Table Base Control Register 2
-    ARM32_CP_REG_DEFINE(TTBR0,            15,   0,   2,   0,   0,   1, RW, FIELD(cp15.ttbr0_ns))  // Translation Table Base Register 0
-    ARM32_CP_REG_DEFINE(TTBR1,            15,   0,   2,   0,   1,   1, RW, FIELD(cp15.ttbr1_ns))  // Translation Table Base Register 1
+    ARM32_CP_REG_DEFINE(TTBR0_32,         15,   0,   2,   0,   0,   1, RW, FIELD(cp15.ttbr0_ns))  // Translation Table Base Register 0
+    ARM32_CP_REG_DEFINE(TTBR1_32,         15,   0,   2,   0,   1,   1, RW, FIELD(cp15.ttbr1_ns))  // Translation Table Base Register 1
     ARM32_CP_REG_DEFINE(VBAR,             15,   0,  12,   0,   0,   1, RW, FIELD(cp15.vbar_ns))  // Vector Base Address Register
     ARM32_CP_REG_DEFINE(VDFSR,            15,   4,   5,   2,   3,   0, RW)  // Virtual SError Exception Syndrome Register
     ARM32_CP_REG_DEFINE(VDISR,            15,   4,  12,   1,   1,   2, RW, FIELD(cp15.vdisr_el2))  // Virtual Deferred Interrupt Status Register
