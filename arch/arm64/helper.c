@@ -411,7 +411,7 @@ void cpu_init_r52(CPUState *env, uint32_t id)
     //  MPIDR will be modified in runtime, by calling `tlib_get_mp_index`
     //  which passes CPUID, CLUSTERIDAFF2 and CLUSTERIDAFF3 configuration signals.
     env->arm_core_config.mpidr =  //  32bit, from 3.3.78
-        (0x1 << 31) |             //  M, RES1
+        (0x1u << 31) |            //  M, RES1
         (0x0 << 30) |             //  U, core is part of cluster (no single core)
         (0x0 << 25) |             //  RES0
         (0x0 << 24);              //  MT

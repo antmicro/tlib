@@ -38,7 +38,7 @@ enum arm_cpu_mode;
 #define PMUSERENR_EN (1 << 0)
 
 #define PMXEVTYPER_EVT 0xFF
-#define PMXEVTYPER_P   (1 << 31)
+#define PMXEVTYPER_P   (1u << 31)
 #define PMXEVTYPER_U   (1 << 30)
 
 //  Implemented PMU events
