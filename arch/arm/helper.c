@@ -1552,6 +1552,13 @@ static bool page_with_address_is_fully_covered_by_consistent_mpu_subregions(uint
     return true;
 }
 
+static bool is_cortexm_ppb_region(CPUState *env, uint32_t address)
+{
+    /* PPB region 0xe0000000 - 0xe00fffff for Cortex-M */
+    return arm_feature(env, ARM_FEATURE_MPU) && !arm_feature(env, ARM_FEATURE_PMSA) &&
+        extract32(address, 20, 12) == 0xe00;
+}
+
 static int get_phys_addr_mpu(CPUState *env, uint32_t address, int access_type, int is_user, uint32_t *phys_ptr, int *prot,
                              target_ulong *page_size)
 {
@@ -1567,6 +1574,12 @@ static int get_phys_addr_mpu(CPUState *env, uint32_t address, int access_type, i
 #if DEBUG
     tlib_printf(LOG_LEVEL_DEBUG, "MPU: Trying to access address 0x%X", address);
 #endif
+
+    /* Accesses to the Private Peripheral Bus (PPB) always use the default system address map */
+    /* See ARMv7-M Architecture Reference Manual - B3.5.1 */
+    if (is_cortexm_ppb_region(env, address)) {
+        return cortexm_check_default_mapping(address, prot, access_type);
+    }
 
     for (n = env->number_of_mpu_regions - 1; n >= 0; n--) {
         if (!(env->cp15.c6_size_and_enable[n] & MPU_REGION_ENABLED_BIT)) {
