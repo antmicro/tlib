@@ -2789,6 +2789,55 @@ static int generate_vsel_insn(CPUState *env, DisasContext *s, uint32_t insn)
     return 0;
 }
 
+/* See ARMv7-M Architecture Reference Manual - A7.7.237 */
+static int handle_vminmaxnm(uint32_t insn, uint32_t rd, uint32_t rn,
+                            uint32_t rm, uint32_t dp)
+{
+    uint32_t vmin = extract32(insn, 6, 1);
+    TCGv_ptr fpst = get_fpstatus_ptr(0);
+
+    if (dp) {
+        TCGv_i64 frn, frm, dest;
+
+        frn = tcg_temp_new_i64();
+        frm = tcg_temp_new_i64();
+        dest = tcg_temp_new_i64();
+
+        tcg_gen_ld_f64(frn, cpu_env, vfp_reg_offset(dp, rn));
+        tcg_gen_ld_f64(frm, cpu_env, vfp_reg_offset(dp, rm));
+        if (vmin) {
+            gen_helper_vfp_minnumd(dest, frn, frm, fpst);
+        } else {
+            gen_helper_vfp_maxnumd(dest, frn, frm, fpst);
+        }
+        tcg_gen_st_f64(dest, cpu_env, vfp_reg_offset(dp, rd));
+        tcg_temp_free_i64(frn);
+        tcg_temp_free_i64(frm);
+        tcg_temp_free_i64(dest);
+    } else {
+        TCGv_i32 frn, frm, dest;
+
+        frn = tcg_temp_new_i32();
+        frm = tcg_temp_new_i32();
+        dest = tcg_temp_new_i32();
+
+        tcg_gen_ld_f32(frn, cpu_env, vfp_reg_offset(dp, rn));
+        tcg_gen_ld_f32(frm, cpu_env, vfp_reg_offset(dp, rm));
+        if (vmin) {
+            gen_helper_vfp_minnums(dest, frn, frm, fpst);
+        } else {
+            gen_helper_vfp_maxnums(dest, frn, frm, fpst);
+        }
+        tcg_gen_st_f32(dest, cpu_env, vfp_reg_offset(dp, rd));
+        tcg_temp_free_i32(frn);
+        tcg_temp_free_i32(frm);
+        tcg_temp_free_i32(dest);
+    }
+
+    tcg_temp_free_ptr(fpst);
+    return 0;
+}
+
 /* Disassemble a VFP instruction.  Returns nonzero if an error occurred
    (ie. an undefined instruction).  */
 static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
@@ -3211,6 +3260,15 @@ case_default:
                     break;
                 case 8:  /* div: fn / fm */
                     gen_vfp_div(dp);
+                    break;
+                case 9: /* VMAXNM/VMINNM */
+                    /* TODO: may need to introduce feature like VFP5 here */
+                    /* FPv5 FPU add new floating-point maximum and minimum numbers instructions
+                     * See ARMv7-M Architecture Reference Manual - A2.5 */
+                    if (!arm_feature(env, ARM_FEATURE_VFP4)) {
+                        return 1;
+                    }
+                    handle_vminmaxnm(insn, rd, rn, rm, dp);
                     break;
                 case 10: /* VFNMA : fd = muladd(-fd,  fn, fm) */
                 case 11: /* VFNMS : fd = muladd(-fd, -fn, fm) */
