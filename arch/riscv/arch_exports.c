@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include "cpu.h"
 #include "unwind.h"
+#include "arch_exports.h"
 
 void tlib_set_hart_id(uint32_t id)
 {
