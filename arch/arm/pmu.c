@@ -10,7 +10,7 @@
 #include "cpu.h"
 #include "pmu.h"
 
-// *INDENT-OFF*
+// clang-format off
 static pmu_event pmu_events[] = {
     {
         .identifier = PMU_EVENT_SOFTWARE_INCREMENT,
@@ -25,7 +25,7 @@ static pmu_event pmu_events[] = {
         .name = "CPU Cycle"
     }
 };
-// *INDENT-ON*
+// clang-format on
 
 static inline void pmu_set_snapshot(pmu_counter *const counter, uint64_t snapshot)
 {
@@ -380,7 +380,7 @@ uint64_t get_c9_pmccntr(struct CPUState *env)
 
 void set_c9_pmselr(struct CPUState *env, uint64_t val)
 {
-    // *INDENT-OFF*
+// clang-format off
     if (val >= env->pmu.counters_number && val != PMU_CYCLE_COUNTER_ID) {
         // Access to unsupported counter is UNPREDICTABLE. Let's be more predictable than and prevent the write with error log
         tlib_printf(LOG_LEVEL_ERROR,
@@ -388,7 +388,7 @@ void set_c9_pmselr(struct CPUState *env, uint64_t val)
                     val, env->pmu.counters_number - 1, PMU_CYCLE_COUNTER_ID);
         return;
     }
-    // *INDENT-ON*
+// clang-format on
     env->pmu.selected_counter_id = val;
 
     // Cache event id, if we want to read it
@@ -458,7 +458,7 @@ void set_c9_pmxevtyper(struct CPUState *env, uint64_t val)
 uint32_t get_c9_pmxevcntr(struct CPUState *env)
 {
     pmu_counter *const counter = pmu_get_counter(env->pmu.selected_counter_id);
-    // *INDENT-OFF*
+// clang-format off
     if (pmu_is_insns_or_cycles_counter(counter)) {
         uint32_t value = pmu_get_insn_cycle_value(counter);
         if (unlikely(env->pmu.extra_logs_enabled)) {
@@ -474,7 +474,7 @@ uint32_t get_c9_pmxevcntr(struct CPUState *env)
         }
         return counter->val;
     }
-    // *INDENT-ON*
+// clang-format on
 }
 
 void set_c9_pmxevcntr(struct CPUState *env, uint64_t val)
@@ -546,7 +546,7 @@ void pmu_update_cycles_instruction_limit_custom_mode(const pmu_counter *const co
         return;
     }
 
-    // *INDENT-OFF*
+// clang-format off
     if (counter->measured_event_id == PMU_EVENT_CYCLES) {
         // CPU cycles
         env->pmu.cycles_overflow_nearest_limit = MIN(env->pmu.cycles_overflow_nearest_limit, UINT32_MAX - pmu_get_insn_cycle_value(counter));
@@ -554,7 +554,7 @@ void pmu_update_cycles_instruction_limit_custom_mode(const pmu_counter *const co
         // Instructions executed
         env->pmu.insns_overflow_nearest_limit = MIN(env->pmu.insns_overflow_nearest_limit, UINT32_MAX - pmu_get_insn_cycle_value(counter));
     }
-    // *INDENT-ON*
+// clang-format on
 
 }
 #undef MIN
@@ -630,10 +630,10 @@ void pmu_update_counter(CPUState *env, pmu_counter *const counter, uint64_t amou
     }
 
     if (unlikely(env->pmu.extra_logs_enabled)) {
-        // *INDENT-OFF*
+// clang-format off
         tlib_printf(LOG_LEVEL_DEBUG, "PMU counter %d updated by 0x%" PRIx64 ", it's now 0x%" PRIx32 ".%s", 
                     counter->id, amount, pmu_get_insn_cycle_value(counter), overflowed ? " Overflow occurred." : "");
-        // *INDENT-ON*
+// clang-format on
     }
 
     if (overflowed) {

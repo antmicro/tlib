@@ -406,7 +406,7 @@ void cpu_sparc_set_id(CPUState *env, unsigned int cpu)
     env->mxccregs[7] = ((cpu + 8) & 0xf) << 24;
 }
 
-/* *INDENT-OFF* */
+// clang-format off
 
 static const sparc_def_t sparc_defs[] = {
     {
@@ -734,7 +734,7 @@ static const sparc_def_t sparc_defs[] = {
     },
 };
 
-/* *INDENT-ON* */
+// clang-format on
 
 static const char *const feature_name[] = {
     "float", "float128", "swap", "mul", "div", "flush", "fsqrt", "fmul", "vis1", "vis2", "fsmuld", "hypv", "cmt", "gl",

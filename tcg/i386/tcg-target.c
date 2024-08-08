@@ -22,7 +22,7 @@
  * THE SOFTWARE.
  */
 
-/* *INDENT-OFF* */
+// clang-format off
 static const int tcg_target_reg_alloc_order[] = {
 #if TCG_TARGET_REG_BITS == 64
     TCG_REG_RBP,
@@ -78,7 +78,7 @@ static const int tcg_target_call_oarg_regs[] = {
 #endif
 };
 
-/* *INDENT-ON* */
+// clang-format on
 
 static uint8_t *tb_ret_addr;
 
@@ -1391,7 +1391,7 @@ static void tcg_out_qemu_st(TCGContext *s, const TCGArg *args, int opc)
     }
 }
 
-/* *INDENT-OFF* */
+// clang-format off
 
 static inline void tcg_out_op(TCGContext *s, TCGOpcode opc,
                               const TCGArg *args, const int *const_args)
@@ -1953,7 +1953,7 @@ static int tcg_target_callee_save_regs[] = {
 #endif
 };
 
-/* *INDENT-ON* */
+// clang-format on
 
 /* Generate global QEMU prologue and epilogue code */
 static void tcg_target_qemu_prologue(TCGContext *s)

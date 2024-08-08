@@ -287,7 +287,7 @@ enum arm_cond_code_e {
     COND_AL = 0xe,
 };
 
-/* *INDENT-OFF* */
+// clang-format off
 
 static const uint8_t tcg_cond_to_arm_cond[] = {
     [TCG_COND_EQ] = COND_EQ,
@@ -303,7 +303,7 @@ static const uint8_t tcg_cond_to_arm_cond[] = {
     [TCG_COND_GTU] = COND_HI,
 };
 
-/* *INDENT-ON* */
+// clang-format on
 
 static inline void tcg_out_bx(TCGContext *s, int cond, int rn)
 {
@@ -1416,7 +1416,7 @@ gen_shift32:
     }
 }
 
-/* *INDENT-OFF* */
+// clang-format off
 
 static const TCGTargetOpDef arm_op_defs[] = {
     { INDEX_op_exit_tb, { } },
@@ -1502,7 +1502,7 @@ static const TCGTargetOpDef arm_op_defs[] = {
     { -1 },
 };
 
-/* *INDENT-ON* */
+// clang-format on
 
 static void tcg_target_init(TCGContext *s)
 {

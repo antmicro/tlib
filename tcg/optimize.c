@@ -265,7 +265,7 @@ static TCGArg do_constant_folding(TCGOpcode op, TCGArg x, TCGArg y)
     return res;
 }
 
-/* *INDENT-OFF* */
+// clang-format off
 
 /* Propagate constants and copies, fold constant expressions. */
 static TCGArg *tcg_constant_folding(TCGContext *s, uint16_t *tcg_opc_ptr,
@@ -516,7 +516,7 @@ static TCGArg *tcg_constant_folding(TCGContext *s, uint16_t *tcg_opc_ptr,
     return gen_args;
 }
 
-/* *INDENT-ON* */
+// clang-format on
 
 TCGArg *tcg_optimize(TCGContext *s, uint16_t *tcg_opc_ptr, TCGArg *args, TCGOpDef *tcg_op_defs)
 {
