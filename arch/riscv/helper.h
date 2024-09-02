@@ -116,6 +116,7 @@ DEF_HELPER_1(fence_i, void, env)
 
 /* Vector Extension */
 DEF_HELPER_6(vsetvl, tl, env, tl, tl, tl, tl, i32)
+DEF_HELPER_1(check_is_vmulh_valid, void, env)
 
 DEF_HELPER_4(vle8, void, env, i32, i32, i32)
 DEF_HELPER_4(vle8ff, void, env, i32, i32, i32)

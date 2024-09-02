@@ -1513,12 +1513,14 @@ static void gen_v_load(DisasContext *dc, uint32_t opc, uint32_t rest, uint32_t v
     tlib_abort("Vector extension isn't available on 32-bit hosts.");
 #else
     uint32_t vm = extract32(rest, 0, 1);
-    uint32_t mew = extract32(rest, 3, 1);
+    uint32_t mew = extract32(rest, 3, 1); // 1 is a currently reserved encoding
     uint32_t nf = extract32(rest, 4, 3);
-    if (!ensure_extension(dc, RISCV_FEATURE_RVV) || mew) {
+
+    if (!does_vector_embedded_extension_support_vsew(cpu, width) || mew) {
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         return;
     }
+
     if (MASK_OP_V_LOAD_US(dc->opcode) != OPC_RISC_VL_US_WR) {
         generate_vill_check(dc);
     }
@@ -1672,11 +1674,16 @@ static void gen_v_load(DisasContext *dc, uint32_t opc, uint32_t rest, uint32_t v
             }
             break;
         case 3:
+#if defined(TARGET_RISCV32)
+            // Indexed instructions for EEW=64 and XLEN=32 aren't supported.
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+#else
             if (vm) {
                 gen_helper_vlxei64(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
             } else {
                 gen_helper_vlxei64_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
             }
+#endif
             break;
         }
         break;
@@ -1745,10 +1752,12 @@ static void gen_v_store(DisasContext *dc, uint32_t opc, uint32_t rest, uint32_t 
     uint32_t vm = extract32(rest, 0, 1);
     uint32_t mew = extract32(rest, 3, 1);
     uint32_t nf = extract32(rest, 4, 3);
-    if (!ensure_extension(dc, RISCV_FEATURE_RVV) || mew) {
+
+    if (!does_vector_embedded_extension_support_vsew(cpu, width) || mew) {
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         return;
     }
+
     if (MASK_OP_V_STORE_US(dc->opcode) != OPC_RISC_VS_US_WR) {
         generate_vill_check(dc);
     }
@@ -1874,11 +1883,16 @@ static void gen_v_store(DisasContext *dc, uint32_t opc, uint32_t rest, uint32_t 
             }
             break;
         case 3:
+#if defined(TARGET_RISCV32)
+            // Indexed instructions for EEW=64 and XLEN=32 aren't supported.
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+#else
             if (vm) {
                 gen_helper_vsxei64(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
             } else {
                 gen_helper_vsxei64_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
             }
+#endif
             break;
         }
         break;
@@ -2827,6 +2841,11 @@ static void gen_system(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2,
 static void gen_v_cfg(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2, int imm)
 {
     TCGv rs1_value, rs2_value, zimm, returned_vl, rd_index, rs1_index, rs1_is_uimm;
+
+    if (!is_vector_embedded_extension_supported(cpu)) {
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        return;
+    }
 
     zimm = tcg_temp_new();
     rd_index = tcg_temp_new();
@@ -3966,6 +3985,7 @@ static void gen_v_opmvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_MULHU:
+        gen_helper_check_is_vmulh_valid(cpu_env);
         if (vm) {
             gen_helper_vmulhu_mvv(cpu_env, t_vd, t_vs2, t_vs1);
         } else {
@@ -3980,6 +4000,7 @@ static void gen_v_opmvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_MULHSU:
+        gen_helper_check_is_vmulh_valid(cpu_env);
         if (vm) {
             gen_helper_vmulhsu_mvv(cpu_env, t_vd, t_vs2, t_vs1);
         } else {
@@ -3987,6 +4008,7 @@ static void gen_v_opmvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_MULH:
+        gen_helper_check_is_vmulh_valid(cpu_env);
         if (vm) {
             gen_helper_vmulh_mvv(cpu_env, t_vd, t_vs2, t_vs1);
         } else {
@@ -4220,6 +4242,7 @@ static void gen_v_opmvx(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
         }
         break;
     case RISC_V_FUNCT_MULHU:
+        gen_helper_check_is_vmulh_valid(cpu_env);
         if (vm) {
             gen_helper_vmulhu_mvx(cpu_env, t_vd, t_vs2, t_tl);
         } else {
@@ -4234,6 +4257,7 @@ static void gen_v_opmvx(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
         }
         break;
     case RISC_V_FUNCT_MULHSU:
+        gen_helper_check_is_vmulh_valid(cpu_env);
         if (vm) {
             gen_helper_vmulhsu_mvx(cpu_env, t_vd, t_vs2, t_tl);
         } else {
@@ -4241,6 +4265,7 @@ static void gen_v_opmvx(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
         }
         break;
     case RISC_V_FUNCT_MULH:
+        gen_helper_check_is_vmulh_valid(cpu_env);
         if (vm) {
             gen_helper_vmulh_mvx(cpu_env, t_vd, t_vs2, t_tl);
         } else {
@@ -5154,10 +5179,6 @@ static void gen_v(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2, int 
 #if HOST_LONG_BITS == 32
     tlib_abort("Vector extension isn't available on 32-bit hosts.");
 #else
-    if (!ensure_extension(dc, RISCV_FEATURE_RVV)) {
-        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
-        return;
-    }
     uint8_t funct6 = extract32(dc->opcode, 26, 6);
     uint8_t vm = extract32(dc->opcode, 25, 1);
 

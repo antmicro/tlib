@@ -358,24 +358,35 @@ static inline int riscv_has_additional_ext(CPUState *env, enum riscv_additional_
     return env->additional_extensions & (1 << extension);
 }
 
-static inline bool is_vector_embedded_extension_supports(CPUState *env, target_ulong eew)
+static inline bool is_vector_embedded_extension_supported(CPUState *env)
+{
+    // Check is the most basic extension supported.
+    return riscv_has_additional_ext(env, RISCV_FEATURE_ZVE32X);
+}
+
+static inline bool does_vector_embedded_extension_support_vsew(CPUState *env, target_ulong vsew)
+{
+    // Assume there is no EEW larger than 64.
+    return riscv_has_additional_ext(env, RISCV_FEATURE_ZVE64X) || (vsew < 0b11 && riscv_has_additional_ext(env, RISCV_FEATURE_ZVE32X));
+}
+
+static inline bool does_vector_embedded_extension_support_eew(CPUState *env, target_ulong eew)
 {
     // Assume there is no EEW larger than 64.
     return riscv_has_additional_ext(env, RISCV_FEATURE_ZVE64X) || (eew < 64 && riscv_has_additional_ext(env, RISCV_FEATURE_ZVE32X));
 }
 
-static inline bool is_vector_embedded_extension_supports_float(CPUState *env, target_ulong eew, enum riscv_floating_point_precision precision)
+static inline bool does_vector_embedded_extension_support_float_for_eew(CPUState *env, target_ulong eew)
 {
-    // Assume there is no EEW larger than 64.
-    if(precision == RISCV_SINGLE_PRECISION)
+    if(eew == 32)
     {
-        return riscv_has_additional_ext(env, RISCV_FEATURE_ZVE64F) || (eew < 64 && riscv_has_additional_ext(env, RISCV_FEATURE_ZVE32F));
+        return riscv_has_additional_ext(env, RISCV_FEATURE_ZVE64F) || riscv_has_additional_ext(env, RISCV_FEATURE_ZVE32F);
     }
-    if(precision == RISCV_HALF_PRECISION)
+    if(eew == 16)
     {
         return riscv_has_additional_ext(env, RISCV_FEATURE_ZVFH);
     }
-    if(precision == RISCV_DOUBLE_PRECISION)
+    if(eew == 64)
     {
         return riscv_has_additional_ext(env, RISCV_FEATURE_ZVE64F);
     }

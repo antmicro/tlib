@@ -475,8 +475,9 @@ void helper_vsm(CPUState *env, uint32_t vd, uint32_t rs1)
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, target_long imm)      \
 {                                                                                                       \
     const target_ulong eew = env->vsew;                                                                 \
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {                                                      \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                           \
+    if (!does_vector_embedded_extension_support_eew(env, eew)                                           \
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {                                                   \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
     }                                                                                                   \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                    \
         TEST_MASK(ei)                                                                                   \
@@ -504,8 +505,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, target_long imm)      \
 {                                                                                                       \
     const target_ulong eew = env->vsew;                                                                 \
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {                                                      \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                           \
+    if (!does_vector_embedded_extension_support_eew(env, eew)                                           \
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {                                                   \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
     }                                                                                                   \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                    \
         TEST_MASK(ei)                                                                                   \
@@ -533,8 +535,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, target_long imm)      \
 {                                                                                                       \
     const target_ulong eew = env->vsew;                                                                 \
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {                                                      \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                           \
+    if (!does_vector_embedded_extension_support_eew(env, eew)                                           \
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {                                                   \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
     }                                                                                                   \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                    \
         TEST_MASK(ei)                                                                                   \
@@ -562,8 +565,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)         \
 {                                                                                                       \
     const target_ulong eew = env->vsew;                                                                 \
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                                \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                           \
+    if (!does_vector_embedded_extension_support_eew(env, eew)                                           \
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                             \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
     }                                                                                                   \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                    \
         TEST_MASK(ei)                                                                                   \
@@ -591,8 +595,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)         \
 {                                                                                                       \
     const target_ulong eew = env->vsew;                                                                 \
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                                \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                           \
+    if (!does_vector_embedded_extension_support_eew(env, eew)                                           \
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                             \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
     }                                                                                                   \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                    \
         TEST_MASK(ei)                                                                                   \
@@ -620,8 +625,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)         \
 {                                                                                                       \
     const target_ulong eew = env->vsew;                                                                 \
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                                \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                           \
+    if (!does_vector_embedded_extension_support_eew(env, eew)                                           \
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                             \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
     }                                                                                                   \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                    \
         TEST_MASK(ei)                                                                                   \
@@ -649,8 +655,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, target_long imm)                  \
 {                                                                                                                   \
     const target_ulong eew = env->vsew;                                                                             \
-    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                                                    \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                       \
+    if (!does_vector_embedded_extension_support_eew(env, eew << 1)                                                  \
+        || V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                                                 \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                  \
     }                                                                                                               \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                                \
         TEST_MASK(ei)                                                                                               \
@@ -675,8 +682,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, target_long imm)      \
 {                                                                                                       \
     const target_ulong eew = env->vsew;                                                                 \
-    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                                        \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                           \
+    if (!does_vector_embedded_extension_support_eew(env, eew << 1)                                      \
+        || V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                                     \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
     }                                                                                                   \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                    \
         TEST_MASK(ei)                                                                                   \
@@ -701,8 +709,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, target_long imm)              \
 {                                                                                                               \
     const target_ulong eew = env->vsew;                                                                         \
-    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                                                \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                   \
+    if (!does_vector_embedded_extension_support_eew(env, eew << 1)                                              \
+        || V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                                             \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                              \
     }                                                                                                           \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                            \
         TEST_MASK(ei)                                                                                           \
@@ -727,8 +736,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)                     \
 {                                                                                                                   \
     const target_ulong eew = env->vsew;                                                                             \
-    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                              \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                       \
+    if (!does_vector_embedded_extension_support_eew(env, eew << 1)                                                  \
+        || V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                           \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                  \
     }                                                                                                               \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                                \
         TEST_MASK(ei)                                                                                               \
@@ -753,8 +763,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)                 \
 {                                                                                                               \
     const target_ulong eew = env->vsew;                                                                         \
-    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                          \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                   \
+    if (!does_vector_embedded_extension_support_eew(env, eew << 1)                                              \
+        || V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                       \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                              \
     }                                                                                                           \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                            \
         TEST_MASK(ei)                                                                                           \
@@ -779,8 +790,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)                 \
 {                                                                                                               \
     const target_ulong eew = env->vsew;                                                                         \
-    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                          \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                   \
+    if (!does_vector_embedded_extension_support_eew(env, eew << 1)                                              \
+        || V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                       \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                              \
     }                                                                                                           \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                            \
         TEST_MASK(ei)                                                                                           \
@@ -805,8 +817,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, target_long imm)      \
 {                                                                                                       \
     const target_ulong eew = env->vsew;                                                                 \
-    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID_EEW(vs2, eew << 1)) {                          \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                           \
+    if (!does_vector_embedded_extension_support_eew(env, eew << 1)                                      \
+        || V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID_EEW(vs2, eew << 1)) {                       \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
     }                                                                                                   \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                    \
         TEST_MASK(ei)                                                                                   \
@@ -831,8 +844,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, target_long imm)      \
 {                                                                                                       \
     const target_ulong eew = env->vsew;                                                                 \
-    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID_EEW(vs2, eew << 1)) {                          \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                           \
+    if (!does_vector_embedded_extension_support_eew(env, eew << 1)                                      \
+        || V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID_EEW(vs2, eew << 1)) {                       \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
     }                                                                                                   \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                    \
         TEST_MASK(ei)                                                                                   \
@@ -857,8 +871,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)             \
 {                                                                                                           \
     const target_ulong eew = env->vsew;                                                                     \
-    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID_EEW(vs2, eew << 1) || V_IDX_INVALID(vs1)) {        \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                               \
+    if (!does_vector_embedded_extension_support_eew(env, eew << 1)                                          \
+        || V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID_EEW(vs2, eew << 1) || V_IDX_INVALID(vs1)) {     \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                          \
     }                                                                                                       \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                        \
         TEST_MASK(ei)                                                                                       \
@@ -883,8 +898,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)         \
 {                                                                                                       \
     const target_ulong eew = env->vsew;                                                                 \
-    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID_EEW(vs2, eew << 1) || V_IDX_INVALID(vs1)) {    \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                           \
+    if (!does_vector_embedded_extension_support_eew(env, eew << 1)                                      \
+        || V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID_EEW(vs2, eew << 1) || V_IDX_INVALID(vs1)) { \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
     }                                                                                                   \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                    \
         TEST_MASK(ei)                                                                                   \
@@ -909,8 +925,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, target_long imm)      \
 {                                                                                                       \
     const target_ulong eew = env->vsew;                                                                 \
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1)) {                                        \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                           \
+    if (!does_vector_embedded_extension_support_eew(env, eew << 1)                                      \
+        || V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1)) {                                     \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
     }                                                                                                   \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                    \
         TEST_MASK(ei)                                                                                   \
@@ -935,8 +952,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, target_long imm)      \
 {                                                                                                       \
     const target_ulong eew = env->vsew;                                                                 \
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1)) {                                        \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                           \
+    if (!does_vector_embedded_extension_support_eew(env, eew << 1)                                      \
+        || V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1)) {                                     \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
     }                                                                                                   \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                    \
         TEST_MASK(ei)                                                                                   \
@@ -961,8 +979,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)         \
 {                                                                                                       \
     const target_ulong eew = env->vsew;                                                                 \
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1) || V_IDX_INVALID(vs1)) {                  \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                           \
+    if (!does_vector_embedded_extension_support_eew(env, eew << 1)                                      \
+        || V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1) || V_IDX_INVALID(vs1)) {               \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
     }                                                                                                   \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                    \
         TEST_MASK(ei)                                                                                   \
@@ -987,8 +1006,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)         \
 {                                                                                                       \
     const target_ulong eew = env->vsew;                                                                 \
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1) || V_IDX_INVALID(vs1)) {                  \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                           \
+    if (!does_vector_embedded_extension_support_eew(env, eew << 1)                                      \
+        || V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1) || V_IDX_INVALID(vs1)) {               \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
     }                                                                                                   \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                    \
         TEST_MASK(ei)                                                                                   \
@@ -1034,8 +1054,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, target_ulong imm)     \
 {                                                                                                       \
     const target_ulong eew = env->vsew;                                                                 \
-    if (V_IDX_INVALID_EEW(vd, 8) || V_IDX_INVALID(vs2)) {                                               \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                           \
+    if (!does_vector_embedded_extension_support_eew(env, eew)                                           \
+        || V_IDX_INVALID_EEW(vd, 8) || V_IDX_INVALID(vs2)) {                                            \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
     }                                                                                                   \
     uint8_t mask = 0, value = 0;                                                                        \
     for (int ei = 0; ei < env->vl; ++ei) {                                                              \
@@ -1067,8 +1088,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, target_long imm)      \
 {                                                                                                       \
     const target_ulong eew = env->vsew;                                                                 \
-    if (V_IDX_INVALID_EEW(vd, 8) || V_IDX_INVALID(vs2)) {                                               \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                           \
+    if (!does_vector_embedded_extension_support_eew(env, eew)                                           \
+        || V_IDX_INVALID_EEW(vd, 8) || V_IDX_INVALID(vs2)) {                                            \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
     }                                                                                                   \
     uint8_t mask = 0, value = 0;                                                                        \
     for (int ei = 0; ei < env->vl; ++ei) {                                                              \
@@ -1100,8 +1122,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)         \
 {                                                                                                       \
     const target_ulong eew = env->vsew;                                                                 \
-    if (V_IDX_INVALID_EEW(vd, 8) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                         \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                           \
+    if (!does_vector_embedded_extension_support_eew(env, eew)                                           \
+        || V_IDX_INVALID_EEW(vd, 8) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                      \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
     }                                                                                                   \
     uint8_t mask = 0, value = 0;                                                                        \
     for (int ei = 0; ei < env->vl; ++ei) {                                                              \
@@ -1133,8 +1156,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)         \
 {                                                                                                       \
     const target_ulong eew = env->vsew;                                                                 \
-    if (V_IDX_INVALID_EEW(vd, 8) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                         \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                           \
+    if (!does_vector_embedded_extension_support_eew(env, eew)                                           \
+        || V_IDX_INVALID_EEW(vd, 8) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                      \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
     }                                                                                                   \
     uint8_t mask = 0, value = 0;                                                                        \
     for (int ei = 0; ei < env->vl; ++ei) {                                                              \
@@ -1166,8 +1190,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, target_long imm)         \
 {                                                                                                           \
     const target_ulong eew = env->vsew;                                                                     \
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {                                                          \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                               \
+    if (!does_vector_embedded_extension_support_eew(env, eew)                                               \
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {                                                       \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                          \
     }                                                                                                       \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                        \
         TEST_MASK(ei)                                                                                       \
@@ -1195,8 +1220,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)                     \
 {                                                                                                                   \
     const target_ulong eew = env->vsew;                                                                             \
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                                            \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                       \
+    if (!does_vector_embedded_extension_support_eew(env, eew)                                                       \
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                                         \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                  \
     }                                                                                                               \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                                \
         TEST_MASK(ei)                                                                                               \
@@ -1224,8 +1250,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, target_ulong imm)                                 \
 {                                                                                                                                   \
     const target_ulong eew = env->vsew;                                                                                             \
-    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                                                                    \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                       \
+    if (!does_vector_embedded_extension_support_eew(env, eew << 1)                                                                  \
+        || V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                                                                 \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                  \
     }                                                                                                                               \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                                                \
         TEST_MASK(ei)                                                                                                               \
@@ -1250,8 +1277,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, target_ulong imm)                             \
 {                                                                                                                               \
     const target_ulong eew = env->vsew;                                                                                         \
-    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                                                                \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                   \
+    if (!does_vector_embedded_extension_support_eew(env, eew << 1)                                                              \
+        || V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                                                             \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                              \
     }                                                                                                                           \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                                            \
         TEST_MASK(ei)                                                                                                           \
@@ -1276,8 +1304,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, target_ulong imm)                             \
 {                                                                                                                               \
     const target_ulong eew = env->vsew;                                                                                         \
-    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                                                                \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                   \
+    if (!does_vector_embedded_extension_support_eew(env, eew << 1)                                                              \
+        || V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                                                             \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                              \
     }                                                                                                                           \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                                            \
         TEST_MASK(ei)                                                                                                           \
@@ -1302,8 +1331,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, target_ulong imm)                             \
 {                                                                                                                               \
     const target_ulong eew = env->vsew;                                                                                         \
-    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                                                                \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                   \
+    if (!does_vector_embedded_extension_support_eew(env, eew << 1)                                                              \
+        || V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                                                             \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                              \
     }                                                                                                                           \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                                            \
         TEST_MASK(ei)                                                                                                           \
@@ -1328,8 +1358,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)                                             \
 {                                                                                                                                           \
     const target_ulong eew = env->vsew;                                                                                                     \
-    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                                                      \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                               \
+    if (!does_vector_embedded_extension_support_eew(env, eew << 1)                                                                          \
+        || V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                                                   \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                          \
     }                                                                                                                                       \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                                                        \
         TEST_MASK(ei)                                                                                                                       \
@@ -1354,8 +1385,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)                                         \
 {                                                                                                                                       \
     const target_ulong eew = env->vsew;                                                                                                 \
-    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                                                  \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                           \
+    if (!does_vector_embedded_extension_support_eew(env, eew << 1)                                                                      \
+        || V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                                               \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                      \
     }                                                                                                                                   \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                                                    \
         TEST_MASK(ei)                                                                                                                   \
@@ -1380,8 +1412,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)                                         \
 {                                                                                                                                       \
     const target_ulong eew = env->vsew;                                                                                                 \
-    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                                                  \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                           \
+    if (!does_vector_embedded_extension_support_eew(env, eew << 1)                                                                      \
+        || V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                                               \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                      \
     }                                                                                                                                   \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                                                    \
         TEST_MASK(ei)                                                                                                                   \
@@ -1406,8 +1439,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)         \
 {                                                                                                       \
     const target_ulong eew = env->vsew;                                                                 \
-    if (V_IDX_INVALID(vs2)) {                                                                           \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                           \
+    if (!does_vector_embedded_extension_support_eew(env, eew)                                           \
+        || V_IDX_INVALID(vs2)) {                                                                        \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
     }                                                                                                   \
     if(env->vl == 0) {                                                                                  \
         return;                                                                                         \
@@ -1467,8 +1501,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)         \
 {                                                                                                       \
     const target_ulong eew = env->vsew;                                                                 \
-    if (V_IDX_INVALID(vs2)) {                                                                           \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                           \
+    if (!does_vector_embedded_extension_support_eew(env, eew)                                           \
+        || V_IDX_INVALID(vs2)) {                                                                        \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
     }                                                                                                   \
     if(env->vl == 0) {                                                                                  \
         return;                                                                                         \
@@ -1793,7 +1828,8 @@ VOP_RED_SIGNED_VVV(vredxor_vs, OP_XOR)
 void glue(helper_vwredsumu_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
     const target_ulong eew = env->vsew;
-    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2) || V_IDX_INVALID_EEW(vs1, eew << 1)) {
+    if (!does_vector_embedded_extension_support_eew(env, eew << 1)
+        || V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2) || V_IDX_INVALID_EEW(vs1, eew << 1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
     if(env->vl == 0)
@@ -1837,7 +1873,8 @@ void glue(helper_vwredsumu_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2
 void glue(helper_vwredsum_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
     const target_ulong eew = env->vsew;
-    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2) || V_IDX_INVALID_EEW(vs1, eew << 1)) {
+    if (!does_vector_embedded_extension_support_eew(env, eew << 1)
+        || V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2) || V_IDX_INVALID_EEW(vs1, eew << 1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
     if(env->vl == 0)
@@ -1881,7 +1918,8 @@ void glue(helper_vwredsum_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2,
 void glue(helper_vnclipu_ivv, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)
 {
     const target_ulong eew = env->vsew;
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1) || V_IDX_INVALID(vs1)) {
+    if (!does_vector_embedded_extension_support_eew(env, eew << 1)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1) || V_IDX_INVALID(vs1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
     const uint16_t v1_mask = (eew << 1) - 1;
@@ -1908,7 +1946,8 @@ void glue(helper_vnclipu_ivv, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2,
 void glue(helper_vnclipu_ivi, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, target_ulong rs1)
 {
     const target_ulong eew = env->vsew;
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1)) {
+    if (!does_vector_embedded_extension_support_eew(env, eew << 1)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
     const uint16_t shift = rs1 & ((eew << 1) - 1);
@@ -1935,7 +1974,8 @@ void glue(helper_vnclipu_ivi, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2,
 void glue(helper_vnclip_ivv, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)
 {
     const target_ulong eew = env->vsew;
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1) || V_IDX_INVALID(vs1)) {
+    if (!does_vector_embedded_extension_support_eew(env, eew << 1)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1) || V_IDX_INVALID(vs1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
     const uint16_t v1_mask = (eew << 1) - 1;
@@ -1962,7 +2002,8 @@ void glue(helper_vnclip_ivv, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, 
 void glue(helper_vnclip_ivi, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, target_ulong rs1)
 {
     const target_ulong eew = env->vsew;
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1)) {
+    if (!does_vector_embedded_extension_support_eew(env, eew << 1)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
     const uint16_t shift = rs1 & ((eew << 1) - 1);
@@ -1988,10 +2029,11 @@ void glue(helper_vnclip_ivi, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, 
 
 void glue(helper_vslideup_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_ulong rs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     const int start = rs1 > env->vlmax ? env->vlmax : (rs1 > env->vstart ? rs1 : env->vstart);
     for (int ei = start; ei < env->vl; ++ei) {
         TEST_MASK(ei)
@@ -2017,10 +2059,11 @@ void glue(helper_vslideup_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2,
 
 void glue(helper_vslidedown_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_ulong rs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     const int src_max = rs1 > env->vlmax ? 0 : (env->vl < env->vlmax - rs1 ? env->vl : env->vlmax - rs1);
     int ei = env->vstart;
     for (; ei < src_max; ++ei) {
@@ -2067,10 +2110,11 @@ void glue(helper_vslidedown_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs
 
 void glue(helper_vslide1up, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     if(env->vl == 0) {
         return;
     }
@@ -2122,10 +2166,11 @@ void glue(helper_vslide1up, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, ta
 
 void glue(helper_vslide1down, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     const int src_max = env->vl - 1;
     if(env->vl == 0) {
         return;
@@ -2178,10 +2223,11 @@ void glue(helper_vslide1down, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, 
 
 void glue(helper_vrgather_ivi, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, target_long imm)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
         TEST_MASK(ei)
         switch (eew) {
@@ -2206,10 +2252,11 @@ void glue(helper_vrgather_ivi, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 
 void glue(helper_vrgatherei16_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID_EEW(vs1, 16)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID_EEW(vs1, 16)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
         TEST_MASK(ei)
         uint16_t idx = ((uint16_t *)V(vs1))[ei];
@@ -2237,7 +2284,8 @@ void glue(helper_vrgatherei16_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t 
 void glue(helper_vzext_vf2, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2)
 {
     const target_ulong eew = env->vsew;
-    if (eew < 16 || V_IDX_INVALID(vd) || V_IDX_INVALID_EMUL(vs2, eew >> 1)) {
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || eew < 16 || V_IDX_INVALID(vd) || V_IDX_INVALID_EMUL(vs2, eew >> 1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
 
@@ -2263,7 +2311,8 @@ void glue(helper_vzext_vf2, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2)
 void glue(helper_vsext_vf2, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2)
 {
     const target_ulong eew = env->vsew;
-    if (eew < 16 || V_IDX_INVALID(vd) || V_IDX_INVALID_EMUL(vs2, eew >> 1)) {
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || eew < 16 || V_IDX_INVALID(vd) || V_IDX_INVALID_EMUL(vs2, eew >> 1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
 
@@ -2289,7 +2338,8 @@ void glue(helper_vsext_vf2, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2)
 void glue(helper_vzext_vf4, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2)
 {
     const target_ulong eew = env->vsew;
-    if (eew < 32 || V_IDX_INVALID(vd) || V_IDX_INVALID_EMUL(vs2, eew >> 2)) {
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || eew < 32 || V_IDX_INVALID(vd) || V_IDX_INVALID_EMUL(vs2, eew >> 2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
 
@@ -2312,7 +2362,8 @@ void glue(helper_vzext_vf4, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2)
 void glue(helper_vsext_vf4, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2)
 {
     const target_ulong eew = env->vsew;
-    if (eew < 32 || V_IDX_INVALID(vd) || V_IDX_INVALID_EMUL(vs2, eew >> 2)) {
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || eew < 32 || V_IDX_INVALID(vd) || V_IDX_INVALID_EMUL(vs2, eew >> 2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
 
@@ -2335,7 +2386,8 @@ void glue(helper_vsext_vf4, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2)
 void glue(helper_vzext_vf8, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2)
 {
     const target_ulong eew = env->vsew;
-    if (eew < 64 || V_IDX_INVALID(vd) || V_IDX_INVALID_EMUL(vs2, eew >> 3)) {
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || eew < 64 || V_IDX_INVALID(vd) || V_IDX_INVALID_EMUL(vs2, eew >> 3)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
 
@@ -2355,7 +2407,8 @@ void glue(helper_vzext_vf8, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2)
 void glue(helper_vsext_vf8, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2)
 {
     const target_ulong eew = env->vsew;
-    if (eew < 64 || V_IDX_INVALID(vd) || V_IDX_INVALID_EMUL(vs2, eew >> 3)) {
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || eew < 64 || V_IDX_INVALID(vd) || V_IDX_INVALID_EMUL(vs2, eew >> 3)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
 
@@ -2374,10 +2427,11 @@ void glue(helper_vsext_vf8, POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2)
 
 void glue(helper_vdivu_mvv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
         TEST_MASK(ei)
         switch (eew) {
@@ -2402,10 +2456,11 @@ void glue(helper_vdivu_mvv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, in
 
 void glue(helper_vdiv_mvv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
         TEST_MASK(ei)
         switch (eew) {
@@ -2430,10 +2485,11 @@ void glue(helper_vdiv_mvv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int
 
 void glue(helper_vremu_mvv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
         TEST_MASK(ei)
         switch (eew) {
@@ -2458,10 +2514,11 @@ void glue(helper_vremu_mvv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, in
 
 void glue(helper_vrem_mvv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
         TEST_MASK(ei)
         switch (eew) {
@@ -2486,10 +2543,11 @@ void glue(helper_vrem_mvv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int
 
 void glue(helper_vdivu_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
         TEST_MASK(ei)
         switch (eew) {
@@ -2514,10 +2572,11 @@ void glue(helper_vdivu_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, ta
 
 void glue(helper_vdiv_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
         TEST_MASK(ei)
         switch (eew) {
@@ -2542,10 +2601,11 @@ void glue(helper_vdiv_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, tar
 
 void glue(helper_vremu_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
         TEST_MASK(ei)
         switch (eew) {
@@ -2570,10 +2630,11 @@ void glue(helper_vremu_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, ta
 
 void glue(helper_vrem_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
         TEST_MASK(ei)
         switch (eew) {
@@ -2598,10 +2659,11 @@ void glue(helper_vrem_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, tar
 
 void glue(helper_vaadd_mvv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     const uint8_t rm = env->vxrm & 0b11;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
         TEST_MASK(ei)
@@ -2639,10 +2701,11 @@ void glue(helper_vaadd_mvv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, in
 
 void glue(helper_vaadd_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     const uint8_t rm = env->vxrm & 0b11;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
         TEST_MASK(ei)
@@ -2676,10 +2739,11 @@ void glue(helper_vaadd_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, ta
 
 void glue(helper_vaaddu_mvv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     const uint8_t rm = env->vxrm & 0b11;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
         TEST_MASK(ei)
@@ -2717,10 +2781,11 @@ void glue(helper_vaaddu_mvv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, i
 
 void glue(helper_vaaddu_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     const uint8_t rm = env->vxrm & 0b11;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
         TEST_MASK(ei)
@@ -2754,10 +2819,11 @@ void glue(helper_vaaddu_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, t
 
 void glue(helper_vasub_mvv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     const uint8_t rm = env->vxrm & 0b11;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
         TEST_MASK(ei)
@@ -2795,10 +2861,11 @@ void glue(helper_vasub_mvv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, in
 
 void glue(helper_vasub_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     const uint8_t rm = env->vxrm & 0b11;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
         TEST_MASK(ei)
@@ -2832,10 +2899,11 @@ void glue(helper_vasub_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, ta
 
 void glue(helper_vasubu_mvv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     const uint8_t rm = env->vxrm & 0b11;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
         TEST_MASK(ei)
@@ -2873,10 +2941,11 @@ void glue(helper_vasubu_mvv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, i
 
 void glue(helper_vasubu_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     const uint8_t rm = env->vxrm & 0b11;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
         TEST_MASK(ei)
@@ -2910,10 +2979,12 @@ void glue(helper_vasubu_mvx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, t
 
 void glue(helper_vsmul_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || (eew == 64 && !riscv_has_ext(env, RISCV_FEATURE_RVV))
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     const uint8_t rm = env->vxrm & 0b11;
     const uint16_t shift = eew - 1;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
@@ -2952,10 +3023,12 @@ void glue(helper_vsmul_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, in
 
 void glue(helper_vsmul_ivx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || (eew == 64 && !riscv_has_ext(env, RISCV_FEATURE_RVV))
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     const uint8_t rm = env->vxrm & 0b11;
     const uint16_t shift = eew - 1;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
@@ -2990,10 +3063,11 @@ void glue(helper_vsmul_ivx, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, ta
 
 void glue(helper_vssrl_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     const uint8_t rm = env->vxrm & 0b11;
     const uint16_t mask = eew - 1;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
@@ -3020,10 +3094,11 @@ void glue(helper_vssrl_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, in
 
 void glue(helper_vssrl_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_ulong rs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     const uint8_t rm = env->vxrm & 0b11;
     const uint16_t shift = rs1 & (eew - 1);
     for (int ei = env->vstart; ei < env->vl; ++ei) {
@@ -3050,10 +3125,11 @@ void glue(helper_vssrl_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, ta
 
 void glue(helper_vssra_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     const uint8_t rm = env->vxrm & 0b11;
     const uint16_t mask = eew - 1;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
@@ -3080,10 +3156,11 @@ void glue(helper_vssra_ivv, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, in
 
 void glue(helper_vssra_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, target_ulong rs1)
 {
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     const uint8_t rm = env->vxrm & 0b11;
     const uint16_t shift = rs1 & (eew - 1);
     for (int ei = env->vstart; ei < env->vl; ++ei) {
@@ -3111,10 +3188,11 @@ void glue(helper_vssra_ivi, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, ta
 
 void glue(helper_viota, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2)
 {
-    if (V_IDX_INVALID(vd) || env->vstart) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || env->vstart) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     uint64_t cnt = 0;
     for (int ei = 0; ei < env->vl; ++ei) {
         TEST_MASK(ei)
@@ -3141,10 +3219,11 @@ void glue(helper_viota, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2)
 
 void glue(helper_vid, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2)
 {
-    if (V_IDX_INVALID(vd) || env->vstart) {
+    const target_ulong eew = env->vsew;
+    if (!does_vector_embedded_extension_support_eew(env, eew)
+        || V_IDX_INVALID(vd) || env->vstart) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     for (int ei = 0; ei < env->vl; ++ei) {
         TEST_MASK(ei)
         switch (eew) {
