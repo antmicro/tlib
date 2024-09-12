@@ -15,9 +15,10 @@ if(NOT TLIB_COMMIT_SHA)
     set(TLIB_COMMIT_SHA "${GIT_OUTPUT}" CACHE STRING "Current tlib commit SHA" FORCE)
 endif()
 
-# this must be placed after setting default values for:
-# TARGET_BIG_ENDIAN, HOST_WORD_SIZE, TARGET_WORD_SIZE, TARGET_INSN_START_EXTRA_WORDS
+# tcg generates tons of warning so turn off some for now
+remove_definitions(-Wall -Wextra -Wno-unused-parameter -Wno-sign-compare)
 add_subdirectory(tcg)
+add_definitions(-Wall -Wextra -Wno-unused-parameter -Wno-sign-compare)
 
 set(SOFTFLOAT_SPECIALIZED_ARCHITECTURE "8086")
 if("${TARGET_ACTUAL_ARCH}" STREQUAL "riscv" OR "${TARGET_ACTUAL_ARCH}" STREQUAL "riscv64")
