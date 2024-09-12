@@ -9,5 +9,4 @@ CMakeCache.txt
 CMakeFiles/
 *.so
 *.a
-*.cmake
 Makefile

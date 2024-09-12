@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.12)
 
 project (tcg)
 
@@ -65,7 +65,7 @@ include_directories (
     ${CMAKE_SOURCE_DIR}
     )
 
-add_library (tcg STATIC
+add_library (tcg OBJECT
     additional.c
     host-utils.c
     optimize.c
