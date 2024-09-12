@@ -22,9 +22,6 @@
  * THE SOFTWARE.
  */
 
-#include "additional.h"
-#include "tcg-target.h" //Only needed to help vscode find symbols
-
 // Order registers get picked in
 static const int tcg_target_reg_alloc_order[] = {
     TCG_REG_R8, TCG_REG_R9, TCG_REG_R10, TCG_REG_R11, TCG_REG_R12, TCG_REG_R13, TCG_REG_R14, TCG_REG_R15, TCG_REG_R16,
