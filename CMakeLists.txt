@@ -78,10 +78,15 @@ if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL Linux AND ${HOST_ARCH} STREQUAL i386 AND $
     set(WRAP_MEMCPY_OPT -Wl,--wrap=memcpy)
 endif()
 
+# -z flag does not work windows
+if ((NOT (${CMAKE_HOST_SYSTEM_NAME} MATCHES "(Windows|CYGWIN)" )) AND ("${C_COMPILER_ID}" STREQUAL "GNU"))
+    set (Z_OPTS -zdefs)
+endif()
+
 target_link_libraries (tlib
     ${WRAP_MEMCPY_OPT}
     -fPIC
-    $<$<C_COMPILER_ID:GNU>:-zdefs>  # Error for undefined symbols is a default for Clang
+    ${Z_OPTS}
 
     ${MATH_LIB_LINK_ARG}
     softfloat-3

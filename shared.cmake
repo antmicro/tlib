@@ -8,7 +8,7 @@ option (HOST_BIG_ENDIAN "Host big endian" OFF)
 
 if(NOT DEFINED HOST_ARCH)
     message(STATUS "'HOST_ARCH' isn't set; analyzing the CPU (${CMAKE_SYSTEM_PROCESSOR})...")
-    if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "(amd64|86)")
+    if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "(AMD64|amd64|86)")
         set (HOST_ARCH "i386" CACHE STRING "Host architecture")
     elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES "(aarch64|arm64)")
         set (HOST_ARCH "aarch64" CACHE STRING "Host architecture")
