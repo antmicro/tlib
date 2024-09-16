@@ -53,6 +53,7 @@ if (HOST_ARCH MATCHES "(arm|aarch64)" AND CMAKE_BUILD_TYPE STREQUAL "Release" AN
     # gcc emits a clobber error for unwind.h DECLARE_ENV_PTR() in release mode on arm targets
     # so demote it to a warning in this case, but not on arm mac clang, because this flag does not exsist
     add_definitions(-Wno-error=clobbered)
+    add_definitions(-Wno-clobbered)
 endif()
 
 option (TARGET_BIG_ENDIAN "Target big endian" OFF)
