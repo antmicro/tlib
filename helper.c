@@ -140,6 +140,11 @@ target_ulong HELPER(check_address_reservation)(CPUState * env, ram_addr_t addres
     return check_address_reservation(env, address);
 }
 
+void HELPER(register_address_access)(CPUState * env, ram_addr_t address)
+{
+    register_address_access(env, address);
+}
+
 void HELPER(cancel_reservation)(CPUState * env)
 {
     cancel_reservation(env);
