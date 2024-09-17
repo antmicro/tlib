@@ -64,7 +64,14 @@ file (GLOB SOURCES
     ${SOURCES_ADDITIONAL}
     )
 
-add_library (tlib OBJECT ${SOURCES} $<TARGET_OBJECTS:tcg> $<TARGET_OBJECTS:softfloat-3>)
+set(TLIB_LIB_TYPE "SHARED" CACHE STRING "")
+if ("${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Linux")
+    # On non-Linux hosts the TLIB_LIB_TYPE variable here gets expanded to "" for some unkown reason
+    # So until that is figured out we only support picking library type on linux
+    add_library (tlib ${TLIB_LIB_TYPE} ${SOURCES} $<TARGET_OBJECTS:tcg> $<TARGET_OBJECTS:softfloat-3>)
+else ()
+    add_library (tlib OBJECT ${SOURCES} $<TARGET_OBJECTS:tcg> $<TARGET_OBJECTS:softfloat-3>)
+endif()
 add_dependencies (tlib tcg)
 
 if("${TARGET_ACTUAL_ARCH}" STREQUAL "i386")
