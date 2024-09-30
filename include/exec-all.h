@@ -305,7 +305,12 @@ static inline tb_page_addr_t get_page_addr_code(CPUState *env1, target_ulong add
 
     page_index = (addr >> TARGET_PAGE_BITS) & (CPU_TLB_SIZE - 1);
     mmu_idx = cpu_mmu_index(env1);
-    if (unlikely(env1->tlb_table[mmu_idx][page_index].addr_code != (addr & TARGET_PAGE_MASK))) {
+    target_ulong addr_code = env1->tlb_table[mmu_idx][page_index].addr_code;
+
+    if (((addr_code & IO_MEM_EXECUTABLE_IO) != 0) && (addr_code != -1)) {
+        addr_code &= ~(IO_MEM_EXECUTABLE_IO | TLB_MMIO);
+    }
+    if (unlikely(addr_code != (addr & TARGET_PAGE_MASK))) {
         if(map_when_needed)
         {
             ldub_code(addr);
@@ -316,7 +321,7 @@ static inline tb_page_addr_t get_page_addr_code(CPUState *env1, target_ulong add
         }
     }
     pd = env1->tlb_table[mmu_idx][page_index].addr_code & ~TARGET_PAGE_MASK;
-    if (unlikely(pd > IO_MEM_ROM && !(pd & IO_MEM_ROMD))) {
+    if (unlikely(pd > IO_MEM_ROM && !(pd & IO_MEM_ROMD) && !(pd & IO_MEM_EXECUTABLE_IO))) {
         const char *reason = "outside RAM or ROM";
 
         if (tlib_is_memory_disabled(addr & TARGET_PAGE_MASK, TARGET_PAGE_SIZE)) {
@@ -325,6 +330,12 @@ static inline tb_page_addr_t get_page_addr_code(CPUState *env1, target_ulong add
         cpu_abort(env1, "Trying to execute code %s at 0x" TARGET_FMT_lx "\n", reason, addr);
     }
     p = (void *)((uintptr_t)addr + env1->tlb_table[mmu_idx][page_index].addend);
+
+    if (unlikely(pd & IO_MEM_EXECUTABLE_IO)) {
+        /* In this case we don't return page address, nor a ram pointer - for MMIO we return only address aligned to page size with executable flag set
+           This is necessary in order to assert correct setting when used with `tlb_set_page` */
+        return ((addr + env1->iotlb[mmu_idx][page_index]) & TARGET_PAGE_MASK) | IO_MEM_EXECUTABLE_IO;
+    }
     return ram_addr_from_host(p);
 }
 

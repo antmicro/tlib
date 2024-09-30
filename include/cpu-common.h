@@ -73,11 +73,12 @@ void cpu_physical_memory_write_rom(target_phys_addr_t addr, const uint8_t *buf, 
 
 #define IO_MEM_SHIFT      3
 
-#define IO_MEM_RAM        (0 << IO_MEM_SHIFT)  /* hardcoded offset */
-#define IO_MEM_ROM        (1 << IO_MEM_SHIFT)  /* hardcoded offset */
-#define IO_MEM_UNASSIGNED (2 << IO_MEM_SHIFT)
-#define IO_MEM_NOTDIRTY   (3 << IO_MEM_SHIFT)
-
+#define IO_MEM_RAM           (0 << IO_MEM_SHIFT)  /* hardcoded offset */
+#define IO_MEM_ROM           (1 << IO_MEM_SHIFT)  /* hardcoded offset */
+#define IO_MEM_UNASSIGNED    (2 << IO_MEM_SHIFT)
+#define IO_MEM_NOTDIRTY      (3 << IO_MEM_SHIFT)
+// TLB_MMIO (4 << IO_MEM_SHIFT)
+#define IO_MEM_EXECUTABLE_IO (8 << IO_MEM_SHIFT)
 /* Acts like a ROM when read and like a device when written.  */
 #define IO_MEM_ROMD       (1)
 #define IO_MEM_SUBPAGE    (2)
