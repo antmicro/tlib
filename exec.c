@@ -302,7 +302,7 @@ void unmap_page(target_phys_addr_t address)
     tlb_flush_page(cpu, address, /* from_generated: */ false);
 }
 
-static void tlb_protect_code(ram_addr_t ram_addr);
+static void tlb_protect_code(ram_addr_t ram_addr, bool is_mapped);
 static void tlb_unprotect_code_phys(CPUState *env, ram_addr_t ram_addr, target_ulong vaddr);
 #define mmap_lock()   do { } while(0)
 #define mmap_unlock() do { } while(0)
@@ -954,7 +954,11 @@ do_invalidate:
 static inline void tb_alloc_page(TranslationBlock *tb, unsigned int n, tb_page_addr_t page_addr)
 {
     PageDesc *p;
+    bool is_mapped;
     bool page_already_protected;
+
+    is_mapped = !(page_addr & IO_MEM_EXECUTABLE_IO);
+    page_addr &= ~IO_MEM_EXECUTABLE_IO;
 
     tb->page_addr[n] = page_addr;
     p = page_find_alloc(page_addr >> TARGET_PAGE_BITS, 1);
@@ -967,7 +971,7 @@ static inline void tb_alloc_page(TranslationBlock *tb, unsigned int n, tb_page_a
        protected. So we handle the case where only the first TB is
        allocated in a physical page */
     if (!page_already_protected) {
-        tlb_protect_code(page_addr);
+        tlb_protect_code(page_addr, is_mapped);
     }
 }
 
@@ -979,7 +983,7 @@ void tb_link_page(TranslationBlock *tb, tb_page_addr_t phys_pc, tb_page_addr_t p
     mmap_lock();
 
     /* add in the page list */
-    tb_alloc_page(tb, 0, phys_pc & TARGET_PAGE_MASK);
+    tb_alloc_page(tb, 0, phys_pc & (TARGET_PAGE_MASK | IO_MEM_EXECUTABLE_IO));
     if (phys_page2 != -1) {
         tb_alloc_page(tb, 1, phys_page2);
     } else {
@@ -1416,7 +1420,8 @@ static void tlb_unprotect_code_phys(CPUState *env, ram_addr_t ram_addr, target_u
 static inline void tlb_reset_dirty_range(CPUTLBEntry *tlb_entry, uintptr_t start, uintptr_t length)
 {
     uintptr_t addr;
-    if ((tlb_entry->addr_write & ~TARGET_PAGE_MASK) == IO_MEM_RAM) {
+    uintptr_t addr_type = tlb_entry->addr_write & ~TARGET_PAGE_MASK;
+    if (addr_type == IO_MEM_RAM || addr_type == IO_MEM_EXECUTABLE_IO) {
         addr = (tlb_entry->addr_write & TARGET_PAGE_MASK) + tlb_entry->addend;
         if ((addr - start) < length) {
             tlb_entry->addr_write = (tlb_entry->addr_write & TARGET_PAGE_MASK) | TLB_NOTDIRTY;
@@ -1446,7 +1451,7 @@ static inline void tlb_set_dirty(CPUState *env, target_ulong vaddr)
 }
 
 /* update the TLBs so that writes to code can be detected */
-static void tlb_protect_code(ram_addr_t ram_addr)
+static void tlb_protect_code(ram_addr_t ram_addr, bool is_mapped)
 {
     uintptr_t start1;
     int i;
@@ -1457,7 +1462,11 @@ static void tlb_protect_code(ram_addr_t ram_addr)
         p->flags.dirty = false;
     }
 
-    start1 = (uintptr_t)get_ram_ptr(ram_addr & TARGET_PAGE_MASK);
+    if (is_mapped) {
+        start1 = (uintptr_t)get_ram_ptr(ram_addr & TARGET_PAGE_MASK);
+    } else {
+        start1 = ram_addr & TARGET_PAGE_MASK;
+    }
 
     int mmu_idx;
     for (mmu_idx = 0; mmu_idx < NB_MMU_MODES; mmu_idx++) {
@@ -1547,16 +1556,25 @@ void tlb_set_page(CPUState *env, target_ulong vaddr, target_phys_addr_t paddr, i
         pd = IO_MEM_UNASSIGNED;
     } else {
         pd = p->phys_offset;
+
+        if (p->flags.executable_io_mem) {
+            // Only `IO_MEM_EXECUTABLE_IO` is set in this case.
+            pd &= TARGET_PAGE_MASK;
+            pd |= IO_MEM_EXECUTABLE_IO;
+        }
     }
 
     if ((pd & ~TARGET_PAGE_MASK) > IO_MEM_ROM && !(pd & IO_MEM_ROMD)) {
         /* IO memory case (romd handled later) */
         address |= TLB_MMIO;
+        if (pd & IO_MEM_EXECUTABLE_IO) {
+            address |= IO_MEM_EXECUTABLE_IO;
+        }
         addend = 0;
     } else {
         addend = (uintptr_t)get_ram_ptr(pd & TARGET_PAGE_MASK);
     }
-    if ((pd & ~TARGET_PAGE_MASK) <= IO_MEM_ROM) {
+    if (((pd & ~TARGET_PAGE_MASK) <= IO_MEM_ROM) && !(pd & IO_MEM_EXECUTABLE_IO)) {
         /* Normal RAM.  */
         iotlb = pd & TARGET_PAGE_MASK;
         if ((pd & ~TARGET_PAGE_MASK) == IO_MEM_RAM) {
@@ -1572,7 +1590,7 @@ void tlb_set_page(CPUState *env, target_ulong vaddr, target_phys_addr_t paddr, i
            We can't use the high bits of pd for this because
            IO_MEM_ROMD uses these as a ram address.  */
         iotlb = (pd & ~TARGET_PAGE_MASK);
-        if (p) {
+        if (p && !(pd & IO_MEM_EXECUTABLE_IO)) {
             iotlb += p->region_offset;
         } else {
             iotlb += paddr;
