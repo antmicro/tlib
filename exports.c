@@ -243,6 +243,7 @@ int32_t tlib_init(char *cpu_name)
         tlib_free(env);
         return -1;
     }
+    tlb_flush(env, 1, true);
     tlib_set_maximum_block_size(TCG_MAX_INSNS);
     env->atomic_memory_state = NULL;
     return 0;
