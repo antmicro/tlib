@@ -435,6 +435,19 @@ void tlib_unmap_range(uint64_t start, uint64_t end)
 
 EXC_VOID_2(tlib_unmap_range, uint64_t, start, uint64_t, end)
 
+void tlib_register_access_flags_for_range(uint64_t start_address, uint64_t length, uint flags)
+{
+    // If needed split ranges
+    uint64_t addr = start_address;
+    while(addr < (start_address + length))
+    {
+        phys_page_flag(addr >> TARGET_PAGE_BITS, flags);
+        addr += TARGET_PAGE_SIZE;
+    }
+    tlib_printf(LOG_LEVEL_DEBUG, "Registering range flags; start_address: 0x%x, length: 0x%x, flags: %d", start_address, length, flags);
+}
+EXC_VOID_3(tlib_register_access_flags_for_range, uint64_t, startAddress, uint64_t, length,  uint32_t, flags)
+
 uint32_t tlib_is_range_mapped(uint64_t start, uint64_t end)
 {
     PhysPageDesc *pd;

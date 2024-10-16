@@ -233,7 +233,7 @@ static inline PageDesc *page_find(tb_page_addr_t index)
     return page_find_alloc(index, 0);
 }
 
-static PhysPageDesc *phys_page_find_alloc(target_phys_addr_t index, int alloc)
+static PhysPageDesc *phys_page_find_alloc(target_phys_addr_t index, int alloc, enum PhysPageDescFlags alloc_flags)
 {
     PhysPageDesc *pd;
     void **lp;
@@ -272,12 +272,22 @@ static PhysPageDesc *phys_page_find_alloc(target_phys_addr_t index, int alloc)
         }
     }
 
+    if (alloc_flags != dont_touch) {
+        PhysPageDesc *page = pd + (index & (L2_SIZE -1));
+        page->flags = alloc_flags;
+    }
+
     return pd + (index & (L2_SIZE - 1));
 }
 
 inline PhysPageDesc *phys_page_find(target_phys_addr_t index)
 {
-    return phys_page_find_alloc(index, 0);
+    return phys_page_find_alloc(index, 0, dont_touch);
+}
+
+inline PhysPageDesc * phys_page_flag(target_phys_addr_t index, enum PhysPageDescFlags flags)
+{
+    return phys_page_find_alloc(index, 1, flags);
 }
 
 void unmap_page(target_phys_addr_t address)
@@ -1639,10 +1649,9 @@ void cpu_register_physical_memory_log(target_phys_addr_t start_addr, ram_addr_t 
                 phys_offset += TARGET_PAGE_SIZE;
             }
         } else {
-            p = phys_page_find_alloc(addr >> TARGET_PAGE_BITS, 1);
+            p = phys_page_find_alloc(addr >> TARGET_PAGE_BITS, 1, is_dirty);
             p->phys_offset = phys_offset;
             p->region_offset = region_offset;
-            p->flags |= is_dirty;
             if ((phys_offset & ~TARGET_PAGE_MASK) <= IO_MEM_ROM || (phys_offset & IO_MEM_ROMD)) {
                 phys_offset += TARGET_PAGE_SIZE;
             }
