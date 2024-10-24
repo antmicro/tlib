@@ -827,16 +827,41 @@ static uint32_t v7m_pop(CPUState *env)
     return val;
 }
 
-/* Switch to V7M main or process stack pointer.  */
-static void switch_v7m_sp(CPUState *env, int process)
+static inline void swap_u32(uint32_t *a, uint32_t *b)
 {
     uint32_t tmp;
+    tmp = *a;
+    *a = *b;
+    *b = tmp;
+}
+
+/* Switch to V7M main or process stack pointer.  */
+static void switch_v7m_sp(CPUState *env, bool process)
+{
     if(env->v7m.current_sp != process) {
-        tmp = env->v7m.other_sp;
-        env->v7m.other_sp = env->regs[13];
-        env->regs[13] = tmp;
+        swap_u32(&env->v7m.other_sp, &env->regs[13]);
         env->v7m.current_sp = process;
     }
+}
+
+static void switch_v7m_security_state(CPUState *env, bool secure)
+{
+    if(secure == env->secure) {
+        return;
+    }
+
+    /* If we were in thread mode before the switch, we need to remember to swap them
+     * to make sure that MSP is really the Main Stack Pointer
+     */
+    if(env->v7m.current_sp) {
+        swap_u32(&env->v7m.other_ss_psp, &env->regs[13]);
+        swap_u32(&env->v7m.other_ss_msp, &env->v7m.other_sp);
+    } else {
+        swap_u32(&env->v7m.other_ss_msp, &env->regs[13]);
+        swap_u32(&env->v7m.other_ss_psp, &env->v7m.other_sp);
+    }
+
+    env->secure = secure;
 }
 
 void do_v7m_exception_exit(CPUState *env)
@@ -847,7 +872,7 @@ void do_v7m_exception_exit(CPUState *env)
     /* Restore FAULTMASK to 0 only if the interrupt that we are exiting is not NMI */
     /* See ARMv7-M Architecture Reference Manual - B1.4.3 */
     if(env->v7m.exception != 2) {
-        cpu->v7m.faultmask = 0;
+        cpu->v7m.faultmask[env->secure] = 0;
     }
 
     type = env->regs[15];
@@ -881,7 +906,7 @@ void do_v7m_exception_exit(CPUState *env)
             if(~env->vfp.xregs[ARM_VFP_FPEXC] & ARM_VFP_FPEXC_FPUEN_MASK) {
                 /* FPU is disabled, revert SP and rise Usage Fault  */
                 env->regs[13] -= 0x20;
-                env->v7m.control &= ~ARM_CONTROL_FPCA_MASK;
+                env->v7m.control[env->secure] &= ~ARM_CONTROL_FPCA_MASK;
                 env->exception_index = EXCP_UDEF;
                 cpu_loop_exit(env);
             }
@@ -895,7 +920,8 @@ void do_v7m_exception_exit(CPUState *env)
         }
     }
     /* Set CONTROL.FPCA to NOT(type[ARM_EXC_RETURN_NFPCA])  */
-    env->v7m.control ^= (env->v7m.control ^ ~type >> (ARM_EXC_RETURN_NFPCA - ARM_CONTROL_FPCA)) & ARM_CONTROL_FPCA_MASK;
+    env->v7m.control[env->secure] ^= (env->v7m.control[env->secure] ^ ~type >> (ARM_EXC_RETURN_NFPCA - ARM_CONTROL_FPCA)) &
+                                     ARM_CONTROL_FPCA_MASK;
     /* Undo stack alignment.  */
     if(xpsr & 0x200) {
         env->regs[13] |= 4;
@@ -965,7 +991,7 @@ static void do_interrupt_v7m(CPUState *env)
     }
 
     /* v7-M and v8-M share FP stack FP context active fields */
-    if(env->v7m.control & ARM_CONTROL_FPCA_MASK) {
+    if(env->v7m.control[env->secure] & ARM_CONTROL_FPCA_MASK) {
         lr ^= ARM_EXC_RETURN_NFPCA_MASK;
     }
 
@@ -1027,8 +1053,8 @@ static void do_interrupt_v7m(CPUState *env)
         xpsr |= 0x200;
     }
     /* Push extended frame  */
-    if(env->v7m.control & ARM_CONTROL_FPCA_MASK) {
-        env->v7m.control &= ~ARM_CONTROL_FPCA_MASK;
+    if(env->v7m.control[env->secure] & ARM_CONTROL_FPCA_MASK) {
+        env->v7m.control[env->secure] &= ~ARM_CONTROL_FPCA_MASK;
         if(env->v7m.fpccr & ARM_FPCCR_LSPEN_MASK) {
             /* Set lazy FP state preservation  */
             env->v7m.fpccr |= ARM_FPCCR_LSPACT_MASK;
@@ -2094,8 +2120,26 @@ uint32_t HELPER(get_r13_banked)(CPUState *env, uint32_t mode)
 }
 
 #ifdef TARGET_PROTO_ARM_M
+/* Helpful note: TrustZone sets bit 7, to indicate non-secure bank for the register
+ * Otherwise, the encoding is the same (see: "Armv8-M Architecture Reference Manual")
+ */
+#define NON_SECURE_REG(x) (x | (1 << 7))
+#define IS_REG_NS(x)      (x & (1 << 7))
+
+/* An access to a register not ending in _NS returns the register associated with the current
+ * Security state. Access to a register ending in _NS in Secure state returns the Non-secure
+ * register. */
 uint32_t HELPER(v7m_mrs)(CPUState *env, uint32_t reg)
 {
+    bool is_secure = env->secure;
+    if(IS_REG_NS(reg)) {
+        if(!env->secure) {
+            //  Access to a register ending in _NS in Non-secure state is RAZ/WI
+            return 0;
+        }
+        is_secure = false;
+    }
+
     switch(reg) {
         case 0: /* APSR */
             return xpsr_read(env) & 0xf8000000;
@@ -2113,21 +2157,32 @@ uint32_t HELPER(v7m_mrs)(CPUState *env, uint32_t reg)
             return xpsr_read(env) & 0x0700edff;
         case 8: /* MSP */
             return env->v7m.current_sp ? env->v7m.other_sp : env->regs[13];
+        case NON_SECURE_REG(8): /* MSP_NS */
+            return env->v7m.other_ss_msp;
         case 9: /* PSP */
             return env->v7m.current_sp ? env->regs[13] : env->v7m.other_sp;
+        case NON_SECURE_REG(9): /* PSP_NS */
+            return env->v7m.other_ss_psp;
+        case NON_SECURE_REG(10):
         case 10: /* MSPLIM - armv8-m specific */
-            return env->v7m.msplim;
+            return env->v7m.msplim[is_secure];
+        case NON_SECURE_REG(11):
         case 11: /* PSPLIM - armv8-m specific */
-            return env->v7m.psplim;
+            return env->v7m.psplim[is_secure];
         case 16: /* PRIMASK */
             return (env->uncached_cpsr & 1) != 0;
+        case NON_SECURE_REG(17):
         case 17: /* BASEPRI */
         case 18: /* BASEPRI_MAX */
-            return env->v7m.basepri;
+            return env->v7m.basepri[is_secure];
+        case NON_SECURE_REG(19):
         case 19: /* FAULTMASK */
-            return env->v7m.faultmask;
+            return env->v7m.faultmask[is_secure];
+        case NON_SECURE_REG(20):
         case 20: /* CONTROL */
-            return env->v7m.control;
+            return env->v7m.control[is_secure];
+        case NON_SECURE_REG(24): /* SP_NS */
+            return env->v7m.current_sp ? env->v7m.other_ss_psp : env->v7m.other_ss_msp;
         default:
             /* ??? For debugging only.  */
             cpu_abort(env, "Unimplemented system register read (%d)\n", reg);
@@ -2137,6 +2192,15 @@ uint32_t HELPER(v7m_mrs)(CPUState *env, uint32_t reg)
 
 void HELPER(v7m_msr)(CPUState *env, uint32_t reg, uint32_t val)
 {
+    bool is_secure = env->secure;
+    if(IS_REG_NS(reg)) {
+        if(!env->secure) {
+            //  Access to a register ending in _NS in Non-secure state is RAZ/WI
+            return;
+        }
+        is_secure = false;
+    }
+
     switch(reg) {
         case 0: /* APSR */
             if(!in_privileged_mode(env)) {
@@ -2189,6 +2253,9 @@ void HELPER(v7m_msr)(CPUState *env, uint32_t reg, uint32_t val)
                 env->regs[13] = val;
             }
             break;
+        case NON_SECURE_REG(8): /* MSP_NS */
+            env->v7m.other_ss_msp = val;
+            break;
         case 9: /* PSP */
             if(env->v7m.current_sp) {
                 env->regs[13] = val;
@@ -2196,11 +2263,16 @@ void HELPER(v7m_msr)(CPUState *env, uint32_t reg, uint32_t val)
                 env->v7m.other_sp = val;
             }
             break;
-        case 10: /* MSPLIM - armv8-m specific */
-            env->v7m.msplim = val;
+        case NON_SECURE_REG(9): /* PSP_NS */
+            env->v7m.other_ss_psp = val;
             break;
+        case NON_SECURE_REG(10):
+        case 10: /* MSPLIM - armv8-m specific */
+            env->v7m.msplim[is_secure] = val;
+            break;
+        case NON_SECURE_REG(11):
         case 11: /* PSPLIM - armv8-m specific */
-            env->v7m.psplim = val;
+            env->v7m.psplim[is_secure] = val;
             break;
         case 16: /* PRIMASK */
             if(!in_privileged_mode(env)) {
@@ -2212,11 +2284,12 @@ void HELPER(v7m_msr)(CPUState *env, uint32_t reg, uint32_t val)
                 tlib_nvic_find_pending_irq();
             }
             break;
+        case NON_SECURE_REG(17):
         case 17: /* BASEPRI */
             if(!in_privileged_mode(env)) {
                 return;
             }
-            env->v7m.basepri = val & 0xff;
+            env->v7m.basepri[is_secure] = val & 0xff;
             tlib_nvic_write_basepri(val & 0xff);
             break;
         case 18: /* BASEPRI_MAX */
@@ -2224,25 +2297,44 @@ void HELPER(v7m_msr)(CPUState *env, uint32_t reg, uint32_t val)
                 return;
             }
             val &= 0xff;
-            if(val != 0 && (val < env->v7m.basepri || env->v7m.basepri == 0)) {
-                env->v7m.basepri = val;
+            if(val != 0 && (val < env->v7m.basepri[cpu->secure] || env->v7m.basepri[cpu->secure] == 0)) {
+                env->v7m.basepri[cpu->secure] = val;
                 tlib_nvic_write_basepri(val);
             }
             break;
+        case NON_SECURE_REG(19):
         case 19: /* FAULTMASK */
             if(!in_privileged_mode(env)) {
                 return;
             }
-            env->v7m.faultmask = val & 1;
+            env->v7m.faultmask[is_secure] = val & 1;
             break;
+        case NON_SECURE_REG(20):
         case 20: /* CONTROL */
             if(!in_privileged_mode(env)) {
                 return;
             }
-            env->v7m.control = val & 3;
+            env->v7m.control[is_secure] = val & 3;
             //  only switch the stack if in thread mode (handler mode always uses MSP stack)
             if(env->v7m.exception == 0) {
+                //  If security states don't match, we need to use other SPs
+                bool other_sps = is_secure != cpu->secure;
+                if(other_sps) {
+                    switch_v7m_security_state(env, is_secure);
+                }
                 switch_v7m_sp(env, (val & 2) != 0);
+                //  ... and restore them afterwards
+                if(other_sps) {
+                    //  negation is ok, since we for sure have switched Security State before
+                    switch_v7m_security_state(env, !is_secure);
+                }
+            }
+            break;
+        case NON_SECURE_REG(24): /* SP_NS */
+            if(env->v7m.current_sp) {
+                env->v7m.other_ss_psp = val;
+            } else {
+                env->v7m.other_ss_msp = val;
             }
             break;
         default:
@@ -2251,6 +2343,8 @@ void HELPER(v7m_msr)(CPUState *env, uint32_t reg, uint32_t val)
             return;
     }
 }
+#undef NON_SECURE_REG
+#undef IS_REG_NS
 #endif
 
 /* Note that signed overflow is undefined in C.  The following routines are

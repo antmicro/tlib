@@ -25,6 +25,7 @@
 #include "tightly_coupled_memory.h"
 #include "ttable.h"
 #include "pmu.h"
+#include "cpu_common.h"
 
 #include "softfloat-2.h"
 #include "arch_callbacks.h"
@@ -79,7 +80,7 @@
 #define USAGE_FAULT_INVSTATE   (1 << 1) << USAGE_FAULT_OFFSET
 #define USAGE_FAULT_UNDEFINSTR (1 << 0) << USAGE_FAULT_OFFSET
 
-#define in_privileged_mode(ENV) (((ENV)->v7m.control & 0x1) == 0 || (ENV)->v7m.handler_mode)
+#define in_privileged_mode(ENV) (((ENV)->v7m.control[env->secure] & 0x1) == 0 || (ENV)->v7m.handler_mode)
 
 #define MAX_MPU_REGIONS                     32
 #define MPU_SIZE_FIELD_MASK                 0x3E
@@ -280,22 +281,30 @@ typedef struct CPUState {
 
 #ifdef TARGET_PROTO_ARM_M
     struct {
-        uint32_t other_sp;
+        /* These represent other (banked) stack pointers
+         * Usually there are two (for handler and process),
+         * but with TrustZone there are four (additional two for each mode)
+         * They should be exchanged via `switch_v7m_sp`/`switch_v7m_security`.
+         * regs[13] contains the current "active" pointer
+         */
+        uint32_t other_sp;     /* Other Stack Pointer */
+        uint32_t other_ss_msp; /* Other Security State Main Stack */
+        uint32_t other_ss_psp; /* Other Security State Process Stack */
         uint32_t vecbase;
-        uint32_t basepri;
-        uint32_t control;
+        uint32_t basepri[M_REG_NUM_BANKS];
+        uint32_t control[M_REG_NUM_BANKS];
         uint32_t fault_status;
         uint32_t current_sp;
         uint32_t exception;
-        uint32_t faultmask;
+        uint32_t faultmask[M_REG_NUM_BANKS];
         uint32_t pending_exception;
         uint32_t cpacr;
         uint32_t fpccr;
         uint32_t fpcar;
         uint32_t fpdscr;
         /* msplim/psplim are armv8-m specific */
-        uint32_t msplim;
-        uint32_t psplim;
+        uint32_t msplim[M_REG_NUM_BANKS];
+        uint32_t psplim[M_REG_NUM_BANKS];
         uint32_t handler_mode;
     } v7m;
 
@@ -655,7 +664,7 @@ static inline void cpu_get_tb_cpu_state(CPUState *env, target_ulong *pc, target_
              (env->vfp.vec_stride << ARM_TBFLAG_VECSTRIDE_SHIFT) | (env->condexec_bits << ARM_TBFLAG_CONDEXEC_SHIFT) |
              (!env->secure << ARM_TBFLAG_NS_SHIFT);
 #ifdef TARGET_PROTO_ARM_M
-    privmode = !((env->v7m.exception == 0) && (env->v7m.control & 1));
+    privmode = !((env->v7m.exception == 0) && (env->v7m.control[env->secure] & 1));
 #else
     privmode = (env->uncached_cpsr & CPSR_M) != ARM_CPU_MODE_USR;
 #endif

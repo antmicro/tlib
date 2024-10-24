@@ -49,9 +49,9 @@ uint32_t *get_reg_pointer_32(int reg)
             return &(cpu->uncached_cpsr);
 #if defined(TARGET_ARM32) && defined(TARGET_PROTO_ARM_M)
         case Control_32:
-            return &(cpu->v7m.control);
+            return &(cpu->v7m.control[cpu->secure]);
         case BasePri_32:
-            return &(cpu->v7m.basepri);
+            return &(cpu->v7m.basepri[cpu->secure]);
         case VecBase_32:
             return &(cpu->v7m.vecbase);
         case CurrentSP_32:
@@ -67,7 +67,7 @@ uint32_t *get_reg_pointer_32(int reg)
         case CPACR_32:
             return &(cpu->v7m.cpacr);
         case FAULTMASK_32:
-            return &(cpu->v7m.faultmask);
+            return &(cpu->v7m.faultmask[cpu->secure]);
 #endif
         default:
             return NULL;
