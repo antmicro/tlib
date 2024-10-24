@@ -83,6 +83,7 @@
 #define in_privileged_mode(ENV) (((ENV)->v7m.control[env->secure] & 0x1) == 0 || (ENV)->v7m.handler_mode)
 
 #define MAX_MPU_REGIONS                     32
+#define MAX_SAU_REGIONS                     32
 #define MPU_SIZE_FIELD_MASK                 0x3E
 #define MPU_REGION_ENABLED_BIT              0x1
 #define MPU_SIZE_AND_ENABLE_FIELD_MASK      (MPU_SIZE_FIELD_MASK | MPU_REGION_ENABLED_BIT)
@@ -318,6 +319,16 @@ typedef struct CPUState {
         uint32_t rlar[MAX_MPU_REGIONS];
         uint32_t mair[2]; /* The number of these registers is *not* configurable */
     } pmsav8[M_REG_NUM_BANKS];
+
+    struct {
+        uint32_t ctrl;
+        uint32_t type;
+        uint32_t rnr;
+        uint32_t rbar[MAX_SAU_REGIONS];
+        uint32_t rlar[MAX_SAU_REGIONS];
+    } sau;
+
+    uint32_t number_of_sau_regions;
 
     int32_t sleep_on_exception_exit;
 #endif

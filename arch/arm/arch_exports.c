@@ -327,6 +327,103 @@ uint32_t tlib_get_mpu_region_number()
 }
 
 EXC_INT_0(uint32_t, tlib_get_mpu_region_number)
+
+void tlib_set_number_of_sau_regions(uint32_t value)
+{
+    if(value >= MAX_SAU_REGIONS) {
+        tlib_abortf("Failed to set number of SAU regions to %u, maximal supported value is %u", value, MAX_SAU_REGIONS);
+    }
+
+    if(!cpu->v7m.has_trustzone) {
+        tlib_printf(LOG_LEVEL_WARNING, "Setting SAU regions to %u, but TrustZone is not enabled", value);
+    }
+
+    cpu->number_of_sau_regions = value;
+}
+
+EXC_VOID_1(tlib_set_number_of_sau_regions, uint32_t, value)
+
+uint32_t tlib_get_number_of_sau_regions()
+{
+    return cpu->number_of_sau_regions;
+}
+
+EXC_INT_0(uint32_t, tlib_get_number_of_sau_regions)
+
+void tlib_set_sau_region_number(uint32_t value)
+{
+    if(!cpu->secure) {
+        //  These are RAZ/WI when accessed from Non-Secure state
+        return;
+    }
+    if(value >= cpu->number_of_sau_regions) {
+        tlib_abortf("SAU: Trying to use non-existent SAU region. Number of regions: %d, faulting region number: %d",
+                    cpu->number_of_sau_regions, value);
+    }
+    cpu->sau.rnr = value;
+}
+
+EXC_VOID_1(tlib_set_sau_region_number, uint32_t, value)
+
+void tlib_set_sau_region_base_address(uint32_t value)
+{
+    if(!cpu->secure) {
+        //  These are RAZ/WI when accessed from Non-Secure state
+        return;
+    }
+    cpu->sau.rbar[cpu->sau.rnr] = value;
+    tlb_flush(cpu, 1, false);
+}
+
+EXC_VOID_1(tlib_set_sau_region_base_address, uint32_t, value)
+
+void tlib_set_sau_region_limit_address(uint32_t value)
+{
+    if(!cpu->secure) {
+        //  These are RAZ/WI when accessed from Non-Secure state
+        return;
+    }
+    cpu->sau.rlar[cpu->sau.rnr] = value;
+    tlb_flush(cpu, 1, false);
+}
+
+EXC_VOID_1(tlib_set_sau_region_limit_address, uint32_t, value)
+
+uint32_t tlib_get_sau_region_number()
+{
+    if(!cpu->secure) {
+        //  These are RAZ/WI when accessed from Non-Secure state
+        return 0;
+    }
+    return cpu->sau.rnr;
+}
+
+EXC_INT_0(uint32_t, tlib_get_sau_region_number)
+
+uint32_t tlib_get_sau_region_base_address()
+{
+    if(!cpu->secure) {
+        //  These are RAZ/WI when accessed from Non-Secure state
+        return 0;
+    }
+    uint32_t result = cpu->sau.rbar[cpu->sau.rnr];
+    return result;
+}
+
+EXC_INT_0(uint32_t, tlib_get_sau_region_base_address)
+
+uint32_t tlib_get_sau_region_limit_address()
+{
+    if(!cpu->secure) {
+        //  These are RAZ/WI when accessed from Non-Secure state
+        return 0;
+    }
+    uint32_t result = cpu->sau.rlar[cpu->sau.rnr];
+    return result;
+}
+
+EXC_INT_0(uint32_t, tlib_get_sau_region_limit_address)
+
 /* See vfp_trigger_exception for irq_number value interpretation */
 void tlib_set_fpu_interrupt_number(int32_t irq_number)
 {
