@@ -35,8 +35,8 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
         "Debug" "Release" "RelWithDebInfo")
 endif()
 
-option (TLIB_PROFILING_BUILD "Build optimized for profiling" OFF)
-if(TLIB_PROFILING_BUILD)
+option (PROFILING_BUILD "Build optimized for profiling" OFF)
+if(PROFILING_BUILD)
     message(STATUS "Profiling enhancements are enabled")
     add_definitions (
         # Forcing not to omit frame pointer can have negative impact on performance,
@@ -128,7 +128,7 @@ if("${TARGET_ACTUAL_ARCH}" STREQUAL "riscv" OR "${TARGET_ACTUAL_ARCH}" STREQUAL 
     add_subdirectory(softfloat-3)
     set(SOFTFLOAT3 softfloat-3)
 
-    if(CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT TLIB_PROFILING_BUILD)
+    if(CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT PROFILING_BUILD)
         target_compile_definitions(softfloat-3 PRIVATE
             INLINE_LEVEL=5
         )
