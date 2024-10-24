@@ -11055,6 +11055,7 @@ void setup_disas_context(DisasContextBase *base, CPUState *env)
 {
     DisasContext *dc = (DisasContext *)base;
     dc->condjmp = 0;
+    dc->ns = ARM_TBFLAG_NS(dc->base.tb->flags);
     dc->thumb = ARM_TBFLAG_THUMB(dc->base.tb->flags);
     dc->condexec_mask = (ARM_TBFLAG_CONDEXEC(dc->base.tb->flags) & 0xf) << 1;
     dc->condexec_cond = ARM_TBFLAG_CONDEXEC(dc->base.tb->flags) >> 4;

@@ -108,6 +108,8 @@ typedef struct DisasContext {
     int condexec_mask;
     int condexec_cond;
     int thumb;
+    /* Non-Secure mode, if TrustZone is available */
+    bool ns;
     TTable *cp_regs;
     int user;
     int vfp_enabled;
@@ -176,6 +178,7 @@ typedef struct CPUState {
     uint32_t GE;            /* cpsr[19:16] */
     uint32_t thumb;         /* cpsr[5]. 0 = arm mode, 1 = thumb mode. */
     uint32_t condexec_bits; /* IT bits.  cpsr[15:10,26:25].  */
+    bool secure;            /* Is CPU executing in Secure mode (TrustZone) */
 
     bool wfe;
     bool sev_pending;
@@ -630,7 +633,9 @@ enum mpu_result {
 #define ARM_TBFLAG_VFPEN_MASK      (1 << ARM_TBFLAG_VFPEN_SHIFT)
 #define ARM_TBFLAG_CONDEXEC_SHIFT  8
 #define ARM_TBFLAG_CONDEXEC_MASK   (0xff << ARM_TBFLAG_CONDEXEC_SHIFT)
-/* Bits 31..16 are currently unused. */
+#define ARM_TBFLAG_NS_SHIFT        16
+#define ARM_TBFLAG_NS_MASK         (1 << ARM_TBFLAG_NS_SHIFT)
+/* Bits 31..17 are currently unused. */
 
 /* some convenience accessor macros */
 #define ARM_TBFLAG_THUMB(F)     (((F) & ARM_TBFLAG_THUMB_MASK) >> ARM_TBFLAG_THUMB_SHIFT)
@@ -639,6 +644,7 @@ enum mpu_result {
 #define ARM_TBFLAG_PRIV(F)      (((F) & ARM_TBFLAG_PRIV_MASK) >> ARM_TBFLAG_PRIV_SHIFT)
 #define ARM_TBFLAG_VFPEN(F)     (((F) & ARM_TBFLAG_VFPEN_MASK) >> ARM_TBFLAG_VFPEN_SHIFT)
 #define ARM_TBFLAG_CONDEXEC(F)  (((F) & ARM_TBFLAG_CONDEXEC_MASK) >> ARM_TBFLAG_CONDEXEC_SHIFT)
+#define ARM_TBFLAG_NS(F)        (((F) & ARM_TBFLAG_NS_MASK) >> ARM_TBFLAG_NS_SHIFT)
 
 static inline void cpu_get_tb_cpu_state(CPUState *env, target_ulong *pc, target_ulong *cs_base, int *flags)
 {
@@ -646,7 +652,8 @@ static inline void cpu_get_tb_cpu_state(CPUState *env, target_ulong *pc, target_
     *pc = CPU_PC(env);
     *cs_base = 0;
     *flags = (env->thumb << ARM_TBFLAG_THUMB_SHIFT) | (env->vfp.vec_len << ARM_TBFLAG_VECLEN_SHIFT) |
-             (env->vfp.vec_stride << ARM_TBFLAG_VECSTRIDE_SHIFT) | (env->condexec_bits << ARM_TBFLAG_CONDEXEC_SHIFT);
+             (env->vfp.vec_stride << ARM_TBFLAG_VECSTRIDE_SHIFT) | (env->condexec_bits << ARM_TBFLAG_CONDEXEC_SHIFT) |
+             (!env->secure << ARM_TBFLAG_NS_SHIFT);
 #ifdef TARGET_PROTO_ARM_M
     privmode = !((env->v7m.exception == 0) && (env->v7m.control & 1));
 #else
