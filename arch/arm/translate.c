@@ -10440,7 +10440,25 @@ static void disas_thumb_insn(CPUState *env, DisasContext *s)
                         break;
                     case 3: /* branch [and link] exchange thumb register */
                         tmp = load_reg(s, rm);
-                        if(insn & (1 << 7)) { /* Link bit set */
+                        bool link = insn & (1 << 7);
+                        bool ns = (insn >> 2) & 1;
+                        if(ns) {
+#ifdef TARGET_PROTO_ARM_M
+                            /* BXNS/BLXNS */
+                            ARCH(8);
+                            //  We need to update PC here to push it correctly on stack in the helper
+                            gen_sync_pc(current_pc);
+                            tmp2 = tcg_const_i32(link);
+                            gen_helper_v8m_blxns(cpu_env, tmp, tmp2);
+                            tcg_temp_free_i32(tmp2);
+                            s->base.is_jmp = DISAS_UPDATE;
+                            break;
+#else
+                            cpu_abort(cpu, "BLXNS used outside ARM-M");
+#endif
+                        }
+                        if(link) { /* Link bit set */
+
                             ARCH(5);
                             val = (uint32_t)s->base.pc | 1;
                             tmp2 = tcg_temp_new_i32();

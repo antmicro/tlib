@@ -60,6 +60,7 @@
 #define ARMV7M_EXCP_MEM     4
 #define ARMV7M_EXCP_BUS     5
 #define ARMV7M_EXCP_USAGE   6
+#define ARMV7M_EXCP_SECURE  7
 #define ARMV7M_EXCP_SVC     11
 #define ARMV7M_EXCP_DEBUG   12
 #define ARMV7M_EXCP_PENDSV  14
@@ -99,6 +100,8 @@
 
 #define BACKGROUND_FAULT_STATUS_BITS 0b0000
 #define PERMISSION_FAULT_STATUS_BITS 0b1101
+
+#define FNC_RETURN 0xFEFFFFFF
 
 typedef struct DisasContext {
     DisasContextBase base;
@@ -294,7 +297,7 @@ typedef struct CPUState {
         uint32_t process_sp;   /* Is the currently selected SP Process or Main SP */
         uint32_t vecbase;
         uint32_t basepri[M_REG_NUM_BANKS];
-        uint32_t control[M_REG_NUM_BANKS];
+        uint32_t control[M_REG_NUM_BANKS]; /* TODO: SFPA and FPCA bits are not banked - required for FPU support */
         uint32_t fault_status;
         uint32_t exception;
         uint32_t primask[M_REG_NUM_BANKS];

@@ -3130,6 +3130,49 @@ invalid:
      */
     return addr_info.value;
 }
+
+void HELPER(v8m_blxns)(CPUState *env, uint32_t addr, uint32_t link)
+{
+    tlib_printf(LOG_LEVEL_NOISY, "B%sXNS jump at 0x%x to 0x%x", link ? "L" : "", env->regs[15], addr);
+
+    /* Only switch to Non-Secure if bit[0] of target addr is 0 */
+    if((addr & 1) == 0) {
+        if(link) {
+            v7m_push(env, env->regs[15] + 2);
+            /* According to docs "some processor state information" is pushed here
+             * the ARM pseudocode specifies exactly:
+             * """
+             *   EPSR.B is not preserved on the stack
+             *   savedPSR.Exception = IPSR.Exception;
+             *   savedPSR.SFPA = CONTROL_S.SFPA;
+             * """
+             * pushing entire xpsr for now, but it's an overkill */
+            v7m_push(env, xpsr_read(env));
+        }
+
+        /* Now we switch stacks and jump to non-secure mode */
+        switch_v7m_security_state(env, false);
+        if(link) {
+            env->regs[14] = FNC_RETURN;
+            /* If in handler mode, we should set exception number to invalid but non-zero value
+             * to prevent information leakage */
+            if(env->v7m.handler_mode) {
+                env->v7m.exception = ARMV7M_EXCP_RESET;
+            }
+        }
+
+        if(!link) {
+            /* BXNS variant uses BranchReturn pseudoinstruction, which can have different behavior here.
+             * Otherwise will behave like a regular branch */
+            if(addr >= 0xfeffff00) {
+                /* TODO: BXNS can also be used with FNC_RETURN or EXCP_RETURN and works differently then */
+                cpu_abort(env, "FNC_RETURN or EXC_RETURN is yet unsupported in BXNS");
+            }
+        }
+    }
+    env->regs[15] = addr;
+}
+
 #endif
 
 void tlib_arch_dispose()
