@@ -356,7 +356,7 @@ static void guard_pmsav8(bool is_write)
 void tlib_set_pmsav8_ctrl(uint32_t value)
 {
     guard_pmsav8(true);
-    cpu->pmsav8.ctrl = value;
+    cpu->pmsav8[cpu->secure].ctrl = value;
 }
 EXC_VOID_1(tlib_set_pmsav8_ctrl, uint32_t, value)
 
@@ -367,23 +367,23 @@ void tlib_set_pmsav8_rnr(uint32_t value)
         tlib_printf(LOG_LEVEL_ERROR, "Requested RNR value is greater than the maximum MPU regions");
         return;
     }
-    cpu->pmsav8.rnr = value;
+    cpu->pmsav8[cpu->secure].rnr = value;
 }
 EXC_VOID_1(tlib_set_pmsav8_rnr, uint32_t, value)
 
 void tlib_set_pmsav8_rbar(uint32_t value)
 {
     guard_pmsav8(true);
-    uint32_t index = cpu->pmsav8.rnr;
-    cpu->pmsav8.rbar[index] = value;
+    uint32_t index = cpu->pmsav8[cpu->secure].rnr;
+    cpu->pmsav8[cpu->secure].rbar[index] = value;
 }
 EXC_VOID_1(tlib_set_pmsav8_rbar, uint32_t, value)
 
 void tlib_set_pmsav8_rlar(uint32_t value)
 {
     guard_pmsav8(true);
-    uint32_t index = cpu->pmsav8.rnr;
-    cpu->pmsav8.rlar[index] = value;
+    uint32_t index = cpu->pmsav8[cpu->secure].rnr;
+    cpu->pmsav8[cpu->secure].rlar[index] = value;
 }
 EXC_VOID_1(tlib_set_pmsav8_rlar, uint32_t, value)
 
@@ -394,37 +394,37 @@ void tlib_set_pmsav8_mair(uint32_t index, uint32_t value)
         tlib_printf(LOG_LEVEL_ERROR, "Only indexes {0,1} are supported by MAIR registers");
         return;
     }
-    cpu->pmsav8.mair[index] = value;
+    cpu->pmsav8[cpu->secure].mair[index] = value;
 }
 EXC_VOID_2(tlib_set_pmsav8_mair, uint32_t, index, uint32_t, value)
 
 uint32_t tlib_get_pmsav8_ctrl()
 {
     guard_pmsav8(false);
-    return cpu->pmsav8.ctrl;
+    return cpu->pmsav8[cpu->secure].ctrl;
 }
 EXC_INT_0(uint32_t, tlib_get_pmsav8_ctrl)
 
 uint32_t tlib_get_pmsav8_rnr()
 {
     guard_pmsav8(false);
-    return cpu->pmsav8.rnr;
+    return cpu->pmsav8[cpu->secure].rnr;
 }
 EXC_INT_0(uint32_t, tlib_get_pmsav8_rnr)
 
 uint32_t tlib_get_pmsav8_rbar()
 {
     guard_pmsav8(false);
-    uint32_t index = cpu->pmsav8.rnr;
-    return cpu->pmsav8.rbar[index];
+    uint32_t index = cpu->pmsav8[cpu->secure].rnr;
+    return cpu->pmsav8[cpu->secure].rbar[index];
 }
 EXC_INT_0(uint32_t, tlib_get_pmsav8_rbar)
 
 uint32_t tlib_get_pmsav8_rlar()
 {
     guard_pmsav8(false);
-    uint32_t index = cpu->pmsav8.rnr;
-    return cpu->pmsav8.rlar[index];
+    uint32_t index = cpu->pmsav8[cpu->secure].rnr;
+    return cpu->pmsav8[cpu->secure].rlar[index];
 }
 EXC_INT_0(uint32_t, tlib_get_pmsav8_rlar)
 
@@ -435,7 +435,7 @@ uint32_t tlib_get_pmsav8_mair(uint32_t index)
         tlib_printf(LOG_LEVEL_ERROR, "Only indexes {0,1} are supported by MAIR registers");
         return 0;
     }
-    return cpu->pmsav8.mair[index];
+    return cpu->pmsav8[cpu->secure].mair[index];
 }
 EXC_INT_1(uint32_t, tlib_get_pmsav8_mair, uint32_t, index)
 

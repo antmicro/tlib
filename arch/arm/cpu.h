@@ -309,17 +309,16 @@ typedef struct CPUState {
         uint32_t handler_mode;
     } v7m;
 
-    /* PMSAv8 MPU */
+    /* PMSAv8 MPUs */
     struct {
         uint32_t ctrl;
         uint32_t rnr;
         uint32_t rbar[MAX_MPU_REGIONS];
         uint32_t rlar[MAX_MPU_REGIONS];
         uint32_t mair[2]; /* The number of these registers is *not* configurable */
-    } pmsav8;
+    } pmsav8[M_REG_NUM_BANKS];
 
     int32_t sleep_on_exception_exit;
-
 #endif
 
     /* Thumb-2 EE state.  */

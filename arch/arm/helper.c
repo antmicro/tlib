@@ -1831,13 +1831,13 @@ static inline bool pmsav8_get_region(CPUState *env, uint32_t address, int *regio
 
     for(n = MAX_MPU_REGIONS - 1; n >= 0; n--) {
 
-        if(!(env->pmsav8.rlar[n] & 0x1)) {
+        if(!(env->pmsav8[env->secure].rlar[n] & 0x1)) {
             /* Region disabled */
             continue;
         }
 
-        uint32_t base = env->pmsav8.rbar[n] & ~0x1f;
-        uint32_t limit = env->pmsav8.rlar[n] | 0x1f;
+        uint32_t base = env->pmsav8[env->secure].rbar[n] & ~0x1f;
+        uint32_t limit = env->pmsav8[env->secure].rlar[n] | 0x1f;
         if(address < base || address > limit) {
             /* Addr not in this region */
             continue;
@@ -1870,7 +1870,7 @@ static inline int pmsav8_get_phys_addr(CPUState *env, uint32_t address, int acce
     bool hit;
     int resolved_region;
     bool multiple_regions = false;
-    bool mpu_enabled = PMSA_ENABLED(env->pmsav8.ctrl);
+    bool mpu_enabled = PMSA_ENABLED(env->pmsav8[env->secure].ctrl);
 
     /* flat memory mapping */
     *phys_ptr = address;
@@ -1889,7 +1889,7 @@ static inline int pmsav8_get_phys_addr(CPUState *env, uint32_t address, int acce
     }
 
     if(hit) {
-        int rbar = env->pmsav8.rbar[resolved_region];
+        int rbar = env->pmsav8[env->secure].rbar[resolved_region];
         int xn = extract32(rbar, 0, 1);
         int ap = extract32(rbar, 1, 2);
 
@@ -1906,8 +1906,8 @@ static inline int pmsav8_get_phys_addr(CPUState *env, uint32_t address, int acce
 
         /* Check that the hit region fully covers the tlb page
          */
-        uint32_t region_start = env->pmsav8.rbar[resolved_region] & ~0x1f;
-        uint32_t region_end = env->pmsav8.rlar[resolved_region] | 0x1f;
+        uint32_t region_start = env->pmsav8[env->secure].rbar[resolved_region] & ~0x1f;
+        uint32_t region_end = env->pmsav8[env->secure].rlar[resolved_region] | 0x1f;
         if((address & TARGET_PAGE_MASK) == (region_start & TARGET_PAGE_MASK)) {
             //  Region starts mid page
             *page_size -= (region_start & ~TARGET_PAGE_MASK);
@@ -1921,7 +1921,7 @@ static inline int pmsav8_get_phys_addr(CPUState *env, uint32_t address, int acce
          * - MPU disabled: for all accesses
          * - MPU enabled: for privileged accesses if default memory map is enabled (PRIVDEFENA)
          */
-        if(!mpu_enabled || (!is_user && PMSA_PRIVDEFENA(env->pmsav8.ctrl))) {
+        if(!mpu_enabled || (!is_user && PMSA_PRIVDEFENA(env->pmsav8[env->secure].ctrl))) {
             *prot = cortexm_check_default_mapping_v8(address);
         } else {
             goto do_fault;
@@ -3049,7 +3049,7 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
     int resolved_region;
     bool multiple_regions;
 
-    if(!PMSA_ENABLED(env->pmsav8.ctrl)) {
+    if(!PMSA_ENABLED(env->pmsav8[env->secure].ctrl)) {
         goto invalid;
     }
 
