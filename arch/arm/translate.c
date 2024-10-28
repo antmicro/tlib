@@ -9154,7 +9154,16 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
         case 4:
             if(insn & (1 << 22)) {
                 /* Other load/store, table branch.  */
+#ifdef TARGET_PROTO_ARM_M
+                if(insn == 0xe97fe97f) {
+                    /* Secure Gateway */
+                    gen_sync_pc(s);
+                    gen_helper_v8m_sg(cpu_env);
+                } else if(insn & 0x01200000) {
+#else
+                //  This line is duplicated to satisfy the formatter
                 if(insn & 0x01200000) {
+#endif
                     /* Load/store doubleword.  */
                     gen_set_pc(current_pc);
                     if(rn == 15) {

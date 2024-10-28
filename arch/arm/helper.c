@@ -3173,6 +3173,18 @@ void HELPER(v8m_blxns)(CPUState *env, uint32_t addr, uint32_t link)
     env->regs[15] = addr;
 }
 
+void HELPER(v8m_sg)(CPUState *env)
+{
+    tlib_assert(!env->secure);
+    /* Clear bit[0] of LR to indicate we will return to Non-Secure mode, if we were previously in Non-Secure state */
+    env->regs[14] &= ~1;
+    //  TODO: should be in Non-secure Callable SAU region
+    //  TODO: bx/blx to any other instruction in Secure memory should cause a SecureFault no matter whether it is NSC or no (see
+    //  below, this will happen 'automatically')
+    //  TODO: once SAU is implemented then lduw_code will not be able to fetch this from Non-secure state
+    switch_v7m_security_state(env, true);
+    tlib_printf(LOG_LEVEL_NOISY, "Executed SG at 0x%" PRIx32, env->regs[15]);
+}
 #endif
 
 void tlib_arch_dispose()
