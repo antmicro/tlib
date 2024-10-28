@@ -201,6 +201,13 @@ if("${TARGET_ACTUAL_ARCH}" STREQUAL "i386")
       "Argument pointing linker to a math functions library. It's required to translate i386 code.")
 endif()
 
+# On windows, make sure the winpthread gets linked statically
+if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "(Windows|CYGWIN)")
+    set(PTREAD_OPT -static winpthread -dynamic)
+else()
+    set(PTREAD_OPT pthread)
+endif()
+
 # On x86_64 Linux, the memcpy function was modified in GNU libc v2.14.
 # It'd be impossible to run tlib without this wrapping with older libc.
 if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL Linux AND ${HOST_ARCH} STREQUAL i386 AND ${HOST_WORD_SIZE} EQUAL 64)
@@ -218,7 +225,7 @@ target_link_libraries (tlib
     ${Z_OPTS}
 
     ${MATH_LIB_LINK_ARG}
-    pthread
+    ${PTREAD_OPT}
     ${SOFTFLOAT3}
     tcg
     )
