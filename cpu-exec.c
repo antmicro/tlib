@@ -384,6 +384,9 @@ int cpu_exec(CPUState *env)
                     if(automatic_sleep_after_interrupt(env)) {
                         env->exit_request = true;
                     }
+                } else if(env->regs[15] >= 0xfeffff00) {
+                    do_v7m_secure_return(env);
+                    next_tb = 0;
                 }
 #endif
                 if(unlikely(env->mmu_fault)) {

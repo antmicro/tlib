@@ -945,6 +945,21 @@ void do_v7m_exception_exit(CPUState *env)
     }
 }
 
+void do_v7m_secure_return(CPUState *env)
+{
+    uint32_t xpsr;
+
+    switch_v7m_security_state(env, true);
+    /* Only Thumb mode is supported for this architecture */
+    env->thumb = true;
+
+    xpsr = v7m_pop(env);
+    xpsr_write(env, xpsr, 0xffffffff);
+    env->regs[15] = v7m_pop(env) & ~1;
+
+    tlib_printf(LOG_LEVEL_NOISY, "Secure return to 0x%08" PRIx32 ", xpsr: 0x%08" PRIx32, env->regs[15], xpsr);
+}
+
 void HELPER(fp_lsp)(CPUState *env)
 {
     /* Save FP state if FPCCR.LSPACT is set  */

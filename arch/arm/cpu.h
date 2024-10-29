@@ -757,6 +757,7 @@ static inline void cpu_pc_from_tb(CPUState *env, TranslationBlock *tb)
 }
 
 void do_v7m_exception_exit(CPUState *env);
+void do_v7m_secure_return(CPUState *env);
 
 #ifdef TARGET_PROTO_ARM_M
 static inline bool automatic_sleep_after_interrupt(CPUState *env)
