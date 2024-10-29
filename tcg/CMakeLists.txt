@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
 
-project (tcg)
+project (tcg LANGUAGES C)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(DEBUG_DEF "-DDEBUG")
