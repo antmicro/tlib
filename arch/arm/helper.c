@@ -3056,6 +3056,7 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
     bool a, t;
     int resolved_region;
     bool multiple_regions;
+    bool secure;
 
     union {
         struct {
@@ -3080,16 +3081,22 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
 
     /* Decode instruction variant
      * TT:    a == 0 && t == 0
-     * TTA:   a == 1 && t == 0 *unimpl*
+     * TTA:   a == 1 && t == 0
      * TTT:   a == 0 && t == 1
-     * TTAT:  a == 1 && t == 1 *unimpl*
+     * TTAT:  a == 1 && t == 1
      */
     a = op & 0b10;
     t = op & 0b01;
 
-    /* Alternate Domain (A) variants are not supported */
+    /* Alternate Domain (A) variants are used to query the Non-secure MPU from Secure code */
     if(a) {
-        cpu_abort(env, "TTA and TTAT instructions are not supported");
+        if(!env->secure) {
+            env->exception_index = EXCP_UDEF;
+            cpu_loop_exit(env);
+        }
+        secure = false;
+    } else {
+        secure = env->secure;
     }
 
     if(t) {
@@ -3100,14 +3107,14 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
         priv_access = in_privileged_mode(env);
     }
 
-    if(!pmsav8_get_region(env, addr, env->secure, &resolved_region, &multiple_regions) || multiple_regions) {
+    if(!pmsav8_get_region(env, addr, secure, &resolved_region, &multiple_regions) || multiple_regions) {
         /* No region hit or multiple regions */
         goto invalid;
     }
     addr_info.flags.mpu_region = resolved_region;
     addr_info.flags.mpu_region_valid = true;
 
-    pmsav8_get_phys_addr(env, addr, env->secure, PAGE_READ, !priv_access, &phys_ptr, &prot, &page_size);
+    pmsav8_get_phys_addr(env, addr, secure, PAGE_READ, !priv_access, &phys_ptr, &prot, &page_size);
     addr_info.flags.read_ok = (prot & (1 << PAGE_READ)) != 0;
     addr_info.flags.readwrite_ok = addr_info.flags.read_ok && (prot & (1 << PAGE_WRITE)) != 0;
 
