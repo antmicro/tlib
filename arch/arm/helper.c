@@ -3057,10 +3057,6 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
     int resolved_region;
     bool multiple_regions;
 
-    if(!PMSA_ENABLED(env->pmsav8[env->secure].ctrl)) {
-        goto invalid;
-    }
-
     union {
         struct {
             unsigned mpu_region : 8;
@@ -3076,7 +3072,11 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
             unsigned idau_region : 8;
         } flags;
         uint32_t value;
-    } addr_info;
+    } addr_info = { .value = 0 };
+
+    if(!PMSA_ENABLED(env->pmsav8[env->secure].ctrl)) {
+        goto invalid;
+    }
 
     /* Decode instruction variant
      * TT:    a == 0 && t == 0
@@ -3121,7 +3121,7 @@ invalid:
      * - The TT or TTT instruction variants, without the A flag specified, were executed from an unprivileged mode. *unimpl*
      * In this case R and RW fields are RAZ
      */
-    return 0;
+    return addr_info.value;
 }
 #endif
 
