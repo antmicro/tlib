@@ -515,10 +515,7 @@ void cpu_reset(CPUState *env)
     env->uncached_cpsr = ARM_CPU_MODE_SVC | CPSR_A | CPSR_F | CPSR_I;
 
 #ifdef TARGET_PROTO_ARM_M
-    /* On ARMv7-M the CPSR_I is the value of the PRIMASK register, and is
-       clear at reset.  Initial SP and PC are loaded from ROM.  */
     env->v7m.fpccr = (env->v7m.fpccr & ~ARM_FPCCR_LSPACT_MASK) | ARM_FPCCR_ASPEN_MASK | ARM_FPCCR_LSPEN_MASK;
-    env->uncached_cpsr &= ~CPSR_PRIMASK;
 #endif
 
     env->vfp.xregs[ARM_VFP_FPEXC] = 0;
@@ -2169,8 +2166,9 @@ uint32_t HELPER(v7m_mrs)(CPUState *env, uint32_t reg)
         case NON_SECURE_REG(11):
         case 11: /* PSPLIM - armv8-m specific */
             return env->v7m.psplim[is_secure];
+        case NON_SECURE_REG(16):
         case 16: /* PRIMASK */
-            return (env->uncached_cpsr & 1) != 0;
+            return (env->v7m.primask[is_secure] & 1) != 0;
         case NON_SECURE_REG(17):
         case 17: /* BASEPRI */
         case 18: /* BASEPRI_MAX */
@@ -2274,13 +2272,14 @@ void HELPER(v7m_msr)(CPUState *env, uint32_t reg, uint32_t val)
         case 11: /* PSPLIM - armv8-m specific */
             env->v7m.psplim[is_secure] = val;
             break;
+        case NON_SECURE_REG(16):
         case 16: /* PRIMASK */
             if(!in_privileged_mode(env)) {
                 return;
             } else if(val & 1) {
-                env->uncached_cpsr |= CPSR_PRIMASK;
+                env->v7m.primask[is_secure] |= PRIMASK_EN;
             } else {
-                env->uncached_cpsr &= ~CPSR_PRIMASK;
+                env->v7m.primask[is_secure] &= ~PRIMASK_EN;
                 tlib_nvic_find_pending_irq();
             }
             break;

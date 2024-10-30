@@ -86,7 +86,7 @@ uint32_t tlib_get_register_value_32(int reg_number)
 #ifdef TARGET_PROTO_ARM_M
     else if(reg_number == PRIMASK_32) {
         //  PRIMASK: b0: IRQ mask enabled/disabled, b1-b31: reserved.
-        return cpu->uncached_cpsr & CPSR_PRIMASK ? 1 : 0;
+        return cpu->v7m.primask[cpu->secure] & PRIMASK_EN ? 1 : 0;
     }
 #endif
 
@@ -112,10 +112,10 @@ void tlib_set_register_value_32(int reg_number, uint32_t value)
     }
 #ifdef TARGET_PROTO_ARM_M
     else if(reg_number == PRIMASK_32) {
-        cpu->uncached_cpsr &= !CPSR_PRIMASK;
+        cpu->v7m.primask[cpu->secure] &= !PRIMASK_EN;
         //  PRIMASK: b0: IRQ mask enabled/disabled, b1-b31: reserved.
         if(value == 1) {
-            cpu->uncached_cpsr |= CPSR_PRIMASK;
+            cpu->v7m.primask[cpu->secure] |= PRIMASK_EN;
             tlib_nvic_find_pending_irq();
         }
         return;

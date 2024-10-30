@@ -658,9 +658,8 @@ static inline uint64_t arm_ttbr1(CPUState *env, int el)
 static inline void find_pending_irq_if_primask_unset(CPUState *env)
 {
 #ifdef TARGET_PROTO_ARM_M
-    if(!(env->uncached_cpsr & CPSR_PRIMASK)) {
-        tlib_nvic_find_pending_irq();
-    }
+    //  There are not enough helpers to emulate M-profile core with this lib
+    tlib_abort("ARM-M mode is not supported");
 #endif
 }
 

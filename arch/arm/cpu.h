@@ -296,6 +296,7 @@ typedef struct CPUState {
         uint32_t fault_status;
         uint32_t current_sp;
         uint32_t exception;
+        uint32_t primask[M_REG_NUM_BANKS];
         uint32_t faultmask[M_REG_NUM_BANKS];
         uint32_t pending_exception;
         uint32_t cpacr;
@@ -385,11 +386,12 @@ void switch_mode(CPUState *, int);
 
 int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int rw, int mmu_idx, int no_page_fault);
 
+#define PRIMASK_EN 1
+
 #define CPSR_M        (0x1f)
 #define CPSR_T        (1 << 5)
 #define CPSR_F        (1 << 6)
 #define CPSR_I        (1 << 7)
-#define CPSR_PRIMASK  1
 #define CPSR_A        (1 << 8)
 #define CPSR_E        (1 << 9)
 #define CPSR_IT_2_7   (0xfc00)
@@ -756,7 +758,7 @@ static inline bool automatic_sleep_after_interrupt(CPUState *env)
 static inline void find_pending_irq_if_primask_unset(CPUState *env)
 {
 #ifdef TARGET_PROTO_ARM_M
-    if(!(env->uncached_cpsr & CPSR_PRIMASK)) {
+    if(!(env->v7m.primask[env->secure] & PRIMASK_EN)) {
         tlib_nvic_find_pending_irq();
     }
 #endif
