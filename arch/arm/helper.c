@@ -3061,19 +3061,19 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
         goto invalid;
     }
 
-    /* From "Armv8-M Architecture Reference Manual"
-     * The padding is a placeholder for fields that
-     * are only used in Secure Mode (currently unsupported)
-     */
     union {
         struct {
             unsigned mpu_region : 8;
-            unsigned : 8;
+            unsigned sau_region : 8;
             unsigned mpu_region_valid : 1;
-            unsigned : 1;
+            unsigned sau_region_valid : 1;
             unsigned read_ok : 1;
             unsigned readwrite_ok : 1;
-            unsigned : 12;
+            unsigned nonsecure_read_ok : 1;
+            unsigned nonsecure_readwrite_ok : 1;
+            unsigned secure : 1;
+            unsigned idau_region_valid : 1;
+            unsigned idau_region : 8;
         } flags;
         uint32_t value;
     } addr_info;
