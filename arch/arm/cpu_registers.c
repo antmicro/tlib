@@ -66,6 +66,8 @@ uint32_t *get_reg_pointer_32(int reg)
             return &(cpu->v7m.fpdscr);
         case CPACR_32:
             return &(cpu->v7m.cpacr);
+        case PRIMASK_32:
+            return &(cpu->v7m.primask[cpu->secure]);
         case FAULTMASK_32:
             return &(cpu->v7m.faultmask[cpu->secure]);
 #endif
