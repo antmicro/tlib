@@ -11,6 +11,7 @@ int32_t tlib_nvic_find_pending_irq(void);
 int32_t tlib_nvic_get_pending_masked_irq(void);
 void tlib_nvic_set_pending_irq(int32_t no);
 uint32_t tlib_has_enabled_trustzone(void);
+uint32_t tlib_nvic_interrupt_targets_secure(int32_t no);
 #endif
 
 uint32_t tlib_read_cp15_32(uint32_t instruction);
