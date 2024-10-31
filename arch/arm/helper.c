@@ -1223,8 +1223,6 @@ void do_interrupt(CPUState *env)
     env->uncached_cpsr = (env->uncached_cpsr & ~CPSR_M) | new_mode;
     env->uncached_cpsr |= mask;
 
-    find_pending_irq_if_primask_unset(env);
-
     /* this is a lie, as the was no c1_sys on V4T/V5, but who cares
      * and we should just guard the thumb mode on V4 */
     if(arm_feature(env, ARM_FEATURE_V4T)) {
