@@ -835,9 +835,9 @@ static inline void swap_u32(uint32_t *a, uint32_t *b)
 /* Switch to V7M main or process stack pointer.  */
 static void switch_v7m_sp(CPUState *env, bool process)
 {
-    if(env->v7m.current_sp != process) {
+    if(env->v7m.process_sp != process) {
         swap_u32(&env->v7m.other_sp, &env->regs[13]);
-        env->v7m.current_sp = process;
+        env->v7m.process_sp = process;
     }
 }
 
@@ -850,7 +850,7 @@ static void switch_v7m_security_state(CPUState *env, bool secure)
     /* If we were in thread mode before the switch, we need to remember to swap them
      * to make sure that MSP is really the Main Stack Pointer
      */
-    if(env->v7m.current_sp) {
+    if(env->v7m.process_sp) {
         swap_u32(&env->v7m.other_ss_psp, &env->regs[13]);
         swap_u32(&env->v7m.other_ss_msp, &env->v7m.other_sp);
     } else {
@@ -976,14 +976,14 @@ static void do_interrupt_v7m(CPUState *env)
         }
 
         /* SPSEL */
-        if(env->v7m.current_sp != 0) {
+        if(env->v7m.process_sp != 0) {
             lr |= 1 << 2;
         }
     } else {
         lr = 0xfffffff1;
         if(env->v7m.exception == 0) {
             lr |= 0x8;
-            lr |= (env->v7m.current_sp != 0) << 2;
+            lr |= (env->v7m.process_sp != 0) << 2;
         }
     }
 
@@ -2151,11 +2151,11 @@ uint32_t HELPER(v7m_mrs)(CPUState *env, uint32_t reg)
         case 7: /* IEPSR */
             return xpsr_read(env) & 0x0700edff;
         case 8: /* MSP */
-            return env->v7m.current_sp ? env->v7m.other_sp : env->regs[13];
+            return env->v7m.process_sp ? env->v7m.other_sp : env->regs[13];
         case NON_SECURE_REG(8): /* MSP_NS */
             return env->v7m.other_ss_msp;
         case 9: /* PSP */
-            return env->v7m.current_sp ? env->regs[13] : env->v7m.other_sp;
+            return env->v7m.process_sp ? env->regs[13] : env->v7m.other_sp;
         case NON_SECURE_REG(9): /* PSP_NS */
             return env->v7m.other_ss_psp;
         case NON_SECURE_REG(10):
@@ -2178,7 +2178,7 @@ uint32_t HELPER(v7m_mrs)(CPUState *env, uint32_t reg)
         case 20: /* CONTROL */
             return env->v7m.control[is_secure];
         case NON_SECURE_REG(24): /* SP_NS */
-            return env->v7m.current_sp ? env->v7m.other_ss_psp : env->v7m.other_ss_msp;
+            return env->v7m.process_sp ? env->v7m.other_ss_psp : env->v7m.other_ss_msp;
         default:
             /* ??? For debugging only.  */
             cpu_abort(env, "Unimplemented system register read (%d)\n", reg);
@@ -2243,7 +2243,7 @@ void HELPER(v7m_msr)(CPUState *env, uint32_t reg, uint32_t val)
         case 8: /* MSP */
             if(!in_privileged_mode(env)) {
                 return;
-            } else if(env->v7m.current_sp) {
+            } else if(env->v7m.process_sp) {
                 env->v7m.other_sp = val;
             } else {
                 env->regs[13] = val;
@@ -2253,7 +2253,7 @@ void HELPER(v7m_msr)(CPUState *env, uint32_t reg, uint32_t val)
             env->v7m.other_ss_msp = val;
             break;
         case 9: /* PSP */
-            if(env->v7m.current_sp) {
+            if(env->v7m.process_sp) {
                 env->regs[13] = val;
             } else {
                 env->v7m.other_sp = val;
@@ -2328,7 +2328,7 @@ void HELPER(v7m_msr)(CPUState *env, uint32_t reg, uint32_t val)
             }
             break;
         case NON_SECURE_REG(24): /* SP_NS */
-            if(env->v7m.current_sp) {
+            if(env->v7m.process_sp) {
                 env->v7m.other_ss_psp = val;
             } else {
                 env->v7m.other_ss_msp = val;

@@ -55,7 +55,7 @@ uint32_t *get_reg_pointer_32(int reg)
         case VecBase_32:
             return &(cpu->v7m.vecbase);
         case CurrentSP_32:
-            return &(cpu->v7m.current_sp);
+            return &(cpu->v7m.process_sp);
         case OtherSP_32:
             return &(cpu->v7m.other_sp);
         case FPCCR_32:

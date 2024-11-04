@@ -290,11 +290,11 @@ typedef struct CPUState {
         uint32_t other_sp;     /* Other Stack Pointer */
         uint32_t other_ss_msp; /* Other Security State Main Stack */
         uint32_t other_ss_psp; /* Other Security State Process Stack */
+        uint32_t process_sp;   /* Is the currently selected SP Process or Main SP */
         uint32_t vecbase;
         uint32_t basepri[M_REG_NUM_BANKS];
         uint32_t control[M_REG_NUM_BANKS];
         uint32_t fault_status;
-        uint32_t current_sp;
         uint32_t exception;
         uint32_t primask[M_REG_NUM_BANKS];
         uint32_t faultmask[M_REG_NUM_BANKS];
