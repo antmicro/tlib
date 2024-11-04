@@ -1016,20 +1016,17 @@ static void do_interrupt_v7m(CPUState *env)
         }
 
         if(env->v7m.has_trustzone) {
-            /* This is a huge generalization right now
-             * in reality, some exceptions are banked, and some are not
-             * for IRQs this might be configured by "NVIC_ITNS"
-             * and for some special exceptions by AIRCR
-             */
             /* There are two most relevant bits here
              * [0] ES (Exception Secure) - "The security domain the exception was taken to"
              * so whether we will be in secure mode after taking this exception
              * [6] S (Secure or Non-secure stack) - "Indicates whether a Secure or Non-secure stack is used to restore stack frame
              * on exception return" so if we will return to secure or non-secure mode, when executin exception return later
              *
-             * TODO: right now, both are set to target the same mode they occur in
+             * By default set to the same mode the exception was taken from, but this will be changed later depending on:
+             * - value of NVIC_ITNSx registers for hardware IRQ
+             * - value of AIRCR.BFHFNMINS for HardFault, NMI, BusFault
+             * Look at "EXCP_IRQ" for how this logic works
              */
-            lr |= env->secure;
             lr |= env->secure << 6;
         }
 
@@ -1038,6 +1035,10 @@ static void do_interrupt_v7m(CPUState *env)
         if(env->v7m.exception == 0) {
             lr |= 0x8;
             lr |= (env->v7m.process_sp != 0) << 2;
+        }
+
+        if(env->v7m.has_trustzone) {
+            cpu_abort(env, "TrustZone enabled for M-Architecture different than V8 is not supported");
         }
     }
 
@@ -1055,42 +1056,47 @@ static void do_interrupt_v7m(CPUState *env)
             tlib_nvic_set_pending_irq(ARMV7M_EXCP_USAGE);
             env->v7m.fault_status |= USAGE_FAULT_UNDEFINSTR;
             return;
-        case EXCP_NOCP:
-            tlib_nvic_set_pending_irq(ARMV7M_EXCP_USAGE);
-            env->v7m.fault_status |= USAGE_FAULT_NOPC;
-            return;
-        case EXCP_INVSTATE:
-            tlib_nvic_set_pending_irq(ARMV7M_EXCP_USAGE);
-            env->v7m.fault_status |= USAGE_FAULT_INVSTATE;
-            return;
-        case EXCP_SWI:
-            tlib_nvic_set_pending_irq(ARMV7M_EXCP_SVC);
-            return;
-        case EXCP_PREFETCH_ABORT:
-            /* Access violation */
-            env->v7m.fault_status |= MEM_FAULT_IACCVIOL;
-            tlib_nvic_set_pending_irq(ARMV7M_EXCP_MEM);
-            return;
-        case EXCP_DATA_ABORT:
-            /* ACK faulting address and set Data acces violation */
-            env->v7m.fault_status |= MEM_FAULT_MMARVALID | MEM_FAULT_DACCVIOL;
-            tlib_nvic_set_pending_irq(ARMV7M_EXCP_MEM);
-            return;
-        case EXCP_BKPT:
-            nr = lduw_code(env->regs[15]) & 0xff;
-            if(nr == 0xab) {
-                env->regs[15] += 2;
-                env->regs[0] = tlib_do_semihosting();
-                return;
+    }
+    tlib_nvic_set_pending_irq(ARMV7M_EXCP_DEBUG);
+    return;
+    case EXCP_IRQ:
+        env->v7m.exception = tlib_nvic_acknowledge_irq();
+        if(env->v7m.has_trustzone) {
+            /* If we have TrustZone, NVIC_ITNSx determines the security state
+             * the hardware IRQ is taken to */
+            bool secure_target = env->secure;
+            if(env->v7m.exception >= ARMV7M_EXCP_HARDIRQ0) {
+                secure_target = tlib_nvic_interrupt_targets_secure(env->v7m.exception);
+            } else {
+                switch(env->v7m.exception) {
+                    case ARMV7M_EXCP_NMI:
+                    case ARMV7M_EXCP_BUS:
+                        /* `AIRCR.BFHFNMINS` determines this behavior, but we store its value
+                         * within this structure, the same as for hard IRQ */
+                        secure_target = tlib_nvic_interrupt_targets_secure(env->v7m.exception);
+                        break;
+                    case ARMV7M_EXCP_HARD:
+                        /* According to pseudocode "ExceptionTargetsSecure" */
+                        secure_target = tlib_nvic_interrupt_targets_secure(env->v7m.exception) || env->secure;
+                        break;
+                    /* Reset and Secure Fault are secure only */
+                    case ARMV7M_EXCP_RESET:
+                    case ARMV7M_EXCP_SECURE:
+                        secure_target = true;
+                        break;
+                    /* Debug monitor (ARMV7M_EXCP_DEBUG) should be configured with `DEMCR.SDME` but since it's unimplemented
+                     * we implement it as banked, to minimize side-effects
+                     * Any other exception is banked too */
+                    default:
+                        break;
+                }
             }
-            tlib_nvic_set_pending_irq(ARMV7M_EXCP_DEBUG);
-            return;
-        case EXCP_IRQ:
-            env->v7m.exception = tlib_nvic_acknowledge_irq();
-            break;
-        default:
-            cpu_abort(env, "Unhandled exception 0x%x\n", env->exception_index);
-            return; /* Never happens.  Keep compiler happy.  */
+            lr |= deposit32(lr, 0, 1, secure_target);
+        }
+        break;
+    default:
+        cpu_abort(env, "Unhandled exception 0x%x\n", env->exception_index);
+        return; /* Never happens.  Keep compiler happy.  */
     }
 
     env->v7m.handler_mode = true;
