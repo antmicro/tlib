@@ -10,6 +10,7 @@ void tlib_nvic_write_basepri(int32_t number);
 int32_t tlib_nvic_find_pending_irq(void);
 int32_t tlib_nvic_get_pending_masked_irq(void);
 void tlib_nvic_set_pending_irq(int32_t no);
+uint32_t tlib_has_enabled_trustzone(void);
 #endif
 
 uint32_t tlib_read_cp15_32(uint32_t instruction);

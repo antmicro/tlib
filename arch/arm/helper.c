@@ -515,6 +515,10 @@ void cpu_reset(CPUState *env)
     env->uncached_cpsr = ARM_CPU_MODE_SVC | CPSR_A | CPSR_F | CPSR_I;
 
 #ifdef TARGET_PROTO_ARM_M
+    env->v7m.has_trustzone = tlib_has_enabled_trustzone() > 0;
+    //  Set initial Security State to Secure if there is TrustZone support
+    env->secure = env->v7m.has_trustzone;
+
     env->v7m.fpccr = (env->v7m.fpccr & ~ARM_FPCCR_LSPACT_MASK) | ARM_FPCCR_ASPEN_MASK | ARM_FPCCR_LSPEN_MASK;
 #endif
 

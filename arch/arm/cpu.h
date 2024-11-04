@@ -307,6 +307,7 @@ typedef struct CPUState {
         uint32_t msplim[M_REG_NUM_BANKS];
         uint32_t psplim[M_REG_NUM_BANKS];
         uint32_t handler_mode;
+        uint32_t has_trustzone;
     } v7m;
 
     /* PMSAv8 MPUs */
