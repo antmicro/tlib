@@ -350,6 +350,29 @@ static inline void tcg_out_st(TCGContext *s, TCGType type, TCGReg arg, TCGReg ar
     tcg_out_st_reg_offset(s, 64, arg, arg1, TCG_TMP_REG);
 }
 
+static inline void tcg_out_lsr_reg(TCGContext *s, int reg_dest, int reg_src, int reg_shift)
+{
+    //  Emit LSRV instruction
+    tcg_out32(s, 0x9AC02400 | reg_shift << 16 | reg_src << 5 | reg_dest << 0);
+}
+static inline void tcg_out_lsl_reg(TCGContext *s, int reg_dest, int reg_src, int reg_shift)
+{
+    //  Emit LSLV instruction
+    tcg_out32(s, 0x9AC02000 | reg_shift << 16 | reg_src << 5 | reg_dest << 0);
+}
+static inline void tcg_out_lsr_imm(TCGContext *s, int reg_dest, int reg_src, tcg_target_long shift)
+{
+    //  Move the offset into a register, and then call the register versions
+    tcg_out_movi(s, TCG_TYPE_I64, TCG_TMP_REG, shift);
+    tcg_out_lsr_reg(s, reg_dest, reg_src, TCG_TMP_REG);
+}
+static inline void tcg_out_lsl_imm(TCGContext *s, int reg_dest, int reg_src, tcg_target_long shift)
+{
+    //  Move the offset into a register, and then call the register versions
+    tcg_out_movi(s, TCG_TYPE_I64, TCG_TMP_REG, shift);
+    tcg_out_lsl_reg(s, reg_dest, reg_src, TCG_TMP_REG);
+}
+
 static inline void tcg_out_movi(TCGContext *s, TCGType type, TCGReg ret, tcg_target_long arg)
 {
     //  TODO: Optimize this in case the immidiate fits in less than 64-bits
@@ -422,10 +445,26 @@ static inline void tcg_out_and_imm(TCGContext *s, int bits, int reg_dest, int re
     }
     tcg_out_and_reg(s, bits, reg_dest, reg_in, TCG_TMP_REG);
 }
+
+static const int LSL = 0b00;
+static const int LSR = 0b01;
+static const int ASR = 0b10;
+static inline void tcg_out_subs_shift_reg(TCGContext *s, int reg_dest, int reg1, int reg2, int shift_type,
+                                          tcg_target_long shift_amount)
+{
+    //  Shift amount is 6-bits
+    tcg_out32(s, 0xeb000000 | (shift_type << 22) | (reg2 << 16) | ((shift_amount & 0x3F) << 10) | (reg1 << 5) | (reg_dest << 0));
+}
+static inline void tcg_out_cmp_shift_reg(TCGContext *s, int reg1, int reg2, int shift_type, tcg_target_long shift_amount)
+{
+    //  Sets flags based on the result of reg1 - reg2, where reg2 is shifted in a manner and by an amount specified in the
+    //  arguments This is actually and alias for SUBS (shifted register) with the dest set to the zero register
+    tcg_out_subs_shift_reg(s, TCG_REG_RZR, reg1, reg2, shift_type, shift_amount);
+}
 static inline void tcg_out_cmp(TCGContext *s, int reg1, int reg2)
 {
     //  CMP is actually just subs with the zero register as the destination
-    tcg_out32(s, 0xeb000000 | (reg2 << 16) | (reg1 << 5) | (TCG_REG_RZR << 0));
+    tcg_out_cmp_shift_reg(s, reg1, reg2, LSL, 0);
 }
 static inline void tcg_out_cmpi(TCGContext *s, int reg, tcg_target_long imm)
 {
