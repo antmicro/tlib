@@ -404,6 +404,14 @@ static inline void tcg_out_asr_imm(TCGContext *s, int reg_dest, int reg_src, tcg
     tcg_out_asr_reg(s, reg_dest, reg_src, TCG_TMP_REG);
 }
 
+//  Extracts #bits bits from the least significant bits of reg_src, sign extends it to 64-bits, and stores the result in reg_dest
+static inline void tcg_out_sign_extend(TCGContext *s, int bits, int reg_dest, int reg_src)
+{
+    tlib_assert(bits <= 64);
+    int bit_position = bits - 1;
+    tcg_out32(s, 0x93400000 | (bit_position << 10) | (reg_src << 5) | (reg_dest << 0));
+}
+
 static const int SHIFT_LSL = 0b00;
 static const int SHIFT_LSR = 0b01;
 static const int SHIFT_ASR = 0b10;
@@ -448,18 +456,26 @@ static inline void tcg_out_addi(TCGContext *s, int reg1, int reg2, tcg_target_lo
     tcg_out32(s, 0x91000000 | (imm << 10) | (reg2 << 5) | (reg1 << 0));
 }
 
-static inline void tcg_out_add_reg(TCGContext *s, int bits, int reg_dest, int reg1, int reg2)
+static inline void tcg_out_add_shift_reg(TCGContext *s, int bits, int reg_dest, int reg1, int reg2, int shift_type,
+                                         tcg_target_long shift_amount)
 {
+    //  Shift amount is 6-bits
     switch(bits) {
         case 32:
-            tcg_out32(s, 0x0b200000 | (reg2 << 16) | (reg1 << 5) | (reg_dest << 0));
+            tcg_out32(s, 0x0b000000 | (shift_type << 22) | (reg2 << 16) | ((shift_amount & 0x3F) << 10) | (reg1 << 5) |
+                             (reg_dest << 0));
             break;
         case 64:
-            tcg_out32(s, 0x8b200000 | (reg2 << 16) | (reg1 << 5) | (reg_dest << 0));
+            tcg_out32(s, 0x8b000000 | (shift_type << 22) | (reg2 << 16) | ((shift_amount & 0x3F) << 10) | (reg1 << 5) |
+                             (reg_dest << 0));
             break;
         default:
-            tcg_abortf("add_reg called with unsupported bit width: %i", bits);
+            tcg_abortf("add_shift_reg called with unsupported bit width: %i", bits);
     }
+}
+static inline void tcg_out_add_reg(TCGContext *s, int bits, int reg_dest, int reg1, int reg2)
+{
+    tcg_out_add_shift_reg(s, bits, reg_dest, reg1, reg2, SHIFT_LSL, 0);
 }
 static inline void tcg_out_add_imm(TCGContext *s, int bits, int reg_dest, int reg_in, tcg_target_long imm)
 {
@@ -520,6 +536,78 @@ static inline void tcg_out_br_condi(TCGContext *s, int arg1, int tcg_cond, int i
 {
     tcg_out_cmpi(s, arg1, imm);
     tcg_out_br_cond_raw(s, tcg_cond, addr);
+}
+
+//  qemu_st/ld loads and stores to and from GUEST addresses, not host ones
+static inline void tcg_out_qemu_st(TCGContext *s, int bits, int reg_data, int reg_addr, int mem_index)
+{
+    //  Store #bits number of bits from reg_data into the guest address in reg_addr
+    //
+    //  Clobbers R0, R1, and R2 since we need extra scratch registers
+    //  could be reduced with more efficient code, but aarch64 has a lot of registers so it probably does not matter
+
+    bool bswap;                        //  Do we need to swap endianess to match guest?
+    uint32_t *miss_label, *end_label;  //  Pointers to hold addresses used in branching
+#ifdef TARGET_WORDS_BIGENDIAN
+    bswap = true;
+#else
+    bswap = false;
+#endif
+
+    //  Logic taken from arm32 target
+    //  Compute TLB offset(?)
+    tcg_out_lsr_imm(s, TCG_REG_R2, reg_addr, TARGET_PAGE_BITS);
+    tcg_out_and_imm(s, 64, TCG_REG_R0, TCG_REG_R2, CPU_TLB_SIZE - 1);
+    tcg_out_add_shift_reg(s, 64, TCG_REG_R0, TCG_AREG0, TCG_REG_R0, SHIFT_LSL,
+                          CPU_TLB_ENTRY_BITS);  //  TCG_AREG0 holds the pointer to env/CPUState
+
+    //  Read tlb table
+    tcg_out_ld_offset(s, 64, TCG_REG_R1, TCG_REG_R0, tlb_table_n_0_addr_write[mem_index]);
+
+    //  Check if we hit, and branch to tlb miss code if not
+    tcg_out_cmp_shift_reg(s, TCG_REG_R1, TCG_REG_R2, SHIFT_LSL, TARGET_PAGE_BITS);
+    miss_label = (void *)s->code_ptr;
+    tcg_out_b_cond_noaddr(s);
+
+    //  TLB hit case
+    //  Load the host to guest offset into r1
+    tcg_out_ld_offset(s, 64, TCG_REG_R1, TCG_REG_R0, tlb_table_n_0_addend[mem_index]);
+
+    if(bswap) {
+        tcg_abortf("tcg_out_qemu_st does not support big endian targets yet");
+    } else {
+        //  Execute the store
+        tcg_out_st_reg_offset(s, bits, reg_data, reg_addr, TCG_REG_R1);
+    }
+    //  Branch to end of function
+    end_label = (void *)s->code_ptr;
+    tcg_out_b_noaddr(s);
+
+    //  TLB miss case
+    reloc_condbr_19(miss_label, (tcg_target_long)s->code_ptr, COND_NE);  //  Put label at this point in the generated code
+
+    //  Put the address in r0, data in R1, and mem_index in R2
+    tcg_out_mov(s, TCG_TYPE_I64, TCG_REG_R0, reg_addr);
+    tcg_out_sign_extend(s, bits, TCG_REG_R1, reg_data);
+    tcg_out_movi(s, TCG_TYPE_I64, TCG_REG_R2, mem_index);
+
+    //  Call tcg function to execute the store and populate tlb
+    switch(bits) {
+        case 8:
+            tcg_out_calli(s, (tcg_target_long)tcg->stb);
+            break;
+        case 16:
+            tcg_out_calli(s, (tcg_target_long)tcg->stw);
+            break;
+        case 32:
+            tcg_out_calli(s, (tcg_target_long)tcg->stl);
+            break;
+        case 64:
+            tcg_out_calli(s, (tcg_target_long)tcg->stq);
+            break;
+    }
+
+    reloc_jump26(end_label, (tcg_target_long)s->code_ptr);  //  End of function label
 }
 
 //  Variable used to store the return address. Used in INDEX_op_exit_tb
@@ -689,16 +777,16 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
             tcg_abortf("op_qemu_ld64 not implemented");
             break;
         case INDEX_op_qemu_st8:
-            tcg_abortf("op_qemu_st8 not implemented");
+            tcg_out_qemu_st(s, 8, args[0], args[1], args[2]);
             break;
         case INDEX_op_qemu_st16:
-            tcg_abortf("op_qemu_st16 not implemented");
+            tcg_out_qemu_st(s, 16, args[0], args[1], args[2]);
             break;
         case INDEX_op_qemu_st32:
-            tcg_abortf("op_qemu_st32 not implemented");
+            tcg_out_qemu_st(s, 32, args[0], args[1], args[2]);
             break;
         case INDEX_op_qemu_st64:
-            tcg_abortf("op_qemu_st64 not implemented");
+            tcg_out_qemu_st(s, 64, args[0], args[1], args[2]);
             break;
         case INDEX_op_bswap16_i32:
             tcg_abortf("op_bswap16_i32 not implemented");
