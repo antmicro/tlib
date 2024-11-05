@@ -209,6 +209,13 @@ static inline void tcg_out_b_noaddr(TCGContext *s)
     //  Unconditional branch opcode
     tcg_out8(s, 0b000101 << 2);
 }
+static inline void tcg_out_b_cond_noaddr(TCGContext *s)
+{
+    //  This sets up a conditional branch to an adress that will be emited later by a condbr_19 reloc
+    s->code_ptr += 3;
+    //  Conditional branch opcode
+    tcg_out8(s, 0b010101 << 2);
+}
 
 //  Value used for addend when nothing extra is needed by the reloc
 #define TCG_UNUSED_CONSTANT 31337
@@ -243,8 +250,7 @@ static inline void tcg_out_goto_label(TCGContext *s, int cond, int label_index)
         } else {
             tcg_out_reloc(s, s->code_ptr, R_AARCH64_CONDBR19, label_index,
                           cond);  //  Reloc needs to set the condition bits correctly
-            s->code_ptr += 3;
-            tcg_out8(s, 0b01010100);  //  Conditional branch opcode
+            tcg_out_b_cond_noaddr(s);
         }
     }
 }
@@ -391,6 +397,33 @@ static inline void tcg_out_lsl_imm(TCGContext *s, int reg_dest, int reg_src, tcg
     tcg_out_lsl_reg(s, reg_dest, reg_src, TCG_TMP_REG);
 }
 
+static const int SHIFT_LSL = 0b00;
+static const int SHIFT_LSR = 0b01;
+static const int SHIFT_ASR = 0b10;
+static inline void tcg_out_subs_shift_reg(TCGContext *s, int reg_dest, int reg1, int reg2, int shift_type,
+                                          tcg_target_long shift_amount)
+{
+    //  Shift amount is 6-bits
+    tcg_out32(s, 0xeb000000 | (shift_type << 22) | (reg2 << 16) | ((shift_amount & 0x3F) << 10) | (reg1 << 5) | (reg_dest << 0));
+}
+static inline void tcg_out_cmp_shift_reg(TCGContext *s, int reg1, int reg2, int shift_type, tcg_target_long shift_amount)
+{
+    //  Sets flags based on the result of reg1 - reg2, where reg2 is shifted in a manner and by an amount specified in the
+    //  arguments This is actually and alias for SUBS (shifted register) with the dest set to the zero register
+    tcg_out_subs_shift_reg(s, TCG_REG_RZR, reg1, reg2, shift_type, shift_amount);
+}
+static inline void tcg_out_cmp(TCGContext *s, int reg1, int reg2)
+{
+    //  cmp is just cmp shifted reg with shift set to zero
+    tcg_out_cmp_shift_reg(s, reg1, reg2, SHIFT_LSL, 0);
+}
+static inline void tcg_out_cmpi(TCGContext *s, int reg, tcg_target_long imm)
+{
+    //  Mov immediate into a register
+    tcg_out_movi(s, 0, TCG_TMP_REG, imm);
+    tcg_out_cmp(s, reg, TCG_TMP_REG);
+}
+
 static inline void tcg_out_movi(TCGContext *s, TCGType type, TCGReg ret, tcg_target_long arg)
 {
     //  TODO: Optimize this in case the immidiate fits in less than 64-bits
@@ -464,43 +497,22 @@ static inline void tcg_out_and_imm(TCGContext *s, int bits, int reg_dest, int re
     tcg_out_and_reg(s, bits, reg_dest, reg_in, TCG_TMP_REG);
 }
 
-static const int LSL = 0b00;
-static const int LSR = 0b01;
-static const int ASR = 0b10;
-static inline void tcg_out_subs_shift_reg(TCGContext *s, int reg_dest, int reg1, int reg2, int shift_type,
-                                          tcg_target_long shift_amount)
+//  Branch based on condition flags set by an earlier cmp instruction
+static inline void tcg_out_br_cond_raw(TCGContext *s, int tcg_cond, int addr)
 {
-    //  Shift amount is 6-bits
-    tcg_out32(s, 0xeb000000 | (shift_type << 22) | (reg2 << 16) | ((shift_amount & 0x3F) << 10) | (reg1 << 5) | (reg_dest << 0));
-}
-static inline void tcg_out_cmp_shift_reg(TCGContext *s, int reg1, int reg2, int shift_type, tcg_target_long shift_amount)
-{
-    //  Sets flags based on the result of reg1 - reg2, where reg2 is shifted in a manner and by an amount specified in the
-    //  arguments This is actually and alias for SUBS (shifted register) with the dest set to the zero register
-    tcg_out_subs_shift_reg(s, TCG_REG_RZR, reg1, reg2, shift_type, shift_amount);
-}
-static inline void tcg_out_cmp(TCGContext *s, int reg1, int reg2)
-{
-    //  CMP is actually just subs with the zero register as the destination
-    tcg_out_cmp_shift_reg(s, reg1, reg2, LSL, 0);
-}
-static inline void tcg_out_cmpi(TCGContext *s, int reg, tcg_target_long imm)
-{
-    //  Mov immediate into a register
-    tcg_out_movi(s, 0, TCG_TMP_REG, imm);
-    tcg_out_cmp(s, reg, TCG_TMP_REG);
+    tcg_out32(s, 0x54000000 | (addr << 5) | (tcg_cond_to_arm_cond[tcg_cond] << 0));
 }
 //  Helper for tcg's conditional branch. branch if arg1 COND arg2 == true
 static inline void tcg_out_br_cond(TCGContext *s, int arg1, int tcg_cond, int arg2, int addr)
 {
     tcg_out_cmp(s, arg1, arg2);
-    tcg_out32(s, 0x54000000 | (addr << 5) | (tcg_cond_to_arm_cond[tcg_cond] << 0));
+    tcg_out_br_cond_raw(s, tcg_cond, addr);
 }
 //  Version of above but with an immediate as the second argument
 static inline void tcg_out_br_condi(TCGContext *s, int arg1, int tcg_cond, int imm, int addr)
 {
     tcg_out_cmpi(s, arg1, imm);
-    tcg_out32(s, 0x54000000 | (addr << 5) | (tcg_cond_to_arm_cond[tcg_cond] << 0));
+    tcg_out_br_cond_raw(s, tcg_cond, addr);
 }
 
 //  Variable used to store the return address. Used in INDEX_op_exit_tb
