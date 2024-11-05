@@ -89,6 +89,24 @@ static int target_parse_constraint(TCGArgConstraint *ct, const char **pct_str)
             ct->ct |= TCG_CT_REG;
             tcg_regset_set(ct->u.regs, (1L << TCG_TARGET_GP_REGS) - 1);
             break;
+        case 's':
+            //  Registers to be used with qemu_st instructions, needs three extra scratch registers,
+            //  so prevent allocating R0, R1, and R2 since they will be overwritten
+            ct->ct |= TCG_CT_REG;
+            tcg_regset_set(ct->u.regs, (1L << TCG_TARGET_GP_REGS) - 1);
+            tcg_regset_reset_reg(ct->u.regs, TCG_REG_R0);
+            tcg_regset_reset_reg(ct->u.regs, TCG_REG_R1);
+            tcg_regset_reset_reg(ct->u.regs, TCG_REG_R2);
+            break;
+        case 'l':
+            //  Registers to be used with qemu_ld instructions, needs three extra scratch registers,
+            //  so prevent allocating R0, R1, and R2 since they will be overwritten
+            ct->ct |= TCG_CT_REG;
+            tcg_regset_set(ct->u.regs, (1L << TCG_TARGET_GP_REGS) - 1);
+            tcg_regset_reset_reg(ct->u.regs, TCG_REG_R0);
+            tcg_regset_reset_reg(ct->u.regs, TCG_REG_R1);
+            tcg_regset_reset_reg(ct->u.regs, TCG_REG_R2);
+            break;
         default:
             tcg_abortf("Constraint %c not implemented", ct_str[0]);
             return -1;
@@ -709,29 +727,117 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
 
 //  Used by parse_constraints and const_match to help tcg select apropriate registers
 //  and to determine what immediates fit in instructions
+//
+//  List taken from i386 target, not all of these are supported or even enabled currently
+//  but even having an incorrect definition here gives more helpful error messages
+//  instead of just segfautling
 static const TCGTargetOpDef arm_op_defs[] = {
     { INDEX_op_exit_tb, {} },
     { INDEX_op_goto_tb, {} },
     { INDEX_op_call, { "ri" } },
+    { INDEX_op_jmp, { "ri" } },
+    { INDEX_op_br, {} },
+    { INDEX_op_mb, {} },
 
     { INDEX_op_mov_i32, { "r", "r" } },
+    { INDEX_op_movi_i32, { "r" } },
+    { INDEX_op_mov_i64, { "r", "r" } },
+    { INDEX_op_movi_i64, { "r" } },
 
-    { INDEX_op_brcond_i32, { "r", "r" } },
+    { INDEX_op_ld8u_i64, { "r", "r" } },
+    { INDEX_op_ld8s_i64, { "r", "r" } },
+    { INDEX_op_ld16u_i64, { "r", "r" } },
+    { INDEX_op_ld16s_i64, { "r", "r" } },
+    { INDEX_op_ld32u_i64, { "r", "r" } },
+    { INDEX_op_ld32s_i64, { "r", "r" } },
+    { INDEX_op_ld_i64, { "r", "r" } },
 
     { INDEX_op_ld32u_i64, { "r", "r" } },
     { INDEX_op_ld_i64, { "r", "r" } },
 
+    { INDEX_op_st8_i32, { "r", "r" } },
+    { INDEX_op_st8_i64, { "r", "r" } },
+    { INDEX_op_st16_i32, { "r", "r" } },
+    { INDEX_op_st16_i64, { "r", "r" } },
     { INDEX_op_st32_i64, { "r", "r" } },
     { INDEX_op_st_i64, { "r", "r" } },
 
-    { INDEX_op_add_i64, { "r", "r", "r" } },
-    { INDEX_op_sub_i64, { "r", "r", "r" } },
-
     { INDEX_op_add_i32, { "r", "r", "r" } },
+    { INDEX_op_add_i64, { "r", "r", "r" } },
     { INDEX_op_sub_i32, { "r", "r", "r" } },
+    { INDEX_op_sub_i64, { "r", "r", "r" } },
     { INDEX_op_mul_i32, { "r", "r", "r" } },
-    { INDEX_op_and_i32, { "r", "r", "r" } },
+    { INDEX_op_mul_i64, { "r", "r", "r" } },
 
+    { INDEX_op_and_i32, { "r", "r", "r" } },
+    { INDEX_op_and_i64, { "r", "r", "r" } },
+    { INDEX_op_or_i32, { "r", "r", "r" } },
+    { INDEX_op_or_i64, { "r", "r", "r" } },
+    { INDEX_op_xor_i32, { "r", "r", "r" } },
+    { INDEX_op_xor_i64, { "r", "r", "r" } },
+
+    { INDEX_op_shl_i32, { "r", "r", "r" } },
+    { INDEX_op_shl_i64, { "r", "r", "r" } },
+    { INDEX_op_shr_i32, { "r", "r", "r" } },
+    { INDEX_op_shr_i64, { "r", "r", "r" } },
+    { INDEX_op_sar_i32, { "r", "r", "r" } },
+    { INDEX_op_sar_i64, { "r", "r", "r" } },
+    { INDEX_op_rotl_i32, { "r", "r", "r" } },
+    { INDEX_op_rotl_i64, { "r", "r", "r" } },
+    { INDEX_op_rotr_i32, { "r", "r", "r" } },
+    { INDEX_op_rotr_i64, { "r", "r", "r" } },
+
+    { INDEX_op_brcond_i32, { "r", "ri" } },
+    { INDEX_op_brcond_i64, { "r", "r" } },
+
+    { INDEX_op_bswap16_i32, { "r", "r" } },
+    { INDEX_op_bswap16_i64, { "r", "r" } },
+    { INDEX_op_bswap32_i32, { "r", "r" } },
+    { INDEX_op_bswap32_i64, { "r", "r" } },
+    { INDEX_op_bswap64_i64, { "r", "r" } },
+
+    { INDEX_op_neg_i32, { "r", "r" } },
+    { INDEX_op_neg_i64, { "r", "r" } },
+
+    { INDEX_op_not_i32, { "r", "r" } },
+    { INDEX_op_not_i64, { "r", "r" } },
+
+    { INDEX_op_ext8s_i32, { "r", "r" } },
+    { INDEX_op_ext16s_i32, { "r", "r" } },
+    { INDEX_op_ext8u_i32, { "r", "r" } },
+    { INDEX_op_ext16u_i32, { "r", "r" } },
+
+    { INDEX_op_ext8s_i64, { "r", "r" } },
+    { INDEX_op_ext16s_i64, { "r", "r" } },
+    { INDEX_op_ext32s_i64, { "r", "r" } },
+    { INDEX_op_ext8u_i64, { "r", "r" } },
+    { INDEX_op_ext16u_i64, { "r", "r" } },
+    { INDEX_op_ext32u_i64, { "r", "r" } },
+
+    { INDEX_op_setcond_i32, { "r", "r", "r" } },
+    { INDEX_op_setcond_i64, { "r", "r", "r" } },
+    { INDEX_op_movcond_i32, { "r", "r", "r", "r", "r" } },
+    { INDEX_op_movcond_i64, { "r", "r", "r", "r", "r" } },
+
+    { INDEX_op_deposit_i32, { "r", "r", "r" } },
+    { INDEX_op_deposit_i64, { "r", "r", "r" } },
+
+    { INDEX_op_extract_i32, { "r", "r" } },
+
+    { INDEX_op_qemu_ld8u, { "r", "l" } },
+    { INDEX_op_qemu_ld8s, { "r", "l" } },
+    { INDEX_op_qemu_ld16u, { "r", "l" } },
+    { INDEX_op_qemu_ld16s, { "r", "l" } },
+    { INDEX_op_qemu_ld32, { "r", "l" } },
+    { INDEX_op_qemu_ld32u, { "r", "l" } },
+    { INDEX_op_qemu_ld32s, { "r", "l" } },
+    { INDEX_op_qemu_ld64, { "r", "l" } },
+
+    { INDEX_op_qemu_st8, { "s", "s" } },
+    { INDEX_op_qemu_st16, { "s", "s" } },
+    { INDEX_op_qemu_st32, { "s", "s" } },
+    { INDEX_op_qemu_st64, { "s", "s" } },
+    //  { -1 } indicates the end of the list
     { -1 },
 };
 
