@@ -891,6 +891,8 @@ void do_v7m_exception_exit(CPUState *env)
         tlib_on_interrupt_end(env->exception_index);
     }
 
+    /* Location of return stack type (Secure/Non-Secure) */
+    switch_v7m_security_state(env, type & (1 << 6));
     /* Switch to the target stack.  */
     switch_v7m_sp(env, (type & 4) != 0);
     /* Pop registers.  */
@@ -1004,6 +1006,25 @@ static void do_interrupt_v7m(CPUState *env)
         if(env->v7m.process_sp != 0) {
             lr |= 1 << 2;
         }
+
+        if(env->v7m.has_trustzone) {
+            /* This is a huge generalization right now
+             * in reality, some exceptions are banked, and some are not
+             * for IRQs this might be configured by "NVIC_ITNS"
+             * and for some special exceptions by AIRCR
+             */
+            /* There are two most relevant bits here
+             * [0] ES (Exception Secure) - "The security domain the exception was taken to"
+             * so whether we will be in secure mode after taking this exception
+             * [6] S (Secure or Non-secure stack) - "Indicates whether a Secure or Non-secure stack is used to restore stack frame
+             * on exception return" so if we will return to secure or non-secure mode, when executin exception return later
+             *
+             * TODO: right now, both are set to target the same mode they occur in
+             */
+            lr |= env->secure;
+            lr |= env->secure << 6;
+        }
+
     } else {
         lr = 0xfffffff1;
         if(env->v7m.exception == 0) {
@@ -1115,6 +1136,7 @@ static void do_interrupt_v7m(CPUState *env)
     stack_status |= v7m_push(env, env->regs[1]);
     stack_status |= v7m_push(env, env->regs[0]);
 
+    switch_v7m_security_state(env, lr & 1);
     switch_v7m_sp(env, 0);
 
     env->uncached_cpsr &= ~CPSR_IT;
