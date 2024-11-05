@@ -387,6 +387,11 @@ static inline void tcg_out_lsl_reg(TCGContext *s, int reg_dest, int reg_src, int
     //  Emit LSLV instruction
     tcg_out32(s, 0x9AC02000 | reg_shift << 16 | reg_src << 5 | reg_dest << 0);
 }
+static inline void tcg_out_asr_reg(TCGContext *s, int reg_dest, int reg_src, int reg_shift)
+{
+    //  Emit ASRV instruction
+    tcg_out32(s, 0x9AC02800 | reg_shift << 16 | reg_src << 5 | reg_dest << 0);
+}
 static inline void tcg_out_lsr_imm(TCGContext *s, int reg_dest, int reg_src, tcg_target_long shift)
 {
     //  Move the offset into a register, and then call the register versions
@@ -398,6 +403,12 @@ static inline void tcg_out_lsl_imm(TCGContext *s, int reg_dest, int reg_src, tcg
     //  Move the offset into a register, and then call the register versions
     tcg_out_movi(s, TCG_TYPE_I64, TCG_TMP_REG, shift);
     tcg_out_lsl_reg(s, reg_dest, reg_src, TCG_TMP_REG);
+}
+static inline void tcg_out_asr_imm(TCGContext *s, int reg_dest, int reg_src, tcg_target_long shift)
+{
+    //  Move the offset into a register, and then call the register versions
+    tcg_out_movi(s, TCG_TYPE_I64, TCG_TMP_REG, shift);
+    tcg_out_asr_reg(s, reg_dest, reg_src, TCG_TMP_REG);
 }
 
 static const int SHIFT_LSL = 0b00;
