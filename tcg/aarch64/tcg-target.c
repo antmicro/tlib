@@ -605,6 +605,79 @@ static inline void tcg_out_qemu_st(TCGContext *s, int bits, int reg_data, int re
         case 64:
             tcg_out_calli(s, (tcg_target_long)tcg->stq);
             break;
+        default:
+            tcg_abortf("tcg_out_qemu_st called with incorrect #%i bits as argument", bits);
+    }
+
+    reloc_jump26(end_label, (tcg_target_long)s->code_ptr);  //  End of function label
+}
+static inline void tcg_out_qemu_ld(TCGContext *s, int bits, bool sign_extend, int reg_data, int reg_addr, int mem_index)
+{
+    bool bswap;                        //  Do we need to swap endianess to match guest?
+    uint32_t *miss_label, *end_label;  //  Pointers to hold addresses used in branching
+#ifdef TARGET_WORDS_BIGENDIAN
+    bswap = true;
+#else
+    bswap = false;
+#endif
+    //  Same TLB lookup logic as in st
+    //  Compute TLB offset(?)
+    tcg_out_lsr_imm(s, TCG_REG_R2, reg_addr, TARGET_PAGE_BITS);
+    tcg_out_and_imm(s, 64, TCG_REG_R0, TCG_REG_R2, CPU_TLB_SIZE - 1);
+    tcg_out_add_shift_reg(s, 64, TCG_REG_R0, TCG_AREG0, TCG_REG_R0, SHIFT_LSL,
+                          CPU_TLB_ENTRY_BITS);  //  TCG_AREG0 holds the pointer to env/CPUState
+
+    //  Read tlb table
+    tcg_out_ld_offset(s, 64, TCG_REG_R1, TCG_REG_R0, tlb_table_n_0_addr_write[mem_index]);
+
+    //  Check if we hit, and branch to tlb miss code if not
+    tcg_out_cmp_shift_reg(s, TCG_REG_R1, TCG_REG_R2, SHIFT_LSL, TARGET_PAGE_BITS);
+    miss_label = (void *)s->code_ptr;
+    tcg_out_b_cond_noaddr(s);
+
+    //  TLB hit case
+    //  Load the host to guest offset into r1
+    tcg_out_ld_offset(s, 64, TCG_REG_R1, TCG_REG_R0, tlb_table_n_0_addend[mem_index]);
+
+    if(bswap) {
+        tcg_abortf("tcg_out_qemu_ld does not support big endian targets yet");
+    } else {
+        //  Execute the load
+        tcg_out_ld_reg_offset(s, bits, reg_data, reg_addr, TCG_REG_R1);
+    }
+    //  Branch to end of function
+    end_label = (void *)s->code_ptr;
+    tcg_out_b_noaddr(s);
+
+    //  TLB miss case
+    reloc_condbr_19(miss_label, (tcg_target_long)s->code_ptr, COND_NE);  //  Put label at this point in the generated code
+
+    //  Put the address in r0, and mem_index in r1
+    tcg_out_mov(s, TCG_TYPE_I64, TCG_REG_R0, reg_addr);
+    tcg_out_movi(s, TCG_TYPE_I64, TCG_REG_R1, mem_index);
+
+    switch(bits) {
+        case 8:
+            tcg_out_calli(s, (tcg_target_long)tcg->ldb);
+            break;
+        case 16:
+            tcg_out_calli(s, (tcg_target_long)tcg->ldw);
+            break;
+        case 32:
+            tcg_out_calli(s, (tcg_target_long)tcg->ldl);
+            break;
+        case 64:
+            tcg_out_calli(s, (tcg_target_long)tcg->ldq);
+            break;
+        default:
+            tcg_abortf("tcg_out_qemu_ld called with incorrect #%i bits as argument", bits);
+    }
+
+    //  The tcg_ld functions put the data in r0
+    if(sign_extend) {
+        tcg_out_sign_extend(s, bits, reg_data, TCG_REG_R0);
+    } else {
+        tcg_out_mov(s, TCG_TYPE_I64, reg_data, TCG_REG_R0);
     }
 
     reloc_jump26(end_label, (tcg_target_long)s->code_ptr);  //  End of function label
@@ -762,19 +835,19 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
             tcg_abortf("op_setcond2_i32 not implemented");
             break;
         case INDEX_op_qemu_ld8s:
-            tcg_abortf("op_qemu_ld8s not implemented");
+            tcg_out_qemu_ld(s, 8, true, args[0], args[1], args[2]);
             break;
         case INDEX_op_qemu_ld16u:
-            tcg_abortf("op_qemu_ld16u not implemented");
+            tcg_out_qemu_ld(s, 16, false, args[0], args[1], args[2]);
             break;
         case INDEX_op_qemu_ld16s:
-            tcg_abortf("op_qemu_ld16s not implemented");
+            tcg_out_qemu_ld(s, 16, true, args[0], args[1], args[2]);
             break;
         case INDEX_op_qemu_ld32:
-            tcg_abortf("op_qemu_ld32 not implemented");
+            tcg_out_qemu_ld(s, 32, false, args[0], args[1], args[2]);
             break;
         case INDEX_op_qemu_ld64:
-            tcg_abortf("op_qemu_ld64 not implemented");
+            tcg_out_qemu_ld(s, 64, false, args[0], args[1], args[2]);
             break;
         case INDEX_op_qemu_st8:
             tcg_out_qemu_st(s, 8, args[0], args[1], args[2]);
