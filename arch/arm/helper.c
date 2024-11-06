@@ -1753,8 +1753,8 @@ static inline bool pmsav8_get_region(CPUState *env, uint32_t address, int *regio
     return hit;
 }
 
-#define PMSA_ENABLED(ctrl) (( ctrl & 0b100 ))
-#define PMSA_PRIVDEFENA(ctrl) (( ctrl & 0b1 ))
+#define PMSA_ENABLED(ctrl) (( ctrl & 0b001 ))
+#define PMSA_PRIVDEFENA(ctrl) (( ctrl & 0b100 ))
 #define PMSA_AP_PRIVONLY(ap) (( ap & 0b01 ) == 0)
 #define PMSA_AP_READONLY(ap) (( ap & 0b10 ) != 0)
 
