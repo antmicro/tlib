@@ -565,6 +565,27 @@ static inline void tcg_out_br_condi(TCGContext *s, int arg1, int tcg_cond, int i
     tcg_out_br_cond_raw(s, tcg_cond, addr);
 }
 
+static inline void tcg_out_bswap(TCGContext *s, int bits, int reg_dest, int reg_src)
+{
+    switch(bits) {
+        case 8:
+            //  Noop, so just move it to dest
+            tcg_out_mov(s, TCG_TYPE_I64, reg_dest, reg_src);
+            break;
+        case 16:
+            tcg_out32(s, 0x5ac00400 | (reg_src << 5) | (reg_dest << 0));
+            break;
+        case 32:
+            tcg_out32(s, 0x5ac00800 | (reg_src << 5) | (reg_dest << 0));
+            break;
+        case 64:
+            tcg_out32(s, 0xdaC00c00 | (reg_src << 5) | (reg_dest << 0));
+            break;
+        default:
+            tcg_abortf("tcg_out_bswap call with unsupported %i bits", bits);
+    }
+}
+
 //  qemu_st/ld loads and stores to and from GUEST addresses, not host ones
 static inline void tcg_out_qemu_st(TCGContext *s, int bits, int reg_data, int reg_addr, int mem_index)
 {
@@ -601,7 +622,9 @@ static inline void tcg_out_qemu_st(TCGContext *s, int bits, int reg_data, int re
     tcg_out_ld_offset(s, 64, TCG_REG_R1, TCG_REG_R0, tlb_table_n_0_addend[mem_index]);
 
     if(bswap) {
-        tcg_abortf("tcg_out_qemu_st does not support big endian targets yet");
+        //  Byte order needs to be swapped before storing
+        tcg_out_bswap(s, bits, TCG_REG_R0, reg_data);
+        tcg_out_st_reg_offset(s, bits, TCG_REG_R0, reg_addr, TCG_REG_R1);
     } else {
         //  Execute the store
         tcg_out_st_reg_offset(s, bits, reg_data, reg_addr, TCG_REG_R1);
@@ -667,7 +690,9 @@ static inline void tcg_out_qemu_ld(TCGContext *s, int bits, bool sign_extend, in
     tcg_out_ld_offset(s, 64, TCG_REG_R1, TCG_REG_R0, tlb_table_n_0_addend[mem_index]);
 
     if(bswap) {
-        tcg_abortf("tcg_out_qemu_ld does not support big endian targets yet");
+        //  Byte order needs to be swapped after load
+        tcg_out_ld_reg_offset(s, bits, TCG_REG_R0, reg_addr, TCG_REG_R1);
+        tcg_out_bswap(s, bits, reg_data, TCG_REG_R0);
     } else {
         //  Execute the load
         tcg_out_ld_reg_offset(s, bits, reg_data, reg_addr, TCG_REG_R1);
