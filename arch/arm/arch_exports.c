@@ -192,6 +192,30 @@ EXC_VOID_1(tlib_set_exception_vector_address, uint32_t, address)
 
 #ifdef TARGET_PROTO_ARM_M
 
+void tlib_set_security_state(uint32_t state)
+{
+    /* Update information about TrustZone support here
+     * this is required to turn TZ support on in the core and is a bit hackish
+     * since we don't have this information available during first cpu_init
+     */
+    cpu->v7m.has_trustzone = tlib_has_enabled_trustzone() > 0;
+
+    if(!cpu->v7m.has_trustzone) {
+        tlib_abort("Changing Security State for CPU with disabled TrustZone");
+    }
+    cpu->secure = state;
+}
+EXC_VOID_1(tlib_set_security_state, uint32_t, state)
+
+uint32_t tlib_get_security_state()
+{
+    if(!cpu->v7m.has_trustzone) {
+        tlib_printf(LOG_LEVEL_WARNING, "This CPU has TrustZone disabled, so its security state is bogus");
+    }
+    return cpu->secure;
+}
+EXC_INT_0(uint32_t, tlib_get_security_state)
+
 void tlib_set_sleep_on_exception_exit(int32_t value)
 {
     cpu->sleep_on_exception_exit = !!value;
@@ -199,7 +223,7 @@ void tlib_set_sleep_on_exception_exit(int32_t value)
 
 EXC_VOID_1(tlib_set_sleep_on_exception_exit, int32_t, value)
 
-void tlib_set_interrupt_vector_base(uint32_t address)
+void tlib_set_interrupt_vector_base(uint32_t address, bool secure)
 {
     cpu->v7m.vecbase = address;
 }

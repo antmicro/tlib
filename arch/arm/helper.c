@@ -857,6 +857,12 @@ static void switch_v7m_security_state(CPUState *env, bool secure)
         return;
     }
 
+    /* If we entered this function but have no TZ, means we have a bug somewhere */
+    if(unlikely(!env->v7m.has_trustzone)) {
+        cpu_abort(env, "Tried to internally switch CPU state to %s but TrustZone is not enabled. This is a translation lib bug",
+                  secure ? "Secure" : "Non-secure");
+    }
+
     /* If we were in thread mode before the switch, we need to remember to swap them
      * to make sure that MSP is really the Main Stack Pointer
      */
@@ -891,8 +897,10 @@ void do_v7m_exception_exit(CPUState *env)
         tlib_on_interrupt_end(env->exception_index);
     }
 
-    /* Location of return stack type (Secure/Non-Secure) */
-    switch_v7m_security_state(env, type & (1 << 6));
+    if(env->v7m.has_trustzone) {
+        /* Location of return stack type (Secure/Non-Secure) */
+        switch_v7m_security_state(env, type & (1 << 6));
+    }
     /* Switch to the target stack.  */
     switch_v7m_sp(env, (type & 4) != 0);
     /* Pop registers.  */
@@ -1136,7 +1144,9 @@ static void do_interrupt_v7m(CPUState *env)
     stack_status |= v7m_push(env, env->regs[1]);
     stack_status |= v7m_push(env, env->regs[0]);
 
-    switch_v7m_security_state(env, lr & 1);
+    if(env->v7m.has_trustzone) {
+        switch_v7m_security_state(env, lr & 1);
+    }
     switch_v7m_sp(env, 0);
 
     env->uncached_cpsr &= ~CPSR_IT;
