@@ -496,6 +496,43 @@ static inline void tcg_out_add_imm(TCGContext *s, int bits, int reg_dest, int re
     }
     tcg_out_add_reg(s, bits, reg_dest, reg_in, TCG_TMP_REG);
 }
+static inline void tcg_out_sub_shift_reg(TCGContext *s, int bits, int reg_dest, int reg1, int reg2, int shift_type,
+                                         tcg_target_long shift_amount)
+{
+    //  Shift amount is 6-bits
+    switch(bits) {
+        case 32:
+            tcg_out32(s, 0x4b000000 | (shift_type << 22) | (reg2 << 16) | ((shift_amount & 0x3F) << 10) | (reg1 << 5) |
+                             (reg_dest << 0));
+            break;
+        case 64:
+            tcg_out32(s, 0xcb000000 | (shift_type << 22) | (reg2 << 16) | ((shift_amount & 0x3F) << 10) | (reg1 << 5) |
+                             (reg_dest << 0));
+            break;
+        default:
+            tcg_abortf("sub_shift_reg called with unsupported bit width: %i", bits);
+    }
+}
+
+static inline void tcg_out_sub_reg(TCGContext *s, int bits, int reg_dest, int reg1, int reg2)
+{
+    tcg_out_sub_shift_reg(s, bits, reg_dest, reg1, reg2, SHIFT_LSL, 0);
+}
+
+static inline void tcg_out_sub_imm(TCGContext *s, int bits, int reg_dest, int reg_in, tcg_target_long imm)
+{
+    switch(bits) {
+        case 32:
+            tcg_out_movi32(s, TCG_TMP_REG, imm);
+            break;
+        case 64:
+            tcg_out_movi64(s, TCG_TMP_REG, imm);
+            break;
+        default:
+            tcg_abortf("sub_imm for %i bits not implemented", bits);
+    }
+    tcg_out_sub_reg(s, bits, reg_dest, reg_in, TCG_TMP_REG);
+}
 
 static inline void tcg_out_and_reg(TCGContext *s, int bits, int reg_dest, int reg1, int reg2)
 {
@@ -733,7 +770,13 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
             }
             break;
         case INDEX_op_sub_i32:
-            tcg_abortf("op_sub_i32 not implemented");
+            if(const_args[2]) {
+                //  Add with immediate
+                tcg_out_sub_imm(s, 32, args[0], args[1], args[2]);
+            } else {
+                //  Add with registers
+                tcg_out_sub_reg(s, 32, args[0], args[1], args[2]);
+            }
             break;
         case INDEX_op_and_i32:
             if(const_args[2]) {
