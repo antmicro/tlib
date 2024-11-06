@@ -350,7 +350,7 @@ static inline void tcg_out_st_reg_offset(TCGContext *s, int bits, int reg_src, i
             tcg_out32(s, 0xf8200800 | (offset_reg << 16) | (0b011 << 13) | (reg_base << 5) | (reg_src << 0));
             break;
         default:
-            tcg_abortf("st %s bits wide not implemented", bits);
+            tcg_abortf("st %i bits wide not implemented", bits);
             break;
     }
 }
@@ -518,6 +518,33 @@ static inline void tcg_out_and_imm(TCGContext *s, int bits, int reg_dest, int re
             tcg_abortf("and_imm for %i bits not implemented", bits);
     }
     tcg_out_and_reg(s, bits, reg_dest, reg_in, TCG_TMP_REG);
+}
+static inline void tcg_out_or_reg(TCGContext *s, int bits, int reg_dest, int reg1, int reg2)
+{
+    switch(bits) {
+        case 32:
+            tcg_out32(s, 0x2a000000 | (reg2 << 16) | (reg1 << 5) | (reg_dest << 0));
+            break;
+        case 64:
+            tcg_out32(s, 0xaa000000 | (reg2 << 16) | (reg1 << 5) | (reg_dest << 0));
+            break;
+        default:
+            tcg_abortf("or_reg called with unsupported bit width: %i", bits);
+    }
+}
+static inline void tcg_out_or_imm(TCGContext *s, int bits, int reg_dest, int reg_in, tcg_target_long imm)
+{
+    switch(bits) {
+        case 32:
+            tcg_out_movi32(s, TCG_TMP_REG, imm);
+            break;
+        case 64:
+            tcg_out_movi64(s, TCG_TMP_REG, imm);
+            break;
+        default:
+            tcg_abortf("or_imm for %i bits not implemented", bits);
+    }
+    tcg_out_or_reg(s, bits, reg_dest, reg_in, TCG_TMP_REG);
 }
 
 //  Branch based on condition flags set by an earlier cmp instruction
@@ -731,14 +758,11 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
         case INDEX_op_ld8u_i32:
             tcg_abortf("op_ld8u_i32 not implemented");
             break;
-        case INDEX_op_qemu_ld8u:
-            tcg_abortf("op_ld8u not implemented");
-            break;
         case INDEX_op_ld16s_i32:
             tcg_abortf("op_ld16s_i32 not implemented");
             break;
         case INDEX_op_ld_i32:
-            tcg_abortf("op_ld_i32 not implemented");
+            tcg_out_ld(s, TCG_TYPE_I32, args[0], args[1], args[2]);
             break;
         case INDEX_op_st8_i32:
             tcg_abortf("op_st8_i32 not implemented");
@@ -747,7 +771,7 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
             tcg_abortf("op_st16_i32 not implemented");
             break;
         case INDEX_op_st_i32:
-            tcg_abortf("op_st_i32 not implemented");
+            tcg_out_st(s, TCG_TYPE_I32, args[0], args[1], args[2]);
             break;
         case INDEX_op_mov_i32:
             tcg_abortf("op_mov_i32 not implemented");
@@ -780,7 +804,13 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
             tcg_abortf("op_andc_i32 not implemented");
             break;
         case INDEX_op_or_i32:
-            tcg_abortf("op_or_i32 not implemented");
+            if(const_args[2]) {
+                //  And with immediate
+                tcg_out_or_imm(s, 32, args[0], args[1], args[2]);
+            } else {
+                //  And with registers
+                tcg_out_or_reg(s, 32, args[0], args[1], args[2]);
+            }
             break;
         case INDEX_op_xor_i32:
             tcg_abortf("op_xor_i32 not implemented");
@@ -924,12 +954,19 @@ static const TCGTargetOpDef arm_op_defs[] = {
     { INDEX_op_mov_i64, { "r", "r" } },
     { INDEX_op_movi_i64, { "r" } },
 
+    { INDEX_op_ld8u_i32, { "r", "r" } },
     { INDEX_op_ld8u_i64, { "r", "r" } },
+    { INDEX_op_ld8s_i32, { "r", "r" } },
     { INDEX_op_ld8s_i64, { "r", "r" } },
+
+    { INDEX_op_ld16u_i32, { "r", "r" } },
     { INDEX_op_ld16u_i64, { "r", "r" } },
+    { INDEX_op_ld16s_i32, { "r", "r" } },
     { INDEX_op_ld16s_i64, { "r", "r" } },
+
     { INDEX_op_ld32u_i64, { "r", "r" } },
     { INDEX_op_ld32s_i64, { "r", "r" } },
+    { INDEX_op_ld_i32, { "r", "r" } },
     { INDEX_op_ld_i64, { "r", "r" } },
 
     { INDEX_op_ld32u_i64, { "r", "r" } },
@@ -940,6 +977,7 @@ static const TCGTargetOpDef arm_op_defs[] = {
     { INDEX_op_st16_i32, { "r", "r" } },
     { INDEX_op_st16_i64, { "r", "r" } },
     { INDEX_op_st32_i64, { "r", "r" } },
+    { INDEX_op_st_i32, { "r", "r" } },
     { INDEX_op_st_i64, { "r", "r" } },
 
     { INDEX_op_add_i32, { "r", "r", "r" } },
