@@ -979,7 +979,7 @@ void tb_link_page(TranslationBlock *tb, tb_page_addr_t phys_pc, tb_page_addr_t p
         tb->page_addr[1] = -1;
     }
 
-    tb->jmp_first = (TranslationBlock *)((uintptr_t)tb | 2);
+    tb->jmp_first = (TranslationBlock *)((uintptr_t)tb | EXIT_TB_FORCE);
     tb->jmp_next[0] = NULL;
     tb->jmp_next[1] = NULL;
 
