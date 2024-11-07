@@ -313,38 +313,73 @@ static inline void tcg_out_movi32(TCGContext *s, int reg1, tcg_target_long imm)
     tcg_out32(s, 0x72800000 | (SHIFT_16 << 21) | ((0xffff & imm) << 5) | (reg1 << 0));  //  MOVK
 }
 
-static inline void tcg_out_lsr_reg(TCGContext *s, int reg_dest, int reg_src, int reg_shift)
+static inline void tcg_out_lsr_reg(TCGContext *s, int bits, int reg_dest, int reg_src, int reg_shift)
 {
     //  Emit LSRV instruction
-    tcg_out32(s, 0x9AC02400 | reg_shift << 16 | reg_src << 5 | reg_dest << 0);
+    switch(bits) {
+        case 32:
+            tcg_out32(s, 0x1AC02400 | reg_shift << 16 | reg_src << 5 | reg_dest << 0);
+            break;
+        case 64:
+            tcg_out32(s, 0x9AC02400 | reg_shift << 16 | reg_src << 5 | reg_dest << 0);
+            break;
+        default:
+            tcg_abortf("lsr_reg for %i bits not implemented", bits);
+            break;
+    }
 }
-static inline void tcg_out_lsl_reg(TCGContext *s, int reg_dest, int reg_src, int reg_shift)
+static inline void tcg_out_lsl_reg(TCGContext *s, int bits, int reg_dest, int reg_src, int reg_shift)
 {
+
     //  Emit LSLV instruction
-    tcg_out32(s, 0x9AC02000 | reg_shift << 16 | reg_src << 5 | reg_dest << 0);
+    switch(bits) {
+        case 32:
+            tcg_out32(s, 0x1AC02000 | reg_shift << 16 | reg_src << 5 | reg_dest << 0);
+            break;
+        case 64:
+            tcg_out32(s, 0x9AC02000 | reg_shift << 16 | reg_src << 5 | reg_dest << 0);
+            break;
+        default:
+            tcg_abortf("lsl_reg for %i bits not implemented", bits);
+            break;
+    }
 }
-static inline void tcg_out_asr_reg(TCGContext *s, int reg_dest, int reg_src, int reg_shift)
+static inline void tcg_out_asr_reg(TCGContext *s, int bits, int reg_dest, int reg_src, int reg_shift)
 {
+
+    switch(bits) {
+        case 32:
+            tcg_out32(s, 0x1AC02800 | reg_shift << 16 | reg_src << 5 | reg_dest << 0);
+            break;
+        case 64:
+            tcg_out32(s, 0x9AC02800 | reg_shift << 16 | reg_src << 5 | reg_dest << 0);
+            break;
+        default:
+            tcg_abortf("asr_reg for %i bits not implemented", bits);
+            break;
+    }
     //  Emit ASRV instruction
-    tcg_out32(s, 0x9AC02800 | reg_shift << 16 | reg_src << 5 | reg_dest << 0);
 }
-static inline void tcg_out_lsr_imm(TCGContext *s, int reg_dest, int reg_src, tcg_target_long shift)
+static inline void tcg_out_lsr_imm(TCGContext *s, int bits, int reg_dest, int reg_src, tcg_target_long shift)
 {
+
     //  Move the offset into a register, and then call the register versions
     tcg_out_movi(s, TCG_TYPE_I64, TCG_TMP_REG, shift);
-    tcg_out_lsr_reg(s, reg_dest, reg_src, TCG_TMP_REG);
+    tcg_out_lsr_reg(s, bits, reg_dest, reg_src, TCG_TMP_REG);
 }
-static inline void tcg_out_lsl_imm(TCGContext *s, int reg_dest, int reg_src, tcg_target_long shift)
+static inline void tcg_out_lsl_imm(TCGContext *s, int bits, int reg_dest, int reg_src, tcg_target_long shift)
 {
+
     //  Move the offset into a register, and then call the register versions
     tcg_out_movi(s, TCG_TYPE_I64, TCG_TMP_REG, shift);
-    tcg_out_lsl_reg(s, reg_dest, reg_src, TCG_TMP_REG);
+    tcg_out_lsl_reg(s, bits, reg_dest, reg_src, TCG_TMP_REG);
 }
-static inline void tcg_out_asr_imm(TCGContext *s, int reg_dest, int reg_src, tcg_target_long shift)
+static inline void tcg_out_asr_imm(TCGContext *s, int bits, int reg_dest, int reg_src, tcg_target_long shift)
 {
+
     //  Move the offset into a register, and then call the register versions
     tcg_out_movi(s, TCG_TYPE_I64, TCG_TMP_REG, shift);
-    tcg_out_asr_reg(s, reg_dest, reg_src, TCG_TMP_REG);
+    tcg_out_asr_reg(s, bits, reg_dest, reg_src, TCG_TMP_REG);
 }
 
 //  Extracts #bits bits from the least significant bits of reg_src, sign extends it to 64-bits, and stores the result in reg_dest
@@ -830,13 +865,25 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
             tcg_abortf("op_muls2_i32 not implemented");
             break;
         case INDEX_op_shl_i32:
-            tcg_abortf("op_shl_i32 not implemented");
+            if(const_args[2]) {
+                tcg_out_lsl_imm(s, 32, args[0], args[1], args[2]);
+            } else {
+                tcg_out_lsl_reg(s, 32, args[0], args[1], args[2]);
+            }
             break;
         case INDEX_op_shr_i32:
-            tcg_abortf("op_shr_i32 not implemented");
+            if(const_args[2]) {
+                tcg_out_lsr_imm(s, 32, args[0], args[1], args[2]);
+            } else {
+                tcg_out_lsr_reg(s, 32, args[0], args[1], args[2]);
+            }
             break;
         case INDEX_op_sar_i32:
-            tcg_abortf("op_sar_i32 not implemented");
+            if(const_args[2]) {
+                tcg_out_asr_imm(s, 32, args[0], args[1], args[2]);
+            } else {
+                tcg_out_asr_reg(s, 32, args[0], args[1], args[2]);
+            }
             break;
         case INDEX_op_rotr_i32:
             tcg_abortf("op_rotr_i32 not implemented");
