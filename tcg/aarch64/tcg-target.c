@@ -309,67 +309,6 @@ static inline void tcg_out_movi32(TCGContext *s, int reg1, tcg_target_long imm)
     tcg_out32(s, 0x72800000 | (SHIFT_16 << 21) | ((0xffff & imm) << 5) | (reg1 << 0));  //  MOVK
 }
 
-//  Fills reg_dest with nbit of data from reg_base + offset_reg
-static inline void tcg_out_ld_reg_offset(TCGContext *s, int bits, int reg_dest, int reg_base, int offset_reg)
-{
-    switch(bits) {
-        case 32:
-            tcg_out32(s, 0x78600800 | (offset_reg << 16) | (0b011 << 13) | (reg_base << 5) | (reg_dest << 0));
-            break;
-        case 64:
-            tcg_out32(s, 0xf8600800 | (offset_reg << 16) | (0b011 << 13) | (reg_base << 5) | (reg_dest << 0));
-            break;
-        default:
-            tcg_abortf("ld %s bits wide not implemented", bits);
-            break;
-    }
-}
-
-static inline void tcg_out_ld_offset(TCGContext *s, int bits, int reg_dest, int reg_base, tcg_target_long offset)
-{
-    tcg_out_movi64(s, TCG_TMP_REG, offset);
-    tcg_out_ld_reg_offset(s, bits, reg_dest, reg_base, TCG_TMP_REG);
-}
-
-//  Read 64-bits from base + offset to dest
-static inline void tcg_out_ld(TCGContext *s, TCGType type, TCGReg dest, TCGReg base, tcg_target_long offset)
-{
-    tcg_out_movi64(s, TCG_TMP_REG, offset);
-    tcg_out_ld_reg_offset(s, 64, dest, base, TCG_TMP_REG);
-}
-
-//  Stores n-bits of data from reg_src to reg_base + offset_reg
-static inline void tcg_out_st_reg_offset(TCGContext *s, int bits, int reg_src, int reg_base, int offset_reg)
-{
-    switch(bits) {
-        case 32:
-            tcg_out32(s, 0x78200800 | (offset_reg << 16) | (0b011 << 13) | (reg_base << 5) | (reg_src << 0));
-            break;
-        case 64:
-            //  The constant is to set some needed flags
-            tcg_out32(s, 0xf8200800 | (offset_reg << 16) | (0b011 << 13) | (reg_base << 5) | (reg_src << 0));
-            break;
-        default:
-            tcg_abortf("st %i bits wide not implemented", bits);
-            break;
-    }
-}
-static inline void tcg_out_st_offset(TCGContext *s, int bits, int reg_src, int reg_base, tcg_target_long offset)
-{
-    tcg_out_movi64(s, TCG_TMP_REG, offset);
-    tcg_out_st_reg_offset(s, bits, reg_src, reg_base, TCG_TMP_REG);
-}
-
-static inline void tcg_out_st(TCGContext *s, TCGType type, TCGReg arg, TCGReg arg1, tcg_target_long offset)
-{
-    //  Write the content of arg to the address in arg1 + offset
-    //  For offsets that fit in 9-bits this could be one instruction, future optimization work
-
-    //  Move offset into designated tmp reg
-    tcg_out_movi64(s, TCG_TMP_REG, offset);
-    tcg_out_st_reg_offset(s, 64, arg, arg1, TCG_TMP_REG);
-}
-
 static inline void tcg_out_lsr_reg(TCGContext *s, int reg_dest, int reg_src, int reg_shift)
 {
     //  Emit LSRV instruction
@@ -410,6 +349,79 @@ static inline void tcg_out_sign_extend(TCGContext *s, int bits, int reg_dest, in
     tlib_assert(bits <= 64);
     int bit_position = bits - 1;
     tcg_out32(s, 0x93400000 | (bit_position << 10) | (reg_src << 5) | (reg_dest << 0));
+}
+
+//  Fills reg_dest with nbit of data from reg_base + offset_reg
+static inline void tcg_out_ld_reg_offset(TCGContext *s, int bits, int reg_dest, int reg_base, int offset_reg)
+{
+    switch(bits) {
+        case 8:
+            tcg_out32(s, 0x38600800 | (offset_reg << 16) | (0b011 << 13) | (reg_base << 5) | (reg_dest << 0));
+            break;
+        case 16:
+            tcg_out32(s, 0x78600800 | (offset_reg << 16) | (0b011 << 13) | (reg_base << 5) | (reg_dest << 0));
+            break;
+        case 32:
+            tcg_out32(s, 0xb8600800 | (offset_reg << 16) | (0b011 << 13) | (reg_base << 5) | (reg_dest << 0));
+            break;
+        case 64:
+            tcg_out32(s, 0xf8600800 | (offset_reg << 16) | (0b011 << 13) | (reg_base << 5) | (reg_dest << 0));
+            break;
+        default:
+            tcg_abortf("%i bit load not implemented", bits);
+            break;
+    }
+}
+
+static inline void tcg_out_ld_offset(TCGContext *s, int bits, int reg_dest, int reg_base, tcg_target_long offset)
+{
+    tcg_out_movi64(s, TCG_TMP_REG, offset);
+    tcg_out_ld_reg_offset(s, bits, reg_dest, reg_base, TCG_TMP_REG);
+}
+
+//  Read 64-bits from base + offset to dest
+static inline void tcg_out_ld(TCGContext *s, TCGType type, TCGReg dest, TCGReg base, tcg_target_long offset)
+{
+    tcg_out_movi64(s, TCG_TMP_REG, offset);
+    tcg_out_ld_reg_offset(s, 64, dest, base, TCG_TMP_REG);
+}
+
+//  Stores n-bits of data from reg_src to reg_base + offset_reg
+static inline void tcg_out_st_reg_offset(TCGContext *s, int bits, int reg_src, int reg_base, int offset_reg)
+{
+    switch(bits) {
+        case 8:
+            //  The constant is to set some needed flags
+            tcg_out32(s, 0x38200800 | (offset_reg << 16) | (0b011 << 13) | (reg_base << 5) | (reg_src << 0));
+            break;
+        case 16:
+            tcg_out32(s, 0x78200800 | (offset_reg << 16) | (0b011 << 13) | (reg_base << 5) | (reg_src << 0));
+            break;
+        case 32:
+            tcg_out32(s, 0xb8200800 | (offset_reg << 16) | (0b011 << 13) | (reg_base << 5) | (reg_src << 0));
+            break;
+        case 64:
+            tcg_out32(s, 0xf8200800 | (offset_reg << 16) | (0b011 << 13) | (reg_base << 5) | (reg_src << 0));
+            break;
+        default:
+            tcg_abortf("st %i bits wide not implemented", bits);
+            break;
+    }
+}
+static inline void tcg_out_st_offset(TCGContext *s, int bits, int reg_src, int reg_base, tcg_target_long offset)
+{
+    tcg_out_movi64(s, TCG_TMP_REG, offset);
+    tcg_out_st_reg_offset(s, bits, reg_src, reg_base, TCG_TMP_REG);
+}
+
+static inline void tcg_out_st(TCGContext *s, TCGType type, TCGReg arg, TCGReg arg1, tcg_target_long offset)
+{
+    //  Write the content of arg to the address in arg1 + offset
+    //  For offsets that fit in 9-bits this could be one instruction, future optimization work
+
+    //  Move offset into designated tmp reg
+    tcg_out_movi64(s, TCG_TMP_REG, offset);
+    tcg_out_st_reg_offset(s, 64, arg, arg1, TCG_TMP_REG);
 }
 
 static const int SHIFT_LSL = 0b00;
