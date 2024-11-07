@@ -752,6 +752,43 @@ static inline void tcg_out_bswap(TCGContext *s, int bits, int reg_dest, int reg_
     }
 }
 
+//  Helper for the CSINC instruction (Conditional Select Increment)
+//  Set reg_dest = reg_src_true if cond == true, reg_dest = reg_src_false + 1 otherwise
+static inline void tcg_out_csinc(TCGContext *s, int bits, int reg_dest, int reg_src_true, int reg_src_false, tcg_target_long cond)
+{
+    switch(bits) {
+        case 32:
+            tcg_out32(s, 0x1a800400 | (reg_src_false << 16) | (tcg_cond_to_arm_cond[cond] << 12) | (reg_src_true << 5) |
+                             (reg_dest << 0));
+            break;
+        case 64:
+            tcg_out32(s, 0x9a800400 | (reg_src_false << 16) | (tcg_cond_to_arm_cond[cond] << 12) | (reg_src_true << 5) |
+                             (reg_dest << 0));
+            break;
+        default:
+            tcg_abortf("tcg_out_cinc called with unsupported %i bits", bits);
+            break;
+    }
+}
+
+//  set reg_dest to 1 if reg_cmp1 <cond> reg_cmp2 is True, otherwise set it to zero
+static inline void tcg_out_setcond_reg(TCGContext *s, int bits, int reg_dest, int reg_cmp1, int reg_cmp2, tcg_target_long cond)
+{
+    //  Compare and set flags
+    tcg_out_cmp(s, bits, reg_cmp1, reg_cmp2);
+    //  the CSINC instruction with both source registers set to the zero register does the inverse of this operation
+    //  so by inverting the condition we get the right result
+    tcg_out_csinc(s, bits, reg_dest, TCG_REG_RZR, TCG_REG_RZR, tcg_invert_cond(cond));
+}
+
+//  Same as above but with an immidiate
+static inline void tcg_out_setcond_imm(TCGContext *s, int bits, int reg_dest, int reg_cmp, tcg_target_long imm,
+                                       tcg_target_long cond)
+{
+    tcg_out_cmpi(s, bits, reg_cmp, imm);
+    tcg_out_csinc(s, bits, reg_dest, TCG_REG_RZR, TCG_REG_RZR, tcg_invert_cond(cond));
+}
+
 //  qemu_st/ld loads and stores to and from GUEST addresses, not host ones
 static inline void tcg_out_qemu_st(TCGContext *s, int bits, int reg_data, int reg_addr, int mem_index)
 {
@@ -987,7 +1024,13 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
             tcg_abortf("op_brcond2_i32 not implemented");
             break;
         case INDEX_op_setcond_i32:
-            tcg_abortf("op_setcond_i32 not implemented");
+            if(const_args[2]) {
+                //  Third arg is an immediate
+                tcg_out_setcond_imm(s, 32, args[0], args[1], args[2], args[3]);
+            } else {
+                //  Third arg is a registers
+                tcg_out_setcond_reg(s, 32, args[0], args[1], args[2], args[3]);
+            }
             break;
         case INDEX_op_setcond2_i32:
             tcg_abortf("op_setcond2_i32 not implemented");
