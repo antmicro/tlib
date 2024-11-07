@@ -382,7 +382,7 @@ static inline void tcg_out_sign_extend(TCGContext *s, int bits, int reg_dest, in
 }
 
 //  Fills reg_dest with nbit of data from reg_base + offset_reg
-static inline void tcg_out_ld_reg_offset(TCGContext *s, int bits, int reg_dest, int reg_base, int offset_reg)
+static inline void tcg_out_ld_reg_offset(TCGContext *s, int bits, bool sign_extend, int reg_dest, int reg_base, int offset_reg)
 {
     switch(bits) {
         case 8:
@@ -401,19 +401,33 @@ static inline void tcg_out_ld_reg_offset(TCGContext *s, int bits, int reg_dest, 
             tcg_abortf("%i bit load not implemented", bits);
             break;
     }
+    if(sign_extend) {
+        tcg_out_sign_extend(s, bits, reg_dest, reg_dest);
+    }
 }
 
-static inline void tcg_out_ld_offset(TCGContext *s, int bits, int reg_dest, int reg_base, tcg_target_long offset)
+static inline void tcg_out_ld_offset(TCGContext *s, int bits, bool sign_extend, int reg_dest, int reg_base,
+                                     tcg_target_long offset)
 {
     tcg_out_movi64(s, TCG_TMP_REG, offset);
-    tcg_out_ld_reg_offset(s, bits, reg_dest, reg_base, TCG_TMP_REG);
+    tcg_out_ld_reg_offset(s, bits, sign_extend, reg_dest, reg_base, TCG_TMP_REG);
 }
 
-//  Read 64-bits from base + offset to dest
+//  Read a specified TCGType from base + offset into dest
 static inline void tcg_out_ld(TCGContext *s, TCGType type, TCGReg dest, TCGReg base, tcg_target_long offset)
 {
     tcg_out_movi64(s, TCG_TMP_REG, offset);
-    tcg_out_ld_reg_offset(s, 64, dest, base, TCG_TMP_REG);
+    switch(type) {
+        case TCG_TYPE_I32:
+            tcg_out_ld_reg_offset(s, 32, false, dest, base, TCG_TMP_REG);
+            break;
+        case TCG_TYPE_I64:
+            tcg_out_ld_reg_offset(s, 64, false, dest, base, TCG_TMP_REG);
+            break;
+        default:
+            tcg_abortf("tcg_out_ld called for unsupported TCGType %i", type);
+            break;
+    }
 }
 
 //  Stores n-bits of data from reg_src to reg_base + offset_reg
@@ -451,7 +465,17 @@ static inline void tcg_out_st(TCGContext *s, TCGType type, TCGReg arg, TCGReg ar
 
     //  Move offset into designated tmp reg
     tcg_out_movi64(s, TCG_TMP_REG, offset);
-    tcg_out_st_reg_offset(s, 64, arg, arg1, TCG_TMP_REG);
+    switch(type) {
+        case TCG_TYPE_I32:
+            tcg_out_st_reg_offset(s, 32, arg, arg1, TCG_TMP_REG);
+            break;
+        case TCG_TYPE_I64:
+            tcg_out_st_reg_offset(s, 64, arg, arg1, TCG_TMP_REG);
+            break;
+        default:
+            tcg_abortf("tcg_out_st called for unsupported TCGType %i", type);
+            break;
+    }
 }
 
 static const int SHIFT_LSL = 0b00;
@@ -722,7 +746,7 @@ static inline void tcg_out_qemu_st(TCGContext *s, int bits, int reg_data, int re
                           CPU_TLB_ENTRY_BITS);  //  TCG_AREG0 holds the pointer to env/CPUState
 
     //  Read tlb table
-    tcg_out_ld_offset(s, 64, TCG_REG_R1, TCG_REG_R0, tlb_table_n_0_addr_write[mem_index]);
+    tcg_out_ld_offset(s, 64, false, TCG_REG_R1, TCG_REG_R0, tlb_table_n_0_addr_write[mem_index]);
 
     //  Check if we hit, and branch to tlb miss code if not
     tcg_out_cmp_shift_reg(s, TCG_REG_R1, TCG_REG_R2, SHIFT_LSL, TARGET_PAGE_BITS);
@@ -731,7 +755,7 @@ static inline void tcg_out_qemu_st(TCGContext *s, int bits, int reg_data, int re
 
     //  TLB hit case
     //  Load the host to guest offset into r1
-    tcg_out_ld_offset(s, 64, TCG_REG_R1, TCG_REG_R0, tlb_table_n_0_addend[mem_index]);
+    tcg_out_ld_offset(s, 64, false, TCG_REG_R1, TCG_REG_R0, tlb_table_n_0_addend[mem_index]);
 
     if(bswap) {
         //  Byte order needs to be swapped before storing
@@ -790,7 +814,7 @@ static inline void tcg_out_qemu_ld(TCGContext *s, int bits, bool sign_extend, in
                           CPU_TLB_ENTRY_BITS);  //  TCG_AREG0 holds the pointer to env/CPUState
 
     //  Read tlb table
-    tcg_out_ld_offset(s, 64, TCG_REG_R1, TCG_REG_R0, tlb_table_n_0_addr_write[mem_index]);
+    tcg_out_ld_offset(s, 64, false, TCG_REG_R1, TCG_REG_R0, tlb_table_n_0_addr_write[mem_index]);
 
     //  Check if we hit, and branch to tlb miss code if not
     tcg_out_cmp_shift_reg(s, TCG_REG_R1, TCG_REG_R2, SHIFT_LSL, TARGET_PAGE_BITS);
@@ -799,15 +823,15 @@ static inline void tcg_out_qemu_ld(TCGContext *s, int bits, bool sign_extend, in
 
     //  TLB hit case
     //  Load the host to guest offset into r1
-    tcg_out_ld_offset(s, 64, TCG_REG_R1, TCG_REG_R0, tlb_table_n_0_addend[mem_index]);
+    tcg_out_ld_offset(s, 64, false, TCG_REG_R1, TCG_REG_R0, tlb_table_n_0_addend[mem_index]);
 
     if(bswap) {
         //  Byte order needs to be swapped after load
-        tcg_out_ld_reg_offset(s, bits, TCG_REG_R0, reg_addr, TCG_REG_R1);
+        tcg_out_ld_reg_offset(s, bits, sign_extend, TCG_REG_R0, reg_addr, TCG_REG_R1);
         tcg_out_bswap(s, bits, reg_data, TCG_REG_R0);
     } else {
         //  Execute the load
-        tcg_out_ld_reg_offset(s, bits, reg_data, reg_addr, TCG_REG_R1);
+        tcg_out_ld_reg_offset(s, bits, sign_extend, reg_data, reg_addr, TCG_REG_R1);
     }
     //  Branch to end of function
     end_label = (void *)s->code_ptr;
@@ -1068,10 +1092,10 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
             tcg_abortf("op_ext16u_i32 not implemented");
             break;
         case INDEX_op_ld32u_i64:
-            tcg_out_ld_offset(s, 32, args[0], args[1], args[2]);
+            tcg_out_ld_offset(s, 32, false, args[0], args[1], args[2]);
             break;
         case INDEX_op_ld_i64:
-            tcg_out_ld_offset(s, 64, args[0], args[1], args[2]);
+            tcg_out_ld_offset(s, 64, false, args[0], args[1], args[2]);
             break;
         case INDEX_op_st32_i64:
             tcg_out_st_offset(s, 32, args[0], args[1], args[2]);
