@@ -130,6 +130,7 @@ void cpu_init_v8_2(CPUState *env, uint32_t id)
     set_feature(env, ARM_FEATURE_GENERIC_TIMER);
     set_feature(env, ARM_FEATURE_CBAR_RO);
     set_feature(env, ARM_FEATURE_PMU);
+    set_feature(env, ARM_FEATURE_THUMB2);
 
     set_feature(env, ARM_FEATURE_EL2);
     set_feature(env, ARM_FEATURE_EL3);
@@ -226,6 +227,7 @@ void cpu_init_a53(CPUState *env, uint32_t id)
     set_feature(env, ARM_FEATURE_GENERIC_TIMER);
     set_feature(env, ARM_FEATURE_CBAR_RO);
     set_feature(env, ARM_FEATURE_PMU);
+    set_feature(env, ARM_FEATURE_THUMB2);
 
     set_feature(env, ARM_FEATURE_EL2);
     set_feature(env, ARM_FEATURE_EL3);
