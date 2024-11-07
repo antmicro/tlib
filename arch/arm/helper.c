@@ -3124,10 +3124,6 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
         uint32_t value;
     } addr_info = { .value = 0 };
 
-    if(!PMSA_ENABLED(env->pmsav8[env->secure].ctrl)) {
-        goto invalid;
-    }
-
     /* Decode instruction variant
      * TT:    a == 0 && t == 0
      * TTA:   a == 1 && t == 0
@@ -3146,6 +3142,10 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
         secure = false;
     } else {
         secure = env->secure;
+    }
+
+    if(!PMSA_ENABLED(env->pmsav8[secure].ctrl)) {
+        goto invalid;
     }
 
     if(t) {
