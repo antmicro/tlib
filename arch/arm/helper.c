@@ -1886,7 +1886,7 @@ static inline bool pmsav8_get_region(CPUState *env, uint32_t address, bool secur
     *multiple_regions = false;
     *region_index = -1;
 
-    for(n = MAX_MPU_REGIONS - 1; n >= 0; n--) {
+    for(n = env->number_of_mpu_regions - 1; n >= 0; n--) {
 
         if(!(env->pmsav8[secure].rlar[n] & 0x1)) {
             /* Region disabled */
