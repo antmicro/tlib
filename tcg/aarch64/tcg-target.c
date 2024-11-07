@@ -569,6 +569,41 @@ static inline void tcg_out_sub_imm(TCGContext *s, int bits, int reg_dest, int re
     tcg_out_sub_reg(s, bits, reg_dest, reg_in, TCG_TMP_REG);
 }
 
+//  Helper for aarch64 MADD instructions, computes reg_dest = (reg_prod1 * reg_prod2) + reg_add
+static inline void tcg_out_mul_add(TCGContext *s, int bits, int reg_dest, int reg_prod1, int reg_prod2, int reg_add)
+{
+    switch(bits) {
+        case 32:
+            tcg_out32(s, 0x1B000000 | (reg_prod2 << 16) | (reg_add << 10) | (reg_prod1 << 5) | (reg_dest << 0));
+            break;
+        case 64:
+            tcg_out32(s, 0x9B000000 | (reg_prod2 << 16) | (reg_add << 10) | (reg_prod1 << 5) | (reg_dest << 0));
+            break;
+        default:
+            tcg_abortf("mul_add for %i bits not implemented", bits);
+            break;
+    }
+}
+static inline void tcg_out_mul_reg(TCGContext *s, int bits, int reg_dest, int reg_prod1, int reg_prod2)
+{
+    //  Register multiplication is just MADD with the zero register as the addend
+    tcg_out_mul_add(s, bits, reg_dest, reg_prod1, reg_prod2, TCG_REG_RZR);
+}
+static inline void tcg_out_mul_imm(TCGContext *s, int bits, int reg_dest, int reg_in, tcg_target_long imm)
+{
+    switch(bits) {
+        case 32:
+            tcg_out_movi32(s, TCG_TMP_REG, imm);
+            break;
+        case 64:
+            tcg_out_movi64(s, TCG_TMP_REG, imm);
+            break;
+        default:
+            tcg_abortf("mul_imm for %i bits not implemented", bits);
+    }
+    tcg_out_mul_reg(s, bits, reg_dest, reg_in, TCG_TMP_REG);
+}
+
 static inline void tcg_out_and_reg(TCGContext *s, int bits, int reg_dest, int reg1, int reg2)
 {
     switch(bits) {
@@ -855,7 +890,7 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
             tcg_out_goto_label(s, COND_AL, args[0]);
             break;
         case INDEX_op_mb:
-            tcg_abortf("op_mp not implemented");
+            tcg_abortf("op_mb not implemented");
             break;
         case INDEX_op_ld8u_i32:
             tcg_abortf("op_ld8u_i32 not implemented");
@@ -913,10 +948,10 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
             break;
         case INDEX_op_or_i32:
             if(const_args[2]) {
-                //  And with immediate
+                //  Or with immediate
                 tcg_out_or_imm(s, 32, args[0], args[1], args[2]);
             } else {
-                //  And with registers
+                //  Or with registers
                 tcg_out_or_reg(s, 32, args[0], args[1], args[2]);
             }
             break;
@@ -930,7 +965,13 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
             tcg_abortf("op_not_i32 not implemented");
             break;
         case INDEX_op_mul_i32:
-            tcg_abortf("op_mul_i32 not implemented");
+            if(const_args[2]) {
+                //  Mul with immediate
+                tcg_out_mul_imm(s, 32, args[0], args[1], args[2]);
+            } else {
+                //  Mul with registers
+                tcg_out_mul_reg(s, 32, args[0], args[1], args[2]);
+            }
             break;
         case INDEX_op_mulu2_i32:
             tcg_abortf("op_mulu2_i32 not implemented");
