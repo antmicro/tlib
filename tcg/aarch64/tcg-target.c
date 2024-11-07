@@ -490,28 +490,43 @@ static inline void tcg_out_st(TCGContext *s, TCGType type, TCGReg arg, TCGReg ar
 static const int SHIFT_LSL = 0b00;
 static const int SHIFT_LSR = 0b01;
 static const int SHIFT_ASR = 0b10;
-static inline void tcg_out_subs_shift_reg(TCGContext *s, int reg_dest, int reg1, int reg2, int shift_type,
+
+static inline void tcg_out_subs_shift_reg(TCGContext *s, int bits, int reg_dest, int reg1, int reg2, int shift_type,
                                           tcg_target_long shift_amount)
 {
     //  Shift amount is 6-bits
-    tcg_out32(s, 0xeb000000 | (shift_type << 22) | (reg2 << 16) | ((shift_amount & 0x3F) << 10) | (reg1 << 5) | (reg_dest << 0));
+    shift_amount = shift_amount & 0x3F;
+    switch(bits) {
+        case 32:
+            tcg_out32(s, 0x6b000000 | (shift_type << 22) | (reg2 << 16) | (shift_amount << 10) | (reg1 << 5) | (reg_dest << 0));
+            break;
+        case 64:
+            tcg_out32(s, 0xeb000000 | (shift_type << 22) | (reg2 << 16) | (shift_amount << 10) | (reg1 << 5) | (reg_dest << 0));
+            break;
+        default:
+            tcg_abortf("tcg_out_subs_shift_reg called with unsupported %i bits", bits);
+    }
 }
-static inline void tcg_out_cmp_shift_reg(TCGContext *s, int reg1, int reg2, int shift_type, tcg_target_long shift_amount)
+
+static inline void tcg_out_cmp_shift_reg(TCGContext *s, int bits, int reg1, int reg2, int shift_type,
+                                         tcg_target_long shift_amount)
 {
     //  Sets flags based on the result of reg1 - reg2, where reg2 is shifted in a manner and by an amount specified in the
     //  arguments. This is actually an alias for SUBS (shifted register) with the dest set to the zero register
-    tcg_out_subs_shift_reg(s, TCG_REG_RZR, reg1, reg2, shift_type, shift_amount);
+    tcg_out_subs_shift_reg(s, bits, TCG_REG_RZR, reg1, reg2, shift_type, shift_amount);
 }
-static inline void tcg_out_cmp(TCGContext *s, int reg1, int reg2)
+
+static inline void tcg_out_cmp(TCGContext *s, int bits, int reg1, int reg2)
 {
     //  cmp is just cmp shifted reg with shift set to zero
-    tcg_out_cmp_shift_reg(s, reg1, reg2, SHIFT_LSL, 0);
+    tcg_out_cmp_shift_reg(s, bits, reg1, reg2, SHIFT_LSL, 0);
 }
-static inline void tcg_out_cmpi(TCGContext *s, int reg, tcg_target_long imm)
+
+static inline void tcg_out_cmpi(TCGContext *s, int bits, int reg, tcg_target_long imm)
 {
     //  Mov immediate into a register
     tcg_out_movi(s, 0, TCG_TMP_REG, imm);
-    tcg_out_cmp(s, reg, TCG_TMP_REG);
+    tcg_out_cmp(s, bits, reg, TCG_TMP_REG);
 }
 
 static inline void tcg_out_movi(TCGContext *s, TCGType type, TCGReg ret, tcg_target_long arg)
@@ -704,15 +719,15 @@ static inline void tcg_out_br_cond_raw(TCGContext *s, int tcg_cond, int addr)
     tcg_out32(s, 0x54000000 | (addr << 5) | (tcg_cond_to_arm_cond[tcg_cond] << 0));
 }
 //  Helper for tcg's conditional branch. branch if arg1 COND arg2 == true
-static inline void tcg_out_br_cond(TCGContext *s, int arg1, int tcg_cond, int arg2, int addr)
+static inline void tcg_out_br_cond(TCGContext *s, int bits, int arg1, int tcg_cond, int arg2, int addr)
 {
-    tcg_out_cmp(s, arg1, arg2);
+    tcg_out_cmp(s, bits, arg1, arg2);
     tcg_out_br_cond_raw(s, tcg_cond, addr);
 }
 //  Version of above but with an immediate as the second argument
-static inline void tcg_out_br_condi(TCGContext *s, int arg1, int tcg_cond, int imm, int addr)
+static inline void tcg_out_br_condi(TCGContext *s, int bits, int arg1, int tcg_cond, int imm, int addr)
 {
-    tcg_out_cmpi(s, arg1, imm);
+    tcg_out_cmpi(s, bits, arg1, imm);
     tcg_out_br_cond_raw(s, tcg_cond, addr);
 }
 
@@ -961,10 +976,10 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
         case INDEX_op_brcond_i32:
             if(const_args[1]) {
                 //  Second arg is an immediate
-                tcg_out_cmpi(s, args[0], args[1]);
+                tcg_out_cmpi(s, 32, args[0], args[1]);
             } else {
                 //  Second arg is a register
-                tcg_out_cmp(s, args[0], args[1]);
+                tcg_out_cmp(s, 32, args[0], args[1]);
             }
             tcg_out_goto_label(s, tcg_cond_to_arm_cond[args[2]], args[3]);
             break;
@@ -976,6 +991,9 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
             break;
         case INDEX_op_setcond2_i32:
             tcg_abortf("op_setcond2_i32 not implemented");
+            break;
+        case INDEX_op_qemu_ld8u:
+            tcg_out_qemu_ld(s, 8, false, args[0], args[1], args[2]);
             break;
         case INDEX_op_qemu_ld8u:
             tcg_out_qemu_ld(s, 8, false, args[0], args[1], args[2]);
