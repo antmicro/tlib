@@ -3184,6 +3184,7 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
     int resolved_region;
     bool multiple_regions;
     bool secure;
+    enum security_attribution attribution;
 
     union {
         struct {
@@ -3244,6 +3245,15 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
     pmsav8_get_phys_addr(env, addr, secure, PAGE_READ, !priv_access, &phys_ptr, &prot, &page_size);
     addr_info.flags.read_ok = (prot & (1 << PAGE_READ)) != 0;
     addr_info.flags.readwrite_ok = addr_info.flags.read_ok && (prot & (1 << PAGE_WRITE)) != 0;
+
+    bool sau_nr_valid = pmsav8_sau_try_get_region(env, addr, secure, PAGE_READ, &resolved_region, &attribution);
+    addr_info.flags.sau_region_valid = sau_nr_valid;
+    if(sau_nr_valid) {
+        addr_info.flags.sau_region = resolved_region;
+    }
+    addr_info.flags.secure = attribution_is_secure(attribution);
+    addr_info.flags.nonsecure_read_ok = !addr_info.flags.secure && addr_info.flags.read_ok;
+    addr_info.flags.nonsecure_readwrite_ok = !addr_info.flags.secure && addr_info.flags.readwrite_ok;
 
     return addr_info.value;
 
