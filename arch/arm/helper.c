@@ -1916,6 +1916,84 @@ static inline bool pmsav8_get_region(CPUState *env, uint32_t address, bool secur
     return hit;
 }
 
+static inline bool pmsav8_sau_is_exempt(uint32_t address, int access_type)
+{
+    switch(address) {
+        case 0xE0000000 ... 0xE0003FFF:  //  ITM, DWT, FPB, PMU
+        case 0xE0005000 ... 0xE0005FFF:  //  RAS error record registers
+        case 0xE000E000 ... 0xE000EFFF:  //  SCS Secure and Non-secure range
+        case 0xE002E000 ... 0xE002EFFF:  //  SCS Non-secure alias range
+        case 0xE0040000 ... 0xE0041FFF:  //  TPIU, ETM
+        case 0xE00FF000 ... 0xE00FFFFF:  //  ROM table
+            return true;
+        default:
+            return address >= 0xE0000000 && address <= 0xEFFFFFFF && access_type == ACCESS_INST_FETCH;
+    }
+}
+
+/* The return value is true if SAU is enabled and a single region was matched. */
+static inline bool pmsav8_sau_try_get_region(CPUState *env, uint32_t address, bool secure, int access_type, int *region_index,
+                                             enum security_attribution *attribution)
+{
+    int n;
+    bool hit = false;
+    *region_index = -1;
+    *attribution = SA_SECURE;
+
+    if(pmsav8_sau_is_exempt(address, access_type)) {
+        *attribution = secure ? SA_SECURE : SA_NONSECURE;
+        return false;
+    }
+
+    if(!(env->sau.ctrl & SAU_CTRL_ENABLE)) {
+        *attribution = env->sau.ctrl & SAU_CTRL_ALLNS ? SA_NONSECURE : SA_SECURE;
+        return false;
+    }
+
+    for(n = 0; n < env->number_of_sau_regions; n++) {
+        if(!(env->sau.rlar[n] & SAU_RLAR_ENABLE)) {
+            /* Region disabled */
+            continue;
+        }
+
+        uint32_t base = env->sau.rbar[n] & ~0x1f;
+        uint32_t limit = env->sau.rlar[n] | 0x1f;
+        bool nsc = env->sau.rlar[n] & SAU_RLAR_NSC;
+        if(address < base || address > limit) {
+            /* Addr not in this region */
+            continue;
+        }
+
+        /* Another region matched?
+         *
+         * Note that we don't break the loop after finding the first matching region as we need
+         * to make sure it's the only matching region. SAU region isn't valid otherwise.
+         */
+        if(hit) {
+            /* An address that matches multiple SAU regions is marked as Secure and
+             * not Not-secure callable regardless of the attributes specified by the
+             * regions that matched the address; ARMv8-M Manual: Rule WGDK.
+             */
+            *attribution = SA_SECURE;
+            return false;
+        }
+
+        hit = true;
+        *region_index = n;
+
+        /* Memory is marked as Secure by default. However, if the address matches a region with
+         * SAU_REGIONn.ENABLE set to 1 and SAU_REGIONn.NSC set to 0, then memory is marked as
+         * Non-secure; ARMv8-M Manual: Rule MPJC.
+         *
+         * This is somewhat contrary to the SAU_RLAR.NSC bit description which states that 0 means
+         * "Region is marked with the Secure attribute and is not Non-secure callable." but the
+         * behavior is confirmed by pseudocode for SecurityCheck in the ARMv8-M Manual.
+         */
+        *attribution = nsc ? SA_SECURE_NSC : SA_NONSECURE;
+    }
+    return hit;
+}
+
 #define PMSA_ENABLED(ctrl)    ((ctrl & 0b001))
 #define PMSA_PRIVDEFENA(ctrl) ((ctrl & 0b100))
 #define PMSA_AP_PRIVONLY(ap)  ((ap & 0b01) == 0)

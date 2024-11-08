@@ -472,6 +472,23 @@ static inline void xpsr_write(CPUState *env, uint32_t val, uint32_t mask)
 }
 
 void vfp_trigger_exception();
+
+enum security_attribution {
+    SA_NONSECURE,
+    SA_SECURE_NSC,
+    SA_SECURE,
+};
+
+static inline bool attribution_is_secure(enum security_attribution attrib)
+{
+    return attrib >= SA_SECURE_NSC;
+}
+
+#define SAU_CTRL_ENABLE 0x01
+#define SAU_CTRL_ALLNS  0x02
+
+#define SAU_RLAR_ENABLE 0x01
+#define SAU_RLAR_NSC    0x02
 #endif
 
 /* Return the current FPSCR value.  */
