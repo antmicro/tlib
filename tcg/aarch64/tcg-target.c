@@ -999,22 +999,40 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
             tcg_abortf("op_mb not implemented");
             break;
         case INDEX_op_ld8u_i32:
-            tcg_abortf("op_ld8u_i32 not implemented");
+            tcg_out_ld_offset(s, 8, false, args[0], args[1], args[2]);
             break;
         case INDEX_op_ld16s_i32:
-            tcg_abortf("op_ld16s_i32 not implemented");
+            tcg_out_ld_offset(s, 16, true, args[0], args[1], args[2]);
             break;
         case INDEX_op_ld_i32:
             tcg_out_ld(s, TCG_TYPE_I32, args[0], args[1], args[2]);
             break;
+        case INDEX_op_ld32u_i64:
+            tcg_out_ld_offset(s, 32, false, args[0], args[1], args[2]);
+            break;
+        case INDEX_op_ld32s_i64:
+            tcg_out_ld_offset(s, 32, true, args[0], args[1], args[2]);
+            break;
+        case INDEX_op_ld_i64:
+            tcg_out_ld_offset(s, 64, false, args[0], args[1], args[2]);
+            break;
         case INDEX_op_st8_i32:
-            tcg_abortf("op_st8_i32 not implemented");
+            tcg_out_st_offset(s, 8, args[0], args[1], args[2]);
             break;
         case INDEX_op_st16_i32:
-            tcg_abortf("op_st16_i32 not implemented");
+            tcg_out_st_offset(s, 16, args[0], args[1], args[2]);
+            break;
+        case INDEX_op_st16_i64:
+            tcg_out_st_offset(s, 16, args[0], args[1], args[2]);
             break;
         case INDEX_op_st_i32:
             tcg_out_st(s, TCG_TYPE_I32, args[0], args[1], args[2]);
+            break;
+        case INDEX_op_st32_i64:
+            tcg_out_st_offset(s, 32, args[0], args[1], args[2]);
+            break;
+        case INDEX_op_st_i64:
+            tcg_out_st(s, TCG_TYPE_I64, args[0], args[1], args[2]);
             break;
         case INDEX_op_mov_i32:
             tcg_abortf("op_mov_i32 not implemented");
@@ -1031,6 +1049,15 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
                 tcg_out_add_reg(s, 32, args[0], args[1], args[2]);
             }
             break;
+        case INDEX_op_add_i64:
+            if(const_args[2]) {
+                //  Add with immediate
+                tcg_out_add_imm(s, 64, args[0], args[1], args[2]);
+            } else {
+                //  Add with registers
+                tcg_out_add_reg(s, 64, args[0], args[1], args[2]);
+            }
+            break;
         case INDEX_op_sub_i32:
             if(const_args[2]) {
                 //  Add with immediate
@@ -1040,6 +1067,15 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
                 tcg_out_sub_reg(s, 32, args[0], args[1], args[2]);
             }
             break;
+        case INDEX_op_sub_i64:
+            if(const_args[2]) {
+                //  Add with immediate
+                tcg_out_sub_imm(s, 64, args[0], args[1], args[2]);
+            } else {
+                //  Add with registers
+                tcg_out_sub_reg(s, 64, args[0], args[1], args[2]);
+            }
+            break;
         case INDEX_op_and_i32:
             if(const_args[2]) {
                 //  And with immediate
@@ -1047,6 +1083,15 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
             } else {
                 //  And with registers
                 tcg_out_and_reg(s, 32, args[0], args[1], args[2]);
+            }
+            break;
+        case INDEX_op_and_i64:
+            if(const_args[2]) {
+                //  And with immediate
+                tcg_out_and_imm(s, 64, args[0], args[1], args[2]);
+            } else {
+                //  And with registers
+                tcg_out_and_reg(s, 64, args[0], args[1], args[2]);
             }
             break;
         case INDEX_op_andc_i32:
@@ -1061,6 +1106,15 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
                 tcg_out_or_reg(s, 32, args[0], args[1], args[2]);
             }
             break;
+        case INDEX_op_or_i64:
+            if(const_args[2]) {
+                //  Or with immediate
+                tcg_out_or_imm(s, 64, args[0], args[1], args[2]);
+            } else {
+                //  Or with registers
+                tcg_out_or_reg(s, 64, args[0], args[1], args[2]);
+            }
+            break;
         case INDEX_op_xor_i32:
             if(const_args[2]) {
                 //  Xor with immediate
@@ -1068,6 +1122,15 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
             } else {
                 //  Xor with registers
                 tcg_out_xor_reg(s, 32, args[0], args[1], args[2]);
+            }
+            break;
+        case INDEX_op_xor_i64:
+            if(const_args[2]) {
+                //  Xor with immediate
+                tcg_out_xor_imm(s, 64, args[0], args[1], args[2]);
+            } else {
+                //  Xor with registers
+                tcg_out_xor_reg(s, 64, args[0], args[1], args[2]);
             }
             break;
         case INDEX_op_neg_i32:
@@ -1085,6 +1148,15 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
                 tcg_out_mul_reg(s, 32, args[0], args[1], args[2]);
             }
             break;
+        case INDEX_op_mul_i64:
+            if(const_args[2]) {
+                //  Mul with immediate
+                tcg_out_mul_imm(s, 64, args[0], args[1], args[2]);
+            } else {
+                //  Mul with registers
+                tcg_out_mul_reg(s, 64, args[0], args[1], args[2]);
+            }
+            break;
         case INDEX_op_mulu2_i32:
             tcg_abortf("op_mulu2_i32 not implemented");
             break;
@@ -1098,6 +1170,13 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
                 tcg_out_lsl_reg(s, 32, args[0], args[1], args[2]);
             }
             break;
+        case INDEX_op_shl_i64:
+            if(const_args[2]) {
+                tcg_out_lsl_imm(s, 64, args[0], args[1], args[2]);
+            } else {
+                tcg_out_lsl_reg(s, 64, args[0], args[1], args[2]);
+            }
+            break;
         case INDEX_op_shr_i32:
             if(const_args[2]) {
                 tcg_out_lsr_imm(s, 32, args[0], args[1], args[2]);
@@ -1105,11 +1184,25 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
                 tcg_out_lsr_reg(s, 32, args[0], args[1], args[2]);
             }
             break;
+        case INDEX_op_shr_i64:
+            if(const_args[2]) {
+                tcg_out_lsr_imm(s, 64, args[0], args[1], args[2]);
+            } else {
+                tcg_out_lsr_reg(s, 64, args[0], args[1], args[2]);
+            }
+            break;
         case INDEX_op_sar_i32:
             if(const_args[2]) {
                 tcg_out_asr_imm(s, 32, args[0], args[1], args[2]);
             } else {
                 tcg_out_asr_reg(s, 32, args[0], args[1], args[2]);
+            }
+            break;
+        case INDEX_op_sar_i64:
+            if(const_args[2]) {
+                tcg_out_asr_imm(s, 64, args[0], args[1], args[2]);
+            } else {
+                tcg_out_asr_reg(s, 64, args[0], args[1], args[2]);
             }
             break;
         case INDEX_op_rotr_i32:
@@ -1128,6 +1221,16 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
             }
             tcg_out_goto_label(s, tcg_cond_to_arm_cond[args[2]], args[3]);
             break;
+        case INDEX_op_brcond_i64:
+            if(const_args[1]) {
+                //  Second arg is an immediate
+                tcg_out_cmpi(s, 64, args[0], args[1]);
+            } else {
+                //  Second arg is a register
+                tcg_out_cmp(s, 64, args[0], args[1]);
+            }
+            tcg_out_goto_label(s, tcg_cond_to_arm_cond[args[2]], args[3]);
+            break;
         case INDEX_op_brcond2_i32:
             tcg_abortf("op_brcond2_i32 not implemented");
             break;
@@ -1138,6 +1241,15 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
             } else {
                 //  Third arg is a registers
                 tcg_out_setcond_reg(s, 32, args[0], args[1], args[2], args[3]);
+            }
+            break;
+        case INDEX_op_setcond_i64:
+            if(const_args[2]) {
+                //  Third arg is an immediate
+                tcg_out_setcond_imm(s, 64, args[0], args[1], args[2], args[3]);
+            } else {
+                //  Third arg is a registers
+                tcg_out_setcond_reg(s, 64, args[0], args[1], args[2], args[3]);
             }
             break;
         case INDEX_op_setcond2_i32:
@@ -1157,6 +1269,12 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
             break;
         case INDEX_op_qemu_ld32:
             tcg_out_qemu_ld(s, 32, false, args[0], args[1], args[2]);
+            break;
+        case INDEX_op_qemu_ld32u:
+            tcg_out_qemu_ld(s, 32, false, args[0], args[1], args[2]);
+            break;
+        case INDEX_op_qemu_ld32s:
+            tcg_out_qemu_ld(s, 32, true, args[0], args[1], args[2]);
             break;
         case INDEX_op_qemu_ld64:
             tcg_out_qemu_ld(s, 64, false, args[0], args[1], args[2]);
@@ -1187,30 +1305,6 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
             break;
         case INDEX_op_ext16u_i32:
             tcg_abortf("op_ext16u_i32 not implemented");
-            break;
-        case INDEX_op_ld32u_i64:
-            tcg_out_ld_offset(s, 32, false, args[0], args[1], args[2]);
-            break;
-        case INDEX_op_ld_i64:
-            tcg_out_ld_offset(s, 64, false, args[0], args[1], args[2]);
-            break;
-        case INDEX_op_st32_i64:
-            tcg_out_st_offset(s, 32, args[0], args[1], args[2]);
-            break;
-        case INDEX_op_st_i64:
-            tcg_out_st_offset(s, 64, args[0], args[1], args[2]);
-            break;
-        case INDEX_op_add_i64:
-            if(const_args[2]) {
-                //  Add with immediate
-                tcg_out_add_imm(s, 64, args[0], args[1], args[2]);
-            } else {
-                //  Add with registers
-                tcg_out_add_reg(s, 64, args[0], args[1], args[2]);
-            }
-            break;
-        case INDEX_op_sub_i64:
-            tcg_abortf("op_sub_i64 not implemented");
             break;
         default:
             tcg_abortf("TCGOpcode %u not implemented", opc);
