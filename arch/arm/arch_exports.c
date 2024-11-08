@@ -379,6 +379,22 @@ uint32_t tlib_get_number_of_sau_regions()
 
 EXC_INT_0(uint32_t, tlib_get_number_of_sau_regions)
 
+void tlib_set_sau_control(uint32_t value)
+{
+    if(cpu->sau.ctrl == value) {
+        return;
+    }
+
+    if(!cpu->secure) {
+        //  These are RAZ/WI when accessed from Non-Secure state
+        return;
+    }
+    cpu->sau.ctrl = value;
+    tlb_flush(cpu, 1, false);
+}
+
+EXC_VOID_1(tlib_set_sau_control, uint32_t, value)
+
 void tlib_set_sau_region_number(uint32_t value)
 {
     if(!cpu->secure) {
@@ -417,6 +433,17 @@ void tlib_set_sau_region_limit_address(uint32_t value)
 }
 
 EXC_VOID_1(tlib_set_sau_region_limit_address, uint32_t, value)
+
+uint32_t tlib_get_sau_control()
+{
+    if(!cpu->secure) {
+        //  These are RAZ/WI when accessed from Non-Secure state
+        return 0;
+    }
+    return cpu->sau.ctrl;
+}
+
+EXC_INT_0(uint32_t, tlib_get_sau_control)
 
 uint32_t tlib_get_sau_region_number()
 {
