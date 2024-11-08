@@ -3243,8 +3243,8 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
     addr_info.flags.mpu_region_valid = true;
 
     pmsav8_get_phys_addr(env, addr, secure, PAGE_READ, !priv_access, &phys_ptr, &prot, &page_size);
-    addr_info.flags.read_ok = (prot & (1 << PAGE_READ)) != 0;
-    addr_info.flags.readwrite_ok = addr_info.flags.read_ok && (prot & (1 << PAGE_WRITE)) != 0;
+    addr_info.flags.read_ok = (prot & PAGE_READ) != 0;
+    addr_info.flags.readwrite_ok = addr_info.flags.read_ok && (prot & PAGE_WRITE) != 0;
 
     bool sau_nr_valid = pmsav8_sau_try_get_region(env, addr, secure, PAGE_READ, &resolved_region, &attribution);
     addr_info.flags.sau_region_valid = sau_nr_valid;
