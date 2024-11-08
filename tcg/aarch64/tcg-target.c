@@ -265,6 +265,13 @@ static inline void tcg_out_calli(TCGContext *s, tcg_target_ulong addr)
     tcg_out_movi(s, 0, TCG_TMP_REG, target);
     tcg_out_blr(s, TCG_TMP_REG);
 }
+//  Emit a memory barrier, a0 contains info about the type of memory barrier requested
+static const int MB_SY = 0b1111;  //  Full system barrier
+static inline void tcg_out_mb(TCGContext *s, TCGArg a0)
+{
+    //  Even if a weaker barrier might suffice, for now just always emit the strongest, full system barrier
+    tcg_out32(s, 0xd50330bf | (MB_SY << 8));
+}
 //  Helper function to emit STP, store pair instructions with offset adressing mode (i.e no changing the base register)
 static inline void tcg_out_stp(TCGContext *s, int reg1, int reg2, int reg_base, tcg_target_long offset)
 {
@@ -996,7 +1003,7 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
             tcg_out_goto_label(s, COND_AL, args[0]);
             break;
         case INDEX_op_mb:
-            tcg_abortf("op_mb not implemented");
+            tcg_out_mb(s, args[0]);
             break;
         case INDEX_op_ld8u_i32:
             tcg_out_ld_offset(s, 8, false, args[0], args[1], args[2]);
