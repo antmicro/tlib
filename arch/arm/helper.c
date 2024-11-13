@@ -2025,9 +2025,11 @@ static inline int pmsav8_get_phys_addr(CPUState *env, uint32_t address, bool sec
     }
 
     if(hit) {
-        int rbar = env->pmsav8[secure].rbar[resolved_region];
+        uint32_t rbar = env->pmsav8[secure].rbar[resolved_region];
+        uint32_t rlar = env->pmsav8[secure].rlar[resolved_region];
         int xn = extract32(rbar, 0, 1);
         int ap = extract32(rbar, 1, 2);
+        int pxn = arm_feature(env, ARM_FEATURE_V8_1M) && extract32(rlar, 4, 1);
 
         if(!PMSA_AP_PRIVONLY(ap) || !is_user) {
             *prot |= PAGE_READ;
@@ -2036,14 +2038,14 @@ static inline int pmsav8_get_phys_addr(CPUState *env, uint32_t address, bool sec
             }
         }
 
-        if(!xn) {
+        if(!xn && (is_user || !pxn)) {
             *prot |= PAGE_EXEC;
         }
 
         /* Check that the hit region fully covers the tlb page
          */
-        uint32_t region_start = pmsav8_idau_sau_get_region_base(env->pmsav8[secure].rbar[resolved_region]);
-        uint32_t region_end = pmsav8_idau_sau_get_region_limit(env->pmsav8[secure].rlar[resolved_region]);
+        uint32_t region_start = pmsav8_idau_sau_get_region_base(rbar);
+        uint32_t region_end = pmsav8_idau_sau_get_region_limit(rlar);
         if((address & TARGET_PAGE_MASK) == (region_start & TARGET_PAGE_MASK)) {
             //  Region starts mid page
             *page_size -= (region_start & ~TARGET_PAGE_MASK);
