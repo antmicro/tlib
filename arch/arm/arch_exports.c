@@ -536,6 +536,19 @@ void tlib_set_pmsav8_rlar(uint32_t value)
 {
     guard_pmsav8(true);
     uint32_t index = cpu->pmsav8[cpu->secure].rnr;
+
+    //  XN is enforced in 0xE0000000-0xFFFFFFFF space; ARMv8-M Manual: Rules VCTC and KDJG.
+    bool region_enabled = value & 0x1;
+    if(region_enabled) {
+        bool xn = extract32(cpu->pmsav8[cpu->secure].rbar[index], 4, 1);
+        if(!xn && pmsav8_idau_sau_get_region_limit(value) >= 0xE0000000) {
+            tlib_printf(LOG_LEVEL_WARNING,
+                        "Enabled MPU region %u without Execute-Never bit set includes addresses from "
+                        "0xE0000000-0xFFFFFFFF address space for which instruction fetch is"
+                        " architecturally prohibited so it won't be possible nevertheless",
+                        index);
+        }
+    }
     cpu->pmsav8[cpu->secure].rlar[index] = value;
 }
 EXC_VOID_1(tlib_set_pmsav8_rlar, uint32_t, value)

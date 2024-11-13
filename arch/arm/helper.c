@@ -2066,6 +2066,11 @@ static inline int pmsav8_get_phys_addr(CPUState *env, uint32_t address, bool sec
         }
     }
 
+    //  XN is enforced in 0xE0000000-0xFFFFFFFF space; ARMv8-M Manual: Rules VCTC and KDJG.
+    if(address >= 0xE0000000) {
+        *prot &= ~PAGE_EXEC;
+    }
+
     if(is_page_access_valid(*prot, access_type)) {
         return TRANSLATE_SUCCESS;
     }
