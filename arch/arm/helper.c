@@ -3221,6 +3221,10 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
     a = op & 0b10;
     t = op & 0b01;
 
+    if(!a && !in_privileged_mode(env)) {
+        goto invalid;
+    }
+
     /* Alternate Domain (A) variants are used to query the Security state and access permissions
      * of a memory location for a Non-secure access to that location. This helper is only called
      * for secure TTA and TTAT execution as they are UNDEFINED if used from non-secure state.
@@ -3266,7 +3270,7 @@ invalid:
      * - The MPU is not implemented or MPU_CTRL.ENABLE is set to zero,
      * - The address specified by the TT instruction variant does not match any enabled MPU regions,
      * - The address matched multiple MPU regions,
-     * - The TT or TTT instruction variants, without the A flag specified, were executed from an unprivileged mode. *unimpl*
+     * - The TT or TTT instruction variants, without the A flag specified, were executed from an unprivileged mode.
      * In this case R and RW fields are RAZ
      */
     return addr_info.value;
