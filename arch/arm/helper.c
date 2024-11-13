@@ -238,6 +238,7 @@ static void cpu_reset_model_id(CPUState *env, uint32_t id)
             set_feature(env, ARM_FEATURE_VFP3);
             set_feature(env, ARM_FEATURE_VFP);
 
+            set_feature(env, ARM_FEATURE_V8_1M);
             set_feature(env, ARM_FEATURE_V8);
             set_feature(env, ARM_FEATURE_V7);
             set_feature(env, ARM_FEATURE_V6);
