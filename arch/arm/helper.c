@@ -1926,8 +1926,13 @@ static inline bool pmsav8_get_region(CPUState *env, uint32_t address, bool secur
     return hit;
 }
 
-static inline bool pmsav8_sau_is_exempt(uint32_t address, int access_type)
+static inline bool pmsav8_is_exempt_from_attribution(uint32_t address, int access_type)
 {
+    /* First architecture-defined exemptions; ARMv8-M Manual: Rule LDTN */
+    if(access_type == ACCESS_INST_FETCH && address >= 0xE0000000 && address <= 0xEFFFFFFF) {
+        return true;
+    }
+
     switch(address) {
         case 0xE0000000 ... 0xE0003FFF:  //  ITM, DWT, FPB, PMU
         case 0xE0005000 ... 0xE0005FFF:  //  RAS error record registers
@@ -1936,24 +1941,20 @@ static inline bool pmsav8_sau_is_exempt(uint32_t address, int access_type)
         case 0xE0040000 ... 0xE0041FFF:  //  TPIU, ETM
         case 0xE00FF000 ... 0xE00FFFFF:  //  ROM table
             return true;
-        default:
-            return address >= 0xE0000000 && address <= 0xEFFFFFFF && access_type == ACCESS_INST_FETCH;
     }
+
+    /* If none matched then the result depends on implementation-defined attribution exemptions. */
+    return is_impl_def_exempt_from_attribution(address);
 }
 
 /* The return value is true if SAU is enabled and a single region was matched. */
-static inline bool pmsav8_sau_try_get_region(CPUState *env, uint32_t address, bool secure, int access_type, int *region_index,
+static inline bool pmsav8_sau_try_get_region(CPUState *env, uint32_t address, int *region_index,
                                              enum security_attribution *attribution)
 {
     int n;
     bool hit = false;
     *region_index = -1;
     *attribution = SA_SECURE;
-
-    if(pmsav8_sau_is_exempt(address, access_type)) {
-        *attribution = secure ? SA_SECURE : SA_NONSECURE;
-        return false;
-    }
 
     if(!(env->sau.ctrl & SAU_CTRL_ENABLE)) {
         *attribution = env->sau.ctrl & SAU_CTRL_ALLNS ? SA_NONSECURE : SA_SECURE;
@@ -2002,6 +2003,76 @@ static inline bool pmsav8_sau_try_get_region(CPUState *env, uint32_t address, bo
         *attribution = nsc ? SA_SECURE_NSC : SA_NONSECURE;
     }
     return hit;
+}
+
+static inline bool pmsav8_idau_get_region(CPUState *env, uint32_t address, int *region_index,
+                                          enum security_attribution *attribution)
+{
+    //  The function should only be called if IDAU is enabled cause IDAU disabled is indistinguishable from no hit
+    tlib_assert(env->idau.enabled);
+
+    for(int index = 0; index <= env->number_of_idau_regions; index++) {
+        uint32_t start = pmsav8_idau_sau_get_region_base(env->idau.rbar[index]);
+        uint32_t rlar = env->idau.rlar[index];
+        uint32_t end = pmsav8_idau_sau_get_region_limit(rlar);
+        if(start <= address && end >= address) {
+            if(rlar & IDAU_RLAR_ENABLE) {
+                *attribution = rlar & IDAU_RLAR_NSC ? SA_SECURE_NSC : SA_NONSECURE;
+                *region_index = index;
+                return true;
+            }
+        }
+    }
+    *attribution = SA_SECURE;
+    return false;
+}
+
+static inline void pmsav8_get_security_attribution(CPUState *env, uint32_t address, bool secure, int access_type,
+                                                   int access_width, bool *idau_valid, int *idau_region, bool *sau_valid,
+                                                   int *sau_region, enum security_attribution *attribution)
+{
+    *idau_valid = false;
+    *sau_valid = false;
+
+    tlib_assert(access_width > 0);
+    uint32_t access_end_address = address + access_width - 1;
+
+    //  Base address is used for all the checks, granularity is 32B.
+    address = pmsav8_idau_sau_get_region_base(address);
+
+    //  Whole 0xF0000000-0xFFFFFFFF is Secure with TrustZone, NS otherwise; ARMv8-M Manual: Rule FGDW.
+    if((address & 0xF0000000) == 0xF0000000) {
+        *attribution = env->v7m.has_trustzone ? SA_SECURE : SA_NONSECURE;
+        return;
+    }
+
+    //  Attribution is the same as access security for exemptions; ARMv8-M Manual: Rule LDTN.
+    if(pmsav8_is_exempt_from_attribution(address, access_type)) {
+        *attribution = secure ? SA_SECURE : SA_NONSECURE;
+        return;
+    }
+
+    //  Even if SAU region not valid, the attribution returned can be NS due to `ALLNS` option changing the default.
+    *sau_valid = pmsav8_sau_try_get_region(env, address, sau_region, attribution);
+
+    //  Make sure last byte accessed belongs to the same region.
+    tlib_assert(!*sau_valid || access_end_address <= pmsav8_idau_sau_get_region_limit(env->sau.rlar[*sau_region]));
+
+    //  Implementation-defined exemptions have been checked already so we can just skip IDAU lookup if it's disabled.
+    if(!env->idau.enabled) {
+        return;
+    }
+
+    enum security_attribution idau_attribution;
+    if(pmsav8_idau_get_region(env, address, idau_region, &idau_attribution)) {
+        //  Make sure last byte accessed belongs to the same region.
+        tlib_assert(access_end_address <= pmsav8_idau_sau_get_region_limit(env->idau.rlar[*idau_region]));
+
+        *idau_valid = true;
+
+        //  More restrictive IDAU attribution overrides SAU attribution.
+        *attribution = attribution_get_more_secure(idau_attribution, *attribution);
+    }
 }
 
 #define PMSA_ENABLED(ctrl)    ((ctrl & 0b001))
@@ -3206,6 +3277,7 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
     target_ulong page_size; /* Not used but needed for MPU check */
     bool a, t;
     int resolved_region;
+    int mpu_region;
     enum security_attribution attribution;
     bool test_privileged;
     bool test_secure;
@@ -3260,10 +3332,10 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
          * Store doesn't need to be tested as we can just check `prot` set by the function.
          */
         int result = pmsav8_check_access_with_region(env, addr, test_secure, ACCESS_DATA_LOAD,
-                                                     /* is_user: */ !test_privileged, &prot, &page_size, &resolved_region);
+                                                     /* is_user: */ !test_privileged, &prot, &page_size, &mpu_region);
 
-        if((in_privileged_mode(env) || a) && pmsav8_mpu_region_valid(resolved_region)) {
-            addr_info.flags.mpu_region = resolved_region;
+        if((in_privileged_mode(env) || a) && pmsav8_mpu_region_valid(mpu_region)) {
+            addr_info.flags.mpu_region = mpu_region;
             addr_info.flags.mpu_region_valid = true;
         }
 
