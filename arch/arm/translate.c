@@ -9212,14 +9212,22 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                         if(!(insn & (1 << 20)) && arm_feature(env, ARM_FEATURE_V8)) {
                             /* TT, TTT, TTA, TTAT */
                             TCGv_i32 addr, op, ttresp;
+                            uint32_t at;
 
                             /* UNPREDICTABLE cases */
                             if((insn & 0x3f) || rd == 13 || rd == 15 || rn == 15) {
                                 goto illegal_op;
                             }
 
+                            at = extract32(insn, 6, 2);
+
+                            /* TTA and TTAT are UNDEFINED if used from Non-Secure state. */
+                            if(s->ns && (at & 0b10)) {
+                                goto illegal_op;
+                            }
+
                             addr = load_reg(s, rn);
-                            op = tcg_const_i32(extract32(insn, 6, 2));
+                            op = tcg_const_i32(at);
                             ttresp = tcg_temp_new_i32();
                             gen_helper_v8m_tt(ttresp, cpu_env, addr, op);
                             tcg_temp_free_i32(addr);

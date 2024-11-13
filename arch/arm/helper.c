@@ -3221,16 +3221,11 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
     a = op & 0b10;
     t = op & 0b01;
 
-    /* Alternate Domain (A) variants are used to query the Non-secure MPU from Secure code */
-    if(a) {
-        if(!env->secure) {
-            env->exception_index = EXCP_UDEF;
-            cpu_loop_exit(env);
-        }
-        test_secure = false;
-    } else {
-        test_secure = env->secure;
-    }
+    /* Alternate Domain (A) variants are used to query the Security state and access permissions
+     * of a memory location for a Non-secure access to that location. This helper is only called
+     * for secure TTA and TTAT execution as they are UNDEFINED if used from non-secure state.
+     */
+    test_secure = a ? false : env->secure;
 
     if(!PMSA_ENABLED(env->pmsav8[test_secure].ctrl)) {
         goto invalid;
