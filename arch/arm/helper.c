@@ -3191,8 +3191,8 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
     bool a, t;
     int resolved_region;
     bool multiple_regions;
-    bool secure;
     enum security_attribution attribution;
+    bool test_secure;
 
     //  Based on TT_RESP from the ARMv8-M Architecture Reference Manual.
     union {
@@ -3227,12 +3227,12 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
             env->exception_index = EXCP_UDEF;
             cpu_loop_exit(env);
         }
-        secure = false;
+        test_secure = false;
     } else {
-        secure = env->secure;
+        test_secure = env->secure;
     }
 
-    if(!PMSA_ENABLED(env->pmsav8[secure].ctrl)) {
+    if(!PMSA_ENABLED(env->pmsav8[test_secure].ctrl)) {
         goto invalid;
     }
 
@@ -3244,18 +3244,18 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
         priv_access = in_privileged_mode(env);
     }
 
-    if(!pmsav8_get_region(env, addr, secure, &resolved_region, &multiple_regions) || multiple_regions) {
+    if(!pmsav8_get_region(env, addr, test_secure, &resolved_region, &multiple_regions) || multiple_regions) {
         /* No region hit or multiple regions */
         goto invalid;
     }
     addr_info.flags.mpu_region = resolved_region;
     addr_info.flags.mpu_region_valid = true;
 
-    pmsav8_get_phys_addr(env, addr, secure, PAGE_READ, !priv_access, &phys_ptr, &prot, &page_size);
+    pmsav8_get_phys_addr(env, addr, test_secure, PAGE_READ, !priv_access, &phys_ptr, &prot, &page_size);
     addr_info.flags.read_ok = (prot & PAGE_READ) != 0;
     addr_info.flags.readwrite_ok = addr_info.flags.read_ok && (prot & PAGE_WRITE) != 0;
 
-    bool sau_nr_valid = pmsav8_sau_try_get_region(env, addr, secure, PAGE_READ, &resolved_region, &attribution);
+    bool sau_nr_valid = pmsav8_sau_try_get_region(env, addr, test_secure, PAGE_READ, &resolved_region, &attribution);
     addr_info.flags.sau_region_valid = sau_nr_valid;
     if(sau_nr_valid) {
         addr_info.flags.sau_region = resolved_region;
