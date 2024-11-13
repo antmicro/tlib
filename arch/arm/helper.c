@@ -3221,35 +3221,38 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
     a = op & 0b10;
     t = op & 0b01;
 
-    if(!a && !in_privileged_mode(env)) {
-        goto invalid;
-    }
-
     /* Alternate Domain (A) variants are used to query the Security state and access permissions
      * of a memory location for a Non-secure access to that location. This helper is only called
      * for secure TTA and TTAT execution as they are UNDEFINED if used from non-secure state.
      */
     test_secure = a ? false : env->secure;
 
-    if(!PMSA_ENABLED(env->pmsav8[test_secure].ctrl)) {
-        goto invalid;
-    }
-
-    /* T-variant instructions, i.e. TTT and TTAT, are Test Target (Alternate Mode) UNPRIVILEGED
-     * so they always query access permissions for an unprivileged access to that location.
+    /* The Arm® v8-M Architecture Reference Manual specifies that MREGION content is not valid if:
+     * - The TT or TTT instruction variants, without the A flag specified, were executed from an unprivileged mode,
+     * - The MPU is not implemented or MPU_CTRL.ENABLE is set to zero,
+     * - The address specified by the TT instruction variant does not match any enabled MPU regions,
+     * - The address matched multiple MPU regions.
+     * In this case R and RW fields are RAZ
      */
-    test_privileged = t ? false : in_privileged_mode(env);
+    if((in_privileged_mode(env) || a) && env->number_of_mpu_regions > 0 && PMSA_ENABLED(env->pmsav8[test_secure].ctrl) &&
+       pmsav8_get_region(env, addr, test_secure, &resolved_region, &multiple_regions) && !multiple_regions) {
+        /* T-variant instructions, i.e. TTT and TTAT, are Test Target (Alternate Mode) UNPRIVILEGED
+         * so they always query access permissions for an unprivileged access to that location.
+         */
+        test_privileged = t ? false : in_privileged_mode(env);
 
-    if(!pmsav8_get_region(env, addr, test_secure, &resolved_region, &multiple_regions) || multiple_regions) {
-        /* No region hit or multiple regions */
-        goto invalid;
+        addr_info.flags.mpu_region = resolved_region;
+        addr_info.flags.mpu_region_valid = true;
+
+        pmsav8_get_phys_addr(env, addr, test_secure, PAGE_READ, /* is_user: */ !test_privileged, &phys_ptr, &prot, &page_size);
+        addr_info.flags.read_ok = (prot & (1 << PAGE_READ)) != 0;
+        addr_info.flags.readwrite_ok = addr_info.flags.read_ok && (prot & (1 << PAGE_WRITE)) != 0;
     }
-    addr_info.flags.mpu_region = resolved_region;
-    addr_info.flags.mpu_region_valid = true;
 
-    pmsav8_get_phys_addr(env, addr, test_secure, PAGE_READ, /* is_user: */ !test_privileged, &phys_ptr, &prot, &page_size);
-    addr_info.flags.read_ok = (prot & PAGE_READ) != 0;
-    addr_info.flags.readwrite_ok = addr_info.flags.read_ok && (prot & PAGE_WRITE) != 0;
+    /* The remaining bits are only valid if executed from secure state. */
+    if(!env->secure) {
+        return addr_info.value;
+    }
 
     bool sau_nr_valid = pmsav8_sau_try_get_region(env, addr, test_secure, PAGE_READ, &resolved_region, &attribution);
     addr_info.flags.sau_region_valid = sau_nr_valid;
@@ -3260,16 +3263,6 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
     addr_info.flags.nonsecure_read_ok = !addr_info.flags.secure && addr_info.flags.read_ok;
     addr_info.flags.nonsecure_readwrite_ok = !addr_info.flags.secure && addr_info.flags.readwrite_ok;
 
-    return addr_info.value;
-
-invalid:
-    /* The Arm® v8-M Architecture Reference Manual specifies that if MREGION content is not valid if:
-     * - The MPU is not implemented or MPU_CTRL.ENABLE is set to zero,
-     * - The address specified by the TT instruction variant does not match any enabled MPU regions,
-     * - The address matched multiple MPU regions,
-     * - The TT or TTT instruction variants, without the A flag specified, were executed from an unprivileged mode.
-     * In this case R and RW fields are RAZ
-     */
     return addr_info.value;
 }
 
