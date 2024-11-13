@@ -85,8 +85,11 @@
 #define in_privileged_mode(ENV) (((ENV)->v7m.control[env->secure] & 0x1) == 0 || (ENV)->v7m.handler_mode)
 
 //  256 is a hard limit based on width of their respective region number fields in TT instructions.
-#define MAX_MPU_REGIONS 256
-#define MAX_SAU_REGIONS 256
+#define MAX_MPU_REGIONS  256
+#define MAX_SAU_REGIONS  256
+#define MAX_IDAU_REGIONS 256
+
+#define MAX_IMPL_DEF_ATTRIBUTION_EXEMPTIONS 256
 
 #define MPU_SIZE_FIELD_MASK                 0x3E
 #define MPU_REGION_ENABLED_BIT              0x1
@@ -336,6 +339,23 @@ typedef struct CPUState {
 
     uint32_t number_of_sau_regions;
 
+    struct {
+        bool enabled;
+        uint32_t rbar[MAX_IDAU_REGIONS];
+        uint32_t rlar[MAX_IDAU_REGIONS];
+    } idau;
+    
+    uint32_t number_of_idau_regions;
+    
+    /* Additional memory attribution exemptions similar to the architecture-defined regions which
+    * make security attribution of these regions (S/NS) the same as current CPU state.
+    */
+    struct {
+        uint32_t count;
+        uint32_t start[MAX_IMPL_DEF_ATTRIBUTION_EXEMPTIONS];
+        uint32_t end[MAX_IMPL_DEF_ATTRIBUTION_EXEMPTIONS];
+    } impl_def_attr_exemptions;
+
     int32_t sleep_on_exception_exit;
 #endif
 
@@ -394,7 +414,7 @@ typedef struct CPUState {
 
     CPU_COMMON
 
-    /* These fields after the common ones so they are preserved on reset.  */
+    /* Fields after CPU_COMMON are preserved on reset but not serialized as opposed to the ones before CPU_COMMON. */
 
     TTable *cp_regs;
 } CPUState;
@@ -491,6 +511,10 @@ static inline bool attribution_is_secure(enum security_attribution attrib)
 
 #define SAU_RLAR_ENABLE 0x01
 #define SAU_RLAR_NSC    0x02
+
+/* There are no such registers in cores, we simply imitate SAU. */
+#define IDAU_RLAR_ENABLE 0x01
+#define IDAU_RLAR_NSC    0x02
 #endif
 
 /* Return the current FPSCR value.  */
@@ -806,6 +830,26 @@ static inline enum arm_cpu_mode cpu_get_current_execution_mode()
 }
 
 #ifdef TARGET_PROTO_ARM_M
+
+//  Always check return value first; `found_index` is only valid if true was returned.
+static inline bool try_get_impl_def_attr_exemption_region(uint32_t address, uint32_t start_at, uint32_t *found_index)
+{
+    for(uint32_t index = start_at; index < cpu->impl_def_attr_exemptions.count; index++) {
+        uint32_t start = cpu->impl_def_attr_exemptions.start[index];
+        uint32_t end = cpu->impl_def_attr_exemptions.end[index];
+        if(start <= address && end >= address) {
+            *found_index = index;
+            return true;
+        }
+    }
+    return false;
+}
+
+static inline bool is_impl_def_exempt_from_attribution(uint32_t address)
+{
+    uint32_t found_index;  //  unused
+    return try_get_impl_def_attr_exemption_region(address, /* start_at: */ 0, &found_index);
+}
 
 //  Region granularity is 32B, the remaining RBAR/RLAR bits contain flags like region enabled etc.
 #define PMSAV8_IDAU_SAU_REGION_GRANULARITY_B 0x20u

@@ -357,6 +357,8 @@ uint32_t tlib_get_mpu_region_number()
 
 EXC_INT_0(uint32_t, tlib_get_mpu_region_number)
 
+#ifdef TARGET_PROTO_ARM_M
+
 void tlib_set_number_of_sau_regions(uint32_t value)
 {
     if(value >= MAX_SAU_REGIONS) {
@@ -479,6 +481,168 @@ uint32_t tlib_get_sau_region_limit_address()
 }
 
 EXC_INT_0(uint32_t, tlib_get_sau_region_limit_address)
+
+void tlib_set_number_of_idau_regions(uint32_t value)
+{
+    if(cpu->number_of_idau_regions == value) {
+        return;
+    }
+
+    if(value >= MAX_IDAU_REGIONS) {
+        tlib_abortf("Failed to set number of IDAU regions to %u, maximal supported value is %u", value, MAX_IDAU_REGIONS);
+    }
+    cpu->number_of_idau_regions = value;
+    tlb_flush(cpu, 1, false);
+}
+
+EXC_VOID_1(tlib_set_number_of_idau_regions, uint32_t, value)
+
+uint32_t tlib_get_number_of_idau_regions()
+{
+    return cpu->number_of_idau_regions;
+}
+
+EXC_INT_0(uint32_t, tlib_get_number_of_idau_regions)
+
+void tlib_set_idau_enabled(uint32_t value)
+{
+    bool newEnabled = value == 1u;
+    if(newEnabled != cpu->idau.enabled) {
+        return;
+    }
+    cpu->idau.enabled = newEnabled;
+    tlb_flush(cpu, 1, false);
+}
+
+EXC_VOID_1(tlib_set_idau_enabled, uint32_t, value)
+
+uint32_t tlib_get_idau_enabled()
+{
+    return cpu->idau.enabled;
+}
+
+EXC_INT_0(uint32_t, tlib_get_idau_enabled)
+
+void tlib_set_idau_region_base_address(uint32_t index, uint32_t value)
+{
+    if(index >= cpu->number_of_idau_regions) {
+        tlib_abortf("IDAU: Trying to use non-existent IDAU region. Number of regions: %u, faulting region number: %u",
+                    cpu->number_of_idau_regions, index);
+    }
+
+    if(cpu->idau.rbar[index] == value) {
+        return;
+    }
+    cpu->idau.rbar[index] = value;
+    tlb_flush(cpu, 1, false);
+}
+
+EXC_VOID_2(tlib_set_idau_region_base_address, uint32_t, index, uint32_t, value)
+
+void tlib_set_idau_region_limit_address(uint32_t index, uint32_t value)
+{
+    if(index >= cpu->number_of_idau_regions) {
+        tlib_abortf("IDAU: Trying to use non-existent IDAU region. Number of regions: %u, faulting region number: %u",
+                    cpu->number_of_idau_regions, index);
+    }
+
+    if(cpu->idau.rlar[index] == value) {
+        return;
+    }
+    cpu->idau.rlar[index] = value;
+    tlb_flush(cpu, 1, false);
+}
+
+EXC_VOID_2(tlib_set_idau_region_limit_address, uint32_t, index, uint32_t, value)
+
+uint32_t tlib_get_idau_region_base_address(uint32_t index)
+{
+    if(index >= cpu->number_of_idau_regions) {
+        tlib_abortf("IDAU: Trying to use non-existent IDAU region. Number of regions: %u, faulting region number: %u",
+                    cpu->number_of_idau_regions, index);
+    }
+    uint32_t result = cpu->idau.rbar[index];
+    return result;
+}
+
+EXC_INT_1(uint32_t, tlib_get_idau_region_base_address, uint32_t, index)
+
+uint32_t tlib_get_idau_region_limit_address(uint32_t index)
+{
+    if(index >= cpu->number_of_idau_regions) {
+        tlib_abortf("IDAU: Trying to use non-existent IDAU region. Number of regions: %u, faulting region number: %u",
+                    cpu->number_of_idau_regions, index);
+    }
+    uint32_t result = cpu->idau.rlar[index];
+    return result;
+}
+
+EXC_INT_1(uint32_t, tlib_get_idau_region_limit_address, uint32_t, index)
+
+bool tlib_try_add_implementation_defined_exemption_region(uint32_t start, uint32_t end)
+{
+    if(cpu->impl_def_attr_exemptions.count + 1 >= MAX_IMPL_DEF_ATTRIBUTION_EXEMPTIONS) {
+        tlib_printf(LOG_LEVEL_ERROR,
+                    "Adding implementation-defined exemption region 0x%08" PRIx32 "-0x%08" PRIx32 " failed; "
+                    "max number of implementation-defined exemption regions reached: %u",
+                    start, end, MAX_IMPL_DEF_ATTRIBUTION_EXEMPTIONS);
+        return false;
+    }
+    uint32_t index = cpu->impl_def_attr_exemptions.count++;
+
+    cpu->impl_def_attr_exemptions.start[index] = pmsav8_idau_sau_get_region_base(start);
+    cpu->impl_def_attr_exemptions.end[index] = pmsav8_idau_sau_get_region_limit(end);
+
+    tlb_flush(cpu, 1, false);
+    return true;
+}
+
+EXC_INT_2(bool, tlib_try_add_implementation_defined_exemption_region, uint32_t, start, uint32_t, end)
+
+bool tlib_try_remove_implementation_defined_exemption_region(uint32_t start, uint32_t end)
+{
+    uint32_t region_index;
+    uint32_t start_at = 0;
+    bool region_found = false;
+    while(start_at < cpu->impl_def_attr_exemptions.count) {
+        if(!try_get_impl_def_attr_exemption_region(start, start_at, &region_index)) {
+            break;
+        }
+
+        uint32_t region_start = cpu->impl_def_attr_exemptions.start[region_index];
+        uint32_t region_end = cpu->impl_def_attr_exemptions.end[region_index];
+        if(region_start == start && region_end == end) {
+            region_found = true;
+            break;
+        } else {
+            //  Regions can overlap so let's check regions past this one too.
+            start_at = region_index + 1;
+        }
+    }
+
+    if(!region_found) {
+        tlib_printf(LOG_LEVEL_ERROR,
+                    "Removing implementation-defined exemption region 0x%08" PRIx32 "-0x%08" PRIx32 " failed; region not found",
+                    start, end);
+        return false;
+    }
+    cpu->impl_def_attr_exemptions.count--;
+
+    //  Let's move the last region, disabled by decreased regions count, in place of the removed one
+    //  unless the last region or the only region is being removed.
+    uint32_t last_index = cpu->impl_def_attr_exemptions.count;
+    if(region_index != last_index) {
+        cpu->impl_def_attr_exemptions.start[region_index] = cpu->impl_def_attr_exemptions.start[last_index];
+        cpu->impl_def_attr_exemptions.end[region_index] = cpu->impl_def_attr_exemptions.end[last_index];
+    }
+
+    tlb_flush(cpu, 1, false);
+    return true;
+}
+
+EXC_INT_2(bool, tlib_try_remove_implementation_defined_exemption_region, uint32_t, start, uint32_t, end)
+
+#endif
 
 /* See vfp_trigger_exception for irq_number value interpretation */
 void tlib_set_fpu_interrupt_number(int32_t irq_number)

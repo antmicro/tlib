@@ -508,6 +508,7 @@ void cpu_reset(CPUState *env)
     uint32_t id = env->cp15.c0_cpuid;
     uint32_t number_of_mpu_regions = env->number_of_mpu_regions;
 #ifdef TARGET_PROTO_ARM_M
+    uint32_t number_of_idau_regions = env->number_of_idau_regions;
     uint32_t number_of_sau_regions = env->number_of_sau_regions;
 #endif
     memset(env, 0, RESET_OFFSET);
@@ -516,6 +517,7 @@ void cpu_reset(CPUState *env)
     }
     env->number_of_mpu_regions = number_of_mpu_regions;
 #ifdef TARGET_PROTO_ARM_M
+    env->number_of_idau_regions = number_of_idau_regions;
     env->number_of_sau_regions = number_of_sau_regions;
 #endif
     /* SVC mode with interrupts disabled.  */
