@@ -3194,6 +3194,7 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
     bool secure;
     enum security_attribution attribution;
 
+    //  Based on TT_RESP from the ARMv8-M Architecture Reference Manual.
     union {
         struct {
             unsigned mpu_region : 8;
