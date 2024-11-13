@@ -3205,7 +3205,7 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
             unsigned readwrite_ok : 1;
             unsigned nonsecure_read_ok : 1;
             unsigned nonsecure_readwrite_ok : 1;
-            unsigned secure : 1;
+            unsigned target_secure : 1;
             unsigned idau_region_valid : 1;
             unsigned idau_region : 8;
         } flags;
@@ -3259,12 +3259,12 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
     if(sau_nr_valid) {
         addr_info.flags.sau_region = resolved_region;
     }
-    addr_info.flags.secure = attribution_is_secure(attribution);
+    addr_info.flags.target_secure = attribution_is_secure(attribution);
 
     /* NSR and NSRW bits are only valid if R/RW fields are valid. */
     if(addr_info.flags.mpu_region_valid) {
-        addr_info.flags.nonsecure_read_ok = !addr_info.flags.secure && addr_info.flags.read_ok;
-        addr_info.flags.nonsecure_readwrite_ok = !addr_info.flags.secure && addr_info.flags.readwrite_ok;
+        addr_info.flags.nonsecure_read_ok = !addr_info.flags.target_secure && addr_info.flags.read_ok;
+        addr_info.flags.nonsecure_readwrite_ok = !addr_info.flags.target_secure && addr_info.flags.readwrite_ok;
     }
 
     return addr_info.value;
