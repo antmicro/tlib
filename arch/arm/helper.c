@@ -1880,12 +1880,19 @@ static int cortexm_check_default_mapping_v8(uint32 address)
     }
 }
 
+#define PMSA_MPU_REGION_INVALID -1
+
+static inline bool pmsav8_mpu_region_valid(int region_index)
+{
+    return region_index != PMSA_MPU_REGION_INVALID;
+}
+
 static inline bool pmsav8_get_region(CPUState *env, uint32_t address, bool secure, int *region_index, bool *multiple_regions)
 {
     int n;
     bool hit = false;
     *multiple_regions = false;
-    *region_index = -1;
+    *region_index = PMSA_MPU_REGION_INVALID;
 
     for(n = env->number_of_mpu_regions - 1; n >= 0; n--) {
 
@@ -1907,7 +1914,7 @@ static inline bool pmsav8_get_region(CPUState *env, uint32_t address, bool secur
              * in this case region_index _must not_ be used
              */
             *multiple_regions = true;
-            *region_index = -1;
+            *region_index = PMSA_MPU_REGION_INVALID;
             break;
         }
 
@@ -2000,33 +2007,35 @@ static inline bool pmsav8_sau_try_get_region(CPUState *env, uint32_t address, bo
 #define PMSA_AP_PRIVONLY(ap)  ((ap & 0b01) == 0)
 #define PMSA_AP_READONLY(ap)  ((ap & 0b10) != 0)
 
-static inline int pmsav8_get_phys_addr(CPUState *env, uint32_t address, bool secure, int access_type, int is_user,
-                                       uint32_t *phys_ptr, int *prot, target_ulong *page_size)
+//  Returns `TRANSLATE_SUCCESS` in case access is valid and `TRANSLATE_FAILURE` otherwise.
+//  MPU region matched is valid in both cases if different than `PMSA_MPU_REGION_INVALID`.
+static inline int pmsav8_check_access_with_region(CPUState *env, uint32_t address, bool secure, int access_type, int is_user,
+                                                  int *prot, target_ulong *page_size, int *resolved_region)
 {
     bool hit;
-    int resolved_region;
     bool multiple_regions = false;
     bool mpu_enabled = PMSA_ENABLED(env->pmsav8[secure].ctrl);
 
-    /* flat memory mapping */
-    *phys_ptr = address;
     *prot = 0;
+    *resolved_region = PMSA_MPU_REGION_INVALID;
 
     if(!mpu_enabled) {
         hit = false;
     } else {
-        hit = pmsav8_get_region(env, address, secure, &resolved_region, &multiple_regions);
+        hit = pmsav8_get_region(env, address, secure, resolved_region, &multiple_regions);
 
         /* Overlapping regions generate MemManage Fault
          * R_LLLP in Arm® v8-M Architecture Reference Manual DDI0553B.l ID30062020 */
-        if(multiple_regions) {
+        if(unlikely(multiple_regions)) {
+            tlib_assert(!pmsav8_mpu_region_valid(*resolved_region));
             goto do_fault;
         }
     }
+    tlib_assert(hit || !pmsav8_mpu_region_valid(*resolved_region));
 
     if(hit) {
-        uint32_t rbar = env->pmsav8[secure].rbar[resolved_region];
-        uint32_t rlar = env->pmsav8[secure].rlar[resolved_region];
+        uint32_t rbar = env->pmsav8[secure].rbar[*resolved_region];
+        uint32_t rlar = env->pmsav8[secure].rlar[*resolved_region];
         int xn = extract32(rbar, 0, 1);
         int ap = extract32(rbar, 1, 2);
         int pxn = arm_feature(env, ARM_FEATURE_V8_1M) && extract32(rlar, 4, 1);
@@ -2078,6 +2087,13 @@ static inline int pmsav8_get_phys_addr(CPUState *env, uint32_t address, bool sec
 do_fault:
     return TRANSLATE_FAIL;
 }
+
+static inline int pmsav8_check_access(CPUState *env, uint32_t address, bool secure, int access_type, int is_user, int *prot,
+                                      target_ulong *page_size)
+{
+    int region;  //  ignored
+    return pmsav8_check_access_with_region(env, address, secure, access_type, is_user, prot, page_size, &region);
+}
 #endif
 
 inline int get_phys_addr(CPUState *env, uint32_t address, int access_type, int is_user, uint32_t *phys_ptr, int *prot,
@@ -2096,13 +2112,13 @@ inline int get_phys_addr(CPUState *env, uint32_t address, int access_type, int i
 #ifdef TARGET_PROTO_ARM_M
     if(arm_feature(env, ARM_FEATURE_V8)) {
         *page_size = TARGET_PAGE_SIZE;
+        *phys_ptr = address;
         if(env->number_of_mpu_regions == 0) {
             /* MPU disabled */
-            *phys_ptr = address;
             *prot = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
             return TRANSLATE_SUCCESS;
         }
-        return pmsav8_get_phys_addr(env, address, env->secure, access_type, is_user, phys_ptr, prot, page_size);
+        return pmsav8_check_access(env, address, env->secure, access_type, is_user, prot, page_size);
     }
 #endif
 
@@ -3185,11 +3201,9 @@ void HELPER(set_teecr)(CPUState *env, uint32_t val)
 uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
 {
     int prot;
-    uint32_t phys_ptr;      /* Not used, but needed for get_phys_addr_mpu */
-    target_ulong page_size; /* Same as above */
+    target_ulong page_size; /* Not used but needed for MPU check */
     bool a, t;
     int resolved_region;
-    bool multiple_regions;
     enum security_attribution attribution;
     bool test_privileged;
     bool test_secure;
@@ -3228,25 +3242,34 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
     test_secure = a ? false : env->secure;
 
     /* The Arm® v8-M Architecture Reference Manual specifies that MREGION content is not valid if:
-     * - The TT or TTT instruction variants, without the A flag specified, were executed from an unprivileged mode,
-     * - The MPU is not implemented or MPU_CTRL.ENABLE is set to zero,
-     * - The address specified by the TT instruction variant does not match any enabled MPU regions,
-     * - The address matched multiple MPU regions.
-     * In this case R and RW fields are RAZ
+     * 1) The TT or TTT instruction variants, without the A flag specified, were executed from an unprivileged mode,
+     * 2) The MPU is not implemented or MPU_CTRL.ENABLE is set to zero,
+     * 3) The address specified by the TT instruction variant does not match any enabled MPU regions,
+     * 4) The address matched multiple MPU regions.
+     * R and RW fields are RAZ in cases 1 and 4; so with 1) we don't even need to check the access.
      */
-    if((in_privileged_mode(env) || a) && env->number_of_mpu_regions > 0 && PMSA_ENABLED(env->pmsav8[test_secure].ctrl) &&
-       pmsav8_get_region(env, addr, test_secure, &resolved_region, &multiple_regions) && !multiple_regions) {
+    if(in_privileged_mode(env) || a) {
         /* T-variant instructions, i.e. TTT and TTAT, are Test Target (Alternate Mode) UNPRIVILEGED
          * so they always query access permissions for an unprivileged access to that location.
          */
         test_privileged = t ? false : in_privileged_mode(env);
 
-        addr_info.flags.mpu_region = resolved_region;
-        addr_info.flags.mpu_region_valid = true;
+        /* We're testing `ACCESS_DATA_LOAD` so the translate success means reading is allowed.
+         * Store doesn't need to be tested as we can just check `prot` set by the function.
+         */
+        int result = pmsav8_check_access_with_region(env, addr, test_secure, ACCESS_DATA_LOAD,
+                                                     /* is_user: */ !test_privileged, &prot, &page_size, &resolved_region);
 
-        pmsav8_get_phys_addr(env, addr, test_secure, PAGE_READ, /* is_user: */ !test_privileged, &phys_ptr, &prot, &page_size);
-        addr_info.flags.read_ok = (prot & (1 << PAGE_READ)) != 0;
-        addr_info.flags.readwrite_ok = addr_info.flags.read_ok && (prot & (1 << PAGE_WRITE)) != 0;
+        if((in_privileged_mode(env) || a) && pmsav8_mpu_region_valid(resolved_region)) {
+            addr_info.flags.mpu_region = resolved_region;
+            addr_info.flags.mpu_region_valid = true;
+        }
+
+        /* `pmsav8_check_access_with_region` always returns `TRANSLATE_FAIL` in case multiple regions were matched
+         * and `prot` has no permissions so we don't really need to know if it happened as both should be RAZ.
+         */
+        addr_info.flags.read_ok = result == TRANSLATE_SUCCESS;
+        addr_info.flags.readwrite_ok = is_page_access_valid(prot, ACCESS_DATA_STORE) ? 1u : 0u;
     }
 
     /* The remaining bits are only valid if executed from secure state. */
