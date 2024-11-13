@@ -84,8 +84,10 @@
 
 #define in_privileged_mode(ENV) (((ENV)->v7m.control[env->secure] & 0x1) == 0 || (ENV)->v7m.handler_mode)
 
-#define MAX_MPU_REGIONS                     32
-#define MAX_SAU_REGIONS                     32
+//  256 is a hard limit based on width of their respective region number fields in TT instructions.
+#define MAX_MPU_REGIONS 256
+#define MAX_SAU_REGIONS 256
+
 #define MPU_SIZE_FIELD_MASK                 0x3E
 #define MPU_REGION_ENABLED_BIT              0x1
 #define MPU_SIZE_AND_ENABLE_FIELD_MASK      (MPU_SIZE_FIELD_MASK | MPU_REGION_ENABLED_BIT)
