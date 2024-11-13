@@ -3185,13 +3185,13 @@ void HELPER(set_teecr)(CPUState *env, uint32_t val)
 uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
 {
     int prot;
-    bool priv_access;
     uint32_t phys_ptr;      /* Not used, but needed for get_phys_addr_mpu */
     target_ulong page_size; /* Same as above */
     bool a, t;
     int resolved_region;
     bool multiple_regions;
     enum security_attribution attribution;
+    bool test_privileged;
     bool test_secure;
 
     //  Based on TT_RESP from the ARMv8-M Architecture Reference Manual.
@@ -3235,13 +3235,10 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
         goto invalid;
     }
 
-    if(t) {
-        /* Force user access */
-        priv_access = false;
-    } else {
-        /* Check privilege level for the M profile, return true otherwise */
-        priv_access = in_privileged_mode(env);
-    }
+    /* T-variant instructions, i.e. TTT and TTAT, are Test Target (Alternate Mode) UNPRIVILEGED
+     * so they always query access permissions for an unprivileged access to that location.
+     */
+    test_privileged = t ? false : in_privileged_mode(env);
 
     if(!pmsav8_get_region(env, addr, test_secure, &resolved_region, &multiple_regions) || multiple_regions) {
         /* No region hit or multiple regions */
@@ -3250,7 +3247,7 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
     addr_info.flags.mpu_region = resolved_region;
     addr_info.flags.mpu_region_valid = true;
 
-    pmsav8_get_phys_addr(env, addr, test_secure, PAGE_READ, !priv_access, &phys_ptr, &prot, &page_size);
+    pmsav8_get_phys_addr(env, addr, test_secure, PAGE_READ, /* is_user: */ !test_privileged, &phys_ptr, &prot, &page_size);
     addr_info.flags.read_ok = (prot & PAGE_READ) != 0;
     addr_info.flags.readwrite_ok = addr_info.flags.read_ok && (prot & PAGE_WRITE) != 0;
 
