@@ -3276,7 +3276,6 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
     int prot;
     target_ulong page_size; /* Not used but needed for MPU check */
     bool a, t;
-    int resolved_region;
     int mpu_region;
     enum security_attribution attribution;
     bool test_privileged;
@@ -3351,10 +3350,19 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
         return addr_info.value;
     }
 
-    bool sau_nr_valid = pmsav8_sau_try_get_region(env, addr, test_secure, PAGE_READ, &resolved_region, &attribution);
-    addr_info.flags.sau_region_valid = sau_nr_valid;
-    if(sau_nr_valid) {
-        addr_info.flags.sau_region = resolved_region;
+    bool idau_valid, sau_valid;
+    int idau_region, sau_region;
+    pmsav8_get_security_attribution(env, addr, test_secure, ACCESS_DATA_LOAD, /* access_width: */ 1, &idau_valid, &idau_region,
+                                    &sau_valid, &sau_region, &attribution);
+
+    if(idau_valid) {
+        addr_info.flags.idau_region_valid = true;
+        addr_info.flags.idau_region = idau_region;
+    }
+
+    if(sau_valid) {
+        addr_info.flags.sau_region_valid = true;
+        addr_info.flags.sau_region = sau_region;
     }
     addr_info.flags.target_secure = attribution_is_secure(attribution);
 
