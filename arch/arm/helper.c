@@ -1160,7 +1160,7 @@ static void do_interrupt_v7m(CPUState *env)
     find_pending_irq_if_primask_unset(env);
 
     env->regs[14] = lr;
-    addr = ldl_phys(env->v7m.vecbase + env->v7m.exception * 4);
+    addr = ldl_phys(env->v7m.vecbase[env->secure] + env->v7m.exception * 4);
     env->regs[15] = addr & 0xfffffffe;
     env->thumb = addr & 1;
     if(stack_status) {

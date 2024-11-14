@@ -225,17 +225,17 @@ EXC_VOID_1(tlib_set_sleep_on_exception_exit, int32_t, value)
 
 void tlib_set_interrupt_vector_base(uint32_t address, bool secure)
 {
-    cpu->v7m.vecbase = address;
+    cpu->v7m.vecbase[secure] = address;
 }
 
-EXC_VOID_1(tlib_set_interrupt_vector_base, uint32_t, address)
+EXC_VOID_2(tlib_set_interrupt_vector_base, uint32_t, address, bool, secure)
 
-uint32_t tlib_get_interrupt_vector_base()
+uint32_t tlib_get_interrupt_vector_base(bool secure)
 {
-    return cpu->v7m.vecbase;
+    return cpu->v7m.vecbase[secure];
 }
 
-EXC_INT_0(uint32_t, tlib_get_interrupt_vector_base)
+EXC_INT_1(uint32_t, tlib_get_interrupt_vector_base, bool, secure)
 
 uint32_t tlib_get_xpsr()
 {

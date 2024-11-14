@@ -24,8 +24,8 @@ void tlib_set_exception_vector_address(uint32_t address);
 #ifdef TARGET_PROTO_ARM_M
 void tlib_set_sleep_on_exception_exit(int32_t);
 
-void tlib_set_interrupt_vector_base(uint32_t address);
-uint32_t tlib_get_interrupt_vector_base(void);
+void tlib_set_interrupt_vector_base(uint32_t address, bool secure);
+uint32_t tlib_get_interrupt_vector_base(bool secure);
 void tlib_set_fpu_interrupt_number(int32_t enabled);
 
 uint32_t tlib_get_xpsr(void);

@@ -53,7 +53,7 @@ uint32_t *get_reg_pointer_32(int reg)
         case BasePri_32:
             return &(cpu->v7m.basepri[cpu->secure]);
         case VecBase_32:
-            return &(cpu->v7m.vecbase);
+            return &(cpu->v7m.vecbase[cpu->secure]);
         case CurrentSP_32:
             return &(cpu->v7m.process_sp);
         case OtherSP_32:

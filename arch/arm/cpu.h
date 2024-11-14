@@ -296,7 +296,7 @@ typedef struct CPUState {
         uint32_t other_ss_msp; /* Other Security State Main Stack */
         uint32_t other_ss_psp; /* Other Security State Process Stack */
         uint32_t process_sp;   /* Is the currently selected SP Process or Main SP */
-        uint32_t vecbase;
+        uint32_t vecbase[M_REG_NUM_BANKS];
         uint32_t basepri[M_REG_NUM_BANKS];
         uint32_t control[M_REG_NUM_BANKS]; /* TODO: SFPA and FPCA bits are not banked - required for FPU support */
         uint32_t fault_status;
