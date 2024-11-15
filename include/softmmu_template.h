@@ -154,7 +154,6 @@ __attribute__((always_inline)) inline DATA_TYPE REGPARM glue(glue(glue(__ld, SUF
     bool is_insn_fetch = (env->current_tb == NULL);
 
     acquire_global_memory_lock(cpu);
-    register_address_access(cpu, addr);
 
     /* test if there is match for unaligned or IO access */
     /* XXX: could done more in memory macro in a non portable way */
