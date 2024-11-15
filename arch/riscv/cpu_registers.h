@@ -128,6 +128,7 @@ typedef enum {
     VXSAT_64    = 102,
     VXRM_64     = 103,
     VCSR_64     = 104,
+    MSECCFG_64  = 0x747,
     VL_64       = 0xc20,
     VTYPE_64    = 0xc21,
     VLENB_64    = 0xc22,
@@ -220,6 +221,7 @@ typedef enum {
     MCAUSE_32   = 0x383,
     MTVAL_32    = 0x384,
     MIP_32      = 0x385,
+    MSECCFG_32  = 0x747,
     PRIV_32     = 4161,
     // For floating-point registers assume both F and D extensions (64 bits wide)
     F_0_64      = 33,

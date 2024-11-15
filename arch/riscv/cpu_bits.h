@@ -339,6 +339,11 @@
 /* mintthresh bits */
 #define MINTTHRESH_TH                     0x000000ff
 
+/* mseccfg bits */
+#define MSECCFG_MML                       (1 << 0)
+#define MSECCFG_MMWP                      (1 << 1)
+#define MSECCFG_RLB                       (1 << 2)
+
 /* sintthresh bits */
 #define SINTTHRESH_TH                     0x000000ff
 
