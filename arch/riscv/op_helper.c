@@ -17,6 +17,7 @@
  * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 #include "cpu.h"
+#include "pmp.h"
 #define ALIGNED_ONLY
 #include "softmmu_exec.h"
 
@@ -663,14 +664,34 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
         env->menvcfgh = val_to_write;
         break;
     case CSR_MSECCFG:
+        // Based on the SMEPMP documentation Version 1.0
         if (!riscv_has_additional_ext(env, RISCV_FEATURE_SMEPMP)) {
             goto unhandled_csr_write;
         }
-        tlib_log(LOG_LEVEL_WARNING, "Behavior of CSR_MSECCFG is currently unimplemented, and writing will have no effect");
-        env->mseccfg = val_to_write;
+        if (env->priv != PRV_M) {
+            tlib_printf(LOG_LEVEL_WARNING, "CSR_MSECCFG can only be accessed in Machine mode");
+            goto unhandled_csr_write;
+        }
+
+        target_ulong mseccfg_mask = MSECCFG_MML | MSECCFG_MMWP | MSECCFG_RLB;
+        if (!(env->mseccfg & MSECCFG_RLB) && pmp_is_any_region_locked(env)) {
+             /* When mseccfg.RLB is 0 and pmpcfg.L is 1 in any rule or entry (including disabled entries), then
+                mseccfg.RLB remains 0 and any further modifications to mseccfg.RLB are ignored until a PMP reset */
+            mseccfg_mask ^= MSECCFG_RLB;
+        }
+        // MML and MMWP bits are sticky - after being set, the cannot be unset
+        env->mseccfg = (val_to_write & mseccfg_mask) | (env->mseccfg & (MSECCFG_MML | MSECCFG_MMWP));
+
+        // This settings can change behavior of PMP, so flush existing TLBs
+        tlb_flush(env, 1, true);
         break;
     case CSR_MSECCFGH:
         if (!riscv_has_additional_ext(env, RISCV_FEATURE_SMEPMP)) {
+            tlib_printf(LOG_LEVEL_ERROR, "CSR_MSECCFGH can only be accessed when SMEPMP extension is enabled");
+            goto unhandled_csr_write;
+        }
+        if (env->priv != PRV_M) {
+            tlib_printf(LOG_LEVEL_WARNING, "CSR_MSECCFGH can only be accessed in Machine mode");
             goto unhandled_csr_write;
         }
         env->mseccfgh = val_to_write;
@@ -892,11 +913,21 @@ static inline target_ulong csr_read_helper(CPUState *env, target_ulong csrno)
         return env->menvcfgh;
     case CSR_MSECCFG:
         if (!riscv_has_additional_ext(env, RISCV_FEATURE_SMEPMP)) {
+            tlib_printf(LOG_LEVEL_ERROR, "CSR_MSECCFG can only be accessed when SMEPMP extension is enabled");
+            goto unhandled_csr_read;
+        }
+        if (env->priv != PRV_M) {
+            tlib_printf(LOG_LEVEL_WARNING, "CSR_MSECCFG can only be accessed in Machine mode");
             goto unhandled_csr_read;
         }
         return env->mseccfg;
     case CSR_MSECCFGH:
         if (!riscv_has_additional_ext(env, RISCV_FEATURE_SMEPMP)) {
+            tlib_printf(LOG_LEVEL_ERROR, "CSR_MSECCFGH can only be accessed when SMEPMP extension is enabled");
+            goto unhandled_csr_read;
+        }
+        if (env->priv != PRV_M) {
+            tlib_printf(LOG_LEVEL_WARNING, "CSR_MSECCFGH can only be accessed in Machine mode");
             goto unhandled_csr_read;
         }
         return env->mseccfgh;

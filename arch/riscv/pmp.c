@@ -132,12 +132,13 @@ static void pmp_write_cfg(CPUState *env, uint32_t pmp_index, uint8_t val)
         return;
     }
 
-    if (pmp_is_locked(env, pmp_index)) {
+    if (pmp_is_locked(env, pmp_index) && !(env->mseccfg & MSECCFG_RLB)) {
         PMP_DEBUG("Ignoring pmpcfg write - locked");
         return;
     }
 
     if (!pmp_validate_configuration(env, pmp_index, &val)) {
+        PMP_DEBUG("Ignoring pmpcfg write - invalid configuration");
         return;
     }
 
@@ -504,7 +505,7 @@ void pmpaddr_csr_write(CPUState *env, uint32_t addr_index, target_ulong val)
     PMP_DEBUG("hart " TARGET_FMT_ld " writes: addr%d, val: 0x" TARGET_FMT_lx, env->mhartid, addr_index, val);
 
     if (addr_index < MAX_RISCV_PMPS) {
-        if (!pmp_is_locked(env, addr_index)) {
+        if (!pmp_is_locked(env, addr_index) || env->mseccfg & MSECCFG_RLB) {
             env->pmp_state.pmp[addr_index].addr_reg = val & cpu->pmp_addr_mask;
             pmp_update_rule(env, addr_index);
         } else {
