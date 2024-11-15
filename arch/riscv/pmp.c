@@ -266,8 +266,13 @@ int pmp_find_overlapping(CPUState *env, target_ulong addr, target_ulong size, in
     target_ulong pmp_sa;
     target_ulong pmp_ea;
     addr &= cpu->pmp_addr_mask;
+    uint8_t a_field;
 
     for (i = starting_index; i < MAX_RISCV_PMPS; i++) {
+        a_field = pmp_get_a_field(env->pmp_state.pmp[i].cfg_reg);
+        if (a_field == PMP_AMATCH_OFF) {
+            continue;
+        }
         pmp_sa = env->pmp_state.addr[i].sa;
         pmp_ea = env->pmp_state.addr[i].ea;
 
