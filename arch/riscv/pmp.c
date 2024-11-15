@@ -77,17 +77,28 @@ static inline int pmp_is_locked(CPUState *env, uint32_t pmp_index)
 /*
  * Checks whether a PMP configuration is valid (e.g. doesn't contain reserved access bit combinations)
  */
-static inline int pmp_validate_configuration(CPUState *env, uint32_t pmp_index, uint8_t *val)
+static inline bool pmp_validate_configuration(CPUState *env, uint32_t pmp_index, uint8_t *val)
 {
-    int is_read = (*val & PMP_READ) == PMP_READ;
-    int is_write = (*val & PMP_WRITE) == PMP_WRITE;
-    // Chapter 3.6.1 of Privileged ISA v1.11 states that combination R=0 and W=1 of
-    // permission bits is reserved for future use
-    if (env->privilege_architecture >= RISCV_PRIV1_11 && !is_read && is_write) {
+    bool rlb = (env->mseccfg & MSECCFG_RLB);
+    bool mml = (env->mseccfg & MSECCFG_MML);
+    bool read = (*val & PMP_READ) == PMP_READ;
+    bool write = (*val & PMP_WRITE) == PMP_WRITE;
+    bool exec = (*val & PMP_EXEC) == PMP_EXEC;
+    bool locked = (*val & PMP_LOCK) == PMP_LOCK;
+    bool shared = (!read && write);
+
+    // If mseccfg.MML is not set, the combination of pmpcfg.RW=01 remains reserved for future standard use.
+    if (!mml && env->privilege_architecture >= RISCV_PRIV1_11 && shared) {
         PMP_DEBUG("Reserved permission bit combination (R=0, W=1) during pmpcfg write - clearing W bit");
         *val &= ~PMP_WRITE;
     }
-    return 1;
+    /* Adding a rule with executable privileges that either is M-mode-only or a locked Shared-Region
+     * is not possible and such pmpcfg writes are ignored, leaving pmpcfg unchanged.
+     * This restriction can be lifted by setting mseccfg.RLB */
+    if (!rlb && (mml && locked && (exec || shared))) {
+        return false;
+    }
+    return true;
 }
 
 /*
