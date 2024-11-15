@@ -515,3 +515,13 @@ target_ulong pmpaddr_csr_read(CPUState *env, uint32_t addr_index)
         return 0;
     }
 }
+
+bool pmp_is_any_region_locked(CPUState* env)
+{
+    for (int i = 0; i < MAX_RISCV_PMPS; i++) {
+        if (pmp_is_locked(env, i)) {
+            return true;
+        }
+    }
+    return false;
+}

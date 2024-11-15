@@ -63,3 +63,4 @@ void pmpaddr_csr_write(CPUState *env, uint32_t addr_index, target_ulong val);
 target_ulong pmpaddr_csr_read(CPUState *env, uint32_t addr_index);
 int pmp_get_access(CPUState *env, target_ulong addr, target_ulong size, int access_type);
 int pmp_find_overlapping(CPUState *env, target_ulong addr, target_ulong size, int starting_index);
+bool pmp_is_any_region_locked(CPUState* env);
