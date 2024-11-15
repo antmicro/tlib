@@ -297,6 +297,59 @@ static inline pmp_priv_t pmp_get_privs_normal(int pmp_index, target_ulong priv)
     return allowed_privs;
 }
 
+/* For Machine Mode Lockdown look at: Chapter 6. "Smepmp" Extension
+ * of RISC-V Privileged Architecture 1.12 */
+static inline pmp_priv_t pmp_get_privs_mml(int pmp_index, target_ulong priv)
+{
+    // Should not reach this function if Machine Mode Lockdown is not active
+    tlib_assert(env->mseccfg & MSECCFG_MML);
+
+    uint8_t rule_privs = env->pmp_state.pmp[pmp_index].cfg_reg;
+    bool is_read = (rule_privs & PMP_READ);
+    bool is_write = (rule_privs & PMP_WRITE);
+    bool is_exec = (rule_privs & PMP_EXEC);
+    bool is_locked = (rule_privs & PMP_LOCK);
+
+    /* Shared memory regions
+     * they use previously reserved PMP encodings W=1 R=0
+     * special case if RWXL = 0b1111 which is Read-only for M/S/U modes */
+    if (is_read && is_write && is_exec && is_locked) {
+        return PMP_READ;
+    }
+
+    pmp_priv_t allowed_privs = 0;
+
+    // Shared memory regions - cont.
+    if (!is_read && is_write) {
+        if (!is_locked) {         // Shared data region
+            allowed_privs |= PMP_READ;
+            /* Machine has RW by default
+             * User/Supervisor has R, but gains W if X=1 */
+            if (priv == PRV_M || is_exec) {
+                allowed_privs |= PMP_WRITE;
+            }
+        } else {          // Shared code region
+            // M/S/U modes have executable access by default
+            allowed_privs |= PMP_EXEC;
+            if (priv == PRV_M && is_exec) {
+                // Machine can gain R if X=1
+                allowed_privs |= PMP_READ;
+            }
+        }
+    } else {
+        /* PMP_LOCK changes behavior - if set it enforces the rule for Machine Mode
+         * otherwise if unset it enforces the rule for Supervisor/User mode
+         * the other mode is denied by default */
+        if ((is_locked && priv != PRV_M) || (!is_locked && priv == PRV_M)) {
+            allowed_privs = 0;
+        } else {
+            allowed_privs = rule_privs & (PMP_READ | PMP_WRITE | PMP_EXEC);
+        }
+    }
+
+    return allowed_privs;
+}
+
 /*
  * Find and return PMP configuration matching memory address
  */
