@@ -261,8 +261,7 @@ case_EXCP_SWI_SVC:
         new_mode = ARM_CPU_MODE_ABT;
         addr += 0x10;
         mask = CPSR_A | CPSR_I;
-        // Manual says we should add 8 here, but our PC is in fact a next_pc so we need to adjust to that
-        offset = 4;
+        offset = 8;
         break;
     case EXCP_IRQ:
     case EXCP_VIRQ:
@@ -288,7 +287,9 @@ case_EXCP_SWI_SVC:
         uint32_t ec = env->exception.syndrome >> SYN_EC_SHIFT;
         // For Data Aborts, set the proper Syndrome Register Transfer
         if (ec == 0x24) {
-            uint32_t prev_pc = env->regs[15] - 4;
+            // At this point, PC points to the instruction that attempted the transfer
+            // (it was restored by restore_state_to_opc)
+            uint32_t prev_pc = env->regs[15];
             // Check whether the CPU is currently in thumb mode or whether the previous PC has LSB set,
             // which indicates we used to be in Thumb mode
             if (env->thumb || (prev_pc & 1)) {

@@ -15123,6 +15123,7 @@ int disas_insn(CPUState *env, DisasContextBase *base)
         aarch64_tr_insn_start(base, env);
         aarch64_tr_translate_insn(base, env);
     } else {
+        arm_tr_insn_start(base, env);
         if (env->thumb) {
             thumb_tr_translate_insn(base, env);
         } else {
