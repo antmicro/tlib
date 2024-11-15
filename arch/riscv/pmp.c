@@ -283,6 +283,20 @@ int pmp_find_overlapping(CPUState *env, target_ulong addr, target_ulong size, in
     return -1;
 }
 
+/* Normal PMP rules behavior, without Smepmp
+ * or with Machine Mode Lockdown (MSECCFG_MML) disabled */
+static inline pmp_priv_t pmp_get_privs_normal(int pmp_index, target_ulong priv)
+{
+    tlib_assert(!(env->mseccfg & MSECCFG_MML));
+
+    pmp_priv_t allowed_privs = PMP_READ | PMP_WRITE | PMP_EXEC;
+
+    if ((priv != PRV_M) || pmp_is_locked(env, pmp_index)) {
+        allowed_privs &= env->pmp_state.pmp[pmp_index].cfg_reg;
+    }
+    return allowed_privs;
+}
+
 /*
  * Find and return PMP configuration matching memory address
  */
