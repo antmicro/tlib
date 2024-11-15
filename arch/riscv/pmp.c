@@ -359,7 +359,6 @@ int pmp_get_access(CPUState *env, target_ulong addr, target_ulong size, int acce
     int ret = -1;
     target_ulong s = 0;
     target_ulong e = 0;
-    pmp_priv_t allowed_privs = 0;
     addr &= cpu->pmp_addr_mask;
 
     /* 
@@ -377,7 +376,7 @@ int pmp_get_access(CPUState *env, target_ulong addr, target_ulong size, int acce
     /* Short cut if no rules */
     if (0 == pmp_get_num_rules(env)) {
         if (priv == PRV_M) {
-            return PMP_READ | PMP_WRITE | PMP_EXEC;
+            return (env->mseccfg & MSECCFG_MMWP) ? 0 : PMP_READ | PMP_WRITE | PMP_EXEC;
         } else {
             return riscv_has_additional_ext(env, RISCV_FEATURE_SMEPMP) ? 0 : PMP_READ | PMP_WRITE | PMP_EXEC;
         }
@@ -388,6 +387,11 @@ int pmp_get_access(CPUState *env, target_ulong addr, target_ulong size, int acce
     for (i = 0; i < MAX_RISCV_PMPS; i++) {
         s = pmp_is_in_range(env, i, addr);
         e = pmp_is_in_range(env, i, addr + size - 1);
+        const uint8_t a_field =
+            pmp_get_a_field(env->pmp_state.pmp[i].cfg_reg);
+        if (a_field == PMP_AMATCH_OFF) {
+            continue;
+        }
 
         /* partially inside */
         if ((s + e) == 1) {
@@ -397,14 +401,8 @@ int pmp_get_access(CPUState *env, target_ulong addr, target_ulong size, int acce
         }
 
         /* fully inside */
-        const uint8_t a_field =
-            pmp_get_a_field(env->pmp_state.pmp[i].cfg_reg);
-        if ((s + e) == 2 && a_field != PMP_AMATCH_OFF) {
-            allowed_privs = PMP_READ | PMP_WRITE | PMP_EXEC;
-            if ((priv != PRV_M) || pmp_is_locked(env, i)) {
-                allowed_privs &= env->pmp_state.pmp[i].cfg_reg;
-            }
-            ret = allowed_privs;
+        if ((s + e) == 2) {
+            ret = (env->mseccfg & MSECCFG_MML) ? pmp_get_privs_mml(i, priv) : pmp_get_privs_normal(i, priv);
             break;
         }
     }
@@ -412,8 +410,19 @@ int pmp_get_access(CPUState *env, target_ulong addr, target_ulong size, int acce
     /* No rule matched */
     if (ret == -1) {
         if (priv == PRV_M) {
-            ret = PMP_READ | PMP_WRITE | PMP_EXEC; /* Privileged spec v1.10 states if no PMP entry matches an
-                                                    * M-Mode access, the access succeeds */
+            uint8_t allowed = PMP_READ | PMP_WRITE | PMP_EXEC;
+            /* Executing code with Machine mode privileges is only possible from 
+             * memory regions with a matching M-mode-only rule or a locked 
+             * Shared-Region rule with executable privileges. 
+             * Executing code from a region without a matching rule 
+             * or with a matching S/U-mode-only rule is denied. */
+            if (env->mseccfg & MSECCFG_MML) {
+                allowed &= ~PMP_EXEC;
+            }
+            /* Privileged spec v1.10 states if no PMP entry matches an
+             * M-Mode access, the access succeeds
+             * unless MMWP is set, which inverts this logic */
+            ret = env->mseccfg & MSECCFG_MMWP ? 0 : allowed;
         } else {
             ret = 0; /* Other modes are not allowed to succeed if they don't
                       * match a rule, but there are rules.  We've checked for
