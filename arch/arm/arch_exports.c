@@ -519,17 +519,16 @@ uint32_t tlib_get_number_of_idau_regions()
 
 EXC_INT_0(uint32_t, tlib_get_number_of_idau_regions)
 
-void tlib_set_idau_enabled(uint32_t value)
+void tlib_set_idau_enabled(bool value)
 {
-    bool newEnabled = value == 1u;
-    if(newEnabled != cpu->idau.enabled) {
+    if(value == cpu->idau.enabled) {
         return;
     }
-    cpu->idau.enabled = newEnabled;
+    cpu->idau.enabled = value;
     tlb_flush(cpu, 1, false);
 }
 
-EXC_VOID_1(tlib_set_idau_enabled, uint32_t, value)
+EXC_VOID_1(tlib_set_idau_enabled, bool, value)
 
 uint32_t tlib_get_idau_enabled()
 {
@@ -538,11 +537,18 @@ uint32_t tlib_get_idau_enabled()
 
 EXC_INT_0(uint32_t, tlib_get_idau_enabled)
 
-void tlib_set_idau_region_base_address(uint32_t index, uint32_t value)
+void tlib_set_idau_region_base_address_register(uint32_t index, uint32_t value)
 {
     if(index >= cpu->number_of_idau_regions) {
         tlib_abortf("IDAU: Trying to use non-existent IDAU region. Number of regions: %u, faulting region number: %u",
                     cpu->number_of_idau_regions, index);
+    }
+
+    uint32_t flags = pmsav8_idau_sau_get_flags(value);
+    if(flags) {
+        tlib_printf(LOG_LEVEL_WARNING, "IDAU: Unsetting invalid RBAR flags used for region %u: 0x%02x; RBAR has no flags", index,
+                    flags);
+        value &= ~flags;
     }
 
     if(cpu->idau.rbar[index] == value) {
@@ -552,13 +558,21 @@ void tlib_set_idau_region_base_address(uint32_t index, uint32_t value)
     tlb_flush(cpu, 1, false);
 }
 
-EXC_VOID_2(tlib_set_idau_region_base_address, uint32_t, index, uint32_t, value)
+EXC_VOID_2(tlib_set_idau_region_base_address_register, uint32_t, index, uint32_t, value)
 
-void tlib_set_idau_region_limit_address(uint32_t index, uint32_t value)
+void tlib_set_idau_region_limit_address_register(uint32_t index, uint32_t value)
 {
     if(index >= cpu->number_of_idau_regions) {
         tlib_abortf("IDAU: Trying to use non-existent IDAU region. Number of regions: %u, faulting region number: %u",
                     cpu->number_of_idau_regions, index);
+    }
+
+    uint32_t valid_flags = IDAU_RLAR_ENABLE | IDAU_RLAR_NSC;
+    uint32_t values_invalid_flags = pmsav8_idau_sau_get_flags(value) & ~valid_flags;
+    if(values_invalid_flags) {
+        tlib_printf(LOG_LEVEL_WARNING, "IDAU: Unsetting invalid RLAR flags used for region %u: 0x%02x; valid flags are: 0x%02x",
+                    index, values_invalid_flags, valid_flags);
+        value &= ~values_invalid_flags;
     }
 
     if(cpu->idau.rlar[index] == value) {
@@ -568,9 +582,9 @@ void tlib_set_idau_region_limit_address(uint32_t index, uint32_t value)
     tlb_flush(cpu, 1, false);
 }
 
-EXC_VOID_2(tlib_set_idau_region_limit_address, uint32_t, index, uint32_t, value)
+EXC_VOID_2(tlib_set_idau_region_limit_address_register, uint32_t, index, uint32_t, value)
 
-uint32_t tlib_get_idau_region_base_address(uint32_t index)
+uint32_t tlib_get_idau_region_base_address_register(uint32_t index)
 {
     if(index >= cpu->number_of_idau_regions) {
         tlib_abortf("IDAU: Trying to use non-existent IDAU region. Number of regions: %u, faulting region number: %u",
@@ -580,9 +594,9 @@ uint32_t tlib_get_idau_region_base_address(uint32_t index)
     return result;
 }
 
-EXC_INT_1(uint32_t, tlib_get_idau_region_base_address, uint32_t, index)
+EXC_INT_1(uint32_t, tlib_get_idau_region_base_address_register, uint32_t, index)
 
-uint32_t tlib_get_idau_region_limit_address(uint32_t index)
+uint32_t tlib_get_idau_region_limit_address_register(uint32_t index)
 {
     if(index >= cpu->number_of_idau_regions) {
         tlib_abortf("IDAU: Trying to use non-existent IDAU region. Number of regions: %u, faulting region number: %u",
@@ -592,7 +606,7 @@ uint32_t tlib_get_idau_region_limit_address(uint32_t index)
     return result;
 }
 
-EXC_INT_1(uint32_t, tlib_get_idau_region_limit_address, uint32_t, index)
+EXC_INT_1(uint32_t, tlib_get_idau_region_limit_address_register, uint32_t, index)
 
 bool tlib_try_add_implementation_defined_exemption_region(uint32_t start, uint32_t end)
 {
@@ -603,10 +617,20 @@ bool tlib_try_add_implementation_defined_exemption_region(uint32_t start, uint32
                     start, end, MAX_IMPL_DEF_ATTRIBUTION_EXEMPTIONS);
         return false;
     }
+
+    //  Check alignment.
+    if(pmsav8_idau_sau_get_region_base(start) != start || pmsav8_idau_sau_get_region_limit(end) != end) {
+        tlib_printf(LOG_LEVEL_ERROR,
+                    "Adding implementation-defined exemption region 0x%08" PRIx32 "-0x%08" PRIx32 " failed; "
+                    "region must be aligned to %uB granularity with end address being included, e.g. 0x0-0x1F is correct while "
+                    "0x0-0x20 isn't",
+                    start, end, PMSAV8_IDAU_SAU_REGION_GRANULARITY_B);
+        return false;
+    }
     uint32_t index = cpu->impl_def_attr_exemptions.count++;
 
-    cpu->impl_def_attr_exemptions.start[index] = pmsav8_idau_sau_get_region_base(start);
-    cpu->impl_def_attr_exemptions.end[index] = pmsav8_idau_sau_get_region_limit(end);
+    cpu->impl_def_attr_exemptions.start[index] = start;
+    cpu->impl_def_attr_exemptions.end[index] = end;
 
     tlb_flush(cpu, 1, false);
     return true;

@@ -495,11 +495,21 @@ static inline void xpsr_write(CPUState *env, uint32_t val, uint32_t mask)
 
 void vfp_trigger_exception();
 
+//  More secure options intentionally have greater numbers so take care when modifying this enum.
+//  Make sure any security attribution comparisons, e.g. in the functions below, are still correct.
 enum security_attribution {
     SA_NONSECURE,
     SA_SECURE_NSC,
     SA_SECURE,
 };
+
+static inline enum security_attribution attribution_get_more_secure(enum security_attribution attribution1,
+                                                                    enum security_attribution attribution2)
+{
+    //  The enum is "in ascending order of security" so we can just choose the greatest value
+    //  according to the ARMv8-M manual rule JGHS.
+    return attribution1 >= attribution2 ? attribution1 : attribution2;
+}
 
 static inline bool attribution_is_secure(enum security_attribution attrib)
 {
