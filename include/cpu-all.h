@@ -644,3 +644,10 @@ static inline uint64_t instructions_to_cycles(CPUState *env, uint64_t instructio
 }
 
 void configure_read_address_caching(uint64_t address, uint64_t lower_address_count, uint64_t upper_address_count);
+
+static inline void cpu_sync_instructions_count(CPUState *cpu)
+{
+    cpu->instructions_count_value += cpu->instructions_count_declaration;
+    cpu->instructions_count_total_value += cpu->instructions_count_declaration;
+    cpu->instructions_count_declaration = 0;
+}

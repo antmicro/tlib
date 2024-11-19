@@ -344,6 +344,7 @@ int32_t tlib_execute(uint32_t max_insns)
     while ((result == EXCP_INTERRUPT) && (cpu->instructions_count_limit > 0)) {
         result = cpu_exec(cpu);
 
+        cpu_sync_instructions_count(cpu);
         local_counter += cpu->instructions_count_value;
         cpu->instructions_count_limit -= cpu->instructions_count_value;
         cpu->instructions_count_value = 0;

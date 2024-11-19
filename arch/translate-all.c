@@ -50,34 +50,19 @@ CPUBreakpoint *process_breakpoints(CPUState *env, target_ulong pc)
     return NULL;
 }
 
-static inline void gen_update_instructions_count(TranslationBlock *tb)
+static inline void gen_declare_instructions_count(TranslationBlock *tb)
 {
     // Assumption: tb == cpu->current_tb when this block is executed
     // This is ensured by the prepare_block_for_execution helper
-    TCGv_i64 tmp = tcg_temp_new_i64();
-    TCGv_i64 icount = tcg_temp_new_i64();
+    TCGv_i32 declaration = tcg_temp_new_i32();
     TCGv_ptr tb_pointer = tcg_const_ptr((tcg_target_long)tb);
 
-    // (uint32_t) tb->icount
-    tcg_gen_ld32u_i64(icount, tb_pointer, offsetof(TranslationBlock, icount));
-
-    // (uint32_t) cpu->instructions_count_value += tb->icount
-    tcg_gen_ld32u_i64(tmp, cpu_env, offsetof(CPUState, instructions_count_value));
-    tcg_gen_add_i64(tmp, tmp, icount);
-    tcg_gen_st32_i64(tmp, cpu_env, offsetof(CPUState, instructions_count_value));
-
-    // (uint64_t) cpu->instructions_count_total_value += tb->icount
-    tcg_gen_ld_i64(tmp, cpu_env, offsetof(CPUState, instructions_count_total_value));
-    tcg_gen_add_i64(tmp, tmp, icount);
-    tcg_gen_st_i64(tmp, cpu_env, offsetof(CPUState, instructions_count_total_value));
-
-    // (uint32_t) tb->instructions_count_dirty = 1
-    tcg_gen_movi_i64(tmp, 1);
-    tcg_gen_st32_i64(tmp, tb_pointer, offsetof(TranslationBlock, instructions_count_dirty));
+    // (uint32_t) cpu->instructions_count_declaration = tb->icount
+    tcg_gen_ld_i32(declaration, tb_pointer, offsetof(TranslationBlock, icount));
+    tcg_gen_st_i32(declaration, cpu_env, offsetof(CPUState, instructions_count_declaration));
 
     tcg_temp_free_ptr(tb_pointer);
-    tcg_temp_free_i64(icount);
-    tcg_temp_free_i64(tmp);
+    tcg_temp_free_i32(declaration);
 }
 
 __attribute__((weak))
@@ -105,7 +90,7 @@ static inline void gen_block_header(TranslationBlock *tb)
         tcg_temp_free_i32(result);
     }
 
-    gen_update_instructions_count(tb);
+    gen_declare_instructions_count(tb);
 
     // It's important that the arch_action occurs after all other actions in the header are generated
     // PMU counters in Arm depend on it
@@ -407,15 +392,13 @@ static inline int adjust_instructions_count(TranslationBlock *tb, bool include_l
         executed_instructions--;
     }
 
-    // it might happen that `cpu->instructions_count_value` was recently "cleared"
-    // by reading it's value from outside; in such case we cannot compensate
-    // the instructions counter
-    uint32_t diff = tb->icount - executed_instructions;
-    if (cpu->instructions_count_value >= diff && tb->instructions_count_dirty) {
-        cpu->instructions_count_value -= diff;
-        cpu->instructions_count_total_value -= diff;
-        tb->instructions_count_dirty = 0;
+
+    if (executed_instructions != -1) {
+        cpu->instructions_count_value += executed_instructions;
+        cpu->instructions_count_total_value += executed_instructions;
+        cpu->instructions_count_declaration = 0;
     }
+
     return executed_instructions;
 }
 
