@@ -200,6 +200,11 @@ void tlib_set_security_state(uint32_t state)
      */
     cpu->v7m.has_trustzone = tlib_has_enabled_trustzone() > 0;
 
+    if(!arm_feature(env, ARM_FEATURE_V8)) {
+        if(env->v7m.has_trustzone) {
+            cpu_abort(env, "TrustZone enabled for M-Architecture different than V8 is not supported");
+        }
+    }
     if(!cpu->v7m.has_trustzone) {
         tlib_abort("Changing Security State for CPU with disabled TrustZone");
     }

@@ -1036,10 +1036,6 @@ static void do_interrupt_v7m(CPUState *env)
             lr |= 0x8;
             lr |= (env->v7m.process_sp != 0) << 2;
         }
-
-        if(env->v7m.has_trustzone) {
-            cpu_abort(env, "TrustZone enabled for M-Architecture different than V8 is not supported");
-        }
     }
 
     /* v7-M and v8-M share FP stack FP context active fields */
