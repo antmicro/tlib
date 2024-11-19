@@ -353,6 +353,8 @@ int cpu_exec(CPUState *env)
 
             next_tb = 0; /* force lookup of first TB */
             for (;;) {
+                cpu_sync_instructions_count(env);
+
                 interrupt_request = env->interrupt_request;
                 if (unlikely(interrupt_request)) {
                     if (is_interrupt_pending(env, CPU_INTERRUPT_DEBUG)) {

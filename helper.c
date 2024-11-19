@@ -68,6 +68,7 @@ uint32_t HELPER(prepare_block_for_execution)(void *tb)
         return cpu->exit_request;
     }
 
+    cpu_sync_instructions_count(cpu);
     uint32_t instructions_left = cpu->instructions_count_limit - cpu->instructions_count_value;
 
     if (instructions_left == 0) {
