@@ -1893,8 +1893,8 @@ static inline bool pmsav8_get_region(CPUState *env, uint32_t address, bool secur
             continue;
         }
 
-        uint32_t base = env->pmsav8[secure].rbar[n] & ~0x1f;
-        uint32_t limit = env->pmsav8[secure].rlar[n] | 0x1f;
+        uint32_t base = pmsav8_idau_sau_get_region_base(env->pmsav8[secure].rbar[n]);
+        uint32_t limit = pmsav8_idau_sau_get_region_limit(env->pmsav8[secure].rlar[n]);
         if(address < base || address > limit) {
             /* Addr not in this region */
             continue;
@@ -1956,8 +1956,8 @@ static inline bool pmsav8_sau_try_get_region(CPUState *env, uint32_t address, bo
             continue;
         }
 
-        uint32_t base = env->sau.rbar[n] & ~0x1f;
-        uint32_t limit = env->sau.rlar[n] | 0x1f;
+        uint32_t base = pmsav8_idau_sau_get_region_base(env->sau.rbar[n]);
+        uint32_t limit = pmsav8_idau_sau_get_region_limit(env->sau.rlar[n]);
         bool nsc = env->sau.rlar[n] & SAU_RLAR_NSC;
         if(address < base || address > limit) {
             /* Addr not in this region */
@@ -2041,8 +2041,8 @@ static inline int pmsav8_get_phys_addr(CPUState *env, uint32_t address, bool sec
 
         /* Check that the hit region fully covers the tlb page
          */
-        uint32_t region_start = env->pmsav8[secure].rbar[resolved_region] & ~0x1f;
-        uint32_t region_end = env->pmsav8[secure].rlar[resolved_region] | 0x1f;
+        uint32_t region_start = pmsav8_idau_sau_get_region_base(env->pmsav8[secure].rbar[resolved_region]);
+        uint32_t region_end = pmsav8_idau_sau_get_region_limit(env->pmsav8[secure].rlar[resolved_region]);
         if((address & TARGET_PAGE_MASK) == (region_start & TARGET_PAGE_MASK)) {
             //  Region starts mid page
             *page_size -= (region_start & ~TARGET_PAGE_MASK);

@@ -802,6 +802,33 @@ static inline enum arm_cpu_mode cpu_get_current_execution_mode()
     return env->uncached_cpsr & CPSR_M;
 }
 
+#ifdef TARGET_PROTO_ARM_M
+
+//  Region granularity is 32B, the remaining RBAR/RLAR bits contain flags like region enabled etc.
+#define PMSAV8_IDAU_SAU_REGION_GRANULARITY_B 0x20u
+#define PMSAV8_IDAU_SAU_FLAGS_MASK           (PMSAV8_IDAU_SAU_REGION_GRANULARITY_B - 1u)
+#define PMSAV8_IDAU_SAU_ADDRESS_MASK         (~PMSAV8_IDAU_SAU_FLAGS_MASK)
+
+static inline uint32_t pmsav8_idau_sau_get_region_base(uint32_t address_or_rbar)
+{
+    return address_or_rbar & PMSAV8_IDAU_SAU_ADDRESS_MASK;
+}
+
+static inline uint32_t pmsav8_idau_sau_get_region_limit(uint32_t address_or_rlar)
+{
+    return address_or_rlar | PMSAV8_IDAU_SAU_FLAGS_MASK;
+}
+
+static inline uint32_t pmsav8_idau_sau_get_flags(uint32_t rbar_or_rlar)
+{
+    return rbar_or_rlar & PMSAV8_IDAU_SAU_FLAGS_MASK;
+}
+
+#undef PMSAV8_IDAU_SAU_FLAGS_MASK
+#undef PMSAV8_IDAU_SAU_ADDRESS_MASK
+
+#endif  //  TARGET_PROTO_ARM_M
+
 //  FIELD expands to constants:
 //  * __REGISTER_<register>_<field>_START,
 //  * __REGISTER_<register>_<field>_WIDTH.
