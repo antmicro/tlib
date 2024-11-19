@@ -1027,6 +1027,11 @@ TranslationBlock *tb_find_pc(uintptr_t tc_ptr)
     if(nb_tbs <= 0) {
         return NULL;
     }
+    //  tc_ptr needs to be a rw ptr in the case of using split buffer views
+    //  noop if split buffers are not enabled
+    if(is_ptr_in_rx_buf((const void *)tc_ptr)) {
+        tc_ptr = (uintptr_t)rx_ptr_to_rw((const void *)tc_ptr);
+    }
     if(tc_ptr < (uintptr_t)tcg_rw_buffer || tc_ptr >= (uintptr_t)code_gen_ptr) {
         return NULL;
     }

@@ -26,6 +26,7 @@
 #include "tcg-op.h"
 #include "debug.h"
 #include "exports.h"
+#include "tlib-alloc.h"
 
 #include <global_helper.h>
 #define GEN_HELPER 1
@@ -352,7 +353,7 @@ static inline int cpu_restore_state_from_tb_ex(CPUState *env, TranslationBlock *
                                                bool skip_current_instruction)
 {
     target_ulong data[TARGET_INSN_START_WORDS] = { tb->pc };
-    uintptr_t host_pc = (uintptr_t)tb->tc_ptr;
+    uintptr_t host_pc = (uintptr_t)rw_ptr_to_rx(tb->tc_ptr);
     uint8_t *p = tb->tc_search;
     int i, j, num_insns = tb->icount;
 
