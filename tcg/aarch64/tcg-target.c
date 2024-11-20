@@ -184,10 +184,12 @@ static inline void tcg_out_br(TCGContext *s, int addr_reg)
 }
 static inline void tcg_out_b(TCGContext *s, int offset)
 {
+    offset = offset >> 2;
     tcg_out32(s, 0x14000000 | (offset << 0));
 }
 static inline void tcg_out_bl(TCGContext *s, int offset)
 {
+    offset = offset >> 2;
     tcg_out32(s, 0x94000000 | (offset << 0));
 }
 static inline void tcg_out_blr(TCGContext *s, int reg)
@@ -236,6 +238,7 @@ static inline void tcg_out_goto_label(TCGContext *s, int cond, int label_index)
                 tcg_abortf("Conditional branches further than %u not supported yet", 0x7FFFF);
             } else {
                 //  Offset needs to be masked to 19-bits
+                offset = offset >> 2;
                 tcg_out32(s, 0x54000000 | ((0x7FFFF & offset) << 5) | (cond << 0));
             }
         }
