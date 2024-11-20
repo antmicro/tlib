@@ -265,7 +265,7 @@ static inline void tcg_out_calli(TCGContext *s, tcg_target_ulong addr)
     } else {
         target = addr;
     }
-    tcg_out_movi(s, 0, TCG_TMP_REG, target);
+    tcg_out_movi(s, TCG_TYPE_PTR, TCG_TMP_REG, target);
     tcg_out_blr(s, TCG_TMP_REG);
 }
 //  Emit a memory barrier, a0 contains info about the type of memory barrier requested
@@ -543,26 +543,40 @@ static inline void tcg_out_addi(TCGContext *s, int reg1, int reg2, tcg_target_lo
     tcg_out32(s, 0x91000000 | (imm << 10) | (reg2 << 5) | (reg1 << 0));
 }
 
-static inline void tcg_out_add_shift_reg(TCGContext *s, int bits, int reg_dest, int reg1, int reg2, int shift_type,
-                                         tcg_target_long shift_amount)
+static inline void tcg_out_add_shift_reg(TCGContext *s, int bits, bool set_flags, int reg_dest, int reg1, int reg2,
+                                         int shift_type, tcg_target_long shift_amount)
 {
     //  Shift amount is 6-bits
     switch(bits) {
         case 32:
-            tcg_out32(s, 0x0b000000 | (shift_type << 22) | (reg2 << 16) | ((shift_amount & 0x3F) << 10) | (reg1 << 5) |
-                             (reg_dest << 0));
+            tcg_out32(s, 0x0b000000 | (set_flags << 29) | (shift_type << 22) | (reg2 << 16) | ((shift_amount & 0x3F) << 10) |
+                             (reg1 << 5) | (reg_dest << 0));
             break;
         case 64:
-            tcg_out32(s, 0x8b000000 | (shift_type << 22) | (reg2 << 16) | ((shift_amount & 0x3F) << 10) | (reg1 << 5) |
-                             (reg_dest << 0));
+            tcg_out32(s, 0x8b000000 | (set_flags << 29) | (shift_type << 22) | (reg2 << 16) | ((shift_amount & 0x3F) << 10) |
+                             (reg1 << 5) | (reg_dest << 0));
             break;
         default:
             tcg_abortf("add_shift_reg called with unsupported bit width: %i", bits);
     }
 }
+//  Addc is add with carry
+static inline void tcg_out_addc_reg(TCGContext *s, int bits, int reg_dest, int reg1, int reg2)
+{
+    switch(bits) {
+        case 32:
+            tcg_out32(s, 0x1a000000 | (reg2 << 16) | (reg1 << 5) | (reg_dest << 0));
+            break;
+        case 64:
+            tcg_out32(s, 0x9a000000 | (reg2 << 16) | (reg1 << 5) | (reg_dest << 0));
+            break;
+        default:
+            tcg_abortf("tcg_out_addc called with unsupported bit width: %i", bits);
+    }
+}
 static inline void tcg_out_add_reg(TCGContext *s, int bits, int reg_dest, int reg1, int reg2)
 {
-    tcg_out_add_shift_reg(s, bits, reg_dest, reg1, reg2, SHIFT_LSL, 0);
+    tcg_out_add_shift_reg(s, bits, false, reg_dest, reg1, reg2, SHIFT_LSL, 0);
 }
 static inline void tcg_out_add_imm(TCGContext *s, int bits, int reg_dest, int reg_in, tcg_target_long imm)
 {
@@ -578,6 +592,42 @@ static inline void tcg_out_add_imm(TCGContext *s, int bits, int reg_dest, int re
     }
     tcg_out_add_reg(s, bits, reg_dest, reg_in, TCG_TMP_REG);
 }
+static inline void tcg_out_addc_imm(TCGContext *s, int bits, int reg_dest, int reg_in, tcg_target_long imm)
+{
+    switch(bits) {
+        case 32:
+            tcg_out_movi32(s, TCG_TMP_REG, imm);
+            break;
+        case 64:
+            tcg_out_movi64(s, TCG_TMP_REG, imm);
+            break;
+        default:
+            tcg_abortf("addc_imm for %i bits not implemented", bits);
+    }
+    tcg_out_addc_reg(s, bits, reg_dest, reg_in, TCG_TMP_REG);
+}
+static inline void tcg_out_add2(TCGContext *s, int bits, int reg_dest_low, int reg_dest_high, int reg_src1_low, int reg_src1_high,
+                                int reg_src2_low, int reg_src2_high)
+{
+    switch(bits) {
+        case 32:
+            if(reg_dest_low == reg_src1_high || reg_dest_low == reg_src2_high) {
+                //  Destination is also used as input, so first write the result to a temp register to preserve
+                //  the value for the second computation
+                tcg_out_add_shift_reg(s, 32, true, TCG_TMP_REG, reg_src1_low, reg_src2_low, SHIFT_LSL, 0);
+                tcg_out_addc_reg(s, 32, reg_dest_high, reg_src1_high, reg_src2_high);
+                //  Finally move the temp result to the correct destination
+                tcg_out_mov(s, TCG_TYPE_I32, reg_dest_low, TCG_TMP_REG);
+            } else {
+                tcg_out_add_shift_reg(s, 32, true, reg_dest_low, reg_src1_low, reg_src2_low, SHIFT_LSL, 0);
+                tcg_out_addc_reg(s, 32, reg_dest_high, reg_src1_high, reg_src2_high);
+            }
+            break;
+        default:
+            tcg_abortf("add2 only support 32 bits for now");
+    }
+}
+
 static inline void tcg_out_sub_shift_reg(TCGContext *s, int bits, int reg_dest, int reg1, int reg2, int shift_type,
                                          tcg_target_long shift_amount)
 {
@@ -740,24 +790,6 @@ static inline void tcg_out_xor_imm(TCGContext *s, int bits, int reg_dest, int re
     tcg_out_xor_reg(s, bits, reg_dest, reg_in, TCG_TMP_REG);
 }
 
-//  Branch based on condition flags set by an earlier cmp instruction
-static inline void tcg_out_br_cond_raw(TCGContext *s, int tcg_cond, int addr)
-{
-    tcg_out32(s, 0x54000000 | (addr << 5) | (tcg_cond_to_arm_cond[tcg_cond] << 0));
-}
-//  Helper for tcg's conditional branch. branch if arg1 COND arg2 == true
-static inline void tcg_out_br_cond(TCGContext *s, int bits, int arg1, int tcg_cond, int arg2, int addr)
-{
-    tcg_out_cmp(s, bits, arg1, arg2);
-    tcg_out_br_cond_raw(s, tcg_cond, addr);
-}
-//  Version of above but with an immediate as the second argument
-static inline void tcg_out_br_condi(TCGContext *s, int bits, int arg1, int tcg_cond, int imm, int addr)
-{
-    tcg_out_cmpi(s, bits, arg1, imm);
-    tcg_out_br_cond_raw(s, tcg_cond, addr);
-}
-
 static inline void tcg_out_bswap(TCGContext *s, int bits, int reg_dest, int reg_src)
 {
     switch(bits) {
@@ -834,7 +866,7 @@ static inline void tcg_out_qemu_st(TCGContext *s, int bits, int reg_data, int re
     //  Compute TLB offset(?)
     tcg_out_lsr_imm(s, 64, TCG_REG_R2, reg_addr, TARGET_PAGE_BITS);
     tcg_out_and_imm(s, 64, TCG_REG_R0, TCG_REG_R2, CPU_TLB_SIZE - 1);
-    tcg_out_add_shift_reg(s, 64, TCG_REG_R0, TCG_AREG0, TCG_REG_R0, SHIFT_LSL,
+    tcg_out_add_shift_reg(s, 64, false, TCG_REG_R0, TCG_AREG0, TCG_REG_R0, SHIFT_LSL,
                           CPU_TLB_ENTRY_BITS);  //  TCG_AREG0 holds the pointer to env/CPUState
 
     //  Read tlb table
@@ -902,7 +934,7 @@ static inline void tcg_out_qemu_ld(TCGContext *s, int bits, bool sign_extend, in
     //  Compute TLB offset(?)
     tcg_out_lsr_imm(s, 64, TCG_REG_R2, reg_addr, TARGET_PAGE_BITS);
     tcg_out_and_imm(s, 64, TCG_REG_R0, TCG_REG_R2, CPU_TLB_SIZE - 1);
-    tcg_out_add_shift_reg(s, 64, TCG_REG_R0, TCG_AREG0, TCG_REG_R0, SHIFT_LSL,
+    tcg_out_add_shift_reg(s, 64, false, TCG_REG_R0, TCG_AREG0, TCG_REG_R0, SHIFT_LSL,
                           CPU_TLB_ENTRY_BITS);  //  TCG_AREG0 holds the pointer to env/CPUState
 
     //  Read tlb table
@@ -1316,6 +1348,20 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
         case INDEX_op_ext16u_i32:
             tcg_abortf("op_ext16u_i32 not implemented");
             break;
+        case INDEX_op_add2_i32:
+            //  The arm target assumes the arguments here are always registers, never constants.
+            //  Making a similar assumption but guarding with an assert just in case
+            if(const_args[4]) {
+                tlib_abortf("op_add2_i32 does not support constant arguments");
+            }
+            if(const_args[5]) {
+                tlib_abortf("op_add2_i32 does not support constant arguments");
+            }
+            tcg_out_add2(s, 32, args[0], args[1], args[2], args[3], args[4], args[5]);
+            break;
+        case INDEX_op_sub2_i32:
+            tcg_abortf("op_sub2_i32 not implemented");
+            break;
         default:
             tcg_abortf("TCGOpcode %u not implemented", opc);
     }
@@ -1441,6 +1487,12 @@ static const TCGTargetOpDef arm_op_defs[] = {
     { INDEX_op_qemu_st16, { "s", "s" } },
     { INDEX_op_qemu_st32, { "s", "s" } },
     { INDEX_op_qemu_st64, { "s", "s" } },
+
+    { INDEX_op_add2_i32, { "r", "r", "r", "r", "r", "r" } },
+    { INDEX_op_sub2_i32, { "r", "r", "r", "r", "r", "r" } },
+    { INDEX_op_brcond2_i32, { "r", "r", "r", "r" } },
+    { INDEX_op_setcond2_i32, { "r", "r", "r", "r", "r" } },
+
     //  { -1 } indicates the end of the list
     { -1 },
 };
