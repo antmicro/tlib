@@ -361,6 +361,10 @@ EXC_INT_0(uint32_t, tlib_get_mpu_region_number)
 
 void tlib_set_number_of_sau_regions(uint32_t value)
 {
+    if(cpu->number_of_sau_regions == value) {
+        return;
+    }
+
     if(value >= MAX_SAU_REGIONS) {
         tlib_abortf("Failed to set number of SAU regions to %u, maximal supported value is %u", value, MAX_SAU_REGIONS);
     }
@@ -368,8 +372,8 @@ void tlib_set_number_of_sau_regions(uint32_t value)
     if(!cpu->v7m.has_trustzone) {
         tlib_printf(LOG_LEVEL_WARNING, "Setting SAU regions to %u, but TrustZone is not enabled", value);
     }
-
     cpu->number_of_sau_regions = value;
+    tlb_flush(cpu, 1, false);
 }
 
 EXC_VOID_1(tlib_set_number_of_sau_regions, uint32_t, value)
@@ -403,6 +407,7 @@ void tlib_set_sau_region_number(uint32_t value)
         //  These are RAZ/WI when accessed from Non-Secure state
         return;
     }
+
     if(value >= cpu->number_of_sau_regions) {
         tlib_abortf("SAU: Trying to use non-existent SAU region. Number of regions: %d, faulting region number: %d",
                     cpu->number_of_sau_regions, value);
@@ -414,11 +419,16 @@ EXC_VOID_1(tlib_set_sau_region_number, uint32_t, value)
 
 void tlib_set_sau_region_base_address(uint32_t value)
 {
+    uint32_t region = cpu->sau.rnr;
+    if(cpu->sau.rbar[region] == value) {
+        return;
+    }
+
     if(!cpu->secure) {
         //  These are RAZ/WI when accessed from Non-Secure state
         return;
     }
-    cpu->sau.rbar[cpu->sau.rnr] = value;
+    cpu->sau.rbar[region] = value;
     tlb_flush(cpu, 1, false);
 }
 
@@ -426,11 +436,16 @@ EXC_VOID_1(tlib_set_sau_region_base_address, uint32_t, value)
 
 void tlib_set_sau_region_limit_address(uint32_t value)
 {
+    uint32_t region = cpu->sau.rnr;
+    if(cpu->sau.rlar[region] == value) {
+        return;
+    }
+
     if(!cpu->secure) {
         //  These are RAZ/WI when accessed from Non-Secure state
         return;
     }
-    cpu->sau.rlar[cpu->sau.rnr] = value;
+    cpu->sau.rlar[region] = value;
     tlb_flush(cpu, 1, false);
 }
 
