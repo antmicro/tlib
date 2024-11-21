@@ -67,6 +67,14 @@
 #define ARMV7M_EXCP_SYSTICK  15
 #define ARMV7M_EXCP_HARDIRQ0 16 /* Hardware IRQ0. Any exceptions above this one are also hard IRQs */
 
+/* For banked exceptions, we store information what Security mode they target
+ * in a specific bit of exception number (higher than max supported exceptions).
+ * This is just a mechanism on our side, from CPUs perspective, banked exceptions have the same
+ * exception numbers as without Security Extensions (TrustZone).
+ * In effect, we have extra exceptions now. */
+#define BANKED_SECURE_EXCP_BIT (1 << 30)
+#define BANKED_SECURE_EXCP(x)  (x | BANKED_SECURE_EXCP_BIT)
+
 /* MemManage Fault : bits 0:7 of CFSR */
 #define MEM_FAULT_MMARVALID 1 << 7
 #define MEM_FAULT_MSTKERR   1 << 4
@@ -317,6 +325,8 @@ typedef struct CPUState {
         uint32_t msplim[M_REG_NUM_BANKS];
         uint32_t psplim[M_REG_NUM_BANKS];
         uint32_t handler_mode;
+        uint32_t
+            original_exception; /* The original exception, which we'll ack when completing. TZ-specific, always zero otherwise */
         uint32_t has_trustzone;
     } v7m;
 
