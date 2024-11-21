@@ -538,7 +538,7 @@ static inline uint32_t is_page_access_valid(uint32_t page_protection_bits, uint3
             __builtin_unreachable();
     }
 
-    return page_protection_bits & access_type_mask;
+    return !!(page_protection_bits & access_type_mask);
 }
 
 /* Flags for use in ENV->INTERRUPT_PENDING.
