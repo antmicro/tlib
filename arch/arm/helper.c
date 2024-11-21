@@ -1172,22 +1172,15 @@ static void do_interrupt_v7m(CPUState *env)
 }
 #endif
 
-/* Handle a CPU exception.  */
-void do_interrupt(CPUState *env)
+#ifndef TARGET_PROTO_ARM_M
+/* Handle a CPU exception for non-M architectures.  */
+static void do_interrupt_normal(CPUState *env)
 {
     uint32_t addr;
     uint32_t mask;
     int new_mode;
     uint32_t offset;
 
-    if(env->interrupt_begin_callback_enabled) {
-        tlib_on_interrupt_begin(env->exception_index);
-    }
-
-#ifdef TARGET_PROTO_ARM_M
-    do_interrupt_v7m(env);
-    return;
-#endif
     /* TODO: Vectored interrupt controller.  */
     switch(env->exception_index) {
         case EXCP_UDEF:
@@ -1295,6 +1288,21 @@ void do_interrupt(CPUState *env)
     set_interrupt_pending(env, CPU_INTERRUPT_EXITTB);
 
     arm_announce_stack_change();
+}
+#endif
+
+/* Handle a CPU exception.  */
+void do_interrupt(CPUState *env)
+{
+    if(env->interrupt_begin_callback_enabled) {
+        tlib_on_interrupt_begin(env->exception_index);
+    }
+
+#ifdef TARGET_PROTO_ARM_M
+    do_interrupt_v7m(env);
+#else
+    do_interrupt_normal(env);
+#endif
 }
 
 /* Check section/page access permissions.
