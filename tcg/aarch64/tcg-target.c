@@ -150,7 +150,7 @@ static void reloc_condbr_19(void *code_ptr, tcg_target_long target, int cond)
     //  Offset for cond branch is encoded as offset * 4
     offset = offset >> 2;
     //  Mask out 19 bits from the offset
-    *(uint32_t *)code_ptr |= ((offset & 0x7FFFF) << 5) | cond;
+    *(uint32_t *)code_ptr = (*(uint32_t *)code_ptr & ~0x1FFFFFF) | ((offset & 0x7FFFF) << 5) | cond;
     //  set bit 4 to zero
     *(uint32_t *)code_ptr &= (~(1 << 4));
 }
@@ -161,7 +161,7 @@ static void reloc_jump26(void *code_ptr, tcg_target_long target)
     uint32_t offset = target - ((tcg_target_long)code_ptr);
     //  Offset for cond branch is encoded as offset * 4
     offset = offset >> 2;
-    *(uint32_t *)code_ptr |= (offset & 0x3FFFFFF);
+    *(uint32_t *)code_ptr = (*(uint32_t *)code_ptr & ~0x3FFFFFF) | (offset & 0x3FFFFFF);
 }
 static void patch_reloc(uint8_t *code_ptr, int type, tcg_target_long value, tcg_target_long addend)
 {
