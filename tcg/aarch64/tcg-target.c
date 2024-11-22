@@ -184,12 +184,12 @@ static inline void tcg_out_br(TCGContext *s, int addr_reg)
 static inline void tcg_out_b(TCGContext *s, int offset)
 {
     offset = offset >> 2;
-    tcg_out32(s, 0x14000000 | (offset << 0));
+    tcg_out32(s, 0x14000000 | ((offset & 0x3FFFFFF) << 0));
 }
 static inline void tcg_out_bl(TCGContext *s, int offset)
 {
     offset = offset >> 2;
-    tcg_out32(s, 0x94000000 | (offset << 0));
+    tcg_out32(s, 0x94000000 | ((offset & 0x3FFFFFF) << 0));
 }
 static inline void tcg_out_blr(TCGContext *s, int reg)
 {
@@ -257,7 +257,7 @@ static inline void tcg_out_goto_label(TCGContext *s, int cond, int label_index)
 //  Helper to generate function calls to constant address
 static inline void tcg_out_calli(TCGContext *s, tcg_target_ulong addr)
 {
-    //  The target address can either be one we have generated, or somehting outside that.
+    //  The target address can either be one we have generated, or something outside that.
     //  So we need to check if the target has to be translated
     tcg_target_ulong target;
     if(is_ptr_in_rw_buf((const void *)addr)) {
@@ -387,6 +387,7 @@ static inline void tcg_out_asr_imm(TCGContext *s, int bits, int reg_dest, int re
 static inline void tcg_out_sign_extend(TCGContext *s, int bits, int reg_dest, int reg_src)
 {
     tlib_assert(bits <= 64);
+    tlib_assert(bits >= 1);
     int bit_position = bits - 1;
     tcg_out32(s, 0x93400000 | (bit_position << 10) | (reg_src << 5) | (reg_dest << 0));
 }
