@@ -2400,7 +2400,25 @@ static inline int pmsav8_check_access(CPUState *env, uint32_t address, bool secu
 
 uint64_t cpu_get_state_for_memory_transaction(CPUState *env, target_ulong addr, int access_type)
 {
-    return 0;
+    bool idau_valid, sau_valid;
+    int idau_region, sau_region;
+    enum security_attribution attribution;
+    union {
+        uint64_t value;
+        struct {
+            /* Must be in sync with CortexM.StateBits */
+            /*  0 */ bool privileged : 1;
+            /*  1 */ bool secure : 1;
+            /*  2 */ bool bus_secure : 1;
+            uint64_t : 61;
+        } flags;
+    } state = { .value = 0 };
+    pmsav8_get_security_attribution(env, addr, env->secure, access_type, /* access_width: */ 1, &idau_valid, &idau_region,
+                                    &sau_valid, &sau_region, &attribution, /* applies_to_whole_page: */ NULL);
+    state.flags.privileged = in_privileged_mode(env);
+    state.flags.secure = env->secure;
+    state.flags.bus_secure = attribution_is_secure(attribution);
+    return state.value;
 }
 #else
 /* Transaction filtering by state is not yet implemented for this architecture.
