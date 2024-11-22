@@ -53,14 +53,14 @@
         return NULL;                       \
     }
 
-uint64_t tlib_read_byte(uint64_t address);
-uint64_t tlib_read_word(uint64_t address);
-uint64_t tlib_read_double_word(uint64_t address);
-uint64_t tlib_read_quad_word(uint64_t address);
-void tlib_write_byte(uint64_t address, uint64_t value);
-void tlib_write_word(uint64_t address, uint64_t value);
-void tlib_write_double_word(uint64_t address, uint64_t value);
-void tlib_write_quad_word(uint64_t address, uint64_t value);
+uint64_t tlib_read_byte(uint64_t address, uint64_t cpustate);
+uint64_t tlib_read_word(uint64_t address, uint64_t cpustate);
+uint64_t tlib_read_double_word(uint64_t address, uint64_t cpustate);
+uint64_t tlib_read_quad_word(uint64_t address, uint64_t cpustate);
+void tlib_write_byte(uint64_t address, uint64_t value, uint64_t cpustate);
+void tlib_write_word(uint64_t address, uint64_t value, uint64_t cpustate);
+void tlib_write_double_word(uint64_t address, uint64_t value, uint64_t cpustate);
+void tlib_write_quad_word(uint64_t address, uint64_t value, uint64_t cpustate);
 void *tlib_guest_offset_to_host_ptr(uint64_t offset);
 uint64_t tlib_host_ptr_to_guest_offset(void *ptr);
 void tlib_mmu_fault_external_handler(uint64_t addr, int32_t access_type, int32_t window_index);

@@ -111,3 +111,5 @@ void tlib_before_save(void *env);
 void tlib_after_load(void *env);
 
 void tlib_enable_read_cache(uint64_t access_address, uint64_t lower_access_count, uint64_t upper_access_count);
+
+uint64_t tlib_get_cpu_state_for_memory_transaction(CPUState *env, uint64_t addr, int access_type);

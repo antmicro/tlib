@@ -82,14 +82,15 @@ static inline DATA_TYPE glue(io_read, SUFFIX)(target_phys_addr_t physaddr, targe
     physaddr = (physaddr & TARGET_PAGE_MASK) + addr;
     cpu->mem_io_pc = (uintptr_t)retaddr;
     cpu->mem_io_vaddr = addr;
+    uint64_t cpustate = cpu_get_state_for_memory_transaction(env, physaddr, READ_ACCESS_TYPE);
 #if SHIFT == 0
-    res = tlib_read_byte(physaddr);
+    res = tlib_read_byte(physaddr, cpustate);
 #elif SHIFT == 1
-    res = tlib_read_word(physaddr);
+    res = tlib_read_word(physaddr, cpustate);
 #elif SHIFT == 2
-    res = tlib_read_double_word(physaddr);
+    res = tlib_read_double_word(physaddr, cpustate);
 #else
-    res = tlib_read_quad_word(physaddr);
+    res = tlib_read_quad_word(physaddr, cpustate);
 #endif /* SHIFT > 2 */
     return res;
 }
@@ -327,6 +328,7 @@ static inline void glue(io_write, SUFFIX)(target_phys_addr_t physaddr, DATA_TYPE
     physaddr = (physaddr & TARGET_PAGE_MASK) + addr;
     cpu->mem_io_vaddr = addr;
     cpu->mem_io_pc = (uintptr_t)retaddr;
+    uint64_t cpustate = cpu_get_state_for_memory_transaction(env, physaddr, ACCESS_DATA_STORE);
     /* TODO: added stuff */
 #if SHIFT <= 2
     if(index == IO_MEM_NOTDIRTY >> IO_MEM_SHIFT) {
@@ -337,13 +339,13 @@ static inline void glue(io_write, SUFFIX)(target_phys_addr_t physaddr, DATA_TYPE
     /* TODO: added stuff ends */
 #endif
 #if SHIFT == 0
-    tlib_write_byte(physaddr, val);
+    tlib_write_byte(physaddr, val, cpustate);
 #elif SHIFT == 1
-    tlib_write_word(physaddr, val);
+    tlib_write_word(physaddr, val, cpustate);
 #elif SHIFT == 2
-    tlib_write_double_word(physaddr, val);
+    tlib_write_double_word(physaddr, val, cpustate);
 #else
-    tlib_write_quad_word(physaddr, val);
+    tlib_write_quad_word(physaddr, val, cpustate);
 #endif /* SHIFT > 2 */
 }
 

@@ -392,6 +392,13 @@ target_phys_addr_t cpu_get_phys_page_debug(CPUState *env, target_ulong addr)
     return phys_addr;
 }
 
+/* Transaction filtering by state is not yet implemented for this architecture.
+ * This placeholder function is here to make it clear that more CPUs are expected to support this in the future. */
+uint64_t cpu_get_state_for_memory_transaction(CPUState *env, target_ulong addr, int access_type)
+{
+    return 0;
+}
+
 /*
  * Assuming system mode, only called in tlb_fill
  */

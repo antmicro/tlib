@@ -720,6 +720,13 @@ target_phys_addr_t cpu_get_phys_page_debug(CPUState *env, target_ulong addr)
     return phys_addr & TARGET_PAGE_MASK;
 }
 
+/* Transaction filtering by state is not yet implemented for this architecture.
+ * This placeholder function is here to make it clear that more CPUs are expected to support this in the future. */
+uint64_t cpu_get_state_for_memory_transaction(CPUState *env, target_ulong addr, int access_type)
+{
+    return 0;
+}
+
 //  The name of the function is a little misleading. It doesn't handle MMU faults as much as TLB misses.
 int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, int mmu_idx, uintptr_t return_address,
                          bool suppress_faults, int access_width)

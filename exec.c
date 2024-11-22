@@ -1764,6 +1764,7 @@ void cpu_physical_memory_rw(target_phys_addr_t addr, uint8_t *buf, int len, int 
     target_phys_addr_t page;
     ram_addr_t pd;
     PhysPageDesc *p;
+    uint64_t cpustate = cpu_get_state_for_memory_transaction(env, addr, is_write ? ACCESS_DATA_STORE : ACCESS_DATA_LOAD);
 
     while(len > 0) {
         page = addr & TARGET_PAGE_MASK;
@@ -1787,21 +1788,21 @@ void cpu_physical_memory_rw(target_phys_addr_t addr, uint8_t *buf, int len, int 
                 if(l >= 8 && ((addr1 & 7) == 0)) {
                     /* 64 bit write access */
                     val = ldq_p(buf);
-                    tlib_write_quad_word(addr1, val);
+                    tlib_write_quad_word(addr1, val, cpustate);
                 } else if(l >= 4 && ((addr1 & 3) == 0)) {
                     /* 32 bit write access */
                     val = ldl_p(buf);
-                    tlib_write_double_word(addr1, val);
+                    tlib_write_double_word(addr1, val, cpustate);
                     l = 4;
                 } else if(l >= 2 && ((addr1 & 1) == 0)) {
                     /* 16 bit write access */
                     val = lduw_p(buf);
-                    tlib_write_word(addr1, val);
+                    tlib_write_word(addr1, val, cpustate);
                     l = 2;
                 } else {
                     /* 8 bit write access */
                     val = ldub_p(buf);
-                    tlib_write_byte(addr1, val);
+                    tlib_write_byte(addr1, val, cpustate);
                     l = 1;
                 }
             } else {
@@ -1824,22 +1825,22 @@ void cpu_physical_memory_rw(target_phys_addr_t addr, uint8_t *buf, int len, int 
                 }
                 if(l >= 8 && ((addr1 & 7) == 0)) {
                     /* 64 bit read access */
-                    val = tlib_read_quad_word(addr1);
+                    val = tlib_read_quad_word(addr1, cpustate);
                     stq_p(buf, val);
                     l = 8;
                 } else if(l >= 4 && ((addr1 & 3) == 0)) {
                     /* 32 bit read access */
-                    val = tlib_read_double_word(addr1);
+                    val = tlib_read_double_word(addr1, cpustate);
                     stl_p(buf, val);
                     l = 4;
                 } else if(l >= 2 && ((addr1 & 1) == 0)) {
                     /* 16 bit read access */
-                    val = tlib_read_word(addr1);
+                    val = tlib_read_word(addr1, cpustate);
                     stw_p(buf, val);
                     l = 2;
                 } else {
                     /* 8 bit read access */
-                    val = tlib_read_byte(addr1);
+                    val = tlib_read_byte(addr1, cpustate);
                     stb_p(buf, val);
                     l = 1;
                 }
@@ -1899,6 +1900,7 @@ static uint32_t ldl_phys_aligned(target_phys_addr_t addr)
     uint32_t val;
     ram_addr_t pd;
     PhysPageDesc *p;
+    uint64_t cpustate = cpu_get_state_for_memory_transaction(env, addr, ACCESS_DATA_LOAD);
 
     p = phys_page_find(addr >> TARGET_PAGE_BITS);
     if(!p) {
@@ -1912,7 +1914,7 @@ static uint32_t ldl_phys_aligned(target_phys_addr_t addr)
         if(p) {
             addr = (addr & ~TARGET_PAGE_MASK) + p->region_offset;
         }
-        val = tlib_read_double_word(addr);
+        val = tlib_read_double_word(addr, cpustate);
     } else {
         /* RAM case */
         ptr = get_ram_ptr(pd & TARGET_PAGE_MASK) + (addr & ~TARGET_PAGE_MASK);
@@ -1945,6 +1947,7 @@ static uint64_t ldq_phys_aligned(target_phys_addr_t addr)
     uint64_t val;
     ram_addr_t pd;
     PhysPageDesc *p;
+    uint64_t cpustate = cpu_get_state_for_memory_transaction(env, addr, ACCESS_DATA_LOAD);
 
     p = phys_page_find(addr >> TARGET_PAGE_BITS);
     if(!p) {
@@ -1958,7 +1961,7 @@ static uint64_t ldq_phys_aligned(target_phys_addr_t addr)
         if(p) {
             addr = (addr & ~TARGET_PAGE_MASK) + p->region_offset;
         }
-        val = tlib_read_quad_word(addr);
+        val = tlib_read_quad_word(addr, cpustate);
     } else {
         /* RAM case */
         ptr = get_ram_ptr(pd & TARGET_PAGE_MASK) + (addr & ~TARGET_PAGE_MASK);
@@ -2006,6 +2009,7 @@ uint32_t lduw_phys(target_phys_addr_t addr)
     uint64_t val;
     ram_addr_t pd;
     PhysPageDesc *p;
+    uint64_t cpustate = cpu_get_state_for_memory_transaction(env, addr, ACCESS_DATA_LOAD);
 
     if(addr % 2 != 0) {
         tlib_abortf("lduw_phys address is not aligned: %lx", addr);
@@ -2023,7 +2027,7 @@ uint32_t lduw_phys(target_phys_addr_t addr)
         if(p) {
             addr = (addr & ~TARGET_PAGE_MASK) + p->region_offset;
         }
-        val = tlib_read_word(addr);
+        val = tlib_read_word(addr, cpustate);
     } else {
         /* RAM case */
         ptr = get_ram_ptr(pd & TARGET_PAGE_MASK) + (addr & ~TARGET_PAGE_MASK);
@@ -2040,6 +2044,7 @@ void stl_phys_notdirty(target_phys_addr_t addr, uint32_t val)
     uint8_t *ptr;
     ram_addr_t pd;
     PhysPageDesc *p;
+    uint64_t cpustate = cpu_get_state_for_memory_transaction(env, addr, ACCESS_DATA_STORE);
 
     if(addr % 4 != 0) {
         tlib_abortf("stl_phys_notdirty address is not aligned: %lx", addr);
@@ -2056,7 +2061,7 @@ void stl_phys_notdirty(target_phys_addr_t addr, uint32_t val)
         if(p) {
             addr = (addr & ~TARGET_PAGE_MASK) + p->region_offset;
         }
-        tlib_write_double_word(addr, val);
+        tlib_write_double_word(addr, val, cpustate);
     } else {
         uintptr_t addr1 = (pd & TARGET_PAGE_MASK) + (addr & ~TARGET_PAGE_MASK);
         ptr = get_ram_ptr(addr1);
@@ -2074,6 +2079,7 @@ void stq_phys_notdirty(target_phys_addr_t addr, uint64_t val)
     uint8_t *ptr;
     ram_addr_t pd;
     PhysPageDesc *p;
+    uint64_t cpustate = cpu_get_state_for_memory_transaction(env, addr, ACCESS_DATA_STORE);
 
     if(addr % 8 != 0) {
         tlib_abortf("stq_phys_notdirty address is not aligned: %lx", addr);
@@ -2090,7 +2096,7 @@ void stq_phys_notdirty(target_phys_addr_t addr, uint64_t val)
         if(p) {
             addr = (addr & ~TARGET_PAGE_MASK) + p->region_offset;
         }
-        tlib_write_quad_word(addr, val);
+        tlib_write_quad_word(addr, val, cpustate);
     } else {
         ptr = get_ram_ptr(pd & TARGET_PAGE_MASK) + (addr & ~TARGET_PAGE_MASK);
         stq_p(ptr, val);
@@ -2103,6 +2109,7 @@ static void stl_phys_aligned(target_phys_addr_t addr, uint32_t val)
     uint8_t *ptr;
     ram_addr_t pd;
     PhysPageDesc *p;
+    uint64_t cpustate = cpu_get_state_for_memory_transaction(env, addr, ACCESS_DATA_STORE);
 
     p = phys_page_find(addr >> TARGET_PAGE_BITS);
     if(!p) {
@@ -2115,7 +2122,7 @@ static void stl_phys_aligned(target_phys_addr_t addr, uint32_t val)
         if(p) {
             addr = (addr & ~TARGET_PAGE_MASK) + p->region_offset;
         }
-        tlib_write_double_word(addr, val);
+        tlib_write_double_word(addr, val, cpustate);
     } else {
         uintptr_t addr1;
         addr1 = (pd & TARGET_PAGE_MASK) + (addr & ~TARGET_PAGE_MASK);
@@ -2153,6 +2160,7 @@ void stw_phys(target_phys_addr_t addr, uint32_t val)
     uint8_t *ptr;
     ram_addr_t pd;
     PhysPageDesc *p;
+    uint64_t cpustate = cpu_get_state_for_memory_transaction(env, addr, ACCESS_DATA_STORE);
 
     if(addr % 2 != 0) {
         tlib_abortf("stw_phys address is not aligned: %lx", addr);
@@ -2169,7 +2177,7 @@ void stw_phys(target_phys_addr_t addr, uint32_t val)
         if(p) {
             addr = (addr & ~TARGET_PAGE_MASK) + p->region_offset;
         }
-        tlib_write_word(addr, val);
+        tlib_write_word(addr, val, cpustate);
     } else {
         uintptr_t addr1;
         addr1 = (pd & TARGET_PAGE_MASK) + (addr & ~TARGET_PAGE_MASK);

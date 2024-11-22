@@ -610,6 +610,11 @@ target_phys_addr_t cpu_get_phys_page_debug(CPUState *env, target_ulong addr);
 
 /* physical memory access */
 
+/* Return the CPU state information bitfield for use in transaction callbacks.
+   This may also be called from managed code, and if it itself calls any managed code,
+   that code must not throw any exceptions that would propagate through this function. */
+uint64_t cpu_get_state_for_memory_transaction(CPUState *env, target_ulong addr, int access_type);
+
 /* MMIO pages are identified by a combination of an IO device index and
    3 flags.  The ROMD code stores the page ram offset in iotlb entry,
    so only a limited number of ids are avaiable.  */

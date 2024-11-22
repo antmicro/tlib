@@ -2397,6 +2397,18 @@ static inline int pmsav8_check_access(CPUState *env, uint32_t address, bool secu
     int region;  //  ignored
     return pmsav8_check_access_with_region(env, address, secure, access_type, is_user, prot, page_size, &region);
 }
+
+uint64_t cpu_get_state_for_memory_transaction(CPUState *env, target_ulong addr, int access_type)
+{
+    return 0;
+}
+#else
+/* Transaction filtering by state is not yet implemented for this architecture.
+ * This placeholder function is here to make it clear that more CPUs are expected to support this in the future. */
+uint64_t cpu_get_state_for_memory_transaction(CPUState *env, target_ulong addr, int access_type)
+{
+    return 0;
+}
 #endif
 
 #ifdef TARGET_PROTO_ARM_M

@@ -1331,6 +1331,13 @@ target_phys_addr_t cpu_get_phys_page_debug(CPUState *env, target_ulong addr)
     return mmu_ctx.raddr & TARGET_PAGE_MASK;
 }
 
+/* Transaction filtering by state is not yet implemented for this architecture.
+ * This placeholder function is here to make it clear that more CPUs are expected to support this in the future. */
+uint64_t cpu_get_state_for_memory_transaction(CPUState *env, target_ulong addr, int access_type)
+{
+    return 0;
+}
+
 static void booke206_update_mas_tlb_miss(CPUState *env, target_ulong address, int rw)
 {
     env->spr[SPR_BOOKE_MAS0] = env->spr[SPR_BOOKE_MAS4] & MAS4_TLBSELD_MASK;
