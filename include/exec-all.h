@@ -224,10 +224,11 @@ static inline void tb_set_jmp_target1(uintptr_t jmp_addr, uintptr_t addr)
 #if defined(__aarch64__)
     /* Write offset to lowest 26-bits,
     * taking care to not overwrite the already emitted opcode
+    * Bits lower than the opcode might not be zeroed, so we mask out everything explicitly
     * */
     uintptr_t offset = addr - jmp_addr;
     offset = offset >> 2;
-    *(uint32_t *)jmp_addr |= (offset & 0x3FFFFFF);
+    *(uint32_t *)jmp_addr = (*(uint32_t *)jmp_addr & ~0x3FFFFFF) | (offset & 0x3FFFFFF);
 #endif
 
 #if defined(__GNUC__)
