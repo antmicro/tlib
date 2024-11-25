@@ -312,7 +312,7 @@ typedef struct CPUState {
         uint32_t vecbase[M_REG_NUM_BANKS];
         uint32_t basepri[M_REG_NUM_BANKS];
         uint32_t control[M_REG_NUM_BANKS]; /* TODO: SFPA and FPCA bits are not banked - required for FPU support */
-        uint32_t fault_status;
+        uint32_t fault_status[M_REG_NUM_BANKS];
         uint32_t exception;
         uint32_t primask[M_REG_NUM_BANKS];
         uint32_t faultmask[M_REG_NUM_BANKS];

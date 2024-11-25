@@ -823,7 +823,7 @@ static int v7m_push(CPUState *env, uint32_t val)
             env->cp15.c5_data |= (1 << 11);
         }
         env->cp15.c6_data = address;
-        env->v7m.fault_status |= MEM_FAULT_MSTKERR;
+        env->v7m.fault_status[env->secure] |= MEM_FAULT_MSTKERR;
         return 1;
     }
     return 0;
@@ -1055,27 +1055,27 @@ static void do_interrupt_v7m(CPUState *env)
     switch(env->exception_index) {
         case EXCP_UDEF:
             tlib_nvic_set_pending_irq(env->secure ? BANKED_SECURE_EXCP(ARMV7M_EXCP_USAGE) : ARMV7M_EXCP_USAGE);
-            env->v7m.fault_status |= USAGE_FAULT_UNDEFINSTR;
+            env->v7m.fault_status[env->secure] |= USAGE_FAULT_UNDEFINSTR;
             return;
         case EXCP_NOCP:
             tlib_nvic_set_pending_irq(env->secure ? BANKED_SECURE_EXCP(ARMV7M_EXCP_USAGE) : ARMV7M_EXCP_USAGE);
-            env->v7m.fault_status |= USAGE_FAULT_NOPC;
+            env->v7m.fault_status[env->secure] |= USAGE_FAULT_NOPC;
             return;
         case EXCP_INVSTATE:
             tlib_nvic_set_pending_irq(env->secure ? BANKED_SECURE_EXCP(ARMV7M_EXCP_USAGE) : ARMV7M_EXCP_USAGE);
-            env->v7m.fault_status |= USAGE_FAULT_INVSTATE;
+            env->v7m.fault_status[env->secure] |= USAGE_FAULT_INVSTATE;
             return;
         case EXCP_SWI:
             tlib_nvic_set_pending_irq(env->secure ? BANKED_SECURE_EXCP(ARMV7M_EXCP_SVC) : ARMV7M_EXCP_SVC);
             return;
         case EXCP_PREFETCH_ABORT:
             /* Access violation */
-            env->v7m.fault_status |= MEM_FAULT_IACCVIOL;
+            env->v7m.fault_status[env->secure] |= MEM_FAULT_IACCVIOL;
             tlib_nvic_set_pending_irq(env->secure ? BANKED_SECURE_EXCP(ARMV7M_EXCP_MEM) : ARMV7M_EXCP_MEM);
             return;
         case EXCP_DATA_ABORT:
             /* ACK faulting address and set Data acces violation */
-            env->v7m.fault_status |= MEM_FAULT_MMARVALID | MEM_FAULT_DACCVIOL;
+            env->v7m.fault_status[env->secure] |= MEM_FAULT_MMARVALID | MEM_FAULT_DACCVIOL;
             tlib_nvic_set_pending_irq(env->secure ? BANKED_SECURE_EXCP(ARMV7M_EXCP_MEM) : ARMV7M_EXCP_MEM);
             return;
         case EXCP_BKPT:

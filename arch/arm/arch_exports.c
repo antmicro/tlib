@@ -249,19 +249,19 @@ uint32_t tlib_get_xpsr()
 
 EXC_INT_0(uint32_t, tlib_get_xpsr)
 
-uint32_t tlib_get_fault_status()
+uint32_t tlib_get_fault_status(bool secure)
 {
-    return cpu->v7m.fault_status;
+    return cpu->v7m.fault_status[secure];
 }
 
-EXC_INT_0(uint32_t, tlib_get_fault_status)
+EXC_INT_1(uint32_t, tlib_get_fault_status, bool, secure)
 
-void tlib_set_fault_status(uint32_t value)
+void tlib_set_fault_status(uint32_t value, bool secure)
 {
-    cpu->v7m.fault_status = value;
+    cpu->v7m.fault_status[secure] = value;
 }
 
-EXC_VOID_1(tlib_set_fault_status, uint32_t, value)
+EXC_VOID_2(tlib_set_fault_status, uint32_t, value, bool, secure)
 
 uint32_t tlib_get_memory_fault_address()
 {
