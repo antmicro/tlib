@@ -17,7 +17,6 @@ int32_t tlib_init(char *cpu_name);
 int32_t tlib_atomic_memory_state_init(uintptr_t atomic_memory_state_ptr, int32_t atomic_id);
 void tlib_dispose(void);
 uint64_t tlib_get_executed_instructions(void);
-void tlib_reset_executed_instrucions(uint64_t val);
 void tlib_reset(void);
 int32_t tlib_execute(uint32_t max_insns);
 void tlib_request_translation_block_interrupt(int);
