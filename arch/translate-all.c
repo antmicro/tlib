@@ -403,7 +403,7 @@ int cpu_restore_state_from_tb(CPUState *env, TranslationBlock *tb, uintptr_t sea
     return cpu_restore_state_from_tb_ex(env, tb, searched_pc, false);
 }
 
-static inline int adjust_instruction_count(TranslationBlock *tb, bool include_last_instruction, int executed_instructions)
+static inline int adjust_instructions_count(TranslationBlock *tb, bool include_last_instruction, int executed_instructions)
 {
     if (executed_instructions == -1) {
         return -1;
@@ -427,12 +427,12 @@ static inline int adjust_instruction_count(TranslationBlock *tb, bool include_la
 
 int cpu_restore_state_and_restore_instructions_count(CPUState *env, TranslationBlock *tb, uintptr_t searched_pc, bool include_last_instruction)
 {
-    return adjust_instruction_count(tb, include_last_instruction, cpu_restore_state_from_tb_ex(env, tb, searched_pc, false));
+    return adjust_instructions_count(tb, include_last_instruction, cpu_restore_state_from_tb_ex(env, tb, searched_pc, false));
 }
 
 int cpu_restore_state_to_next_instruction(CPUState *env, struct TranslationBlock *tb, uintptr_t searched_pc)
 {
-    return adjust_instruction_count(tb, false, cpu_restore_state_from_tb_ex(env, tb, searched_pc, true));
+    return adjust_instructions_count(tb, false, cpu_restore_state_from_tb_ex(env, tb, searched_pc, true));
 }
 
 void cpu_restore_state(CPUState *env, void *retaddr) {
