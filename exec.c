@@ -1403,7 +1403,7 @@ void tlb_flush_page(CPUState *env, target_ulong addr, bool from_generated_code)
 static void tlb_unprotect_code_phys(CPUState *env, ram_addr_t ram_addr, target_ulong vaddr)
 {
     PhysPageDesc *p = phys_page_find(ram_addr >> TARGET_PAGE_BITS);
-    p->phys_dirty = true;
+    p->flags.dirty = true;
 }
 
 static inline void tlb_reset_dirty_range(CPUTLBEntry *tlb_entry, uintptr_t start, uintptr_t length)
@@ -1446,7 +1446,9 @@ static void tlb_protect_code(ram_addr_t ram_addr)
     PhysPageDesc *p;
 
     p = phys_page_find(ram_addr >> TARGET_PAGE_BITS);
-    p->phys_dirty = false;
+    if (p != NULL) {
+        p->flags.dirty = false;
+    }
 
     start1 = (uintptr_t)get_ram_ptr(ram_addr & TARGET_PAGE_MASK);
 
@@ -1596,7 +1598,7 @@ void tlb_set_page(CPUState *env, target_ulong vaddr, target_phys_addr_t paddr, i
         if ((pd & ~TARGET_PAGE_MASK) == IO_MEM_ROM || (pd & IO_MEM_ROMD)) {
             /* Write access calls the I/O callback.  */
             te->addr_write = address | TLB_MMIO;
-        } else if ((pd & ~TARGET_PAGE_MASK) == IO_MEM_RAM && !p->phys_dirty) {
+        } else if ((pd & ~TARGET_PAGE_MASK) == IO_MEM_RAM && !p->flags.dirty) {
             te->addr_write = address | TLB_NOTDIRTY;
         } else {
             te->addr_write = address;
@@ -1634,7 +1636,7 @@ void cpu_register_physical_memory_log(target_phys_addr_t start_addr, ram_addr_t 
         p = phys_page_find(addr >> TARGET_PAGE_BITS);
         if (p && p->phys_offset != IO_MEM_UNASSIGNED) {
             p->phys_offset = phys_offset;
-            p->phys_dirty = true;
+            p->flags.dirty = true;
             if ((phys_offset & ~TARGET_PAGE_MASK) <= IO_MEM_ROM || (phys_offset & IO_MEM_ROMD)) {
                 phys_offset += TARGET_PAGE_SIZE;
             }
@@ -1642,7 +1644,7 @@ void cpu_register_physical_memory_log(target_phys_addr_t start_addr, ram_addr_t 
             p = phys_page_find_alloc(addr >> TARGET_PAGE_BITS, 1);
             p->phys_offset = phys_offset;
             p->region_offset = region_offset;
-            p->phys_dirty = true;
+            p->flags.dirty = true;
             if ((phys_offset & ~TARGET_PAGE_MASK) <= IO_MEM_ROM || (phys_offset & IO_MEM_ROMD)) {
                 phys_offset += TARGET_PAGE_SIZE;
             }
@@ -1682,13 +1684,13 @@ ram_addr_t ram_addr_from_host(void *ptr)
 void notdirty_mem_writeb(void *opaque, target_phys_addr_t ram_addr, uint32_t val)
 {
     PhysPageDesc *p = phys_page_find(ram_addr >> TARGET_PAGE_BITS);
-    if (!p->phys_dirty) {
+    if (!p->flags.dirty) {
         tb_invalidate_phys_page_fast(ram_addr, 1);
     }
     stb_p(get_ram_ptr(ram_addr), val);
     /* we remove the notdirty callback only if the code has been
        flushed */
-    if (p->phys_dirty) {
+    if (p->flags.dirty) {
         tlb_set_dirty(cpu, cpu->mem_io_vaddr);
     }
 }
@@ -1696,13 +1698,13 @@ void notdirty_mem_writeb(void *opaque, target_phys_addr_t ram_addr, uint32_t val
 void notdirty_mem_writew(void *opaque, target_phys_addr_t ram_addr, uint32_t val)
 {
     PhysPageDesc *p = phys_page_find(ram_addr >> TARGET_PAGE_BITS);
-    if (!p->phys_dirty) {
+    if (!p->flags.dirty) {
         tb_invalidate_phys_page_fast(ram_addr, 2);
     }
     stw_p(get_ram_ptr(ram_addr), val);
     /* we remove the notdirty callback only if the code has been
        flushed */
-    if (p->phys_dirty) {
+    if (p->flags.dirty) {
         tlb_set_dirty(cpu, cpu->mem_io_vaddr);
     }
 }
@@ -1710,13 +1712,13 @@ void notdirty_mem_writew(void *opaque, target_phys_addr_t ram_addr, uint32_t val
 void notdirty_mem_writel(void *opaque, target_phys_addr_t ram_addr, uint32_t val)
 {
     PhysPageDesc *p = phys_page_find(ram_addr >> TARGET_PAGE_BITS);
-    if (!p->phys_dirty) {
+    if (!p->flags.dirty) {
         tb_invalidate_phys_page_fast(ram_addr, 2);
     }
     stl_p(get_ram_ptr(ram_addr), val);
     /* we remove the notdirty callback only if the code has been
        flushed */
-    if (p->phys_dirty) {
+    if (p->flags.dirty) {
         tlb_set_dirty(cpu, cpu->mem_io_vaddr);
     }
 }
@@ -1776,7 +1778,7 @@ void cpu_physical_memory_rw(target_phys_addr_t addr, uint8_t *buf, int len, int 
                 /* RAM case */
                 ptr = get_ram_ptr(addr1);
                 memcpy(ptr, buf, l);
-                if (!p->phys_dirty) {
+                if (!p->flags.dirty) {
                     /* invalidate code */
                     tb_invalidate_phys_page_range(addr1, addr1 + l, 1);
                 }
@@ -2093,7 +2095,7 @@ static void stl_phys_aligned(target_phys_addr_t addr, uint32_t val)
         /* RAM case */
         ptr = get_ram_ptr(addr1);
         stl_p(ptr, val);
-        if (!p->phys_dirty) {
+        if (!p->flags.dirty) {
             /* invalidate code */
             tb_invalidate_phys_page_range(addr1, addr1 + 4, 1);
         }
@@ -2149,7 +2151,7 @@ void stw_phys(target_phys_addr_t addr, uint32_t val)
         /* RAM case */
         ptr = get_ram_ptr(addr1);
         stw_p(ptr, val);
-        if (!p->phys_dirty) {
+        if (!p->flags.dirty) {
             /* invalidate code */
             tb_invalidate_phys_page_range(addr1, addr1 + 2, 1);
         }

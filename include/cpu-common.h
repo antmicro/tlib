@@ -82,11 +82,15 @@ void cpu_physical_memory_write_rom(target_phys_addr_t addr, const uint8_t *buf, 
 #define IO_MEM_ROMD       (1)
 #define IO_MEM_SUBPAGE    (2)
 
+typedef struct __attribute__((__packed__)) {
+    bool dirty : 1;
+} PhysPageDescFlags;
+
 typedef struct PhysPageDesc {
     /* offset in host memory of the page + io_index in the low bits */
     ram_addr_t phys_offset;
     ram_addr_t region_offset;
-    bool phys_dirty;
+    PhysPageDescFlags flags;
 } PhysPageDesc;
 
 target_ulong virt_to_phys(target_ulong virtual, uint32_t access_type, uint32_t nofault);
