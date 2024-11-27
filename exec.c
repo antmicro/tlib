@@ -277,7 +277,14 @@ static PhysPageDesc *phys_page_find_alloc(target_phys_addr_t index, int alloc)
 
 inline PhysPageDesc *phys_page_find(target_phys_addr_t index)
 {
-    return phys_page_find_alloc(index, 0);
+    return phys_page_find_alloc(index, /* alloc: */ 0);
+}
+
+inline PhysPageDesc *phys_page_alloc(target_phys_addr_t index, PhysPageDescFlags flags)
+{
+    PhysPageDesc *page = phys_page_find_alloc(index, /* alloc: */ 1);
+    page->flags = flags;
+    return page;
 }
 
 void unmap_page(target_phys_addr_t address)
@@ -1641,10 +1648,12 @@ void cpu_register_physical_memory_log(target_phys_addr_t start_addr, ram_addr_t 
                 phys_offset += TARGET_PAGE_SIZE;
             }
         } else {
-            p = phys_page_find_alloc(addr >> TARGET_PAGE_BITS, 1);
+            PhysPageDescFlags flags = {
+                .dirty = true,
+            };
+            p = phys_page_alloc(addr >> TARGET_PAGE_BITS, flags);
             p->phys_offset = phys_offset;
             p->region_offset = region_offset;
-            p->flags.dirty = true;
             if ((phys_offset & ~TARGET_PAGE_MASK) <= IO_MEM_ROM || (phys_offset & IO_MEM_ROMD)) {
                 phys_offset += TARGET_PAGE_SIZE;
             }

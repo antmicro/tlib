@@ -334,6 +334,7 @@ CPUDebugExcpHandler *cpu_set_debug_excp_handler(CPUDebugExcpHandler *handler);
 
 /* cpu-exec.c */
 PhysPageDesc *phys_page_find(target_phys_addr_t index);
+PhysPageDesc *phys_page_alloc(target_phys_addr_t index, PhysPageDescFlags flags);
 
 void tb_invalidate_phys_page_range_inner(tb_page_addr_t start, tb_page_addr_t end, int is_cpu_write_access, int broadcast);
 void tb_invalidate_phys_page_range_checked(tb_page_addr_t start, tb_page_addr_t end, int is_cpu_write_access, int broadcast);
