@@ -719,9 +719,9 @@ static inline int arm_feature(const CPUState *env, int feature)
 #define TARGET_VIRT_ADDR_SPACE_BITS 32
 
 /* MMU modes definitions */
-#define MMU_MODE0_SUFFIX _kernel
-#define MMU_MODE1_SUFFIX _user
-#define MMU_USER_IDX     1
+
+#define MMU_USER_IDX 1
+
 static inline int cpu_mmu_index(CPUState *env)
 {
     return (env->uncached_cpsr & CPSR_M) == ARM_CPU_MODE_USR ? 1 : 0;
