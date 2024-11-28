@@ -400,7 +400,7 @@ int cpu_restore_state_from_tb(CPUState *env, TranslationBlock *tb, uintptr_t sea
 static inline int adjust_instruction_count(TranslationBlock *tb, bool include_last_instruction, int executed_instructions)
 {
     assert(executed_instructions >= 0);
-    if(executed_instructions > 0 && !include_last_instruction) {
+    if (executed_instructions > 0 && !include_last_instruction) {
         executed_instructions--;
     }
 
