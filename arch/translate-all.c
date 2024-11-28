@@ -399,7 +399,10 @@ int cpu_restore_state_from_tb(CPUState *env, TranslationBlock *tb, uintptr_t sea
 
 static inline int adjust_instruction_count(TranslationBlock *tb, bool include_last_instruction, int executed_instructions)
 {
-    assert(executed_instructions >= 0);
+    if (executed_instructions == -1) {
+        return -1;
+    }
+
     if (executed_instructions > 0 && !include_last_instruction) {
         executed_instructions--;
     }
@@ -408,7 +411,7 @@ static inline int adjust_instruction_count(TranslationBlock *tb, bool include_la
     // by reading it's value from outside; in such case we cannot compensate
     // the instructions counter
     uint32_t diff = tb->icount - executed_instructions;
-    if (cpu->instructions_count_value >= diff && executed_instructions != -1 && tb->instructions_count_dirty) {
+    if (cpu->instructions_count_value >= diff && tb->instructions_count_dirty) {
         cpu->instructions_count_value -= diff;
         cpu->instructions_count_total_value -= diff;
         tb->instructions_count_dirty = 0;
