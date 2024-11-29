@@ -10,6 +10,10 @@
 #include "arch_callbacks.h"
 #include "pmu.h"
 
+#ifdef HOST_WORDS_BIGENDIAN
+#error "This file depends on little-endian bitfield packing order"
+#endif
+
 static uint32_t cortexa15_cp15_c0_c1[8] = { 0x00001131, 0x00011011, 0x02010555, 0x00000000,
                                             0x10201105, 0x20000000, 0x01240000, 0x02102211 };
 
