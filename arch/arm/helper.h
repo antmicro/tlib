@@ -1,5 +1,8 @@
 #include <stdint.h>
 
+int get_phys_addr(CPUState *env, uint32_t address, bool is_secure, int access_type, bool is_user, uint32_t *phys_ptr, int *prot,
+                  target_ulong *page_size, int no_page_fault);
+
 #include "def-helper.h"
 
 DEF_HELPER_1(clz, i32, i32)

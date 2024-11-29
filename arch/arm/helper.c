@@ -46,8 +46,6 @@ static uint32_t arm1176_cp15_c0_c1[8] = { 0x111, 0x11, 0x33, 0, 0x01130003, 0x10
 static uint32_t arm1176_cp15_c0_c2[8] = { 0x0140011, 0x12002111, 0x11231121, 0x01102131, 0x01141, 0, 0, 0 };
 
 static uint32_t cpu_arm_find_by_name(const char *name);
-int get_phys_addr(CPUState *env, uint32_t address, int access_type, int is_user, uint32_t *phys_ptr, int *prot,
-                  target_ulong *page_size, int no_page_fault);
 
 static inline void set_feature(CPUState *env, int feature)
 {
@@ -812,7 +810,8 @@ static int v7m_push(CPUState *env, uint32_t val)
     target_ulong page_size = 0;
     int ret, prot = 0;
     uint32_t address = env->regs[13] - 4;
-    ret = get_phys_addr(env, address, ACCESS_DATA_STORE, !in_privileged_mode(env), &phys_ptr, &prot, &page_size, false);
+    ret = get_phys_addr(env, address, env->secure, ACCESS_DATA_STORE, !in_privileged_mode(env), &phys_ptr, &prot, &page_size,
+                        false);
     if(ret == TRANSLATE_SUCCESS) {
         env->regs[13] = address;
         stl_phys(env->regs[13], val);
@@ -2308,8 +2307,8 @@ static inline bool pmsav8_check_security_attribution(CPUState *env, uint32_t add
 }
 #endif
 
-inline int get_phys_addr(CPUState *env, uint32_t address, int access_type, int is_user, uint32_t *phys_ptr, int *prot,
-                         target_ulong *page_size, int no_page_fault)
+inline int get_phys_addr(CPUState *env, uint32_t address, bool is_secure, int access_type, bool is_user, uint32_t *phys_ptr,
+                         int *prot, target_ulong *page_size, int no_page_fault)
 {
     if(unlikely(cpu->external_mmu_enabled)) {
 #ifdef TARGET_PROTO_ARM_M
@@ -2355,7 +2354,7 @@ inline int get_phys_addr(CPUState *env, uint32_t address, int access_type, int i
             *prot = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
             return TRANSLATE_SUCCESS;
         }
-        return pmsav8_check_access(env, address, env->secure, access_type, is_user, prot, page_size);
+        return pmsav8_check_access(env, address, is_secure, access_type, is_user, prot, page_size);
     }
 #endif
 
@@ -2392,7 +2391,7 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, i
     int ret, is_user;
 
     is_user = mmu_idx == MMU_USER_IDX;
-    ret = get_phys_addr(env, address, access_type, is_user, &phys_addr, &prot, &page_size, no_page_fault);
+    ret = get_phys_addr(env, address, env->secure, access_type, is_user, &phys_addr, &prot, &page_size, no_page_fault);
     //  returns TRANSLATE_SUCCESS (0x0) on success
     //  for no PMSA returns c5_data/insn value
     //  for PMSA returns enum mpu_result
@@ -2438,7 +2437,8 @@ target_phys_addr_t cpu_get_phys_page_debug(CPUState *env, target_ulong addr)
     int prot = 0;
     int ret;
 
-    ret = get_phys_addr(env, addr, ACCESS_DATA_LOAD, in_user_mode(env), &phys_addr, &prot, &page_size, /* no_page_fault: */ 1);
+    ret = get_phys_addr(env, addr, env->secure, ACCESS_DATA_LOAD, in_user_mode(env), &phys_addr, &prot, &page_size,
+                        /* no_page_fault: */ 1);
 
     if(ret != 0) {
         return -1;

@@ -273,9 +273,6 @@ static inline void set_c7_par(CPUState *env, uint64_t val)
 }
 RW_FUNCTIONS(64, c7_par, env->cp15.c7_par, set_c7_par(env, value))
 
-int get_phys_addr(CPUState *env, uint32_t address, int access_type, int is_user, uint32_t *phys_ptr, int *prot,
-                  target_ulong *page_size, int no_page_fault);
-
 static inline void ats1_helper(CPUState *env, uint64_t val, int is_user, int access_type)
 {
     set_c15_i_max_min(env);
@@ -284,7 +281,7 @@ static inline void ats1_helper(CPUState *env, uint64_t val, int is_user, int acc
     target_ulong page_size;
     int prot;
 
-    int ret = get_phys_addr(env, val, access_type, is_user, &phys_addr, &prot, &page_size, 0);
+    int ret = get_phys_addr(env, val, env->secure, access_type, is_user, &phys_addr, &prot, &page_size, 0);
     if(ret == 0) {
         /* We do not set any attribute bits in the PAR */
         if(page_size == (1 << 24) && arm_feature(env, ARM_FEATURE_V7)) {
