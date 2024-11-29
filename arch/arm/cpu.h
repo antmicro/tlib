@@ -573,6 +573,15 @@ enum arm_cpu_mode {
     ARM_CPU_MODE_SVC26 = 0x03,
 };
 
+static inline bool in_user_mode(CPUState *env)
+{
+#ifdef TARGET_PROTO_ARM_M
+    return (env->v7m.exception == 0) && (env->v7m.control[env->secure] & 1);
+#else
+    return (env->uncached_cpsr & CPSR_M) == ARM_CPU_MODE_USR;
+#endif
+}
+
 /* VFP system registers.  */
 #define ARM_VFP_FPSID   0
 #define ARM_VFP_FPSCR   1
@@ -760,14 +769,12 @@ static inline void cpu_get_tb_cpu_state(CPUState *env, target_ulong *pc, target_
     *flags = (env->thumb << ARM_TBFLAG_THUMB_SHIFT) | (env->vfp.vec_len << ARM_TBFLAG_VECLEN_SHIFT) |
              (env->vfp.vec_stride << ARM_TBFLAG_VECSTRIDE_SHIFT) | (env->condexec_bits << ARM_TBFLAG_CONDEXEC_SHIFT) |
              (!env->secure << ARM_TBFLAG_NS_SHIFT);
-#ifdef TARGET_PROTO_ARM_M
-    privmode = !((env->v7m.exception == 0) && (env->v7m.control[env->secure] & 1));
-#else
-    privmode = (env->uncached_cpsr & CPSR_M) != ARM_CPU_MODE_USR;
-#endif
+
+    privmode = !in_user_mode(env);
     if(privmode) {
         *flags |= ARM_TBFLAG_PRIV_MASK;
     }
+
     if((env->vfp.xregs[ARM_VFP_FPEXC] & ARM_VFP_FPEXC_FPUEN_MASK)
 #ifdef TARGET_PROTO_ARM_M
        && (privmode || ((env->v7m.cpacr & ARM_CPACR_CP10_MASK) >> ARM_CPACR_CP10) == ARM_CPN_ACCESS_FULL)
