@@ -2273,11 +2273,9 @@ static inline int pmsav8_check_access(CPUState *env, uint32_t address, bool secu
 #endif
 
 #ifdef TARGET_PROTO_ARM_M
-static inline bool pmsav8_check_security_attribution(CPUState *env, uint32_t address, int access_type, bool set_fault_status)
+static inline bool pmsav8_check_security_attribution(CPUState *env, uint32_t address, bool is_secure, int access_type,
+                                                     bool set_fault_status)
 {
-    //  TODO: TZ: swap this for MMU_IDX, when we have it
-    bool is_secure = env->secure;
-
     bool idau_valid, sau_valid;
     int idau_region, sau_region;
     enum security_attribution attribution;
@@ -2334,7 +2332,7 @@ inline int get_phys_addr(CPUState *env, uint32_t address, bool is_secure, int ac
 #ifdef TARGET_PROTO_ARM_M
     /* TrustZone: Security attribution happens here */
     if(env->v7m.has_trustzone) {
-        if(!pmsav8_check_security_attribution(env, address, access_type, true)) {
+        if(!pmsav8_check_security_attribution(env, address, is_secure, access_type, true)) {
             tlib_printf(LOG_LEVEL_WARNING, "SecureFault while accessing address: 0x%" PRIx32 ", access type %s", address,
                         ACCESS_TYPE_STRING(access_type));
             env->v7m.secure_fault_address = address;
@@ -2388,10 +2386,10 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, i
     uint32_t phys_addr = 0;
     target_ulong page_size = 0;
     int prot = 0;
-    int ret, is_user;
+    int ret;
 
-    is_user = mmu_idx == MMU_USER_IDX;
-    ret = get_phys_addr(env, address, env->secure, access_type, is_user, &phys_addr, &prot, &page_size, no_page_fault);
+    MMUMode mode = mmu_index_to_mode(mmu_idx);
+    ret = get_phys_addr(env, address, mode.secure, access_type, mode.user, &phys_addr, &prot, &page_size, no_page_fault);
     //  returns TRANSLATE_SUCCESS (0x0) on success
     //  for no PMSA returns c5_data/insn value
     //  for PMSA returns enum mpu_result
@@ -2421,7 +2419,7 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, i
             env->cp15.c5_data |= (1 << 11);
         }
 #ifdef TARGET_PROTO_ARM_M
-        env->v7m.memory_fault_address[env->secure] = address;
+        env->v7m.memory_fault_address[mode.secure] = address;
 #else
         env->cp15.c6_data = address;
 #endif

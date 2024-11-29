@@ -152,7 +152,7 @@ typedef struct DisasContext {
 /* ARM-specific interrupt pending bits.  */
 #define CPU_INTERRUPT_FIQ CPU_INTERRUPT_TGT_EXT_1
 
-#define NB_MMU_MODES 2
+#define NB_MMU_MODES 4
 
 /* We currently assume float and double are IEEE single and double
    precision respectively.
@@ -720,11 +720,41 @@ static inline int arm_feature(const CPUState *env, int feature)
 
 /* MMU modes definitions */
 
-#define MMU_USER_IDX 1
+typedef union {
+    struct {
+        bool user : 1;
+        bool secure : 1;
+    };
+    int index;
+} MMUMode;
 
+static inline MMUMode context_to_mmu_mode(DisasContext *s)
+{
+    MMUMode mode = {
+        .user = s->user,
+        .secure = !s->ns,
+    };
+    return mode;
+}
+
+static inline int context_to_mmu_index(DisasContext *s)
+{
+    return context_to_mmu_mode(s).index;
+}
+
+//  Don't rename, it's used in softmmu.
 static inline int cpu_mmu_index(CPUState *env)
 {
-    return (env->uncached_cpsr & CPSR_M) == ARM_CPU_MODE_USR ? 1 : 0;
+    MMUMode mode = {
+        .user = in_user_mode(env),
+        .secure = env->secure,
+    };
+    return mode.index;
+}
+
+static inline MMUMode mmu_index_to_mode(int index)
+{
+    return (MMUMode) { .index = index };
 }
 
 #include "cpu-all.h"
