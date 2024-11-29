@@ -2438,7 +2438,7 @@ target_phys_addr_t cpu_get_phys_page_debug(CPUState *env, target_ulong addr)
     int prot = 0;
     int ret;
 
-    ret = get_phys_addr(env, addr, 0, 0, &phys_addr, &prot, &page_size, 0);
+    ret = get_phys_addr(env, addr, ACCESS_DATA_LOAD, in_user_mode(env), &phys_addr, &prot, &page_size, /* no_page_fault: */ 1);
 
     if(ret != 0) {
         return -1;
