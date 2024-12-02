@@ -308,7 +308,11 @@ target_phys_addr_t cpu_get_phys_page_debug(CPUState *env, target_ulong addr)
 
 void do_interrupt(CPUState *env)
 {
+    target_ulong tbr_base;
     int cwp, intno = env->exception_index;
+    int svt = (env->def->features & CPU_FEATURE_ASR)
+              ? !!(env->asr[1] & (0x1 << 13)) // ASR contains regs 16-31; here we are accessing ASR17
+              : 0;
 
     if(env->interrupt_begin_callback_enabled)
     {
@@ -335,8 +339,9 @@ void do_interrupt(CPUState *env)
     env->regwptr[10] = env->npc;
     env->psrps = env->psrs;
     env->psrs = 1;
-    env->tbr = (env->tbr & TBR_BASE_MASK) | (intno << 4);
-    env->pc = env->tbr;
+    tbr_base = (env->tbr & TBR_BASE_MASK);
+    env->tbr = tbr_base | (intno << 4);
+    env->pc = svt ? tbr_base : env->tbr;
     env->npc = env->pc + 4;
     env->exception_index = -1;
     env->wfi = 0;
