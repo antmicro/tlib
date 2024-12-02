@@ -263,12 +263,12 @@ void tlib_set_fault_status(uint32_t value, bool secure)
 
 EXC_VOID_2(tlib_set_fault_status, uint32_t, value, bool, secure)
 
-uint32_t tlib_get_memory_fault_address()
+uint32_t tlib_get_memory_fault_address(bool secure)
 {
-    return cpu->cp15.c6_data;
+    return cpu->v7m.memory_fault_address[secure];
 }
 
-EXC_INT_0(uint32_t, tlib_get_memory_fault_address)
+EXC_INT_1(uint32_t, tlib_get_memory_fault_address, bool, secure)
 
 uint32_t tlib_is_mpu_enabled()
 {

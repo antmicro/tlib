@@ -822,7 +822,7 @@ static int v7m_push(CPUState *env, uint32_t val)
         if(arm_feature(env, ARM_FEATURE_V6)) {
             env->cp15.c5_data |= (1 << 11);
         }
-        env->cp15.c6_data = address;
+        env->v7m.memory_fault_address[env->secure] = address;
         env->v7m.fault_status[env->secure] |= MEM_FAULT_MSTKERR;
         return 1;
     }
@@ -2299,7 +2299,11 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, i
         if(access_type == ACCESS_DATA_STORE && (arm_feature(env, ARM_FEATURE_PMSA) || arm_feature(env, ARM_FEATURE_V6))) {
             env->cp15.c5_data |= (1 << 11);
         }
+#ifdef TARGET_PROTO_ARM_M
+        env->v7m.memory_fault_address[env->secure] = address;
+#else
         env->cp15.c6_data = address;
+#endif
         env->exception_index = EXCP_DATA_ABORT;
     }
     return TRANSLATE_FAIL;

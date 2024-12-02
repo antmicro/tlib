@@ -31,7 +31,7 @@ void tlib_set_fpu_interrupt_number(int32_t enabled);
 uint32_t tlib_get_xpsr(void);
 uint32_t tlib_get_fault_status(bool secure);
 void tlib_set_fault_status(uint32_t value, bool secure);
-uint32_t tlib_get_memory_fault_address(void);
+uint32_t tlib_get_memory_fault_address(bool secure);
 void tlib_enable_mpu(int32_t enabled);
 void tlib_set_mpu_region_base_address(uint32_t value);
 void tlib_set_mpu_region_size_and_enable(uint32_t value);
