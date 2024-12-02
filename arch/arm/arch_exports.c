@@ -393,8 +393,6 @@ uint32_t tlib_get_mpu_region_number()
 
 EXC_INT_0(uint32_t, tlib_get_mpu_region_number)
 
-#ifdef TARGET_PROTO_ARM_M
-
 void tlib_set_number_of_sau_regions(uint32_t value)
 {
     if(cpu->number_of_sau_regions == value) {
@@ -729,8 +727,6 @@ bool tlib_try_remove_implementation_defined_exemption_region(uint32_t start, uin
 }
 
 EXC_INT_2(bool, tlib_try_remove_implementation_defined_exemption_region, uint32_t, start, uint32_t, end)
-
-#endif
 
 /* See vfp_trigger_exception for irq_number value interpretation */
 void tlib_set_fpu_interrupt_number(int32_t irq_number)
