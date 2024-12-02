@@ -50,10 +50,10 @@ extern void *global_retaddr;
 #endif
 
 #ifdef SOFTMMU_CODE_ACCESS
-#define READ_ACCESS_TYPE 2
+#define READ_ACCESS_TYPE ACCESS_INST_FETCH
 #define ADDR_READ        addr_code
 #else
-#define READ_ACCESS_TYPE 0
+#define READ_ACCESS_TYPE ACCESS_DATA_LOAD
 #define ADDR_READ        addr_read
 #endif
 
