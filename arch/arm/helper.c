@@ -1106,8 +1106,14 @@ static void do_interrupt_v7m(CPUState *env)
                             secure_target = tlib_nvic_interrupt_targets_secure(env->v7m.exception);
                             break;
                         case ARMV7M_EXCP_HARD:
-                            /* According to pseudocode "ExceptionTargetsSecure" */
-                            secure_target = tlib_nvic_interrupt_targets_secure(env->v7m.exception) || env->secure;
+                            /* If `AIRCR.BFHFNMINS` is set to 1, HardFault is a regular banked IRQ
+                             * so nothing special here - the other HardFault will be handled automatically in the other clause
+                             * otherwise, escalate to Secure */
+                            secure_target = tlib_nvic_interrupt_targets_secure(env->v7m.exception);
+                            /* It's negation, since it's a Non-secure target! It's as expected */
+                            if(!secure_target) {
+                                goto banked_exception;
+                            }
                             break;
                         /* Reset and Secure Fault are secure only */
                         case ARMV7M_EXCP_RESET:
@@ -1117,6 +1123,7 @@ static void do_interrupt_v7m(CPUState *env)
                         /* Debug monitor (ARMV7M_EXCP_DEBUG) should be configured with `DEMCR.SDME` but since it's unimplemented
                          * we implement it as banked, to minimize side-effects
                          * Any other exception is banked too */
+                        banked_exception:
                         default:
                             secure_target = (env->v7m.exception & BANKED_SECURE_EXCP_BIT) > 0;
                             /* We need to clear the "SECURE" bit, so everything works correctly */
