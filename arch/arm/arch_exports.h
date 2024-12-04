@@ -28,6 +28,9 @@ void tlib_set_interrupt_vector_base(uint32_t address, bool secure);
 uint32_t tlib_get_interrupt_vector_base(bool secure);
 void tlib_set_fpu_interrupt_number(int32_t enabled);
 
+uint32_t tlib_get_primask(bool secure);
+uint32_t tlib_get_faultmask(bool secure);
+
 uint32_t tlib_get_xpsr(void);
 uint32_t tlib_get_fault_status(bool secure);
 void tlib_set_fault_status(uint32_t value, bool secure);

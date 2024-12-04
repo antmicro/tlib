@@ -2574,16 +2574,16 @@ void HELPER(v7m_msr)(CPUState *env, uint32_t reg, uint32_t val)
                 return;
             }
             env->v7m.basepri[is_secure] = val & 0xff;
-            tlib_nvic_write_basepri(val & 0xff);
+            tlib_nvic_write_basepri(val & 0xff, is_secure);
             break;
         case 18: /* BASEPRI_MAX */
             if(!in_privileged_mode(env)) {
                 return;
             }
             val &= 0xff;
-            if(val != 0 && (val < env->v7m.basepri[cpu->secure] || env->v7m.basepri[cpu->secure] == 0)) {
-                env->v7m.basepri[cpu->secure] = val;
-                tlib_nvic_write_basepri(val);
+            if(val != 0 && (val < env->v7m.basepri[is_secure] || env->v7m.basepri[is_secure] == 0)) {
+                env->v7m.basepri[is_secure] = val;
+                tlib_nvic_write_basepri(val, is_secure);
             }
             break;
         case NON_SECURE_REG(19):

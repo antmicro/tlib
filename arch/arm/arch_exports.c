@@ -256,6 +256,20 @@ uint32_t tlib_get_fault_status(bool secure)
 
 EXC_INT_1(uint32_t, tlib_get_fault_status, bool, secure)
 
+uint32_t tlib_get_primask(bool secure)
+{
+    return cpu->v7m.primask[secure];
+}
+
+EXC_INT_1(uint32_t, tlib_get_primask, bool, secure)
+
+uint32_t tlib_get_faultmask(bool secure)
+{
+    return cpu->v7m.faultmask[secure];
+}
+
+EXC_INT_1(uint32_t, tlib_get_faultmask, bool, secure)
+
 void tlib_set_fault_status(uint32_t value, bool secure)
 {
     cpu->v7m.fault_status[secure] = value;
