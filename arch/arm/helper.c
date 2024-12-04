@@ -3456,9 +3456,7 @@ void HELPER(v8m_blxns)(CPUState *env, uint32_t addr, uint32_t link)
             if(env->v7m.handler_mode) {
                 env->v7m.exception = ARMV7M_EXCP_RESET;
             }
-        }
-
-        if(!link) {
+        } else {
             /* BXNS variant uses BranchReturn pseudoinstruction, which can have different behavior here.
              * Otherwise will behave like a regular branch */
             if(addr >= 0xfeffff00) {
