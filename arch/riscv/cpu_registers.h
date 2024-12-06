@@ -210,6 +210,7 @@ typedef enum {
     SIP_32      = 0x185,
     SATP_32     = 0x1C1,
     SPTBR_32    = 0x1C1,
+    MTVT_32     = 0x307,
     MSTATUS_32  = 0x341,
     MISA_32     = 0x342,
     MEDELEG_32  = 0x343,
