@@ -1088,6 +1088,12 @@ static void do_interrupt_v7m(CPUState *env)
             /* Banked DEBUG, but it's not exactly true, see below */
             tlib_nvic_set_pending_irq(env->secure ? BANKED_SECURE_EXCP(ARMV7M_EXCP_DEBUG) : ARMV7M_EXCP_DEBUG);
             return;
+        case EXCP_SECURE:
+            /* Secure Fault address and status bits should be set by respective routines. This only raises the fault to be handled
+             * in NVIC */
+            tlib_assert(cpu->v7m.has_trustzone);
+            tlib_nvic_set_pending_irq(ARMV7M_EXCP_SECURE);
+            return;
         case EXCP_IRQ:
             env->v7m.exception = tlib_nvic_acknowledge_irq();
             if(env->v7m.has_trustzone) {
@@ -2218,10 +2224,57 @@ static inline int pmsav8_check_access(CPUState *env, uint32_t address, bool secu
 }
 #endif
 
+#ifdef TARGET_PROTO_ARM_M
+static inline bool pmsav8_check_security_attribution(CPUState *env, uint32_t address, int access_type, bool set_fault_status)
+{
+    //  TODO: TZ: swap this for MMU_IDX, when we have it
+    bool is_secure = env->secure;
+
+    bool idau_valid, sau_valid;
+    int idau_region, sau_region;
+    enum security_attribution attribution;
+    pmsav8_get_security_attribution(env, address, is_secure, access_type, /* access_width */ 1, &idau_valid, &idau_region,
+                                    &sau_valid, &sau_region, &attribution);
+
+    //  See: B10.2 Security attribution
+    if(access_type == ACCESS_INST_FETCH) {
+        if(((attribution == SA_NONSECURE) && is_secure) || ((attribution == SA_SECURE) && !is_secure)) {
+            if(set_fault_status) {
+                /* The fault ocurred, the fault type is determined by the direction into which domain we are crossing
+                 * while trying to execute code (fetch instruction for execution) */
+                env->v7m.secure_fault_status |= is_secure ? SECURE_FAULT_INVTRAN : SECURE_FAULT_INVEP;
+            }
+            return false;
+        }
+    } else {  //  LOAD or STORE
+        if(attribution_is_secure(attribution) && !is_secure) {
+            if(set_fault_status) {
+                /* TODO: LSPERR is possible here, but requires FPU support for TZ */
+                env->v7m.secure_fault_status |= SECURE_FAULT_AUVIOL;
+            }
+            return false;
+        }
+    }
+    return true;
+}
+#endif
+
 inline int get_phys_addr(CPUState *env, uint32_t address, int access_type, int is_user, uint32_t *phys_ptr, int *prot,
                          target_ulong *page_size, int no_page_fault)
 {
     if(unlikely(cpu->external_mmu_enabled)) {
+#ifdef TARGET_PROTO_ARM_M
+        /* No notion of security in external MMU if it's enabled. We ignore security attribution, and warn the user */
+        if(unlikely(env->v7m.has_trustzone)) {
+            static bool has_printed_tz_warning = false;
+            /* Prevent flood of messages in console */
+            if(!has_printed_tz_warning) {
+                tlib_printf(LOG_LEVEL_WARNING,
+                            "Using external MMU with TrustZone. Security attribution checks with IDAU and SAU are disabled");
+                has_printed_tz_warning = true;
+            }
+        }
+#endif
         return get_external_mmu_phys_addr(env, address, access_type, phys_ptr, prot, no_page_fault);
     }
 
@@ -2230,8 +2283,19 @@ inline int get_phys_addr(CPUState *env, uint32_t address, int access_type, int i
         address += env->cp15.c13_fcse;
     }
 
-    /* Handle v8M specific MPU */
 #ifdef TARGET_PROTO_ARM_M
+    /* TrustZone: Security attribution happens here */
+    if(env->v7m.has_trustzone) {
+        if(!pmsav8_check_security_attribution(env, address, access_type, true)) {
+            tlib_printf(LOG_LEVEL_WARNING, "SecureFault while accessing address: 0x%" PRIx32 ", access type %s", address,
+                        ACCESS_TYPE_STRING(access_type));
+            env->exception_index = EXCP_SECURE;
+            /* Non-returning function - jump out of TB to signal SecureFault */
+            cpu_loop_exit(env);
+        }
+    }
+
+    /* Handle v8M specific MPU */
     if(arm_feature(env, ARM_FEATURE_V8)) {
         *page_size = TARGET_PAGE_SIZE;
         *phys_ptr = address;

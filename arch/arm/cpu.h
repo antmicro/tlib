@@ -53,6 +53,7 @@
 #define EXCP_STREX          10
 #define EXCP_NOCP           17 /* NOCP usage fault */
 #define EXCP_INVSTATE       18 /* INVSTATE usage fault */
+#define EXCP_SECURE         19 /* TrustZone Secure fault */
 
 #define ARMV7M_EXCP_RESET    1
 #define ARMV7M_EXCP_NMI      2
