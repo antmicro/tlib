@@ -3534,15 +3534,32 @@ void HELPER(v8m_blxns)(CPUState *env, uint32_t addr, uint32_t link)
 
 void HELPER(v8m_sg)(CPUState *env)
 {
-    tlib_assert(!env->secure);
+    /* Using PC is fine, since we just synced it in "translate"
+     * but we need to subtract, since we point at the next instruction */
+    const uint32_t sg_pc = env->regs[15] - 2;
+    if(env->secure) {
+        tlib_printf(LOG_LEVEL_WARNING,
+                    "SG instruction at address: 0x%" PRIx32 " is executed in Secure state, and will be treated as NOP", sg_pc);
+        return;
+    }
+
+    bool idau_valid, sau_valid;
+    int idau_region, sau_region;
+    enum security_attribution attribution;
+    pmsav8_get_security_attribution(env, sg_pc, env->secure, ACCESS_INST_FETCH, /* access_width */ 1, &idau_valid, &idau_region,
+                                    &sau_valid, &sau_region, &attribution);
+
+    if(attribution != SA_SECURE_NSC) {
+        tlib_printf(LOG_LEVEL_WARNING,
+                    "SG instruction at address: 0x%" PRIx32 " is not in Non-secure Callable region, and will be treated as NOP",
+                    sg_pc);
+        return;
+    }
+
     /* Clear bit[0] of LR to indicate we will return to Non-Secure mode, if we were previously in Non-Secure state */
     env->regs[14] &= ~1;
-    //  TODO: should be in Non-secure Callable SAU region
-    //  TODO: bx/blx to any other instruction in Secure memory should cause a SecureFault no matter whether it is NSC or no (see
-    //  below, this will happen 'automatically')
-    //  TODO: once SAU is implemented then lduw_code will not be able to fetch this from Non-secure state
     switch_v7m_security_state(env, true);
-    tlib_printf(LOG_LEVEL_NOISY, "Executed SG at 0x%" PRIx32, env->regs[15]);
+    tlib_printf(LOG_LEVEL_NOISY, "Executed SG at 0x%" PRIx32, sg_pc);
 }
 #endif
 
