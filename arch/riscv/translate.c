@@ -122,7 +122,7 @@ static int ensure_extension(DisasContext *dc, target_ulong ext)
     return 0;
 }
 
-static int ensure_additional_extension(DisasContext *dc, target_ulong ext)
+static int ensure_additional_extension(DisasContext *dc, enum riscv_additional_feature ext)
 {
     if (riscv_has_additional_ext(cpu, ext)) {
         return 1;

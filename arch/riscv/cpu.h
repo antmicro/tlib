@@ -73,17 +73,6 @@ typedef struct DisasContext {
     target_ulong npc;
 } DisasContext;
 
-typedef struct instruction_extensions_t {
-    uint8_t enable_Zba;
-    uint8_t enable_Zbb;
-    uint8_t enable_Zbc;
-    uint8_t enable_Zbs;
-    uint8_t enable_Zicsr;
-    uint8_t enable_Zifencei;
-    uint8_t enable_Zfh;
-    uint8_t enable_Smepmp;
-} instruction_extensions_t;
-
 typedef struct CPUState CPUState;
 
 #include "cpu-common.h"
@@ -223,7 +212,7 @@ struct CPUState {
        i.e., the ILLEGAL INSTRUCTION exception is generated and handled by the software */
     target_ulong silenced_extensions;
 
-    instruction_extensions_t instruction_extensions;
+    uint32_t additional_extensions;
 
     /* since priv-1.11.0 pmp grain size must be the same across all pmp regions */
     int32_t pmp_napot_grain;
@@ -308,7 +297,7 @@ static inline void cpu_pc_from_tb(CPUState *cs, TranslationBlock *tb)
     cs->pc = tb->pc;
 }
 
-enum riscv_features {
+enum riscv_feature {
     RISCV_FEATURE_RVI = RV('I'),
     RISCV_FEATURE_RVM = RV('M'),
     RISCV_FEATURE_RVA = RV('A'),
@@ -321,15 +310,17 @@ enum riscv_features {
     RISCV_FEATURE_RVE = RV('E'),
 };
 
-enum riscv_additional_features {
-    RISCV_FEATURE_ZBA = ((target_ulong)1 << RISCV_ADDITIONAL_FEATURE_OFFSET),
-    RISCV_FEATURE_ZBB = ((target_ulong)2 << RISCV_ADDITIONAL_FEATURE_OFFSET),
-    RISCV_FEATURE_ZBC = ((target_ulong)3 << RISCV_ADDITIONAL_FEATURE_OFFSET),
-    RISCV_FEATURE_ZBS = ((target_ulong)4 << RISCV_ADDITIONAL_FEATURE_OFFSET),
-    RISCV_FEATURE_ZICSR = ((target_ulong)5 << RISCV_ADDITIONAL_FEATURE_OFFSET),
-    RISCV_FEATURE_ZIFENCEI = ((target_ulong)6 << RISCV_ADDITIONAL_FEATURE_OFFSET),
-    RISCV_FEATURE_ZFH = ((target_ulong)7 << RISCV_ADDITIONAL_FEATURE_OFFSET),
-    RISCV_FEATURE_SMEPMP = ((target_ulong)8 << RISCV_ADDITIONAL_FEATURE_OFFSET),
+enum riscv_additional_feature {
+    RISCV_FEATURE_ZBA = 0,
+    RISCV_FEATURE_ZBB = 1,
+    RISCV_FEATURE_ZBC = 2,
+    RISCV_FEATURE_ZBS = 3,
+    RISCV_FEATURE_ZICSR = 4,
+    RISCV_FEATURE_ZIFENCEI = 5,
+    RISCV_FEATURE_ZFH = 6,
+    RISCV_FEATURE_SMEPMP = 8,
+    // Please update the highest additional when adding a new member!
+    RISCV_FEATURE_HIGHEST_ADDITIONAL = RISCV_FEATURE_SMEPMP 
 };
 
 enum privilege_architecture {
@@ -357,28 +348,9 @@ static inline int riscv_has_ext(CPUState *env, target_ulong ext)
     return (env->misa & ext) != 0;
 }
 
-static inline int riscv_has_additional_ext(CPUState *env, target_ulong ext)
+static inline int riscv_has_additional_ext(CPUState *env, enum riscv_additional_feature extension)
 {
-    switch (ext) {
-    case RISCV_FEATURE_ZBA:
-        return env->instruction_extensions.enable_Zba;
-    case RISCV_FEATURE_ZBB:
-        return env->instruction_extensions.enable_Zbb;
-    case RISCV_FEATURE_ZBC:
-        return env->instruction_extensions.enable_Zbc;
-    case RISCV_FEATURE_ZBS:
-        return env->instruction_extensions.enable_Zbs;
-    case RISCV_FEATURE_ZICSR:
-        return env->instruction_extensions.enable_Zicsr;
-    case RISCV_FEATURE_ZIFENCEI:
-        return env->instruction_extensions.enable_Zifencei;
-    case RISCV_FEATURE_ZFH:
-        return env->instruction_extensions.enable_Zfh;
-    case RISCV_FEATURE_SMEPMP:
-        return env->instruction_extensions.enable_Smepmp;
-    default:
-        return 0;
-    }
+    return !!(env->additional_extensions & (1U << extension));
 }
 
 static inline int riscv_silent_ext(CPUState *env, target_ulong ext)

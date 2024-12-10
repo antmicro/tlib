@@ -87,38 +87,31 @@ void tlib_allow_feature(uint32_t feature_bit)
 
 EXC_VOID_1(tlib_allow_feature, uint32_t, feature_bit)
 
-void tlib_allow_additional_feature(uint32_t feature_encoding)
+void tlib_allow_additional_feature(uint32_t feature)
 {
-    switch(feature_encoding)
-    {
-    case RISCV_FEATURE_ZBA:
-        cpu->instruction_extensions.enable_Zba = 1;
-        break;
-    case RISCV_FEATURE_ZBB:
-        cpu->instruction_extensions.enable_Zbb = 1;
-        break;
-    case RISCV_FEATURE_ZBC:
-        cpu->instruction_extensions.enable_Zbc = 1;
-        break;
-    case RISCV_FEATURE_ZBS:
-        cpu->instruction_extensions.enable_Zbs = 1;
-        break;
-    case RISCV_FEATURE_ZICSR:
-        cpu->instruction_extensions.enable_Zicsr = 1;
-        break;
-    case RISCV_FEATURE_ZIFENCEI:
-        cpu->instruction_extensions.enable_Zifencei = 1;
-        break;
-    case RISCV_FEATURE_ZFH:
-        cpu->instruction_extensions.enable_Zfh = 1;
-        break;
-    case RISCV_FEATURE_SMEPMP:
-        cpu->instruction_extensions.enable_Smepmp = 1;
-        break;
-    default:
+    if (feature > RISCV_FEATURE_HIGHEST_ADDITIONAL) {
         tlib_abort("Invalid architecture set extension.");
-        break;
+        return;
     }
+
+    enum riscv_additional_feature extension = feature;
+    switch (extension) {
+        case RISCV_FEATURE_ZFH:
+            tlib_allow_feature('F' - 'A');
+            break;
+        case RISCV_FEATURE_SMEPMP:
+            tlib_allow_additional_feature(RISCV_FEATURE_ZICSR);
+            break;
+        case RISCV_FEATURE_ZBA:
+        case RISCV_FEATURE_ZBB:
+        case RISCV_FEATURE_ZBC:
+        case RISCV_FEATURE_ZBS:
+        case RISCV_FEATURE_ZICSR:
+        case RISCV_FEATURE_ZIFENCEI:
+            // No dependencies
+            break;
+    }
+    cpu->additional_extensions |= 1U << extension;
 }
 
 EXC_VOID_1(tlib_allow_additional_feature, uint32_t, feature_bit)
