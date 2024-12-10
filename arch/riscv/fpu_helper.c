@@ -1152,31 +1152,17 @@ target_ulong helper_fclass_h(CPUState *env, uint64_t frs1)
 
 void helper_vfmv_vf(CPUState *env, uint32_t vd, uint64_t f1)
 {
-    require_fp;
+    const target_ulong eew = env->vsew;
+    ensure_vector_embedded_extension_for_eew_or_raise_exception(env, eew);
     if (V_IDX_INVALID(vd)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     switch (eew) {
     case 16:
-        if (!riscv_has_additional_ext(env, RISCV_FEATURE_ZFH)) {
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
-            return;
-        }
         f1 = unbox_float(RISCV_HALF_PRECISION, env, f1);
         break;
     case 32:
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
-            return;
-        }
         f1 = unbox_float(RISCV_SINGLE_PRECISION, env, f1);
-        break;
-    case 64:
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
-            return;
-        }
         break;
     default:
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
@@ -1199,32 +1185,17 @@ void helper_vfmv_vf(CPUState *env, uint32_t vd, uint64_t f1)
 
 void helper_vfmv_fs(CPUState *env, int32_t vd, int32_t vs2)
 {
-    require_fp;
     const target_ulong eew = env->vsew;
+    ensure_vector_float_embedded_extension_or_raise_exception(env, eew);
     switch(eew)
     {
         case 16:
-           if (!riscv_has_additional_ext(env, RISCV_FEATURE_ZFH))
-           {
-               raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
-               break;
-           }
            env->fpr[vd] = box_float(RISCV_HALF_PRECISION, ((uint16_t *)V(vs2))[0]);
            break;
         case 32:
-           if (!riscv_has_ext(env, RISCV_FEATURE_RVF))
-           {
-               raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
-               break;
-           }
            env->fpr[vd] = box_float(RISCV_SINGLE_PRECISION, ((uint32_t *)V(vs2))[0]);
            break;
         case 64:
-           if (!riscv_has_ext(env, RISCV_FEATURE_RVD))
-           {
-               raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
-               break;
-           }
            env->fpr[vd] = ((uint64_t *)V(vs2))[0];
            break;
         default:
@@ -1235,35 +1206,21 @@ void helper_vfmv_fs(CPUState *env, int32_t vd, int32_t vs2)
 
 void helper_vfmv_sf(CPUState *env, uint32_t vd, float64 rs1)
 {
-    require_fp;
+    const target_ulong eew = env->vsew;
+    ensure_vector_float_embedded_extension_or_raise_exception(env, eew);
     if (env->vstart >= env->vl)
     {
         return;
     }
-    switch(env->vsew)
+    switch(eew)
     {
         case 16:
-           if (!riscv_has_additional_ext(env, RISCV_FEATURE_ZFH))
-           {
-               raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
-               break;
-           }
            ((int16_t *)V(vd))[0] = unbox_float(RISCV_HALF_PRECISION, env, rs1);
            break;
         case 32:
-           if (!riscv_has_ext(env, RISCV_FEATURE_RVF))
-           {
-               raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
-               break;
-           }
            ((int32_t *)V(vd))[0] = unbox_float(RISCV_SINGLE_PRECISION, env, rs1);
            break;
         case 64:
-           if (!riscv_has_ext(env, RISCV_FEATURE_RVD))
-           {
-               raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
-               break;
-           }
            ((int64_t *)V(vd))[0] = rs1;
            break;
         default:

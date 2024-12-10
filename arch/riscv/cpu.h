@@ -276,11 +276,16 @@ static inline int riscv_mstatus_fs(CPUState *env)
     return env->mstatus & MSTATUS_FS;
 }
 
+static inline void raise_exception(CPUState *env, uint32_t exception)
+{
+    env->exception_index = exception;
+}
+
 // It must be always inlined, because GETPC() macro must be called in the context of function that is directly invoked by generated code.
 static inline void __attribute__ ((always_inline,__noreturn__)) raise_exception_and_sync_pc(CPUState *env, uint32_t exception)
 {
     uintptr_t pc = (uintptr_t)GETPC();
-    env->exception_index = exception;
+    raise_exception(env, exception);
     cpu_loop_exit_restore(env, pc, 1);
 }
 
@@ -318,9 +323,15 @@ enum riscv_additional_feature {
     RISCV_FEATURE_ZICSR = 4,
     RISCV_FEATURE_ZIFENCEI = 5,
     RISCV_FEATURE_ZFH = 6,
+    RISCV_FEATURE_ZVFH = 7,
     RISCV_FEATURE_SMEPMP = 8,
+    RISCV_FEATURE_ZVE32X =  9,
+    RISCV_FEATURE_ZVE32F = 10,
+    RISCV_FEATURE_ZVE64X = 11,
+    RISCV_FEATURE_ZVE64F = 12,
+    RISCV_FEATURE_ZVE64D = 13,
     // Please update the highest additional when adding a new member!
-    RISCV_FEATURE_HIGHEST_ADDITIONAL = RISCV_FEATURE_SMEPMP 
+    RISCV_FEATURE_HIGHEST_ADDITIONAL = RISCV_FEATURE_ZVE64D
 };
 
 enum privilege_architecture {
@@ -369,6 +380,81 @@ static inline int riscv_features_to_string(uint32_t features, char *buffer, int 
         }
     }
     return pos;
+}
+
+static void __attribute__ ((__noreturn__)) log_disabled_extension_and_raise_exception(CPUState *env, uintptr_t host_pc, enum riscv_feature ext, const char *message)
+{
+    cpu_restore_state(env, (void *)host_pc);
+    if (!riscv_silent_ext(cpu, ext)) {
+        target_ulong guest_pc = env->pc;
+        char letter = 0;
+        riscv_features_to_string(ext, &letter, 1);
+        if (message == NULL) {
+            tlib_printf(LOG_LEVEL_ERROR, "PC: 0x%llx, RISC-V '%c' instruction set is not enabled for this CPU! ",
+                        guest_pc, letter);
+        } else {
+            tlib_printf(LOG_LEVEL_ERROR, "PC: 0x%llx, RISC-V '%c' instruction set is not enabled for this CPU! %s",
+                        guest_pc, letter, message);
+        }
+    }
+    raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
+    cpu_loop_exit(env);
+}
+
+static inline void __attribute__ ((always_inline)) ensure_vector_embedded_extension_or_raise_exception(CPUState *env)
+{
+    // Check if the most basic extension is supported.
+    if (riscv_has_additional_ext(env, RISCV_FEATURE_ZVE32X)) {
+        return;
+    }
+
+    log_disabled_extension_and_raise_exception(env, (uintptr_t)GETPC(), RISCV_FEATURE_RVV, NULL);
+}
+
+static inline void __attribute__ ((always_inline)) ensure_vector_embedded_extension_for_eew_or_raise_exception(CPUState *env, target_ulong eew)
+{
+    // Assume there is no EEW larger than 64.
+    if (riscv_has_additional_ext(env, RISCV_FEATURE_ZVE64X)) {
+        return;
+    }
+
+    if (riscv_has_additional_ext(env, RISCV_FEATURE_ZVE32X)) {
+        if (eew < 64) {
+            return;
+        }
+        log_disabled_extension_and_raise_exception(env, (uintptr_t)GETPC(), RISCV_FEATURE_RVV, "EEW is too large for the Zve32x extension");
+    }
+    else {
+        log_disabled_extension_and_raise_exception(env, (uintptr_t)GETPC(), RISCV_FEATURE_RVV, NULL);
+    }
+}
+
+static inline void __attribute__ ((always_inline)) ensure_vector_float_embedded_extension_or_raise_exception(CPUState *env, target_ulong eew)
+{
+    if (eew == 32) {
+        if (riscv_has_additional_ext(env, RISCV_FEATURE_ZVE64F) || riscv_has_additional_ext(env, RISCV_FEATURE_ZVE32F)) {
+            return;
+        }
+        log_disabled_extension_and_raise_exception(env, (uintptr_t)GETPC(), RISCV_FEATURE_RVV, "Zve64f or Zve32f is required for single precision floating point vector operations");
+    }
+    if (eew == 16) {
+        if(riscv_has_additional_ext(env, RISCV_FEATURE_ZVFH)) {
+            return;
+        }
+        log_disabled_extension_and_raise_exception(env, (uintptr_t)GETPC(), RISCV_FEATURE_RVV, "Zvfh is required for half precision floating point vector operations");
+    }
+    if (eew == 64) {
+        if (riscv_has_additional_ext(env, RISCV_FEATURE_ZVE64D)) {
+            return;
+        }
+        log_disabled_extension_and_raise_exception(env, (uintptr_t)GETPC(), RISCV_FEATURE_RVV, "Zve64d is required for double precision floating point vector operations");
+    }
+
+    char eww_unsupported_message[64];
+    if (snprintf(eww_unsupported_message, 63, "EEW (%d) isn't supported for vector floating point extensions", (unsigned int)eew) < 0) {
+        tlib_abort("Unable to print log about unsupported EEW!");
+    }
+    log_disabled_extension_and_raise_exception(env, (uintptr_t)GETPC(), RISCV_FEATURE_RVV, eww_unsupported_message);
 }
 
 static inline void mark_fs_dirty()

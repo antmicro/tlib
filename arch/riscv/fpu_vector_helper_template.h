@@ -17,6 +17,7 @@
  * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "cpu.h"
 #ifdef MASKED
 #define POSTFIX _m
 #else
@@ -36,33 +37,17 @@ if (!(V(0)[(ei) >> 3] & (1 << ((ei) & 0x7)))) {     \
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, float64 imm)          \
 {                                                                                                       \
     const target_ulong eew = env->vsew;                                                                 \
+    ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                                \
     if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {                                                      \
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
     }                                                                                                   \
     switch (eew) {                                                                                      \
     case 16:                                                                                            \
-        if (!riscv_has_additional_ext(env, RISCV_FEATURE_ZFH)) {                                        \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                  \
-            return;                                                                                     \
-        }                                                                                               \
         imm = unbox_float(RISCV_HALF_PRECISION, env, imm);                                              \
         break;                                                                                          \
     case 32:                                                                                            \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {                                                   \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                  \
-            return;                                                                                     \
-        }                                                                                               \
         imm = unbox_float(RISCV_SINGLE_PRECISION, env, imm);                                            \
         break;                                                                                          \
-    case 64:                                                                                            \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {                                                   \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                  \
-            return;                                                                                     \
-        }                                                                                               \
-        break;                                                                                          \
-    default:                                                                                            \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
-        return;                                                                                         \
     }                                                                                                   \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                    \
         TEST_MASK(ei)                                                                                   \
@@ -76,6 +61,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
         case 64:                                                                                        \
             ((float64 *)V(vd))[ei] = glue(HELPER, _d)(env, ((float64 *)V(vs2))[ei], imm, env->frm);     \
             break;                                                                                      \
+        default:                                                                                        \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                  \
+            break;                                                                                      \
         }                                                                                               \
     }                                                                                                   \
 }
@@ -84,31 +72,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)                             \
 {                                                                                                                           \
     const target_ulong eew = env->vsew;                                                                                     \
+    ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                                                    \
     if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                                                    \
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                          \
-    }                                                                                                                       \
-    switch (eew) {                                                                                                          \
-    case 16:                                                                                                                \
-        if (!riscv_has_additional_ext(env, RISCV_FEATURE_ZFH)) {                                                            \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                      \
-            return;                                                                                                         \
-        }                                                                                                                   \
-        break;                                                                                                              \
-    case 32:                                                                                                                \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {                                                                       \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                      \
-            return;                                                                                                         \
-        }                                                                                                                   \
-        break;                                                                                                              \
-    case 64:                                                                                                                \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {                                                                       \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                      \
-            return;                                                                                                         \
-        }                                                                                                                   \
-        break;                                                                                                              \
-    default:                                                                                                                \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                          \
-        return;                                                                                                             \
     }                                                                                                                       \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                                        \
         TEST_MASK(ei)                                                                                                       \
@@ -122,6 +88,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
         case 64:                                                                                                            \
             ((float64 *)V(vd))[ei] = glue(HELPER, _d)(env, ((float64 *)V(vs2))[ei], ((float64 *)V(vs1))[ei], env->frm);     \
             break;                                                                                                          \
+        default:                                                                                                            \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                      \
+            break;                                                                                                          \
         }                                                                                                                   \
     }                                                                                                                       \
 }
@@ -130,26 +99,23 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, float64 imm)                                          \
 {                                                                                                                                       \
     const target_ulong eew = env->vsew;                                                                                                 \
-    if (V_IDX_INVALID_EEW(vd, SEW() + 1) || V_IDX_INVALID(vs2)) {                                                                       \
+    ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);                                                           \
+    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                                                                        \
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                      \
     }                                                                                                                                   \
     switch (eew) {                                                                                                                      \
     case 32:                                                                                                                            \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVF) || !riscv_has_ext(env, RISCV_FEATURE_RVD)) {                                         \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                  \
-            return;                                                                                                                     \
-        }                                                                                                                               \
         imm = helper_fcvt_d_s(env, unbox_float(RISCV_SINGLE_PRECISION, env, imm), env->frm);                                            \
         break;                                                                                                                          \
-    default:                                                                                                                            \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                      \
-        return;                                                                                                                         \
     }                                                                                                                                   \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                                                    \
         TEST_MASK(ei)                                                                                                                   \
         switch (eew) {                                                                                                                  \
         case 32:                                                                                                                        \
             ((float64 *)V(vd))[ei] = glue(HELPER, _d)(env, helper_fcvt_d_s(env, ((float32 *)V(vs2))[ei], env->frm), imm, env->frm);     \
+            break;                                                                                                                      \
+        default:                                                                                                                        \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                  \
             break;                                                                                                                      \
         }                                                                                                                               \
     }                                                                                                                                   \
@@ -159,19 +125,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)                             \
 {                                                                                                                           \
     const target_ulong eew = env->vsew;                                                                                     \
-    if (V_IDX_INVALID_EEW(vd, SEW() + 1) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                                     \
+    ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);                                               \
+    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                                      \
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                          \
-    }                                                                                                                       \
-    switch (eew) {                                                                                                          \
-    case 32:                                                                                                                \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVF) || !riscv_has_ext(env, RISCV_FEATURE_RVD)) {                             \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                      \
-            return;                                                                                                         \
-        }                                                                                                                   \
-        break;                                                                                                              \
-    default:                                                                                                                \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                          \
-        return;                                                                                                             \
     }                                                                                                                       \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                                        \
         TEST_MASK(ei)                                                                                                       \
@@ -179,6 +135,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
         case 32:                                                                                                            \
             ((float64 *)V(vd))[ei] = glue(HELPER, _d)(env, helper_fcvt_d_s(env, ((float32 *)V(vs2))[ei], env->frm),         \
                                                     helper_fcvt_d_s(env, ((float32 *)V(vs1))[ei], env->frm), env->frm);     \
+            break;                                                                                                          \
+        default:                                                                                                            \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                      \
             break;                                                                                                          \
         }                                                                                                                   \
     }                                                                                                                       \
@@ -188,26 +147,23 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, float64 imm)          \
 {                                                                                                       \
     const target_ulong eew = env->vsew;                                                                 \
-    if (V_IDX_INVALID_EEW(vd, SEW() + 1) || V_IDX_INVALID_EEW(vs2, eew << 1)) {                         \
+    ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);                           \
+    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID_EEW(vs2, eew << 1)) {                          \
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
     }                                                                                                   \
     switch (eew) {                                                                                      \
     case 32:                                                                                            \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVF) || !riscv_has_ext(env, RISCV_FEATURE_RVD)) {         \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                  \
-            return;                                                                                     \
-        }                                                                                               \
         imm = helper_fcvt_d_s(env, unbox_float(RISCV_SINGLE_PRECISION, env, imm), env->frm);            \
         break;                                                                                          \
-    default:                                                                                            \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
-        return;                                                                                         \
     }                                                                                                   \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                    \
         TEST_MASK(ei)                                                                                   \
         switch (eew) {                                                                                  \
         case 32:                                                                                        \
             ((float64 *)V(vd))[ei] = glue(HELPER, _d)(env, ((float64 *)V(vs2))[ei], imm, env->frm);     \
+            break;                                                                                      \
+        default:                                                                                        \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                  \
             break;                                                                                      \
         }                                                                                               \
     }                                                                                                   \
@@ -217,25 +173,18 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)                                                             \
 {                                                                                                                                                           \
     const target_ulong eew = env->vsew;                                                                                                                     \
-    if (V_IDX_INVALID_EEW(vd, SEW() + 1) || V_IDX_INVALID_EEW(vs2, eew << 1) || V_IDX_INVALID(vs1)) {                                                       \
+    ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);                                                                               \
+    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID_EEW(vs2, eew << 1) || V_IDX_INVALID(vs1)) {                                                        \
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                                          \
-    }                                                                                                                                                       \
-    switch (eew) {                                                                                                                                          \
-    case 32:                                                                                                                                                \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVF) || !riscv_has_ext(env, RISCV_FEATURE_RVD)) {                                                             \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                                      \
-            return;                                                                                                                                         \
-        }                                                                                                                                                   \
-        break;                                                                                                                                              \
-    default:                                                                                                                                                \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                                          \
-        return;                                                                                                                                             \
     }                                                                                                                                                       \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                                                                        \
         TEST_MASK(ei)                                                                                                                                       \
         switch (eew) {                                                                                                                                      \
         case 32:                                                                                                                                            \
             ((float64 *)V(vd))[ei] = glue(HELPER, _d)(env, ((float64 *)V(vs2))[ei], helper_fcvt_d_s(env, ((float32 *)V(vs1))[ei], env->frm), env->frm);     \
+            break;                                                                                                                                          \
+        default:                                                                                                                                            \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                                      \
             break;                                                                                                                                          \
         }                                                                                                                                                   \
     }                                                                                                                                                       \
@@ -245,33 +194,17 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, float64 imm)                                              \
 {                                                                                                                                           \
     const target_ulong eew = env->vsew;                                                                                                     \
+    ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                                                                    \
     if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {                                                                                          \
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                          \
     }                                                                                                                                       \
     switch (eew) {                                                                                                                          \
     case 16:                                                                                                                                \
-        if (!riscv_has_additional_ext(env, RISCV_FEATURE_ZFH)) {                                                                            \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                      \
-            return;                                                                                                                         \
-        }                                                                                                                                   \
         imm = unbox_float(RISCV_HALF_PRECISION, env, imm);                                                                                  \
         break;                                                                                                                              \
     case 32:                                                                                                                                \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {                                                                                       \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                      \
-            return;                                                                                                                         \
-        }                                                                                                                                   \
         imm = unbox_float(RISCV_SINGLE_PRECISION, env, imm);                                                                                \
         break;                                                                                                                              \
-    case 64:                                                                                                                                \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {                                                                                       \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                      \
-            return;                                                                                                                         \
-        }                                                                                                                                   \
-        break;                                                                                                                              \
-    default:                                                                                                                                \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                          \
-        return;                                                                                                                             \
     }                                                                                                                                       \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                                                        \
         TEST_MASK(ei)                                                                                                                       \
@@ -285,6 +218,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
         case 64:                                                                                                                            \
             ((float64 *)V(vd))[ei] = glue(HELPER, _d)(env, ((float64 *)V(vd))[ei], ((float64 *)V(vs2))[ei], imm, env->frm);                 \
             break;                                                                                                                          \
+        default:                                                                                                                            \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                      \
+            break;                                                                                                                          \
         }                                                                                                                                   \
     }                                                                                                                                       \
 }
@@ -293,31 +229,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)                                                     \
 {                                                                                                                                                   \
     const target_ulong eew = env->vsew;                                                                                                             \
+    ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                                                                            \
     if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                                                                            \
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                                  \
-    }                                                                                                                                               \
-    switch (eew) {                                                                                                                                  \
-    case 16:                                                                                                                                        \
-        if (!riscv_has_additional_ext(env, RISCV_FEATURE_ZFH)) {                                                                                    \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                              \
-            return;                                                                                                                                 \
-        }                                                                                                                                           \
-        break;                                                                                                                                      \
-    case 32:                                                                                                                                        \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {                                                                                               \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                              \
-            return;                                                                                                                                 \
-        }                                                                                                                                           \
-        break;                                                                                                                                      \
-    case 64:                                                                                                                                        \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {                                                                                               \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                              \
-            return;                                                                                                                                 \
-        }                                                                                                                                           \
-        break;                                                                                                                                      \
-    default:                                                                                                                                        \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                                  \
-        return;                                                                                                                                     \
     }                                                                                                                                               \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                                                                \
         TEST_MASK(ei)                                                                                                                               \
@@ -331,6 +245,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
         case 64:                                                                                                                                    \
             ((float64 *)V(vd))[ei] = glue(HELPER, _d)(env, ((float64 *)V(vd))[ei], ((float64 *)V(vs2))[ei], ((float64 *)V(vs1))[ei], env->frm);     \
             break;                                                                                                                                  \
+        default:                                                                                                                                    \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                                              \
+            break;                                                                                                                                  \
         }                                                                                                                                           \
     }                                                                                                                                               \
 }
@@ -339,20 +256,14 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, float64 imm)      \
 {                                                                                                   \
     const target_ulong eew = env->vsew;                                                             \
-    if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {                                                  \
+    ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);                       \
+    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                                    \
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                  \
     }                                                                                               \
     switch (eew) {                                                                                  \
     case 32:                                                                                        \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVF) || !riscv_has_ext(env, RISCV_FEATURE_RVD)) {     \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                              \
-            return;                                                                                 \
-        }                                                                                           \
         imm = helper_fcvt_d_s(env, unbox_float(RISCV_SINGLE_PRECISION, env, imm), env->frm);        \
         break;                                                                                      \
-    default:                                                                                        \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                  \
-        return;                                                                                     \
     }                                                                                               \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                \
         TEST_MASK(ei)                                                                               \
@@ -363,6 +274,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
                 helper_fcvt_d_s(env, ((float32 *)V(vs2))[ei], env->frm),                            \
                 imm, env->frm);                                                                     \
             break;                                                                                  \
+        default:                                                                                    \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                              \
+            break;                                                                                  \
         }                                                                                           \
     }                                                                                               \
 }
@@ -371,19 +285,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1) \
 {                                                                                               \
     const target_ulong eew = env->vsew;                                                         \
-    if (V_IDX_INVALID_EEW(vd, SEW() + 1) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {         \
+    ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);                   \
+    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {          \
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                              \
-    }                                                                                           \
-    switch (eew) {                                                                              \
-    case 32:                                                                                    \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVF) || !riscv_has_ext(env, RISCV_FEATURE_RVD)) { \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                          \
-            return;                                                                             \
-        }                                                                                       \
-        break;                                                                                  \
-    default:                                                                                    \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                              \
-        return;                                                                                 \
     }                                                                                           \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                            \
         TEST_MASK(ei)                                                                           \
@@ -393,6 +297,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
                 ((float64 *)V(vd))[ei],                                                         \
                 helper_fcvt_d_s(env, ((float32 *)V(vs2))[ei], env->frm),                        \
                 helper_fcvt_d_s(env, ((float32 *)V(vs1))[ei], env->frm), env->frm);             \
+            break;                                                                              \
+        default:                                                                                \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                          \
             break;                                                                              \
         }                                                                                       \
     }                                                                                           \
@@ -422,33 +329,17 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, float64 imm)  \
 {                                                                                               \
     const target_ulong eew = env->vsew;                                                         \
+    ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                        \
     if (V_IDX_INVALID(vs2)) {                                                                   \
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                              \
     }                                                                                           \
     switch (eew) {                                                                              \
     case 16:                                                                                    \
-        if (!riscv_has_additional_ext(env, RISCV_FEATURE_ZFH)) {                                \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                          \
-            return;                                                                             \
-        }                                                                                       \
         imm = unbox_float(RISCV_HALF_PRECISION, env, imm);                                      \
         break;                                                                                  \
     case 32:                                                                                    \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {                                           \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                          \
-            return;                                                                             \
-        }                                                                                       \
         imm = unbox_float(RISCV_SINGLE_PRECISION, env, imm);                                    \
         break;                                                                                  \
-    case 64:                                                                                    \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {                                           \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                          \
-            return;                                                                             \
-        }                                                                                       \
-        break;                                                                                  \
-    default:                                                                                    \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                              \
-        return;                                                                                 \
     }                                                                                           \
     uint8_t mask = 0, value = 0;                                                                \
     for (int ei = 0; ei < env->vl; ++ei) {                                                      \
@@ -464,6 +355,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
             case 64:                                                                            \
                 value |= glue(HELPER, _d)(env, ((float64 *)V(vs2))[ei], imm) << (ei & 0x7);     \
                 break;                                                                          \
+            default:                                                                            \
+                raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                      \
+                break;                                                                          \
             }                                                                                   \
         }                                                                                       \
         VFMOP_LOOP_SUFFIX();                                                                    \
@@ -474,31 +368,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)                     \
 {                                                                                                                   \
     const target_ulong eew = env->vsew;                                                                             \
+    ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                                            \
     if (V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                                                                 \
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                  \
-    }                                                                                                               \
-    switch (eew) {                                                                                                  \
-    case 16:                                                                                                        \
-        if (!riscv_has_additional_ext(env, RISCV_FEATURE_ZFH)) {                                                    \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                              \
-            return;                                                                                                 \
-        }                                                                                                           \
-        break;                                                                                                      \
-    case 32:                                                                                                        \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {                                                               \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                              \
-            return;                                                                                                 \
-        }                                                                                                           \
-        break;                                                                                                      \
-    case 64:                                                                                                        \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {                                                               \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                              \
-            return;                                                                                                 \
-        }                                                                                                           \
-        break;                                                                                                      \
-    default:                                                                                                        \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                  \
-        return;                                                                                                     \
     }                                                                                                               \
     uint8_t mask = 0, value = 0;                                                                                    \
     for (int ei = 0; ei < env->vl; ++ei) {                                                                          \
@@ -514,6 +386,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
             case 64:                                                                                                \
                 value |= glue(HELPER, _d)(env, ((float64 *)V(vs2))[ei], ((float64 *)V(vs1))[ei]) << (ei & 0x7);     \
                 break;                                                                                              \
+            default:                                                                                                \
+                raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                          \
+                break;                                                                                              \
             }                                                                                                       \
         }                                                                                                           \
         VFMOP_LOOP_SUFFIX();                                                                                        \
@@ -525,31 +400,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 {                                                                                       \
     require_fp;                                                                         \
     const target_ulong eew = env->vsew;                                                 \
+    ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                \
     if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {                                      \
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                      \
-    }                                                                                   \
-    switch (eew) {                                                                      \
-    case 16:                                                                            \
-        if (!riscv_has_additional_ext(env, RISCV_FEATURE_ZFH)) {                        \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                  \
-            return;                                                                     \
-        }                                                                               \
-        break;                                                                          \
-    case 32:                                                                            \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {                                   \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                  \
-            return;                                                                     \
-        }                                                                               \
-        break;                                                                          \
-    case 64:                                                                            \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {                                   \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                  \
-            return;                                                                     \
-        }                                                                               \
-        break;                                                                          \
-    default:                                                                            \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                      \
-        return;                                                                         \
     }                                                                                   \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                    \
         TEST_MASK(ei)                                                                   \
@@ -563,6 +416,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
         case 64:                                                                        \
             ((float64 *)V(vd))[ei] = glue(HELPER, _d)(env, ((float64 *)V(vs2))[ei]);    \
             break;                                                                      \
+        default:                                                                        \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                  \
+            break;                                                                      \
         }                                                                               \
     }                                                                                   \
 }
@@ -571,25 +427,18 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2)               \
 {                                                                                               \
     const target_ulong eew = env->vsew;                                                         \
-    if (V_IDX_INVALID_EEW(vd, SEW() + 1) || V_IDX_INVALID(vs2)) {                               \
+    ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);                   \
+    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                                \
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                              \
-    }                                                                                           \
-    switch (eew) {                                                                              \
-    case 32:                                                                                    \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {                                           \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                          \
-            return;                                                                             \
-        }                                                                                       \
-        break;                                                                                  \
-    default:                                                                                    \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                              \
-        return;                                                                                 \
     }                                                                                           \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                            \
         TEST_MASK(ei)                                                                           \
         switch (eew) {                                                                          \
         case 32:                                                                                \
             ((float64 *)V(vd))[ei] = glue(HELPER, _d)(env, ((float32 *)V(vs2))[ei]);            \
+            break;                                                                              \
+        default:                                                                                \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                          \
             break;                                                                              \
         }                                                                                       \
     }                                                                                           \
@@ -599,25 +448,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2)               \
 {                                                                                               \
     const target_ulong eew = env->vsew;                                                         \
-    if (V_IDX_INVALID_EEW(vd, SEW() + 1) || V_IDX_INVALID(vs2)) {                               \
+    ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);                   \
+    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                                \
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                              \
-    }                                                                                           \
-    switch (eew) {                                                                              \
-    case 16:                                                                                    \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {                                           \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                          \
-            return;                                                                             \
-        }                                                                                       \
-        break;                                                                                  \
-    case 32:                                                                                    \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {                                           \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                          \
-            return;                                                                             \
-        }                                                                                       \
-        break;                                                                                  \
-    default:                                                                                    \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                              \
-        return;                                                                                 \
     }                                                                                           \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                            \
         TEST_MASK(ei)                                                                           \
@@ -628,6 +461,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
         case 32:                                                                                \
             ((float64 *)V(vd))[ei] = glue(HELPER, _d)(env, ((uint32_t *)V(vs2))[ei]);           \
             break;                                                                              \
+        default:                                                                                \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                          \
+            break;                                                                              \
         }                                                                                       \
     }                                                                                           \
 }
@@ -636,25 +472,18 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2)               \
 {                                                                                               \
     const target_ulong eew = env->vsew;                                                         \
-    if (V_IDX_INVALID_EEW(vd, SEW() + 1) || V_IDX_INVALID(vs2)) {                               \
+    ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                        \
+    if (V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                                \
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                              \
-    }                                                                                           \
-    switch (eew) {                                                                              \
-    case 32:                                                                                    \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {                                           \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                          \
-            return;                                                                             \
-        }                                                                                       \
-        break;                                                                                  \
-    default:                                                                                    \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                              \
-        return;                                                                                 \
     }                                                                                           \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                            \
         TEST_MASK(ei)                                                                           \
         switch (eew) {                                                                          \
         case 32:                                                                                \
             ((uint64_t *)V(vd))[ei] = glue(HELPER, _d)(env, ((float32 *)V(vs2))[ei]);           \
+            break;                                                                              \
+        default:                                                                                \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                          \
             break;                                                                              \
         }                                                                                       \
     }                                                                                           \
@@ -664,25 +493,18 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2)               \
 {                                                                                               \
     const target_ulong eew = env->vsew;                                                         \
+    ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);                   \
     if (V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1)) {                                \
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                              \
-    }                                                                                           \
-    switch (eew) {                                                                              \
-    case 32:                                                                                    \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {                                           \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                          \
-            return;                                                                             \
-        }                                                                                       \
-        break;                                                                                  \
-    default:                                                                                    \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                              \
-        return;                                                                                 \
     }                                                                                           \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                            \
         TEST_MASK(ei)                                                                           \
         switch (eew) {                                                                          \
         case 32:                                                                                \
             ((float32 *)V(vd))[ei] = glue(HELPER, _s)(env, ((float64 *)V(vs2))[ei]);            \
+            break;                                                                              \
+        default:                                                                                \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                          \
             break;                                                                              \
         }                                                                                       \
     }                                                                                           \
@@ -692,25 +514,18 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2)               \
 {                                                                                               \
     const target_ulong eew = env->vsew;                                                         \
+    ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                        \
     if (V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1)) {                                \
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                              \
-    }                                                                                           \
-    switch (eew) {                                                                              \
-    case 32:                                                                                    \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {                                           \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                          \
-            return;                                                                             \
-        }                                                                                       \
-        break;                                                                                  \
-    default:                                                                                    \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                              \
-        return;                                                                                 \
     }                                                                                           \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                            \
         TEST_MASK(ei)                                                                           \
         switch (eew) {                                                                          \
         case 32:                                                                                \
             ((float32 *)V(vd))[ei] = glue(HELPER, _s)(env, ((uint64_t *)V(vs2))[ei]);           \
+            break;                                                                              \
+        default:                                                                                \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                          \
             break;                                                                              \
         }                                                                                       \
     }                                                                                           \
@@ -720,25 +535,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2)               \
 {                                                                                               \
     const target_ulong eew = env->vsew;                                                         \
+    ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);                   \
     if (V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1)) {                                \
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                              \
-    }                                                                                           \
-    switch (eew) {                                                                              \
-    case 16:                                                                                    \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {                                           \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                          \
-            return;                                                                             \
-        }                                                                                       \
-        break;                                                                                  \
-    case 32:                                                                                    \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {                                           \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                          \
-            return;                                                                             \
-        }                                                                                       \
-        break;                                                                                  \
-    default:                                                                                    \
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                              \
-        return;                                                                                 \
     }                                                                                           \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                            \
         TEST_MASK(ei)                                                                           \
@@ -749,6 +548,9 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
         case 32:                                                                                \
             ((uint32_t *)V(vd))[ei] = glue(HELPER, _d)(env, ((float64 *)V(vs2))[ei]);           \
             break;                                                                              \
+        default:                                                                                \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                          \
+            break;                                                                              \
         }                                                                                       \
     }                                                                                           \
 }
@@ -757,28 +559,21 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1) \
 {                                                                                               \
     const target_ulong eew = env->vsew;                                                         \
+    ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                        \
     if (V_IDX_INVALID(vs2) || env->vstart != 0) {                                               \
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                              \
     }                                                                                           \
     float64 acc;                                                                                \
     switch (eew) {                                                                              \
     case 32:                                                                                    \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {                                           \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                          \
-            return;                                                                             \
-        }                                                                                       \
         acc = ((float32 *)V(vs1))[0];                                                           \
         break;                                                                                  \
     case 64:                                                                                    \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {                                           \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                          \
-            return;                                                                             \
-        }                                                                                       \
         acc = ((float64 *)V(vs1))[0];                                                           \
         break;                                                                                  \
     default:                                                                                    \
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                              \
-        return;                                                                                 \
+        break;                                                                                  \
     }                                                                                           \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                            \
         TEST_MASK(ei)                                                                           \
@@ -805,21 +600,18 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2, uint32_t vs1)         \
 {                                                                                                       \
     const target_ulong eew = env->vsew;                                                                 \
+    ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                                \
     if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1) || env->vstart != 0) {            \
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
     }                                                                                                   \
     float64 acc;                                                                                        \
     switch (eew) {                                                                                      \
     case 32:                                                                                            \
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {                                                   \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                  \
-            return;                                                                                     \
-        }                                                                                               \
         acc = ((float64 *)V(vs1))[0];                                                                   \
         break;                                                                                          \
     default:                                                                                            \
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
-        return;                                                                                         \
+        break;                                                                                          \
     }                                                                                                   \
     for (int ei = env->vstart; ei < env->vl; ++ei) {                                                    \
         TEST_MASK(ei)                                                                                   \
@@ -838,32 +630,11 @@ void glue(glue(helper_, NAME), POSTFIX)(CPUState *env, uint32_t vd, uint32_t vs2
 
 void glue(helper_vfslide1up, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, float64 imm)
 {
+    const target_ulong eew = env->vsew;
+
+    ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);
     if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
-    }
-    const target_ulong eew = env->vsew;
-    switch (eew) {
-    case 16:
-        if (!riscv_has_additional_ext(env, RISCV_FEATURE_ZFH)) {
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
-            return;
-        }
-        break;
-    case 32:
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
-            return;
-        }
-        break;
-    case 64:
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
-            return;
-        }
-        break;
-    default:
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
-        return;
     }
 
     if(env->vl == 0) {
@@ -911,32 +682,10 @@ void glue(helper_vfslide1up, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, f
 
 void glue(helper_vfslide1down, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, float64 imm)
 {
+    const target_ulong eew = env->vsew;
+    ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);
     if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
-    }
-    const target_ulong eew = env->vsew;
-    switch (eew) {
-    case 16:
-        if (!riscv_has_additional_ext(env, RISCV_FEATURE_ZFH)) {
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
-            return;
-        }
-        break;
-    case 32:
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
-            return;
-        }
-        break;
-    case 64:
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
-            return;
-        }
-        break;
-    default:
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
-        return;
     }
 
     const int src_max = env->vl - 1;

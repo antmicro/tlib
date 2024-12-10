@@ -19,13 +19,6 @@
 #include "cpu.h"
 #include "softfloat-2.h"
 
-static inline void require_vec(CPUState *env)
-{
-    if (!riscv_has_ext(env, RISCV_FEATURE_RVV)) {
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
-    }
-}
-
 #define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
 
 /*
@@ -37,7 +30,7 @@ target_ulong helper_vsetvl(CPUState *env, target_ulong rd, target_ulong rs1,
                            target_ulong rs1_value, target_ulong new_vtype_value,
                            uint32_t is_rs1_imm)
 {
-    require_vec(env);
+    ensure_vector_embedded_extension_or_raise_exception(env);
 
     target_ulong prev_csr_vl = env->vl;
     target_ulong vlen = env->vlenb * 8;
@@ -79,6 +72,7 @@ target_ulong helper_vsetvl(CPUState *env, target_ulong rd, target_ulong rs1,
 void helper_vmv_ivi(CPUState *env, uint32_t vd, target_long imm)
 {
     const target_ulong eew = env->vsew;
+    ensure_vector_embedded_extension_for_eew_or_raise_exception(env, eew);
     if (V_IDX_INVALID(vd)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
@@ -106,6 +100,7 @@ void helper_vmv_ivi(CPUState *env, uint32_t vd, target_long imm)
 void helper_vmv_ivv(CPUState *env, uint32_t vd, int32_t vs1)
 {
     const target_ulong eew = env->vsew;
+    ensure_vector_embedded_extension_for_eew_or_raise_exception(env, eew);
     if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
@@ -132,10 +127,11 @@ void helper_vmv_ivv(CPUState *env, uint32_t vd, int32_t vs1)
 
 void helper_vmerge_ivv(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
+    const target_ulong eew = env->vsew;
+    ensure_vector_embedded_extension_for_eew_or_raise_exception(env, eew);
     if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
         uint8_t mask = !(V(0)[ei >> 3] & (1 << (ei & 0x7)));
         switch (eew) {
@@ -160,10 +156,11 @@ void helper_vmerge_ivv(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 
 void helper_vmerge_ivi(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 {
+    const target_ulong eew = env->vsew;
+    ensure_vector_embedded_extension_for_eew_or_raise_exception(env, eew);
     if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     for (int ei = env->vstart; ei < env->vl; ++ei) {
         uint8_t mask = !(V(0)[ei >> 3] & (1 << (ei & 0x7)));
         switch (eew) {
@@ -188,32 +185,10 @@ void helper_vmerge_ivi(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 
 void helper_vfmerge_vfm(CPUState *env, uint32_t vd, uint32_t vs2, uint64_t f1)
 {
+    const target_ulong eew = env->vsew;
+    ensure_vector_embedded_extension_for_eew_or_raise_exception(env, eew);
     if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
-    }
-    const target_ulong eew = env->vsew;
-    switch (eew) {
-    case 16:
-        if (!riscv_has_additional_ext(env, RISCV_FEATURE_ZFH)) {
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
-            return;
-        }
-        break;
-    case 32:
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVF)) {
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
-            return;
-        }
-        break;
-    case 64:
-        if (!riscv_has_ext(env, RISCV_FEATURE_RVD)) {
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
-            return;
-        }
-        break;
-    default:
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
-        return;
     }
     for (int ei = 0; ei < env->vl; ++ei) {
         uint8_t mask = !(V(0)[ei >> 3] & (1 << (ei & 0x7)));
@@ -233,10 +208,11 @@ void helper_vfmerge_vfm(CPUState *env, uint32_t vd, uint32_t vs2, uint64_t f1)
 
 void helper_vcompress_mvv(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
+    const target_ulong eew = env->vsew;
+    ensure_vector_embedded_extension_for_eew_or_raise_exception(env, eew);
     if (env->vstart != 0 || V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     int di = 0;
     for (int i = 0; i < env->vl; ++i) {
         if (!(V(vs1)[i >> 3] & (1 << (i & 0x7)))) {
@@ -265,10 +241,11 @@ void helper_vcompress_mvv(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 
 void helper_vadc_vvm(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
+    const target_ulong eew = env->vsew;
+    ensure_vector_embedded_extension_for_eew_or_raise_exception(env, eew);
     if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     for (int i = 0; i < env->vl; ++i) {
         uint8_t carry = !!(V(0)[i >> 3] & (1 << (i & 0x7)));
         switch (eew) {
@@ -293,10 +270,11 @@ void helper_vadc_vvm(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 
 void helper_vmadc_vv(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
+    const target_ulong eew = env->vsew;
+    ensure_vector_embedded_extension_for_eew_or_raise_exception(env, eew);
     if (V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     for (int i = 0; i < env->vl; ++i) {
         uint8_t mask = ~(1 << (i & 0x7));
         switch (eew) {
@@ -337,10 +315,11 @@ void helper_vmadc_vv(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 
 void helper_vmadc_vvm(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
+    const target_ulong eew = env->vsew;
+    ensure_vector_embedded_extension_for_eew_or_raise_exception(env, eew);
     if (V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     for (int i = 0; i < env->vl; ++i) {
         uint8_t carry = !!(V(0)[i >> 3] & (1 << (i & 0x7)));
         uint8_t mask = ~(1 << (i & 0x7));
@@ -382,10 +361,11 @@ void helper_vmadc_vvm(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 
 void helper_vsbc_vvm(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
+    const target_ulong eew = env->vsew;
+    ensure_vector_embedded_extension_for_eew_or_raise_exception(env, eew);
     if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     for (int i = 0; i < env->vl; ++i) {
         uint8_t borrow = !!(V(0)[i >> 3] & (1 << (i & 0x7)));
         switch (eew) {
@@ -410,10 +390,11 @@ void helper_vsbc_vvm(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 
 void helper_vmsbc_vv(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
+    const target_ulong eew = env->vsew;
+    ensure_vector_embedded_extension_for_eew_or_raise_exception(env, eew);
     if (V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     for (int i = 0; i < env->vl; ++i) {
         uint8_t mask = ~(1 << (i & 0x7));
         switch (eew) {
@@ -446,10 +427,11 @@ void helper_vmsbc_vv(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 
 void helper_vmsbc_vvm(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 {
+    const target_ulong eew = env->vsew;
+    ensure_vector_embedded_extension_for_eew_or_raise_exception(env, eew);
     if (V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     for (int i = 0; i < env->vl; ++i) {
         uint8_t mask = ~(1 << (i & 0x7));
         uint8_t borrow = !!(V(0)[i >> 3] & (1 << (i & 0x7)));
@@ -491,10 +473,11 @@ void helper_vmsbc_vvm(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
 
 void helper_vadc_vi(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 {
+    const target_ulong eew = env->vsew;
+    ensure_vector_embedded_extension_for_eew_or_raise_exception(env, eew);
     if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     for (int i = 0; i < env->vl; ++i) {
         uint8_t carry = !!(V(0)[i >> 3] & (1 << (i & 0x7)));
         switch (eew) {
@@ -519,10 +502,11 @@ void helper_vadc_vi(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 
 void helper_vmadc_vi(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 {
+    const target_ulong eew = env->vsew;
+    ensure_vector_embedded_extension_for_eew_or_raise_exception(env, eew);
     if (V_IDX_INVALID(vs2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     for (int i = 0; i < env->vl; ++i) {
         uint8_t mask = ~(1 << (i & 0x7));
         switch (eew) {
@@ -563,10 +547,11 @@ void helper_vmadc_vi(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 
 void helper_vmadc_vim(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 {
+    const target_ulong eew = env->vsew;
+    ensure_vector_embedded_extension_for_eew_or_raise_exception(env, eew);
     if (V_IDX_INVALID(vs2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     for (int i = 0; i < env->vl; ++i) {
         uint8_t mask = ~(1 << (i & 0x7));
         uint8_t carry = !!(V(0)[i >> 3] & (1 << (i & 0x7)));
@@ -608,10 +593,11 @@ void helper_vmadc_vim(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 
 void helper_vsbc_vi(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 {
+    const target_ulong eew = env->vsew;
+    ensure_vector_embedded_extension_for_eew_or_raise_exception(env, eew);
     if (V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     for (int i = 0; i < env->vl; ++i) {
         uint8_t borrow = !!(V(0)[i >> 3] & (1 << (i & 0x7)));
         switch (eew) {
@@ -636,10 +622,11 @@ void helper_vsbc_vi(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 
 void helper_vmsbc_vi(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 {
+    const target_ulong eew = env->vsew;
+    ensure_vector_embedded_extension_for_eew_or_raise_exception(env, eew);
     if (V_IDX_INVALID(vs2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     for (int i = 0; i < env->vl; ++i) {
         uint8_t mask = ~(1 << (i & 0x7));
         switch (eew) {
@@ -672,10 +659,11 @@ void helper_vmsbc_vi(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 
 void helper_vmsbc_vim(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 {
+    const target_ulong eew = env->vsew;
+    ensure_vector_embedded_extension_for_eew_or_raise_exception(env, eew);
     if (V_IDX_INVALID(vs2)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    const target_ulong eew = env->vsew;
     for (int i = 0; i < env->vl; ++i) {
         uint8_t mask = ~(1 << (i & 0x7));
         uint8_t borrow = !!(V(0)[i >> 3] & (1 << (i & 0x7)));
@@ -714,6 +702,7 @@ void helper_vmsbc_vim(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
 target_long helper_vmv_xs(CPUState *env, int32_t vs2)
 {
     const target_ulong eew = env->vsew;
+    ensure_vector_embedded_extension_for_eew_or_raise_exception(env, eew);
     switch (eew) {
     case 8:
         return ((int8_t *)V(vs2))[0];
@@ -731,8 +720,9 @@ target_long helper_vmv_xs(CPUState *env, int32_t vs2)
 
 void helper_vmv_sx(CPUState *env, uint32_t vd, target_long rs1)
 {
+    const target_ulong eew = env->vsew;
+    ensure_vector_embedded_extension_for_eew_or_raise_exception(env, eew);
     if(env->vstart < env->vl) {
-        const target_ulong eew = env->vsew;
         switch (eew) {
         case 8:
             ((int8_t *)V(vd))[0] = rs1;
@@ -756,6 +746,7 @@ void helper_vmv_sx(CPUState *env, uint32_t vd, target_long rs1)
 void helper_vmv1r_v(CPUState *env, uint32_t vd, uint32_t vs2)
 {
     const uint8_t emul = 0;
+    ensure_vector_embedded_extension_or_raise_exception(env);
     if (V_IDX_INVALID_EMUL(vd, emul) || V_IDX_INVALID_EMUL(vs2, emul)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
@@ -765,6 +756,7 @@ void helper_vmv1r_v(CPUState *env, uint32_t vd, uint32_t vs2)
 void helper_vmv2r_v(CPUState *env, uint32_t vd, uint32_t vs2)
 {
     const uint8_t emul = 1;
+    ensure_vector_embedded_extension_or_raise_exception(env);
     if (V_IDX_INVALID_EMUL(vd, emul) || V_IDX_INVALID_EMUL(vs2, emul)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
@@ -774,6 +766,7 @@ void helper_vmv2r_v(CPUState *env, uint32_t vd, uint32_t vs2)
 void helper_vmv4r_v(CPUState *env, uint32_t vd, uint32_t vs2)
 {
     const uint8_t emul = 2;
+    ensure_vector_embedded_extension_or_raise_exception(env);
     if (V_IDX_INVALID_EMUL(vd, emul) || V_IDX_INVALID_EMUL(vs2, emul)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
@@ -783,6 +776,7 @@ void helper_vmv4r_v(CPUState *env, uint32_t vd, uint32_t vs2)
 void helper_vmv8r_v(CPUState *env, uint32_t vd, uint32_t vs2)
 {
     const uint8_t emul = 3;
+    ensure_vector_embedded_extension_or_raise_exception(env);
     if (V_IDX_INVALID_EMUL(vd, emul) || V_IDX_INVALID_EMUL(vs2, emul)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
@@ -1154,6 +1148,13 @@ void helper_vmsof_m(CPUState *env, uint32_t vd, uint32_t vs2)
     }
     if (env->vl & 0x7) {
         V(vd)[i] &= (0xffu << (env->vl & 0x7)) | ~V(0)[i];
+    }
+}
+
+void helper_check_is_vmulh_valid(CPUState *env)
+{
+    if (env->vsew == 64 && !riscv_has_ext(env, RISCV_FEATURE_RVV)) {
+        log_disabled_extension_and_raise_exception(env, (uintptr_t)GETPC(), RISCV_FEATURE_RVV, "VMULH is supported only for EEW = 64");
     }
 }
 

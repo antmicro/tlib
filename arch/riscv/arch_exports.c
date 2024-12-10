@@ -78,6 +78,12 @@ void tlib_allow_feature(uint32_t feature_bit)
     cpu->misa_mask |= (1L << feature_bit);
     cpu->misa |= (1L << feature_bit);
 
+    if(feature_bit == 'D' - 'A') {
+        tlib_allow_feature('F' - 'A');
+    }
+    if(feature_bit == 'V' - 'A') {
+        tlib_allow_additional_feature(RISCV_FEATURE_ZVE64D);
+    }
     // availability of F/D extensions
     // is indicated by a bit in MSTATUS
     if (feature_bit == 'F' - 'A' || feature_bit == 'D' - 'A') {
@@ -96,8 +102,35 @@ void tlib_allow_additional_feature(uint32_t feature)
 
     enum riscv_additional_feature extension = feature;
     switch (extension) {
+        case RISCV_FEATURE_ZVE64D:
+            tlib_allow_feature('D' - 'A');
+            tlib_allow_additional_feature(RISCV_FEATURE_ZVE64F);
+            break;
+        case RISCV_FEATURE_ZVE64F:
+            tlib_allow_additional_feature(RISCV_FEATURE_ZVE32F);
+            tlib_allow_additional_feature(RISCV_FEATURE_ZVE64X);
+            break;
+        case RISCV_FEATURE_ZVE32F:
+            tlib_allow_feature('F' - 'A');
+            tlib_allow_additional_feature(RISCV_FEATURE_ZVE32X);
+            break;
+        case RISCV_FEATURE_ZVE64X:
+            tlib_allow_additional_feature(RISCV_FEATURE_ZVE32X);
+            break;
+        case RISCV_FEATURE_ZVE32X:
+            tlib_allow_additional_feature(RISCV_FEATURE_ZICSR);
+#if HOST_LONG_BITS == 32
+            tlib_abort("Vector extension can't be enabled on 32-bit hosts.");
+            return;
+#else
+            break;
+#endif
         case RISCV_FEATURE_ZFH:
             tlib_allow_feature('F' - 'A');
+            break;
+        case RISCV_FEATURE_ZVFH:
+            tlib_allow_additional_feature(RISCV_FEATURE_ZFH); // It should depends precisely on Zfhmin that isn't supported.
+            tlib_allow_additional_feature(RISCV_FEATURE_ZVE32F);
             break;
         case RISCV_FEATURE_SMEPMP:
             tlib_allow_additional_feature(RISCV_FEATURE_ZICSR);

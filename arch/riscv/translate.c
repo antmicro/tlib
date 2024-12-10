@@ -103,22 +103,31 @@ static inline uint64_t format_opcode(uint64_t opcode, int instruction_length)
     return opcode & (((typeof(opcode))1 << (8 * instruction_length)) - 1);
 }
 
-static int ensure_extension(DisasContext *dc, target_ulong ext)
+static void log_disabled_extension_and_kill_unknown(DisasContext *dc, enum riscv_feature ext, const char *message)
 {
-    if (riscv_has_ext(cpu, ext)) {
-        return 1;
-    }
-
     if (!riscv_silent_ext(cpu, ext)) {
         char letter = 0;
         riscv_features_to_string(ext, &letter, 1);
 
         int instruction_length = decode_instruction_length(dc->opcode);
-        tlib_printf(LOG_LEVEL_ERROR, "RISC-V '%c' instruction set is not enabled for this CPU! PC: 0x%llx, opcode: 0x%0*llx",
-                    letter, dc->base.pc, /* padding */ 2 * instruction_length, format_opcode(dc->opcode, instruction_length));
+        if (message == NULL) {
+            tlib_printf(LOG_LEVEL_ERROR, "PC: 0x%llx, opcode: 0x%0*llx, RISC-V '%c' instruction set is not enabled for this CPU!",
+                        dc->base.pc, /* padding */ 2 * instruction_length, format_opcode(dc->opcode, instruction_length), letter);
+        } else {
+            tlib_printf(LOG_LEVEL_ERROR, "PC: 0x%llx, opcode: 0x%0*llx, RISC-V '%c' instruction set is not enabled for this CPU! %s",
+                        dc->base.pc, /* padding */ 2 * instruction_length, format_opcode(dc->opcode, instruction_length), letter, message);
+        }
     }
 
     kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+}
+
+static int ensure_extension(DisasContext *dc, target_ulong ext)
+{
+    if (riscv_has_ext(cpu, ext)) {
+        return 1;
+    }
+    log_disabled_extension_and_kill_unknown(dc, ext, NULL);
     return 0;
 }
 
@@ -150,6 +159,24 @@ static int ensure_additional_extension(DisasContext *dc, enum riscv_additional_f
         break;
     case RISCV_FEATURE_ZFH:
         encoding = "fh";
+        break;
+    case RISCV_FEATURE_ZVFH:
+        encoding = "vfh";
+        break;
+    case RISCV_FEATURE_ZVE32X:
+        encoding = "ve32x";
+        break;
+    case RISCV_FEATURE_ZVE32F:
+        encoding = "ve32f";
+        break;
+    case RISCV_FEATURE_ZVE64X:
+        encoding = "ve64x";
+        break;
+    case RISCV_FEATURE_ZVE64F:
+        encoding = "ve64f";
+        break;
+    case RISCV_FEATURE_ZVE64D:
+        encoding = "ve64d";
         break;
     default:
         tlib_printf(LOG_LEVEL_ERROR, "Unexpected additional extension encoding: %d", ext);
@@ -196,6 +223,36 @@ static int ensure_fp_extension_for_load_store(DisasContext *dc)
             kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
             return false;
     }
+}
+
+static inline bool ensure_vector_embedded_extension_or_kill_unknown(DisasContext *dc)
+{
+    // Check if the most basic extension is supported.
+    if (riscv_has_additional_ext(env, RISCV_FEATURE_ZVE32X)) {
+        return true;
+    }
+
+    log_disabled_extension_and_kill_unknown(dc, RISCV_FEATURE_RVV, NULL);
+    return false;
+}
+
+static inline bool ensure_vector_embedded_extension_for_vsew_or_kill_unknown(DisasContext *dc, target_ulong vsew)
+{
+    // Assume there is no EEW larger than 64.
+    if (riscv_has_additional_ext(env, RISCV_FEATURE_ZVE64X)) {
+        return true;
+    }
+
+    if (riscv_has_additional_ext(env, RISCV_FEATURE_ZVE32X)) {
+        if(vsew < 0b11) {
+            return true;
+        }
+        log_disabled_extension_and_kill_unknown(dc, RISCV_FEATURE_RVV, "vsew is too large for the Zve32x extension");
+    }
+    else {
+        log_disabled_extension_and_kill_unknown(dc, RISCV_FEATURE_RVV, NULL);
+    }
+    return false;
 }
 
 static inline void gen_sync_pc(DisasContext *dc)
@@ -1554,12 +1611,17 @@ static void gen_v_load(DisasContext *dc, uint32_t opc, uint32_t rest, uint32_t v
     tlib_abort("Vector extension isn't available on 32-bit hosts.");
 #else
     uint32_t vm = extract32(rest, 0, 1);
-    uint32_t mew = extract32(rest, 3, 1);
+    uint32_t mew = extract32(rest, 3, 1); // 1 is a currently reserved encoding
     uint32_t nf = extract32(rest, 4, 3);
-    if (!ensure_extension(dc, RISCV_FEATURE_RVV) || mew) {
+
+    if (!ensure_vector_embedded_extension_for_vsew_or_kill_unknown(dc, width)) {
+        return;
+    }
+    if (mew) {
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         return;
     }
+
     if (MASK_OP_V_LOAD_US(dc->opcode) != OPC_RISC_VL_US_WR) {
         generate_vill_check(dc);
     }
@@ -1713,11 +1775,16 @@ static void gen_v_load(DisasContext *dc, uint32_t opc, uint32_t rest, uint32_t v
             }
             break;
         case 3:
+#if defined(TARGET_RISCV32)
+            // Indexed instructions for EEW=64 and XLEN=32 aren't supported.
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+#else
             if (vm) {
                 gen_helper_vlxei64(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
             } else {
                 gen_helper_vlxei64_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
             }
+#endif
             break;
         }
         break;
@@ -1786,10 +1853,15 @@ static void gen_v_store(DisasContext *dc, uint32_t opc, uint32_t rest, uint32_t 
     uint32_t vm = extract32(rest, 0, 1);
     uint32_t mew = extract32(rest, 3, 1);
     uint32_t nf = extract32(rest, 4, 3);
-    if (!ensure_extension(dc, RISCV_FEATURE_RVV) || mew) {
+
+    if (!ensure_vector_embedded_extension_for_vsew_or_kill_unknown(dc, width)) {
+        return;
+    }
+    if (mew) {
         kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
         return;
     }
+
     if (MASK_OP_V_STORE_US(dc->opcode) != OPC_RISC_VS_US_WR) {
         generate_vill_check(dc);
     }
@@ -1915,11 +1987,16 @@ static void gen_v_store(DisasContext *dc, uint32_t opc, uint32_t rest, uint32_t 
             }
             break;
         case 3:
+#if defined(TARGET_RISCV32)
+            // Indexed instructions for EEW=64 and XLEN=32 aren't supported.
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+#else
             if (vm) {
                 gen_helper_vsxei64(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
             } else {
                 gen_helper_vsxei64_m(cpu_env, t_vd, t_rs1, t_rs2, t_nf);
             }
+#endif
             break;
         }
         break;
@@ -2871,6 +2948,10 @@ static void gen_system(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2,
 static void gen_v_cfg(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2, int imm)
 {
     TCGv rs1_value, rs2_value, zimm, returned_vl, rd_index, rs1_index, rs1_is_uimm;
+
+    if(!ensure_vector_embedded_extension_or_kill_unknown(dc)) {
+        return;
+    }
 
     zimm = tcg_temp_new();
     rd_index = tcg_temp_new();
@@ -4010,6 +4091,7 @@ static void gen_v_opmvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_MULHU:
+        gen_helper_check_is_vmulh_valid(cpu_env);
         if (vm) {
             gen_helper_vmulhu_mvv(cpu_env, t_vd, t_vs2, t_vs1);
         } else {
@@ -4024,6 +4106,7 @@ static void gen_v_opmvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_MULHSU:
+        gen_helper_check_is_vmulh_valid(cpu_env);
         if (vm) {
             gen_helper_vmulhsu_mvv(cpu_env, t_vd, t_vs2, t_vs1);
         } else {
@@ -4031,6 +4114,7 @@ static void gen_v_opmvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
         }
         break;
     case RISC_V_FUNCT_MULH:
+        gen_helper_check_is_vmulh_valid(cpu_env);
         if (vm) {
             gen_helper_vmulh_mvv(cpu_env, t_vd, t_vs2, t_vs1);
         } else {
@@ -4264,6 +4348,7 @@ static void gen_v_opmvx(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
         }
         break;
     case RISC_V_FUNCT_MULHU:
+        gen_helper_check_is_vmulh_valid(cpu_env);
         if (vm) {
             gen_helper_vmulhu_mvx(cpu_env, t_vd, t_vs2, t_tl);
         } else {
@@ -4278,6 +4363,7 @@ static void gen_v_opmvx(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
         }
         break;
     case RISC_V_FUNCT_MULHSU:
+        gen_helper_check_is_vmulh_valid(cpu_env);
         if (vm) {
             gen_helper_vmulhsu_mvx(cpu_env, t_vd, t_vs2, t_tl);
         } else {
@@ -4285,6 +4371,7 @@ static void gen_v_opmvx(DisasContext *dc, uint8_t funct6, int vd, int rs1, int v
         }
         break;
     case RISC_V_FUNCT_MULH:
+        gen_helper_check_is_vmulh_valid(cpu_env);
         if (vm) {
             gen_helper_vmulh_mvx(cpu_env, t_vd, t_vs2, t_tl);
         } else {
@@ -5198,10 +5285,6 @@ static void gen_v(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2, int 
 #if HOST_LONG_BITS == 32
     tlib_abort("Vector extension isn't available on 32-bit hosts.");
 #else
-    if (!ensure_extension(dc, RISCV_FEATURE_RVV)) {
-        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
-        return;
-    }
     uint8_t funct6 = extract32(dc->opcode, 26, 6);
     uint8_t vm = extract32(dc->opcode, 25, 1);
 
