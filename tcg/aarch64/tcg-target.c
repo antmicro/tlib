@@ -991,8 +991,26 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
         case INDEX_op_ld8u_i32:
             tcg_out_ld_offset(s, 8, false, args[0], args[1], args[2]);
             break;
+        case INDEX_op_ld8u_i64:
+            tcg_out_ld_offset(s, 8, false, args[0], args[1], args[2]);
+            break;
+        case INDEX_op_ld8s_i32:
+            tcg_out_ld_offset(s, 8, true, args[0], args[1], args[2]);
+            break;
+        case INDEX_op_ld8s_i64:
+            tcg_out_ld_offset(s, 8, true, args[0], args[1], args[2]);
+            break;
         case INDEX_op_ld16s_i32:
             tcg_out_ld_offset(s, 16, true, args[0], args[1], args[2]);
+            break;
+        case INDEX_op_ld16s_i64:
+            tcg_out_ld_offset(s, 16, true, args[0], args[1], args[2]);
+            break;
+        case INDEX_op_ld16u_i32:
+            tcg_out_ld_offset(s, 16, false, args[0], args[1], args[2]);
+            break;
+        case INDEX_op_ld16u_i64:
+            tcg_out_ld_offset(s, 16, false, args[0], args[1], args[2]);
             break;
         case INDEX_op_ld_i32:
             tcg_out_ld(s, TCG_TYPE_I32, args[0], args[1], args[2]);
@@ -1007,6 +1025,9 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
             tcg_out_ld_offset(s, 64, false, args[0], args[1], args[2]);
             break;
         case INDEX_op_st8_i32:
+            tcg_out_st_offset(s, 8, args[0], args[1], args[2]);
+            break;
+        case INDEX_op_st8_i64:
             tcg_out_st_offset(s, 8, args[0], args[1], args[2]);
             break;
         case INDEX_op_st16_i32:
@@ -1244,9 +1265,6 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
             break;
         case INDEX_op_setcond2_i32:
             tcg_abortf("op_setcond2_i32 not implemented");
-            break;
-        case INDEX_op_qemu_ld8u:
-            tcg_out_qemu_ld(s, 8, false, args[0], args[1], args[2]);
             break;
         case INDEX_op_qemu_ld8u:
             tcg_out_qemu_ld(s, 8, false, args[0], args[1], args[2]);
