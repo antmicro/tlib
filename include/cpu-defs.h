@@ -226,6 +226,7 @@ enum block_interrupt_cause {
     int block_finished_hook_present;                                          \
     /* indicates if the block_begin hook is registered */                     \
     int block_begin_hook_present;                                             \
+    int sync_pc_every_instruction_disabled;                                   \
     int cpu_wfi_state_change_hook_present;                                    \
     uint32_t millicycles_per_instruction;                                     \
     int interrupt_begin_callback_enabled;                                     \

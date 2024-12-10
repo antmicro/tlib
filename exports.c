@@ -618,6 +618,20 @@ uint32_t tlib_get_tb_cache_enabled()
 
 EXC_INT_0(uint32_t, tlib_get_tb_cache_enabled)
 
+void tlib_set_sync_pc_every_instruction_disabled(uint32_t val)
+{
+    cpu->sync_pc_every_instruction_disabled = val;
+}
+
+EXC_VOID_1(tlib_set_sync_pc_every_instruction_disabled, uint32_t, val)
+
+uint32_t tlib_get_sync_pc_every_instruction_disabled()
+{
+    return cpu->sync_pc_every_instruction_disabled;
+}
+
+EXC_INT_0(uint32_t, tlib_get_sync_pc_every_instruction_disabled)
+
 void tlib_set_block_finished_hook_present(uint32_t val)
 {
     cpu->block_finished_hook_present = !!val;
