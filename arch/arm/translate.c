@@ -10464,14 +10464,21 @@ static void disas_thumb_insn(CPUState *env, DisasContext *s)
                             /* BXNS/BLXNS */
                             ARCH(8);
                             //  We need to update PC here to push it correctly on stack in the helper
-                            gen_sync_pc(current_pc);
+                            gen_sync_pc(s);
+
+                            /* BLXNS/BXNS is UNDEFINED if executed in Non-secure state, or if the Security Extension is not
+                             * implemented. */
+                            if(s->ns) {
+                                goto illegal_op;
+                            }
+
                             tmp2 = tcg_const_i32(link);
                             gen_helper_v8m_blxns(cpu_env, tmp, tmp2);
                             tcg_temp_free_i32(tmp2);
                             s->base.is_jmp = DISAS_UPDATE;
                             break;
 #else
-                            cpu_abort(cpu, "BLXNS used outside ARM-M");
+                            goto illegal_op;
 #endif
                         }
                         if(link) { /* Link bit set */
