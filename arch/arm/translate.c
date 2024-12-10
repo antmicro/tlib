@@ -102,7 +102,7 @@ void translate_init(void)
 #define DISAS_SWI 5
 #define DISAS_WFE 6
 
-static inline void gen_sync_pc(target_ulong value)
+static inline void gen_set_pc(target_ulong value)
 {
 #if defined(TARGET_ARM32)
     tcg_gen_movi_i32(cpu_R[15], value);
@@ -7070,7 +7070,7 @@ static void disas_arm_insn(CPUState *env, DisasContext *s)
             if (!arm_feature(env, ARM_FEATURE_NEON)) {
                 goto illegal_op;
             }
-            gen_sync_pc(current_pc);
+            gen_set_pc(current_pc);
 
             if (disas_neon_ls_insn(env, s, insn)) {
                 goto illegal_op;
@@ -7236,7 +7236,7 @@ static void disas_arm_insn(CPUState *env, DisasContext *s)
         } else if ((insn & 0x0e000f00) == 0x0c000100) {
             if (arm_feature(env, ARM_FEATURE_IWMMXT)) {
                 /* iWMMXt register transfer.  */
-                gen_sync_pc(current_pc);
+                gen_set_pc(current_pc);
                 if (env->cp15.c15_cpar & (1 << 1)) {
                     if (!disas_iwmmxt_insn(env, s, insn)) {
                         return;
@@ -7666,7 +7666,7 @@ static void disas_arm_insn(CPUState *env, DisasContext *s)
     } else {
         /* other instructions */
         op1 = (insn >> 24) & 0xf;
-        gen_sync_pc(current_pc);
+        gen_set_pc(current_pc);
         switch (op1) {
         case 0x0:
         case 0x1:
@@ -8378,7 +8378,7 @@ do_ldst:
             /* Coprocessor.  */
             // MCR/MRC Encoding A1
 do_coproc_transfer:
-            gen_sync_pc(current_pc);
+            gen_set_pc(current_pc);
 
             if (disas_coproc_insn(env, s, insn)) {
                 goto illegal_op;
@@ -8572,7 +8572,7 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
             /* Other load/store, table branch.  */
             if (insn & 0x01200000) {
                 /* Load/store doubleword.  */
-                gen_sync_pc(current_pc);
+                gen_set_pc(current_pc);
                 if (rn == 15) {
                     addr = tcg_temp_new_i32();
                     tcg_gen_movi_i32(addr, s->base.pc & ~3);
@@ -8698,7 +8698,7 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
             }
         } else {
             /* Load/store multiple, RFE, SRS.  */
-            gen_sync_pc(current_pc);
+            gen_set_pc(current_pc);
             if (((insn >> 23) & 1) == ((insn >> 24) & 1)) {
                 /* Not available in user mode.  */
                 if (s->user) {
@@ -9152,7 +9152,7 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                 goto illegal_op;
             }
         } else {
-            gen_sync_pc(current_pc);
+            gen_set_pc(current_pc);
 
             /* MCR/MRC/MRRC/MCRR (Thumb) encoding  */
             if (disas_coproc_insn(env, s, insn)) {
@@ -9996,7 +9996,7 @@ static void disas_thumb_insn(CPUState *env, DisasContext *s)
             tmp = load_reg(s, rd);
         }
 
-        gen_sync_pc(current_pc);
+        gen_set_pc(current_pc);
         switch (op) {
         case 0: /* str */
             gen_st32(tmp, addr, s->user);
