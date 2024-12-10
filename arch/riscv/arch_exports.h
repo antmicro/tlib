@@ -21,8 +21,8 @@ uint32_t tlib_set_vlen(uint32_t vlen);
 uint32_t tlib_set_elen(uint32_t elen);
 void tlib_set_pmpaddr_bits(uint32_t number_of_bits);
 
-uint64_t tlib_get_vector(int regn, int idx);
-void tlib_set_vector(int regn, int idx, uint64_t value);
+uint64_t tlib_get_vector(uint32_t regn, uint32_t idx);
+void tlib_set_vector(uint32_t regn, uint32_t idx, uint64_t value);
 
 uint32_t tlib_get_whole_vector(uint32_t regn, uint8_t *bytes);
 uint32_t tlib_set_whole_vector(uint32_t regn, uint8_t *bytes);
