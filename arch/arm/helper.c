@@ -907,7 +907,36 @@ void do_v7m_exception_exit(CPUState *env)
     }
     /* Switch to the target stack.  */
     switch_v7m_sp(env, (type & 4) != 0);
+
     /* Pop registers.  */
+    if(cpu->v7m.has_trustzone) {
+        /* We need to pop additional state registers, if they were pushed before */
+        if((type & 1) == 0 && (type & (1 << 6)) > 0) {
+            uint32_t signature = v7m_pop(env);
+            if(signature != INTEGRITY_SIGN) {
+                tlib_printf(LOG_LEVEL_WARNING,
+                            "Integrity signature mismatch on stack, expected 0x%" PRIx32 ", got 0x%" PRIx32 ", type 0x%" PRIx32
+                            ". SecureFault!",
+                            INTEGRITY_SIGN, signature, type);
+                /* On security integrity signature mismatch, report SecureFault */
+                env->v7m.secure_fault_status |= SECURE_FAULT_INVIS;
+                env->v7m.secure_fault_address = env->regs[15];
+                env->exception_index = EXCP_SECURE;
+                cpu_loop_exit(env);
+            }
+            /* Reserved */
+            v7m_pop(env);
+            env->regs[4] = v7m_pop(env);
+            env->regs[5] = v7m_pop(env);
+            env->regs[6] = v7m_pop(env);
+            env->regs[7] = v7m_pop(env);
+            env->regs[8] = v7m_pop(env);
+            env->regs[9] = v7m_pop(env);
+            env->regs[10] = v7m_pop(env);
+            env->regs[11] = v7m_pop(env);
+        }
+    }
+
     env->regs[0] = v7m_pop(env);
     env->regs[1] = v7m_pop(env);
     env->regs[2] = v7m_pop(env);
@@ -1197,6 +1226,26 @@ static void do_interrupt_v7m(CPUState *env)
     stack_status |= v7m_push(env, env->regs[0]);
 
     if(env->v7m.has_trustzone) {
+        /* RSHNX: On taking an exception, excluding tail-chaining that requires a transition from Secure to Non-secure state, the
+         * PE hardware saves Additional state context registers. We don't do tail-chaining at all in our implementation. Push
+         * additional state context registers, when switching from Secure to Non-secure */
+        if(cpu->secure && (lr & 1) == 0) {
+            tlib_printf(LOG_LEVEL_NOISY, "Pushing additional state context registers on stack");
+            stack_status |= v7m_push(env, env->regs[11]);
+            stack_status |= v7m_push(env, env->regs[10]);
+            stack_status |= v7m_push(env, env->regs[9]);
+            stack_status |= v7m_push(env, env->regs[8]);
+            stack_status |= v7m_push(env, env->regs[7]);
+            stack_status |= v7m_push(env, env->regs[6]);
+            stack_status |= v7m_push(env, env->regs[5]);
+            stack_status |= v7m_push(env, env->regs[4]);
+            /* Marked as reserved in docs */
+            stack_status |= v7m_push(env, 0xDEADBEEF);
+            /* Push integrity signature */
+            stack_status |= v7m_push(env, INTEGRITY_SIGN);
+        }
+
+        tlib_printf(LOG_LEVEL_NOISY, "Loading to LR, value 0x%" PRIx32, lr);
         switch_v7m_security_state(env, lr & 1);
     }
     switch_v7m_sp(env, 0);

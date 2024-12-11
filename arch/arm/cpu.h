@@ -127,6 +127,8 @@
 #define PERMISSION_FAULT_STATUS_BITS 0b1101
 
 #define FNC_RETURN 0xFEFFFFFF
+//  TODO: handle bit[0] properly with FPU in TrustZone
+#define INTEGRITY_SIGN 0xFEFA125B
 
 typedef struct DisasContext {
     DisasContextBase base;
