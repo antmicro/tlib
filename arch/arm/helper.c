@@ -3574,7 +3574,7 @@ void HELPER(v8m_blxns)(CPUState *env, uint32_t addr, uint32_t link)
         } else {
             /* BXNS variant uses BranchReturn pseudoinstruction, which can have different behavior here.
              * Otherwise will behave like a regular branch */
-            if(addr >= 0xfeffff00) {
+            if(addr >= ARM_M_FNC_RETURN_MIN) {
                 /* TODO: BXNS can also be used with FNC_RETURN or EXCP_RETURN and works differently then */
                 cpu_abort(env, "FNC_RETURN or EXC_RETURN is yet unsupported in BXNS");
             }
@@ -3616,7 +3616,7 @@ void HELPER(v8m_sg)(CPUState *env)
 void HELPER(v8m_bx_update_pc)(CPUState *env, uint32_t pc)
 {
     /* is not EXC_RETURN */
-    if(pc < 0xffffff00) {
+    if(pc < ARM_M_EXC_RETURN_MIN) {
         if((pc & 1) == 0) {
             env->exception_index = EXCP_INVSTATE;
             cpu_loop_exit(env);

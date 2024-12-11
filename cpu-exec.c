@@ -378,13 +378,13 @@ int cpu_exec(CPUState *env)
                 }
 
 #ifdef TARGET_PROTO_ARM_M
-                if(env->regs[15] >= 0xffffff00) {
+                if(env->regs[15] >= ARM_M_EXC_RETURN_MIN) {
                     do_v7m_exception_exit(env);
                     next_tb = 0;
                     if(automatic_sleep_after_interrupt(env)) {
                         env->exit_request = true;
                     }
-                } else if(env->regs[15] >= 0xfeffff00) {
+                } else if(env->regs[15] >= ARM_M_FNC_RETURN_MIN) {
                     do_v7m_secure_return(env);
                     next_tb = 0;
                 }

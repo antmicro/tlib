@@ -85,6 +85,10 @@ typedef uint64_t target_ulong __attribute__((aligned(TARGET_LONG_ALIGNMENT)));
 
 #define MAX_EXTERNAL_MMU_RANGES 256
 
+/* ARM-M specific magic PC values, which can be used for exception/secure return */
+#define ARM_M_EXC_RETURN_MIN 0xffffff00
+#define ARM_M_FNC_RETURN_MIN 0xfeffff00
+
 /* Only the bottom TB_JMP_PAGE_BITS of the jump cache hash bits vary for
    addresses on the same page.  The top bits are the same.  This allows
    TLB invalidation to quickly clear a subset of the hash table.  */
