@@ -2289,6 +2289,8 @@ inline int get_phys_addr(CPUState *env, uint32_t address, int access_type, int i
         if(!pmsav8_check_security_attribution(env, address, access_type, true)) {
             tlib_printf(LOG_LEVEL_WARNING, "SecureFault while accessing address: 0x%" PRIx32 ", access type %s", address,
                         ACCESS_TYPE_STRING(access_type));
+            env->v7m.secure_fault_address = address;
+            env->v7m.secure_fault_status |= SECURE_FAULT_SFARVALID;
             env->exception_index = EXCP_SECURE;
             /* Non-returning function - jump out of TB to signal SecureFault */
             cpu_loop_exit(env);

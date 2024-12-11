@@ -91,6 +91,16 @@
 #define USAGE_FAULT_INVSTATE   (1 << 1) << USAGE_FAULT_OFFSET
 #define USAGE_FAULT_UNDEFINSTR (1 << 0) << USAGE_FAULT_OFFSET
 
+/* Secure Fault */
+#define SECURE_FAULT_LSERR     (1 << 7)
+#define SECURE_FAULT_SFARVALID (1 << 6)
+#define SECURE_FAULT_LSPERR    (1 << 5)
+#define SECURE_FAULT_INVTRAN   (1 << 4)
+#define SECURE_FAULT_AUVIOL    (1 << 3)
+#define SECURE_FAULT_INVER     (1 << 2)
+#define SECURE_FAULT_INVIS     (1 << 1)
+#define SECURE_FAULT_INVEP     (1 << 0)
+
 #define in_privileged_mode(ENV) (((ENV)->v7m.control[env->secure] & 0x1) == 0 || (ENV)->v7m.handler_mode)
 
 //  256 is a hard limit based on width of their respective region number fields in TT instructions.
@@ -314,6 +324,8 @@ typedef struct CPUState {
         uint32_t basepri[M_REG_NUM_BANKS];
         uint32_t control[M_REG_NUM_BANKS]; /* TODO: SFPA and FPCA bits are not banked - required for FPU support */
         uint32_t fault_status[M_REG_NUM_BANKS];
+        uint32_t secure_fault_status;  /* SFSR */
+        uint32_t secure_fault_address; /* SFAR. It can be shared with MMFAR, but it's more hassle, so let's keep it separate */
         uint32_t memory_fault_address[M_REG_NUM_BANKS];
         uint32_t exception;
         uint32_t primask[M_REG_NUM_BANKS];

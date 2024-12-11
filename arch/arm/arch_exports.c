@@ -284,6 +284,27 @@ uint32_t tlib_get_memory_fault_address(bool secure)
 
 EXC_INT_1(uint32_t, tlib_get_memory_fault_address, bool, secure)
 
+uint32_t tlib_get_secure_fault_address()
+{
+    return cpu->v7m.secure_fault_address;
+}
+
+EXC_INT_0(uint32_t, tlib_get_secure_fault_address)
+
+uint32_t tlib_get_secure_fault_status()
+{
+    return cpu->v7m.secure_fault_status;
+}
+
+EXC_INT_0(uint32_t, tlib_get_secure_fault_status)
+
+void tlib_set_secure_fault_status(uint32_t value)
+{
+    cpu->v7m.secure_fault_status = value;
+}
+
+EXC_VOID_1(tlib_set_secure_fault_status, uint32_t, value)
+
 uint32_t tlib_is_mpu_enabled()
 {
     return cpu->cp15.c1_sys & 0x1;
