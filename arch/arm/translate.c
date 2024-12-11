@@ -785,9 +785,13 @@ static inline void gen_bx(DisasContext *s, TCGv var, int stack_announcement_type
         generate_stack_announcement(var, stack_announcement_type, true);
     }
     s->base.is_jmp = DISAS_UPDATE;
+#ifdef TARGET_PROTO_ARM_M
+    gen_helper_v8m_bx_update_pc(cpu_env, var);
+#else
     tcg_gen_andi_i32(cpu_R[15], var, ~1);
     tcg_gen_andi_i32(var, var, 1);
     store_cpu_field(var, thumb);
+#endif
 }
 
 /* Variant of store_reg which uses branch&exchange logic when storing

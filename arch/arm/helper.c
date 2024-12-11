@@ -3563,6 +3563,28 @@ void HELPER(v8m_sg)(CPUState *env)
     switch_v7m_security_state(env, true);
     tlib_printf(LOG_LEVEL_NOISY, "Executed SG at 0x%" PRIx32, sg_pc);
 }
+
+void HELPER(v8m_bx_update_pc)(CPUState *env, uint32_t pc)
+{
+    /* is not EXC_RETURN */
+    if(pc < 0xffffff00) {
+        if((pc & 1) == 0) {
+            env->exception_index = EXCP_INVSTATE;
+            cpu_loop_exit(env);
+        }
+        pc &= ~1;
+    }
+    /* For EXC_RETURN, we interrupt the block in translate.c, so we will next do `do_v7m_exception_exit`
+     * For FNC_RETURN there is `do_v7m_secure_return`, and low bit will be cleared, but this is fine, see this comment from the
+     * manual:
+     * """
+     * Because FNC_RETURN is only used when calling from the Secure state, this bit is always set to 1. However, some function
+     * chaining cases can result in an SG instruction clearing this bit, so the architecture ignores the state of this bit when
+     * processing a branch to FNC_RETURN.
+     * """
+     * So we just don't care if it's cleared, as it can happen anyway out of our control in SG */
+    env->regs[15] = pc;
+}
 #endif
 
 void tlib_arch_dispose()

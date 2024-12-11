@@ -66,6 +66,8 @@ DEF_HELPER_2(v7m_mrs, i32, env, i32)
 DEF_HELPER_1(fp_lsp, void, env)
 DEF_HELPER_3(v8m_blxns, void, env, i32, i32)
 DEF_HELPER_1(v8m_sg, void, env)
+
+DEF_HELPER_2(v8m_bx_update_pc, void, env, i32)
 #endif
 
 DEF_HELPER_4(set_cp15_64bit, void, env, i32, i32, i32)
