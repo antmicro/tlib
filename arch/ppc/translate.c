@@ -192,7 +192,7 @@ static inline void gen_update_nip(DisasContext *s, target_ulong nip)
     tcg_gen_movi_tl(cpu_nip, (uint32_t)nip);
 }
 
-static inline void gen_sync_pc(DisasContext *dc)
+void gen_sync_pc(DisasContext *dc)
 {
     tcg_gen_movi_tl(cpu_nip, dc->base.pc);
 }

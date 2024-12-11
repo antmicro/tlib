@@ -786,6 +786,11 @@ void gen_set_pc_im(target_ulong val)
     tcg_gen_movi_i32(cpu_R[15], val);
 }
 
+void gen_sync_pc(DisasContext* dc)
+{
+    gen_set_pc_im(dc->base.pc);
+}
+
 /* Set PC and Thumb state from var.  var is marked as dead.  */
 static inline void gen_bx(DisasContext *s, TCGv_i32 var)
 {

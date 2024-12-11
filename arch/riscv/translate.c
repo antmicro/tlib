@@ -255,7 +255,7 @@ static inline bool ensure_vector_embedded_extension_for_vsew_or_kill_unknown(Dis
     return false;
 }
 
-static inline void gen_sync_pc(DisasContext *dc)
+void gen_sync_pc(DisasContext *dc)
 {
     tcg_gen_movi_tl(cpu_pc, dc->base.pc);
     tcg_gen_movi_tl(cpu_opcode, dc->opcode);

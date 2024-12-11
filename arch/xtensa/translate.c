@@ -201,7 +201,7 @@ void xtensa_translate_init(void)
                                "exclusive_val");
 }
 
-static inline void gen_sync_pc(DisasContext *dc)
+void gen_sync_pc(DisasContext *dc)
 {
     TCGv_i32 tmp = tcg_const_i32(dc->base.pc);
     tcg_gen_mov_i32(cpu_pc, tmp);

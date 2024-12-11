@@ -1958,6 +1958,12 @@ static void gen_shifti(DisasContext *s1, int op, int ot, int d, int c)
     }
 }
 
+void gen_sync_pc(DisasContext* dc)
+{
+    target_ulong cur_eip = dc->base.pc - dc->cs_base;
+    gen_jmp_im(cur_eip);
+}
+
 static void gen_lea_modrm(DisasContext *s, int modrm, int *reg_ptr, int *offset_ptr)
 {
     target_long disp;

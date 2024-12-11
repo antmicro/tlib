@@ -120,6 +120,14 @@ static int sign_extend(int x, int len)
 
 #define IS_IMM (insn & (1<<13))
 
+void gen_sync_pc(DisasContext* dc)
+{
+    /* if dc->base.pc is DYNAMIC_PC we are already updating the PC in gen_op_next_insn */
+    if (dc->base.pc != DYNAMIC_PC) {
+        tcg_gen_movi_tl(cpu_pc, dc->base.pc);
+    }
+}
+
 /* floating point registers moves */
 static void gen_op_load_fpr_DT0(unsigned int src)
 {

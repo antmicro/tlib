@@ -210,6 +210,11 @@ static void cpu_gen_code_inner(CPUState *env, TranslationBlock *tb)
 
         int do_break = 0;
         tb->icount++;
+
+        if (!cpu->sync_pc_every_instruction_disabled) {
+            gen_sync_pc(&dcc);
+        }
+
         if (!gen_intermediate_code(env, dc)) {
             do_break = 1;
         }

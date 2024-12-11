@@ -52,6 +52,7 @@ void do_interrupt(CPUState *env);
 int gen_breakpoint(DisasContextBase *base, CPUBreakpoint *bp);
 int gen_intermediate_code(CPUState *env, DisasContextBase *base);
 uint32_t gen_intermediate_code_epilogue(CPUState *env, DisasContextBase *base);
+void gen_sync_pc(DisasContext *dc);
 void restore_state_to_opc(CPUState *env, struct TranslationBlock *tb, target_ulong *data);
 void setup_disas_context(DisasContextBase *dc, CPUState *env);
 int tlb_fill(CPUState *env1, target_ulong addr, int is_write, int mmu_idx, void *retaddr, int no_page_fault, int access_width);

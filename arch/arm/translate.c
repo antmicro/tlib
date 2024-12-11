@@ -111,6 +111,11 @@ static inline void gen_set_pc(target_ulong value)
 #endif
 }
 
+void gen_sync_pc(DisasContext* dc)
+{
+    gen_set_pc(dc->base.pc);
+}
+
 static inline TCGv load_cpu_offset(int offset)
 {
     TCGv tmp = tcg_temp_new_i32();
