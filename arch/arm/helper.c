@@ -3580,7 +3580,8 @@ void HELPER(v8m_blxns)(CPUState *env, uint32_t addr, uint32_t link)
             }
         }
     }
-    env->regs[15] = addr;
+    /* As in BX/BLX we need to clear bit[0] of address */
+    env->regs[15] = addr & ~1;
 }
 
 void HELPER(v8m_sg)(CPUState *env)
