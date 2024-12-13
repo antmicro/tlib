@@ -269,6 +269,7 @@ static PhysPageDesc *phys_page_find_alloc(target_phys_addr_t index, int alloc)
         for (i = 0; i < L2_SIZE; i++) {
             pd[i].phys_offset = IO_MEM_UNASSIGNED;
             pd[i].region_offset = (aligned_index + i) << TARGET_PAGE_BITS;
+            pd[i].flags = (PhysPageDescFlags) { 0 };
         }
     }
 
