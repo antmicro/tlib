@@ -3838,6 +3838,128 @@ void HELPER(v8m_bx_update_pc)(CPUState *env, uint32_t pc)
      * So we just don't care if it's cleared, as it can happen anyway out of our control in SG */
     env->regs[15] = pc;
 }
+
+static inline bool vlstm_store_helper(CPUState *env, uint32_t *address, uint64_t val)
+{
+    uint32_t phys_ptr = 0;
+    target_ulong page_size = 0;
+    int prot = 0;
+
+    int ret = get_phys_addr(env, *address, env->secure, ACCESS_DATA_STORE, !in_privileged_mode(env), &phys_ptr, &prot, &page_size,
+                            false);
+    if(ret == TRANSLATE_SUCCESS) {
+        stq_phys(*address, val);
+        *address += sizeof(val);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+static inline bool vlldm_load_helper(CPUState *env, uint32_t *address, uint64_t *val)
+{
+    uint32_t phys_ptr = 0;
+    target_ulong page_size = 0;
+    int prot = 0;
+
+    int ret = get_phys_addr(env, *address, env->secure, ACCESS_DATA_STORE, !in_privileged_mode(env), &phys_ptr, &prot, &page_size,
+                            false);
+    if(ret == TRANSLATE_SUCCESS) {
+        *val = ldq_phys(*address);
+        *address += sizeof(*val);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+void HELPER(v8m_vlstm)(CPUState *env, uint32_t rn, uint32_t lowRegsOnly)
+{
+    /* Instruction is UNDEF in Non-secure state - helper should not be called */
+    tlib_assert(env->secure);
+
+    if((env->v7m.control[env->secure] & ARM_CONTROL_SFPA_MASK) == 0) {
+        /* Secure FPU disabled; this bit is not banked, SS doesn't matter when reading */
+        return;
+    }
+    if((env->v7m.fpccr & ARM_FPCCR_LSPACT) > 0) {
+        /* The HW raises exception here, as it's a possible attack scenario */
+        env->v7m.secure_fault_status |= SECURE_FAULT_LSERR;
+        env->exception_index = EXCP_SECURE;
+        cpu_loop_exit(env);
+    }
+
+    uint32_t address = env->regs[rn];
+    if((env->v7m.fpccr & ARM_FPCCR_LSPEN_MASK) > 0) {
+        /* If Lazy preservation is already enabled, just update the FPCAR address
+         * Low three bits are RES0 */
+        env->v7m.fpcar = address & ~0x7;
+    } else {
+        /* We store, in this order, the following FPU registers, at the address passed in register "rn":
+         *  S[0]-S[15]
+         *  FPSCR
+         *  VPR (but we don't have it, so 32-bit all-ones value)
+         *  S[16]-S[31] */
+        for(int i = 0; i < 8; ++i) {
+            vlstm_store_helper(env, &address, env->vfp.regs[i]);
+        }
+        vlstm_store_helper(env, &address, vfp_get_fpscr(env));
+        /* No MVE, store all ones */
+        vlstm_store_helper(env, &address, ~0x0);
+
+        bool pushCalleeFrame = (env->v7m.fpccr & ARM_FPCCR_TS_MASK) > 0;
+        if(pushCalleeFrame) {
+            for(int i = 8; i < 16; ++i) {
+                vlstm_store_helper(env, &address, env->vfp.regs[i]);
+            }
+        }
+
+        memset(env->vfp.regs, 0, 16 * sizeof(env->vfp.regs[0]));
+        if(pushCalleeFrame) {
+            memset(env->vfp.regs + 16, 0, 16 * sizeof(env->vfp.regs[0]));
+        }
+        vfp_set_fpscr(env, 0);
+    }
+    env->v7m.control[env->secure] &= ~ARM_CONTROL_FPCA_MASK;
+}
+
+void HELPER(v8m_vlldm)(CPUState *env, uint32_t rn, uint32_t lowRegsOnly)
+{
+    /* Instruction is UNDEF in Non-secure state - helper should not be called */
+    tlib_assert(env->secure);
+    tlib_assert(sizeof(env->vfp.regs[0]) <= sizeof(uint64_t));
+
+    if((env->v7m.control[env->secure] & ARM_CONTROL_SFPA_MASK) == 0) {
+        /* Secure FPU disabled; this bit is not banked, SS doesn't matter when reading */
+        return;
+    }
+
+    if((env->v7m.fpccr & ARM_FPCCR_LSPACT_MASK) > 0) {
+        /* The state is still active */
+        env->v7m.fpccr &= ~ARM_FPCCR_LSPACT_MASK;
+    } else {
+        uint32_t address = env->regs[rn];
+
+        uint64_t scratch = 0;
+        for(int i = 0; i < 8; ++i) {
+            vlldm_load_helper(env, &address, &scratch);
+            env->vfp.regs[i] = scratch;
+        }
+        vlldm_load_helper(env, &address, &scratch);
+        vfp_set_fpscr(env, scratch);
+        /* No MVE, these we can ignore */
+        vlldm_load_helper(env, &address, &scratch);
+
+        if((env->v7m.fpccr & ARM_FPCCR_TS_MASK) > 0) {
+            for(int i = 8; i < 16; ++i) {
+                vlldm_load_helper(env, &address, &scratch);
+                env->vfp.regs[i] = scratch;
+            }
+        }
+    }
+    env->v7m.control[env->secure] |= ARM_CONTROL_FPCA_MASK;
+}
+
 #endif
 
 void tlib_arch_dispose()

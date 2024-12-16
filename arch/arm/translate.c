@@ -49,6 +49,7 @@
 #define ENABLE_ARCH_6T2 arm_feature(env, ARM_FEATURE_THUMB2)
 #define ENABLE_ARCH_7   arm_feature(env, ARM_FEATURE_V7)
 #define ENABLE_ARCH_8   arm_feature(env, ARM_FEATURE_V8)
+#define ENABLE_ARCH_8_1M arm_feature(env, ARM_FEATURE_V8_1M)
 #define ENABLE_ARCH_MVE arm_feature(env, ARM_FEATURE_MVE)
 
 //  Masks for coprocessor instruction
@@ -9770,6 +9771,10 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                6, 14 are MRRC/MCRR T1,T2
                7, 15 are MCR/MRC T1,T2
              */
+
+            int op1 = (insn >> 21) & 0xf;
+            int op4 = (insn >> 6) & 0x7;
+
             if(arm_feature(env, ARM_FEATURE_V8) && is_insn_vstrw(insn)) {
                 ARCH(MVE);
                 return trans_vstrw(s, insn);
@@ -9779,6 +9784,26 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                 if(disas_neon_data_insn(env, s, insn)) {
                     goto illegal_op;
                 }
+            } else if(((insn >> 25) & 0xf) == 0b0110 && (op1 & 0b1101) == 0b0001 && (op4 >> 2) == 0) {
+#ifdef TARGET_PROTO_ARM_M
+                /* VLSTM, VLLDM */
+                ARCH(8);
+                if(s->ns) {
+                    goto illegal_op;
+                }
+                bool lowRegsOnly = ((insn >> 7) & 1) == 0;
+                if(!lowRegsOnly) {
+                    ARCH(8_1M);
+                }
+                int op2 = (insn >> 20) & 1;
+                if(op2 == 0) {
+                    gen_helper_v8m_vlstm(cpu_env, rn, lowRegsOnly);
+                } else {
+                    gen_helper_v8m_vlldm(cpu_env, rn, lowRegsOnly);
+                }
+#else
+                goto illegal_op;
+#endif
             } else {
                 gen_set_pc(current_pc);
 
