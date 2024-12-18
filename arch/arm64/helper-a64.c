@@ -913,6 +913,22 @@ static void cpsr_write_from_spsr_elx(CPUARMState *env,
     cpsr_write(env, val, mask, CPSRWriteRaw);
 }
 
+uint32_t cpsr_read_to_spsr_elx(CPUARMState *env)
+{
+    uint32_t spsr = cpsr_read(env);
+
+    /* Load SS from PSTATE */
+    spsr |= env->pstate & PSTATE_SS;
+
+    /* Move DIT to the correct location for SPSR */
+    if (spsr & CPSR_DIT) {
+        spsr &= ~CPSR_DIT;
+        spsr |= PSTATE_DIT;
+    }
+
+    return spsr;
+}
+
 // This is just a dummy replacement based on what it causes. PSTATE_SS is supposed
 // to be unset if this function returns true so only abort if it's set.
 bool arm_generate_debug_exceptions(CPUState *env)

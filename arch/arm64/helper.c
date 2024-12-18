@@ -641,7 +641,7 @@ void do_interrupt_a64(CPUState *env)
     }
 
     // current pstate mode
-    uint32_t old_pstate = pstate_read(env);
+    uint32_t old_pstate = is_a64(env) ? pstate_read(env) : cpsr_read_to_spsr_elx(env);
     // exception vector table, base adress for target el
     target_ulong addr = env->cp15.vbar_el[target_el];
     // save current pstate in SPSR_ELn

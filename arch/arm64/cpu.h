@@ -1319,6 +1319,11 @@ static inline unsigned int aarch64_pstate_mode(unsigned int el, bool handler)
 /* Return the current CPSR value.  */
 uint32_t cpsr_read(CPUARMState *env);
 
+/* Return the current CPSR value adjusted into a form
+ * suitable for saving into SPSR_ELx.
+ */
+uint32_t cpsr_read_to_spsr_elx(CPUARMState *env);
+
 typedef enum CPSRWriteType {
     CPSRWriteByInstr = 0,         /* from guest MSR or CPS */
     CPSRWriteExceptionReturn = 1, /* from guest exception return insn */
