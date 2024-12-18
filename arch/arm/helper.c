@@ -2279,7 +2279,7 @@ static inline int pmsav8_check_access(CPUState *env, uint32_t address, bool secu
 
 #ifdef TARGET_PROTO_ARM_M
 static inline bool pmsav8_check_security_attribution(CPUState *env, uint32_t address, bool is_secure, int access_type,
-                                                     bool set_fault_status)
+                                                     bool suppress_faults)
 {
     bool idau_valid, sau_valid;
     int idau_region, sau_region;
@@ -2287,26 +2287,34 @@ static inline bool pmsav8_check_security_attribution(CPUState *env, uint32_t add
     pmsav8_get_security_attribution(env, address, is_secure, access_type, /* access_width */ 1, &idau_valid, &idau_region,
                                     &sau_valid, &sau_region, &attribution);
 
+    uint32_t fault_status = 0;
+
     //  See: B10.2 Security attribution
     if(access_type == ACCESS_INST_FETCH) {
         if(((attribution == SA_NONSECURE) && is_secure) || ((attribution == SA_SECURE) && !is_secure)) {
-            if(set_fault_status) {
-                /* The fault ocurred, the fault type is determined by the direction into which domain we are crossing
-                 * while trying to execute code (fetch instruction for execution) */
-                env->v7m.secure_fault_status |= is_secure ? SECURE_FAULT_INVTRAN : SECURE_FAULT_INVEP;
-            }
-            return false;
+            /* The fault ocurred, the fault type is determined by the direction into which domain we are crossing
+             * while trying to execute code (fetch instruction for execution) */
+            fault_status = is_secure ? SECURE_FAULT_INVTRAN : SECURE_FAULT_INVEP;
         }
     } else {  //  LOAD or STORE
         if(attribution_is_secure(attribution) && !is_secure) {
-            if(set_fault_status) {
-                /* TODO: LSPERR is possible here, but requires FPU support for TZ */
-                env->v7m.secure_fault_status |= SECURE_FAULT_AUVIOL;
-            }
-            return false;
+            /* TODO: LSPERR is possible here, but requires FPU support for TZ */
+            fault_status = SECURE_FAULT_AUVIOL;
         }
     }
-    return true;
+
+    if(fault_status != 0 && !suppress_faults) {
+        fault_status |= SECURE_FAULT_SFARVALID;
+        tlib_printf(LOG_LEVEL_WARNING,
+                    "[PC=0x%" PRIx32 "] SecureFault while accessing address in %s state: 0x%" PRIx32
+                    ", access type: %s, fault status: 0x%" PRIx32,
+                    env->regs[15], is_secure ? "secure" : "non-secure", address, ACCESS_TYPE_STRING(access_type), fault_status);
+
+        env->v7m.secure_fault_address = address;
+        env->v7m.secure_fault_status |= fault_status;
+        env->exception_index = EXCP_SECURE;
+    }
+    return fault_status == 0;
 }
 #endif
 
@@ -2337,14 +2345,8 @@ inline int get_phys_addr(CPUState *env, uint32_t address, bool is_secure, int ac
 #ifdef TARGET_PROTO_ARM_M
     /* TrustZone: Security attribution happens here */
     if(env->v7m.has_trustzone) {
-        if(!pmsav8_check_security_attribution(env, address, is_secure, access_type, true)) {
-            tlib_printf(LOG_LEVEL_WARNING, "SecureFault while accessing address: 0x%" PRIx32 ", access type %s", address,
-                        ACCESS_TYPE_STRING(access_type));
-            env->v7m.secure_fault_address = address;
-            env->v7m.secure_fault_status |= SECURE_FAULT_SFARVALID;
-            env->exception_index = EXCP_SECURE;
-            /* Non-returning function - jump out of TB to signal SecureFault */
-            cpu_loop_exit(env);
+        if(!pmsav8_check_security_attribution(env, address, is_secure, access_type, /* suppress_faults: */ no_page_fault)) {
+            return TRANSLATE_FAIL;
         }
     }
 
