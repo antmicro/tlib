@@ -1992,7 +1992,32 @@ static inline bool pmsav8_mpu_region_valid(int region_index)
     return region_index != PMSA_MPU_REGION_INVALID;
 }
 
-static inline bool pmsav8_get_region(CPUState *env, uint32_t address, bool secure, int *region_index, bool *multiple_regions)
+/* Helper used in PMSAv8 and IDAU/SAU lookups checking if the region doesn't break the accessed page into parts. */
+static inline void update__applies_to_whole_page(uint32_t address, uint32_t region_start, uint32_t region_end,
+                                                 bool *applies_to_whole_page)
+{
+    /* Any region start or end on the page which is not equal to the page start and end means that
+     * the function result for the address doesn't necessarily apply to the whole page.
+     *
+     * This isn't needed if we already know that the whole page can't be treated the same.
+     */
+    if(applies_to_whole_page != NULL && *applies_to_whole_page) {
+        uint32_t page_start = address & TARGET_PAGE_MASK;
+        uint32_t page_end = page_start + TARGET_PAGE_SIZE - 1;
+
+        if(((region_start > page_start) && (region_start <= page_end)) ||
+           ((region_end >= page_start) && (region_end < page_end))) {
+            *applies_to_whole_page = false;
+        }
+    }
+}
+
+/* `applies_to_whole_page` can be passed NULL in which case the function won't be checking if the
+ * returned permissions are valid for the whole page. The same applies if it's value is false from
+ * the beginning in which case it will always stay false.
+ */
+static inline bool pmsav8_get_region(CPUState *env, uint32_t address, bool secure, int *region_index, bool *multiple_regions,
+                                     bool *applies_to_whole_page)
 {
     int n;
     bool hit = false;
@@ -2000,7 +2025,6 @@ static inline bool pmsav8_get_region(CPUState *env, uint32_t address, bool secur
     *region_index = PMSA_MPU_REGION_INVALID;
 
     for(n = env->number_of_mpu_regions - 1; n >= 0; n--) {
-
         if(!(env->pmsav8[secure].rlar[n] & 0x1)) {
             /* Region disabled */
             continue;
@@ -2008,6 +2032,9 @@ static inline bool pmsav8_get_region(CPUState *env, uint32_t address, bool secur
 
         uint32_t base = pmsav8_idau_sau_get_region_base(env->pmsav8[secure].rbar[n]);
         uint32_t limit = pmsav8_idau_sau_get_region_limit(env->pmsav8[secure].rlar[n]);
+
+        update__applies_to_whole_page(address, base, limit, applies_to_whole_page);
+
         if(address < base || address > limit) {
             /* Addr not in this region */
             continue;
@@ -2020,7 +2047,12 @@ static inline bool pmsav8_get_region(CPUState *env, uint32_t address, bool secur
              */
             *multiple_regions = true;
             *region_index = PMSA_MPU_REGION_INVALID;
-            break;
+
+            /* Returning after finding the second region is safe even if `applies_to_whole_page` is
+             * still true because `multiple_regions` will fail translation so permissions won't be
+             * added to TLB anyway.
+             */
+            return false;
         }
 
         hit = true;
@@ -2190,9 +2222,11 @@ static inline void pmsav8_get_security_attribution(CPUState *env, uint32_t addre
 
 //  Returns `TRANSLATE_SUCCESS` in case access is valid and `TRANSLATE_FAILURE` otherwise.
 //  MPU region matched is valid in both cases if different than `PMSA_MPU_REGION_INVALID`.
+//  `page_size` can be safely passed NULL if it doesn't matter.
 static inline int pmsav8_check_access_with_region(CPUState *env, uint32_t address, bool secure, int access_type, int is_user,
                                                   int *prot, target_ulong *page_size, int *resolved_region)
 {
+    bool applies_to_whole_page = true;
     bool hit;
     bool multiple_regions = false;
     bool mpu_enabled = PMSA_ENABLED(env->pmsav8[secure].ctrl);
@@ -2203,7 +2237,7 @@ static inline int pmsav8_check_access_with_region(CPUState *env, uint32_t addres
     if(!mpu_enabled) {
         hit = false;
     } else {
-        hit = pmsav8_get_region(env, address, secure, resolved_region, &multiple_regions);
+        hit = pmsav8_get_region(env, address, secure, resolved_region, &multiple_regions, &applies_to_whole_page);
 
         /* Overlapping regions generate MemManage Fault
          * R_LLLP in Arm® v8-M Architecture Reference Manual DDI0553B.l ID30062020 */
@@ -2231,19 +2265,6 @@ static inline int pmsav8_check_access_with_region(CPUState *env, uint32_t addres
         if(!xn && (is_user || !pxn)) {
             *prot |= PAGE_EXEC;
         }
-
-        /* Check that the hit region fully covers the tlb page
-         */
-        uint32_t region_start = pmsav8_idau_sau_get_region_base(rbar);
-        uint32_t region_end = pmsav8_idau_sau_get_region_limit(rlar);
-        if((address & TARGET_PAGE_MASK) == (region_start & TARGET_PAGE_MASK)) {
-            //  Region starts mid page
-            *page_size -= (region_start & ~TARGET_PAGE_MASK);
-        }
-        if((address & TARGET_PAGE_MASK) == (region_end & TARGET_PAGE_MASK)) {
-            //  Region ends mid page
-            *page_size -= TARGET_PAGE_SIZE - (region_end & ~TARGET_PAGE_MASK);
-        }
     } else {
         /* No region hit, use background region if:
          * - MPU disabled: for all accesses
@@ -2262,6 +2283,21 @@ static inline int pmsav8_check_access_with_region(CPUState *env, uint32_t addres
     }
 
     if(is_page_access_valid(*prot, access_type)) {
+        //  Page size might not be needed, e.g., for the TT(A)(T) instruction helper.
+        if(page_size == NULL) {
+            return TRANSLATE_SUCCESS;
+        }
+
+        /* Otherwise, making sure the returned permissions are valid for the whole page is crucial
+         * when returning success cause those will be cached per page. Precise size isn't strictly
+         * necessary as one-shot TLB entries are currently always added if `page_size` is smaller
+         * than `TARGET_PAGE_SIZE` (see `tlb_set_page`). It can't be lower than PMSAv8 granularity
+         * though so let's use that value if page isn't uniform MPU-wise.
+         *
+         * `TARGET_PAGE_SIZE` is always returned for valid accesses if MPU is disabled cause background
+         * regions are much bigger than page size.
+         */
+        *page_size = applies_to_whole_page || !mpu_enabled ? TARGET_PAGE_SIZE : PMSAV8_IDAU_SAU_REGION_GRANULARITY_B;
         return TRANSLATE_SUCCESS;
     }
 
@@ -3452,7 +3488,6 @@ void HELPER(set_teecr)(CPUState *env, uint32_t val)
 uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
 {
     int prot;
-    target_ulong page_size; /* Not used but needed for MPU check */
     bool a, t;
     int mpu_region;
     enum security_attribution attribution;
@@ -3509,7 +3544,7 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
          * Store doesn't need to be tested as we can just check `prot` set by the function.
          */
         int result = pmsav8_check_access_with_region(env, addr, test_secure, ACCESS_DATA_LOAD,
-                                                     /* is_user: */ !test_privileged, &prot, &page_size, &mpu_region);
+                                                     /* is_user: */ !test_privileged, &prot, /* page_size: */ NULL, &mpu_region);
 
         if((in_privileged_mode(env) || a) && pmsav8_mpu_region_valid(mpu_region)) {
             addr_info.flags.mpu_region = mpu_region;
