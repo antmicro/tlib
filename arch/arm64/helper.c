@@ -704,7 +704,7 @@ void do_interrupt_a64(CPUState *env)
             tlib_printf(LOG_LEVEL_WARNING, "Handling illegal execution state exception; PSTATE=0x%" PRIx32, env->pstate);
             break;
         case SYN_EC_UNKNOWN_REASON:
-            tlib_printf(LOG_LEVEL_DEBUG, "Undefined instruction at PC=0x%" PRIx64 ": %" PRIx32, env->pc, ldl_code(env->pc));
+            tlib_printf(LOG_LEVEL_DEBUG, "Undefined instruction at PC=0x%" PRIx64 ": %" PRIx32, CPU_PC(env), ldl_code(CPU_PC(env)));
             break;
         default:
             // All the syndromes used with EXCP_UDEF have explicit cases.
@@ -722,7 +722,7 @@ void do_interrupt_a64(CPUState *env)
     pstate_write_with_sp_change(env, new_pstate);
 
     tlib_printf(LOG_LEVEL_DEBUG, "%s: excp=%d, addr=0x%" PRIx64 ", target_el=%d, syndrome=0x%x, pc=0x%" PRIx64 ", far=0x%" PRIx64,
-                __func__, env->exception_index, addr, target_el, env->exception.syndrome, env->pc, env->exception.vaddress);
+                __func__, env->exception_index, addr, target_el, env->exception.syndrome, CPU_PC(env), env->exception.vaddress);
 
     // execute exception handler
     env->pc = addr;
