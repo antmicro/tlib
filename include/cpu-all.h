@@ -472,9 +472,8 @@ static inline void stfq_be_p(void *ptr, float64 v)
 
 /* page related stuff */
 
-#define TARGET_PAGE_SIZE        (1ull << TARGET_PAGE_BITS)
-#define TARGET_PAGE_MASK        ~(TARGET_PAGE_SIZE - 1)
-#define TARGET_PAGE_ALIGN(addr) (((addr) + TARGET_PAGE_SIZE - 1) & TARGET_PAGE_MASK)
+#define TARGET_PAGE_SIZE (1ull << TARGET_PAGE_BITS)
+#define TARGET_PAGE_MASK ~(TARGET_PAGE_SIZE - 1)
 
 /* ??? These should be the larger of unsigned long and target_ulong.  */
 extern uintptr_t tlib_real_host_page_size;
