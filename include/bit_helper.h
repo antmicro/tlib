@@ -10,6 +10,9 @@
 
 #include "infrastructure.h"
 
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+
 //  Used by deposit32.
 static inline uint64_t deposit64(uint64_t dst_val, uint8_t start, uint8_t length, uint64_t val);
 

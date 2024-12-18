@@ -19,8 +19,6 @@
 #include "cpu.h"
 #include "softfloat-2.h"
 
-#define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
-
 /*
  * Handle configuration to vector registers
  *

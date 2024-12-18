@@ -17,6 +17,9 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
+
+#include "bit_helper.h"
+
 #if SHIFT == 0
 #define Reg MMXReg
 #define XMM_ONLY(...)
@@ -34,9 +37,6 @@
 #define Q(n)          XMM_Q(n)
 #define SUFFIX        _xmm
 #endif
-
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
-#define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 void glue(helper_psrlw, SUFFIX)(Reg *d, Reg *s)
 {

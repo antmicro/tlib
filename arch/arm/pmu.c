@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "bit_helper.h"
 #include "cpu.h"
 #include "pmu.h"
 
@@ -521,7 +522,6 @@ uint32_t pmu_get_insn_cycle_value(const pmu_counter *const counter)
     return counter->val + value;
 }
 
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
 void pmu_update_cycles_instruction_limit_custom_mode(const pmu_counter *const counter, enum arm_cpu_mode mode)
 {
     if(!counter->enabled_overflow_interrupt || !counter->enabled || !env->pmu.counters_enabled) {
@@ -543,7 +543,6 @@ void pmu_update_cycles_instruction_limit_custom_mode(const pmu_counter *const co
             MIN(env->pmu.insns_overflow_nearest_limit, UINT32_MAX - pmu_get_insn_cycle_value(counter));
     }
 }
-#undef MIN
 
 void pmu_update_cycles_instruction_limit(const pmu_counter *const counter)
 {
