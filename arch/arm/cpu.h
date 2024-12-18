@@ -546,12 +546,9 @@ static inline bool attribution_is_secure(enum security_attribution attrib)
 #define SAU_CTRL_ENABLE 0x01
 #define SAU_CTRL_ALLNS  0x02
 
-#define SAU_RLAR_ENABLE 0x01
-#define SAU_RLAR_NSC    0x02
-
 /* There are no such registers in cores, we simply imitate SAU. */
-#define IDAU_RLAR_ENABLE 0x01
-#define IDAU_RLAR_NSC    0x02
+#define IDAU_SAU_RLAR_ENABLE 0x01
+#define IDAU_SAU_RLAR_NSC    0x02
 #endif
 
 /* Return the current FPSCR value.  */

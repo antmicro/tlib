@@ -2104,29 +2104,23 @@ static inline bool pmsav8_is_exempt_from_attribution(uint32_t address, int acces
     return is_impl_def_exempt_from_attribution(address);
 }
 
-/* The return value is true if SAU is enabled and a single region was matched. */
-static inline bool pmsav8_sau_try_get_region(CPUState *env, uint32_t address, int *region_index,
-                                             enum security_attribution *attribution)
+static inline bool pmsav8_idau_sau_try_get_region(uint32_t address, uint32_t *rbars, uint32_t *rlars, uint32_t regions_count,
+                                                  int *region_index, enum security_attribution *attribution)
 {
     int n;
     bool hit = false;
     *region_index = -1;
     *attribution = SA_SECURE;
 
-    if(!(env->sau.ctrl & SAU_CTRL_ENABLE)) {
-        *attribution = env->sau.ctrl & SAU_CTRL_ALLNS ? SA_NONSECURE : SA_SECURE;
-        return false;
-    }
-
-    for(n = 0; n < env->number_of_sau_regions; n++) {
-        if(!(env->sau.rlar[n] & SAU_RLAR_ENABLE)) {
+    for(n = 0; n < regions_count; n++) {
+        if(!(rlars[n] & IDAU_SAU_RLAR_ENABLE)) {
             /* Region disabled */
             continue;
         }
 
-        uint32_t base = pmsav8_idau_sau_get_region_base(env->sau.rbar[n]);
-        uint32_t limit = pmsav8_idau_sau_get_region_limit(env->sau.rlar[n]);
-        bool nsc = env->sau.rlar[n] & SAU_RLAR_NSC;
+        uint32_t base = pmsav8_idau_sau_get_region_base(rbars[n]);
+        uint32_t limit = pmsav8_idau_sau_get_region_limit(rlars[n]);
+        bool nsc = rlars[n] & IDAU_SAU_RLAR_NSC;
         if(address < base || address > limit) {
             /* Addr not in this region */
             continue;
@@ -2134,8 +2128,9 @@ static inline bool pmsav8_sau_try_get_region(CPUState *env, uint32_t address, in
 
         /* Another region matched?
          *
-         * Note that we don't break the loop after finding the first matching region as we need
-         * to make sure it's the only matching region. SAU region isn't valid otherwise.
+         * Note that we don't break the loop after finding the first matching region as we need to
+         * make sure it's the only matching region. SAU region isn't valid otherwise and we follow
+         * the same rules for IDAU.
          */
         if(hit) {
             /* An address that matches multiple SAU regions is marked as Secure and
@@ -2162,26 +2157,28 @@ static inline bool pmsav8_sau_try_get_region(CPUState *env, uint32_t address, in
     return hit;
 }
 
-static inline bool pmsav8_idau_get_region(CPUState *env, uint32_t address, int *region_index,
-                                          enum security_attribution *attribution)
+/* The return value is true if SAU is enabled and a single region was matched. */
+static inline bool pmsav8_sau_try_get_region(CPUState *env, uint32_t address, int *region_index,
+                                             enum security_attribution *attribution)
+{
+    if(!(env->sau.ctrl & SAU_CTRL_ENABLE)) {
+        *attribution = env->sau.ctrl & SAU_CTRL_ALLNS ? SA_NONSECURE : SA_SECURE;
+        return false;
+    }
+
+    return pmsav8_idau_sau_try_get_region(address, env->sau.rbar, env->sau.rlar, env->number_of_sau_regions, region_index,
+                                          attribution);
+}
+
+/* The return value is true if a single IDAU region was matched. */
+static inline bool pmsav8_idau_try_get_region(CPUState *env, uint32_t address, int *region_index,
+                                              enum security_attribution *attribution)
 {
     //  The function should only be called if IDAU is enabled cause IDAU disabled is indistinguishable from no hit
     tlib_assert(env->idau.enabled);
 
-    for(int index = 0; index <= env->number_of_idau_regions; index++) {
-        uint32_t start = pmsav8_idau_sau_get_region_base(env->idau.rbar[index]);
-        uint32_t rlar = env->idau.rlar[index];
-        uint32_t end = pmsav8_idau_sau_get_region_limit(rlar);
-        if(start <= address && end >= address) {
-            if(rlar & IDAU_RLAR_ENABLE) {
-                *attribution = rlar & IDAU_RLAR_NSC ? SA_SECURE_NSC : SA_NONSECURE;
-                *region_index = index;
-                return true;
-            }
-        }
-    }
-    *attribution = SA_SECURE;
-    return false;
+    return pmsav8_idau_sau_try_get_region(address, env->idau.rbar, env->idau.rlar, env->number_of_idau_regions, region_index,
+                                          attribution);
 }
 
 static inline void pmsav8_get_security_attribution(CPUState *env, uint32_t address, bool secure, int access_type,
@@ -2224,12 +2221,11 @@ static inline void pmsav8_get_security_attribution(CPUState *env, uint32_t addre
     if(unlikely(env->idau.custom_handler_enabled)) {
         ExternalIDAURequest request = { address, (int32_t)secure, access_type, access_width };
         *idau_valid = tlib_custom_idau_handler(&request, idau_region, &idau_attribution);
-    } else if(pmsav8_idau_get_region(env, address, idau_region, &idau_attribution)) {
+    } else if(pmsav8_idau_try_get_region(env, address, idau_region, &idau_attribution)) {
         //  Make sure last byte accessed belongs to the same region.
         tlib_assert(access_end_address <= pmsav8_idau_sau_get_region_limit(env->idau.rlar[*idau_region]));
 
         *idau_valid = true;
-
     } else {
         return;
     }

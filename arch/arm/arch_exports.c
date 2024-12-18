@@ -616,7 +616,7 @@ void tlib_set_idau_region_limit_address_register(uint32_t index, uint32_t value)
                     cpu->number_of_idau_regions, index);
     }
 
-    uint32_t valid_flags = IDAU_RLAR_ENABLE | IDAU_RLAR_NSC;
+    uint32_t valid_flags = IDAU_SAU_RLAR_ENABLE | IDAU_SAU_RLAR_NSC;
     uint32_t values_invalid_flags = pmsav8_idau_sau_get_flags(value) & ~valid_flags;
     if(values_invalid_flags) {
         tlib_printf(LOG_LEVEL_WARNING, "IDAU: Unsetting invalid RLAR flags used for region %u: 0x%02x; valid flags are: 0x%02x",
