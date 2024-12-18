@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "bit_helper.h"
 #include "cpu.h"
 #include "helper.h"
 #include "host-utils.h"
@@ -2063,8 +2064,12 @@ static inline bool pmsav8_get_region(CPUState *env, uint32_t address, bool secur
 
 //  Always check return value first as `found_index` is only valid on success.
 //  NULL can be safely passed when the index doesn't matter.
-inline bool try_get_impl_def_attr_exemption_region(uint32_t address, uint32_t start_at, uint32_t *found_index)
+inline bool try_get_impl_def_attr_exemption_region(uint32_t address, uint32_t start_at, uint32_t *found_index,
+                                                   bool *applies_to_whole_page)
 {
+    bool applies_to_whole_page_was_true = applies_to_whole_page != NULL && *applies_to_whole_page;
+    bool result = false;
+
     for(uint32_t index = start_at; index < cpu->impl_def_attr_exemptions.count; index++) {
         uint32_t start = cpu->impl_def_attr_exemptions.start[index];
         uint32_t end = cpu->impl_def_attr_exemptions.end[index];
@@ -2072,18 +2077,35 @@ inline bool try_get_impl_def_attr_exemption_region(uint32_t address, uint32_t st
             if(found_index != NULL) {
                 *found_index = index;
             }
-            return true;
+            result = true;
+
+            /* This is a special case in all the lookups because multiple matched regions have no
+             * special meaning. Therefore the result will be certainly the same for the whole page
+             * if the matched region covers the whole page.
+             *
+             * It only matters if `applies_to_whole_page` was true from the very beginning; in that
+             * case we restore it and break the loop after it's updated for this matched region.
+             */
+            if(applies_to_whole_page_was_true) {
+                *applies_to_whole_page = true;
+            }
+        }
+        update__applies_to_whole_page(address, start, end, applies_to_whole_page);
+
+        if(result) {
+            break;
         }
     }
-    return false;
+    return result;
 }
 
-inline bool is_impl_def_exempt_from_attribution(uint32_t address)
+inline bool is_impl_def_exempt_from_attribution(uint32_t address, bool *applies_to_whole_page)
 {
-    return try_get_impl_def_attr_exemption_region(address, /* start_at: */ 0, /* found_index: */ NULL);
+    return try_get_impl_def_attr_exemption_region(address, /* start_at: */ 0, /* found_index: */ NULL, applies_to_whole_page);
 }
 
-static inline bool pmsav8_is_exempt_from_attribution(uint32_t address, int access_type)
+/* `applies_to_whole_page` can only be changed to false by this function because of IDAU exemption regions. */
+static inline bool pmsav8_is_exempt_from_attribution(uint32_t address, int access_type, bool *applies_to_whole_page)
 {
     /* First architecture-defined exemptions; ARMv8-M Manual: Rule LDTN */
     if(access_type == ACCESS_INST_FETCH && address >= 0xE0000000 && address <= 0xEFFFFFFF) {
@@ -2101,11 +2123,16 @@ static inline bool pmsav8_is_exempt_from_attribution(uint32_t address, int acces
     }
 
     /* If none matched then the result depends on implementation-defined attribution exemptions. */
-    return is_impl_def_exempt_from_attribution(address);
+    return is_impl_def_exempt_from_attribution(address, applies_to_whole_page);
 }
 
+/* `applies_to_whole_page` can be passed NULL in which case the function won't be checking if the
+ * returned attribution is the same for the whole page. The same applies if it's value is false from
+ * the beginning in which case it will always stay false.
+ */
 static inline bool pmsav8_idau_sau_try_get_region(uint32_t address, uint32_t *rbars, uint32_t *rlars, uint32_t regions_count,
-                                                  int *region_index, enum security_attribution *attribution)
+                                                  int *region_index, enum security_attribution *attribution,
+                                                  bool *applies_to_whole_page)
 {
     int n;
     bool hit = false;
@@ -2121,6 +2148,9 @@ static inline bool pmsav8_idau_sau_try_get_region(uint32_t address, uint32_t *rb
         uint32_t base = pmsav8_idau_sau_get_region_base(rbars[n]);
         uint32_t limit = pmsav8_idau_sau_get_region_limit(rlars[n]);
         bool nsc = rlars[n] & IDAU_SAU_RLAR_NSC;
+
+        update__applies_to_whole_page(address, base, limit, applies_to_whole_page);
+
         if(address < base || address > limit) {
             /* Addr not in this region */
             continue;
@@ -2138,6 +2168,15 @@ static inline bool pmsav8_idau_sau_try_get_region(uint32_t address, uint32_t *rb
              * regions that matched the address; ARMv8-M Manual: Rule WGDK.
              */
             *attribution = SA_SECURE;
+
+            /* Returning after finding the second region is safe even if `applies_to_whole_page` is
+             * still true and there is yet another region only partially covering the page.
+             *
+             * The only possible option for that is that both matched regions cover the whole page.
+             * In that case a potential third region only partially covering the page won't really
+             * matter as the two matched regions covering the whole page will make the the result
+             * the same for every access of this page.
+             */
             return false;
         }
 
@@ -2159,34 +2198,47 @@ static inline bool pmsav8_idau_sau_try_get_region(uint32_t address, uint32_t *rb
 
 /* The return value is true if SAU is enabled and a single region was matched. */
 static inline bool pmsav8_sau_try_get_region(CPUState *env, uint32_t address, int *region_index,
-                                             enum security_attribution *attribution)
+                                             enum security_attribution *attribution, bool *applies_to_whole_page)
 {
     if(!(env->sau.ctrl & SAU_CTRL_ENABLE)) {
         *attribution = env->sau.ctrl & SAU_CTRL_ALLNS ? SA_NONSECURE : SA_SECURE;
+
+        /* `applies_to_whole_page` is untouched intentionally. This result definitely applies to the
+         * whole page but it's only one of a few lookups so let's keep it false if it was false.
+         */
         return false;
     }
 
     return pmsav8_idau_sau_try_get_region(address, env->sau.rbar, env->sau.rlar, env->number_of_sau_regions, region_index,
-                                          attribution);
+                                          attribution, applies_to_whole_page);
 }
 
 /* The return value is true if a single IDAU region was matched. */
 static inline bool pmsav8_idau_try_get_region(CPUState *env, uint32_t address, int *region_index,
-                                              enum security_attribution *attribution)
+                                              enum security_attribution *attribution, bool *applies_to_whole_page)
 {
     //  The function should only be called if IDAU is enabled cause IDAU disabled is indistinguishable from no hit
     tlib_assert(env->idau.enabled);
 
     return pmsav8_idau_sau_try_get_region(address, env->idau.rbar, env->idau.rlar, env->number_of_idau_regions, region_index,
-                                          attribution);
+                                          attribution, applies_to_whole_page);
 }
 
+/* `applies_to_whole_page` can be passed NULL in which case the function won't be checking if the
+ * returned attribution is the same for the whole page. The same applies if it's value is false from
+ * the beginning in which case it will always stay false.
+ */
 static inline void pmsav8_get_security_attribution(CPUState *env, uint32_t address, bool secure, int access_type,
                                                    int access_width, bool *idau_valid, int *idau_region, bool *sau_valid,
-                                                   int *sau_region, enum security_attribution *attribution)
+                                                   int *sau_region, enum security_attribution *attribution,
+                                                   bool *applies_to_whole_page)
 {
     *idau_valid = false;
     *sau_valid = false;
+
+    if(applies_to_whole_page != NULL) {
+        *applies_to_whole_page = true;
+    }
 
     tlib_assert(access_width > 0);
     uint32_t access_end_address = address + access_width - 1;
@@ -2201,13 +2253,13 @@ static inline void pmsav8_get_security_attribution(CPUState *env, uint32_t addre
     }
 
     //  Attribution is the same as access security for exemptions; ARMv8-M Manual: Rule LDTN.
-    if(pmsav8_is_exempt_from_attribution(address, access_type)) {
+    if(pmsav8_is_exempt_from_attribution(address, access_type, applies_to_whole_page)) {
         *attribution = secure ? SA_SECURE : SA_NONSECURE;
         return;
     }
 
     //  Even if SAU region not valid, the attribution returned can be NS due to `ALLNS` option changing the default.
-    *sau_valid = pmsav8_sau_try_get_region(env, address, sau_region, attribution);
+    *sau_valid = pmsav8_sau_try_get_region(env, address, sau_region, attribution, applies_to_whole_page);
 
     //  Make sure last byte accessed belongs to the same region.
     tlib_assert(!*sau_valid || access_end_address <= pmsav8_idau_sau_get_region_limit(env->sau.rlar[*sau_region]));
@@ -2221,7 +2273,12 @@ static inline void pmsav8_get_security_attribution(CPUState *env, uint32_t addre
     if(unlikely(env->idau.custom_handler_enabled)) {
         ExternalIDAURequest request = { address, (int32_t)secure, access_type, access_width };
         *idau_valid = tlib_custom_idau_handler(&request, idau_region, &idau_attribution);
-    } else if(pmsav8_idau_try_get_region(env, address, idau_region, &idau_attribution)) {
+
+        //  Custom IDAU's attribution isn't guaranteed to be the same for the whole page.
+        if(applies_to_whole_page != NULL) {
+            *applies_to_whole_page = false;
+        }
+    } else if(pmsav8_idau_try_get_region(env, address, idau_region, &idau_attribution, applies_to_whole_page)) {
         //  Make sure last byte accessed belongs to the same region.
         tlib_assert(access_end_address <= pmsav8_idau_sau_get_region_limit(env->idau.rlar[*idau_region]));
 
@@ -2333,13 +2390,14 @@ static inline int pmsav8_check_access(CPUState *env, uint32_t address, bool secu
 
 #ifdef TARGET_PROTO_ARM_M
 static inline bool pmsav8_check_security_attribution(CPUState *env, uint32_t address, bool is_secure, int access_type,
-                                                     bool suppress_faults)
+                                                     bool suppress_faults, uint32_t *page_size)
 {
-    bool idau_valid, sau_valid;
+    bool idau_valid, sau_valid, applies_to_whole_page = true;
     int idau_region, sau_region;
     enum security_attribution attribution;
     pmsav8_get_security_attribution(env, address, is_secure, access_type, /* access_width */ 1, &idau_valid, &idau_region,
-                                    &sau_valid, &sau_region, &attribution);
+                                    &sau_valid, &sau_region, &attribution, &applies_to_whole_page);
+    *page_size = applies_to_whole_page ? TARGET_PAGE_SIZE : PMSAV8_IDAU_SAU_REGION_GRANULARITY_B;
 
     uint32_t fault_status = 0;
 
@@ -2396,11 +2454,23 @@ inline int get_phys_addr(CPUState *env, uint32_t address, bool is_secure, int ac
         address += env->cp15.c13_fcse;
     }
 
+    /* Resulting `page_size` should be a minimum of IDAU/SAU and MPU `page_size`.
+     *
+     * Generally it's a little tricky because in case no region was matched we still need to know
+     * whether there are no regions on the whole page.
+     *
+     * `TARGET_PAGE_SIZE` is used as default for IDAU/SAU so that the final `page_size` isn't
+     * changed if security attribution check wasn't performed.
+     */
+    target_ulong idau_sau_page_size = TARGET_PAGE_SIZE;
+
     int ret;
 #ifdef TARGET_PROTO_ARM_M
     /* TrustZone: Security attribution happens here */
     if(env->v7m.has_trustzone) {
-        if(!pmsav8_check_security_attribution(env, address, is_secure, access_type, /* suppress_faults: */ no_page_fault)) {
+        if(!pmsav8_check_security_attribution(env, address, is_secure, access_type, /* suppress_faults: */ no_page_fault,
+                                              &idau_sau_page_size)) {
+            //  No need to update `page_size` in this case, we only cache successful translations.
             return TRANSLATE_FAIL;
         }
     }
@@ -2442,6 +2512,7 @@ inline int get_phys_addr(CPUState *env, uint32_t address, bool is_secure, int ac
     } else {
         ret = get_phys_addr_v5(env, address, access_type, is_user, phys_ptr, prot, page_size);
     }
+    *page_size = MIN(idau_sau_page_size, *page_size);
 
     if(ret == TRANSLATE_SUCCESS || no_page_fault) {
         return ret;
@@ -3584,7 +3655,7 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
     bool idau_valid, sau_valid;
     int idau_region, sau_region;
     pmsav8_get_security_attribution(env, addr, test_secure, ACCESS_DATA_LOAD, /* access_width: */ 1, &idau_valid, &idau_region,
-                                    &sau_valid, &sau_region, &attribution);
+                                    &sau_valid, &sau_region, &attribution, /* applies_to_whole_page: */ NULL);
 
     if(idau_valid) {
         addr_info.flags.idau_region_valid = true;
@@ -3662,7 +3733,7 @@ void HELPER(v8m_sg)(CPUState *env)
     int idau_region, sau_region;
     enum security_attribution attribution;
     pmsav8_get_security_attribution(env, sg_pc, env->secure, ACCESS_INST_FETCH, /* access_width */ 1, &idau_valid, &idau_region,
-                                    &sau_valid, &sau_region, &attribution);
+                                    &sau_valid, &sau_region, &attribution, /* applies_to_whole_page: */ NULL);
 
     if(attribution != SA_SECURE_NSC) {
         tlib_printf(LOG_LEVEL_WARNING,

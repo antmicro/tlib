@@ -693,7 +693,7 @@ bool tlib_try_remove_implementation_defined_exemption_region(uint32_t start, uin
     uint32_t start_at = 0;
     bool region_found = false;
     while(start_at < cpu->impl_def_attr_exemptions.count) {
-        if(!try_get_impl_def_attr_exemption_region(start, start_at, &region_index)) {
+        if(!try_get_impl_def_attr_exemption_region(start, start_at, &region_index, /* applies_to_whole_page: */ NULL)) {
             break;
         }
 
