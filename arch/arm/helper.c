@@ -2342,6 +2342,7 @@ inline int get_phys_addr(CPUState *env, uint32_t address, bool is_secure, int ac
         address += env->cp15.c13_fcse;
     }
 
+    int ret;
 #ifdef TARGET_PROTO_ARM_M
     /* TrustZone: Security attribution happens here */
     if(env->v7m.has_trustzone) {
@@ -2355,20 +2356,21 @@ inline int get_phys_addr(CPUState *env, uint32_t address, bool is_secure, int ac
         *page_size = TARGET_PAGE_SIZE;
         *phys_ptr = address;
         if(env->number_of_mpu_regions == 0) {
-            /* MPU disabled */
+            /* MPU not implemented */
             *prot = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
-            return TRANSLATE_SUCCESS;
+            ret = TRANSLATE_SUCCESS;
+        } else {
+            //  MPU is implemented but might be disabled which is handled inside the function.
+            ret = pmsav8_check_access(env, address, is_secure, access_type, is_user, prot, page_size);
         }
-        return pmsav8_check_access(env, address, is_secure, access_type, is_user, prot, page_size);
-    }
+    } else
 #endif
-
-    if((env->cp15.c1_sys & 1) == 0) {
+        if((env->cp15.c1_sys & 1) == 0) {
         /* MMU/MPU disabled.  */
         *phys_ptr = address;
         *prot = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
         *page_size = TARGET_PAGE_SIZE;
-        return TRANSLATE_SUCCESS;
+        ret = TRANSLATE_SUCCESS;
     } else if(arm_feature(env, ARM_FEATURE_MPU)) {
         //  Set default page_size for MPU background fault checks.
         //  Size of region for background mappings is bigger than TARGET_PAGE_SIZE
@@ -2378,14 +2380,41 @@ inline int get_phys_addr(CPUState *env, uint32_t address, bool is_secure, int ac
         //  If MPU uses more granular permissions, it will result in `TLB_ONE_SHOT` tlb entry
         //  on successful translation.
         *page_size = TARGET_PAGE_SIZE;
-        return get_phys_addr_mpu(env, address, access_type, is_user, phys_ptr, prot, page_size);
+        ret = get_phys_addr_mpu(env, address, access_type, is_user, phys_ptr, prot, page_size);
     } else if(env->cp15.c2_ttbcr_eae) {
-        return get_phys_addr_lpae(env, address, access_type, is_user, phys_ptr, prot, page_size);
+        ret = get_phys_addr_lpae(env, address, access_type, is_user, phys_ptr, prot, page_size);
     } else if(env->cp15.c1_sys & (1 << 23)) {
-        return get_phys_addr_v6(env, address, access_type, is_user, phys_ptr, prot, page_size);
+        ret = get_phys_addr_v6(env, address, access_type, is_user, phys_ptr, prot, page_size);
     } else {
-        return get_phys_addr_v5(env, address, access_type, is_user, phys_ptr, prot, page_size);
+        ret = get_phys_addr_v5(env, address, access_type, is_user, phys_ptr, prot, page_size);
     }
+
+    if(ret == TRANSLATE_SUCCESS || no_page_fault) {
+        return ret;
+    }
+
+    uint32_t c5_value = ret;
+    if(arm_feature(env, ARM_FEATURE_PMSA)) {
+        c5_value = (ret == MPU_PERMISSION_FAULT) ? PERMISSION_FAULT_STATUS_BITS : BACKGROUND_FAULT_STATUS_BITS;
+    }
+
+    if(access_type == ACCESS_INST_FETCH) {
+        env->cp15.c5_insn = c5_value;
+        env->cp15.c6_insn = address;
+        env->exception_index = EXCP_PREFETCH_ABORT;
+    } else {
+        env->cp15.c5_data = c5_value;
+        if(access_type == ACCESS_DATA_STORE && (arm_feature(env, ARM_FEATURE_PMSA) || arm_feature(env, ARM_FEATURE_V6))) {
+            env->cp15.c5_data |= (1 << 11);
+        }
+#ifdef TARGET_PROTO_ARM_M
+        env->v7m.memory_fault_address[is_secure] = address;
+#else
+        env->cp15.c6_data = address;
+#endif
+        env->exception_index = EXCP_DATA_ABORT;
+    }
+    return ret;
 }
 
 int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, int mmu_idx, int no_page_fault)
@@ -2407,30 +2436,6 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, i
         address &= TARGET_PAGE_MASK;
         tlb_set_page(env, address, phys_addr, prot, mmu_idx, page_size);
         return TRANSLATE_SUCCESS;
-    } else if(cpu->external_mmu_enabled) {
-        return TRANSLATE_FAIL;
-    }
-
-    uint32_t c5_value = ret;
-    if(arm_feature(env, ARM_FEATURE_PMSA)) {
-        c5_value = (ret == MPU_PERMISSION_FAULT) ? PERMISSION_FAULT_STATUS_BITS : BACKGROUND_FAULT_STATUS_BITS;
-    }
-
-    if(access_type == ACCESS_INST_FETCH) {
-        env->cp15.c5_insn = c5_value;
-        env->cp15.c6_insn = address;
-        env->exception_index = EXCP_PREFETCH_ABORT;
-    } else {
-        env->cp15.c5_data = c5_value;
-        if(access_type == ACCESS_DATA_STORE && (arm_feature(env, ARM_FEATURE_PMSA) || arm_feature(env, ARM_FEATURE_V6))) {
-            env->cp15.c5_data |= (1 << 11);
-        }
-#ifdef TARGET_PROTO_ARM_M
-        env->v7m.memory_fault_address[mode.secure] = address;
-#else
-        env->cp15.c6_data = address;
-#endif
-        env->exception_index = EXCP_DATA_ABORT;
     }
     return TRANSLATE_FAIL;
 }
