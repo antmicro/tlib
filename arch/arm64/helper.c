@@ -718,7 +718,7 @@ void do_interrupt_a64(CPUState *env)
     env->cp15.esr_el[target_el] = env->exception.syndrome;
 
     // save current PC to ELR_ELn
-    env->elr_el[target_el] = env->pc;
+    env->elr_el[target_el] = CPU_PC(env);
     pstate_write_with_sp_change(env, new_pstate);
 
     tlib_printf(LOG_LEVEL_DEBUG, "%s: excp=%d, addr=0x%" PRIx64 ", target_el=%d, syndrome=0x%x, pc=0x%" PRIx64 ", far=0x%" PRIx64,
