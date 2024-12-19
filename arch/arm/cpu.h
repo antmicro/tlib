@@ -367,6 +367,7 @@ typedef struct CPUState {
 
     struct {
         bool enabled;
+        bool custom_handler_enabled;
         uint32_t rbar[MAX_IDAU_REGIONS];
         uint32_t rlar[MAX_IDAU_REGIONS];
     } idau;

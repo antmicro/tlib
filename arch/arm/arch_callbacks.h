@@ -11,6 +11,14 @@ int32_t tlib_nvic_get_pending_masked_irq(void);
 void tlib_nvic_set_pending_irq(int32_t no);
 uint32_t tlib_has_enabled_trustzone(void);
 uint32_t tlib_nvic_interrupt_targets_secure(int32_t no);
+int32_t tlib_custom_idau_handler(void *external_idau_request, void *attribution, void *region);
+
+typedef struct {
+    uint32_t address;
+    int32_t secure;
+    int32_t access_type;
+    int32_t access_width;
+} ExternalIDAURequest;
 #endif
 
 uint32_t tlib_read_cp15_32(uint32_t instruction);

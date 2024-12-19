@@ -2167,15 +2167,20 @@ static inline void pmsav8_get_security_attribution(CPUState *env, uint32_t addre
     }
 
     enum security_attribution idau_attribution;
-    if(pmsav8_idau_get_region(env, address, idau_region, &idau_attribution)) {
+    if(unlikely(env->idau.custom_handler_enabled)) {
+        ExternalIDAURequest request = { address, (int32_t)secure, access_type, access_width };
+        *idau_valid = tlib_custom_idau_handler(&request, idau_region, &idau_attribution);
+    } else if(pmsav8_idau_get_region(env, address, idau_region, &idau_attribution)) {
         //  Make sure last byte accessed belongs to the same region.
         tlib_assert(access_end_address <= pmsav8_idau_sau_get_region_limit(env->idau.rlar[*idau_region]));
 
         *idau_valid = true;
 
-        //  More restrictive IDAU attribution overrides SAU attribution.
-        *attribution = attribution_get_more_secure(idau_attribution, *attribution);
+    } else {
+        return;
     }
+    //  More restrictive IDAU attribution overrides SAU attribution.
+    *attribution = attribution_get_more_secure(idau_attribution, *attribution);
 }
 
 #define PMSA_ENABLED(ctrl)    ((ctrl & 0b001))

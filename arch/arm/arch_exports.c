@@ -565,6 +565,19 @@ void tlib_set_idau_enabled(bool value)
 
 EXC_VOID_1(tlib_set_idau_enabled, bool, value)
 
+void tlib_set_custom_idau_handler_enabled(bool value)
+{
+    if(value == cpu->idau.custom_handler_enabled) {
+        return;
+    }
+    cpu->idau.custom_handler_enabled = value;
+    tcg_context_use_tlb(!value);
+    tb_flush(cpu);
+    tlb_flush(cpu, 1, false);
+}
+
+EXC_VOID_1(tlib_set_custom_idau_handler_enabled, bool, value)
+
 uint32_t tlib_get_idau_enabled()
 {
     return cpu->idau.enabled;
