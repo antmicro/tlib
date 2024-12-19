@@ -63,4 +63,13 @@ uint32_t tlib_get_pmsav8_rbar(void);
 uint32_t tlib_get_pmsav8_rlar(void);
 uint32_t tlib_get_pmsav8_mair(uint32_t index);
 
+void tlib_set_idau_enabled(bool value);
+void tlib_set_custom_idau_handler_enabled(bool value);
+void tlib_set_number_of_idau_regions(uint32_t value);
+void tlib_set_idau_region_base_address_register(uint32_t index, uint32_t value);
+void tlib_set_idau_region_limit_address_register(uint32_t index, uint32_t value);
+uint32_t tlib_get_idau_enabled();
+uint32_t tlib_get_number_of_idau_regions();
+uint32_t tlib_get_idau_region_base_address_register(uint32_t index);
+uint32_t tlib_get_idau_region_limit_address_register(uint32_t index);
 #endif
