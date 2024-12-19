@@ -19,6 +19,7 @@
  */
 #include <stdint.h>
 #include "cpu.h"
+#include "helper.h"
 #include "system_registers.h"
 #include "unwind.h"
 #include "tightly_coupled_memory.h"

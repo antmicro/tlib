@@ -3,6 +3,10 @@
 int get_phys_addr(CPUState *env, uint32_t address, bool is_secure, int access_type, bool is_user, uint32_t *phys_ptr, int *prot,
                   target_ulong *page_size, int no_page_fault);
 
+bool is_impl_def_exempt_from_attribution(uint32_t address, bool *applies_to_whole_page);
+bool try_get_impl_def_attr_exemption_region(uint32_t address, uint32_t start_at, uint32_t *found_index,
+                                            bool *applies_to_whole_page);
+
 #include "def-helper.h"
 
 DEF_HELPER_1(clz, i32, i32)

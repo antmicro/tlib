@@ -2061,6 +2061,28 @@ static inline bool pmsav8_get_region(CPUState *env, uint32_t address, bool secur
     return hit;
 }
 
+//  Always check return value first as `found_index` is only valid on success.
+//  NULL can be safely passed when the index doesn't matter.
+inline bool try_get_impl_def_attr_exemption_region(uint32_t address, uint32_t start_at, uint32_t *found_index)
+{
+    for(uint32_t index = start_at; index < cpu->impl_def_attr_exemptions.count; index++) {
+        uint32_t start = cpu->impl_def_attr_exemptions.start[index];
+        uint32_t end = cpu->impl_def_attr_exemptions.end[index];
+        if(start <= address && end >= address) {
+            if(found_index != NULL) {
+                *found_index = index;
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+inline bool is_impl_def_exempt_from_attribution(uint32_t address)
+{
+    return try_get_impl_def_attr_exemption_region(address, /* start_at: */ 0, /* found_index: */ NULL);
+}
+
 static inline bool pmsav8_is_exempt_from_attribution(uint32_t address, int access_type)
 {
     /* First architecture-defined exemptions; ARMv8-M Manual: Rule LDTN */
