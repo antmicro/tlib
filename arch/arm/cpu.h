@@ -905,14 +905,17 @@ static inline enum arm_cpu_mode cpu_get_current_execution_mode()
 
 #ifdef TARGET_PROTO_ARM_M
 
-//  Always check return value first; `found_index` is only valid if true was returned.
+//  Always check return value first as `found_index` is only valid on success.
+//  NULL can be safely passed when the index doesn't matter.
 static inline bool try_get_impl_def_attr_exemption_region(uint32_t address, uint32_t start_at, uint32_t *found_index)
 {
     for(uint32_t index = start_at; index < cpu->impl_def_attr_exemptions.count; index++) {
         uint32_t start = cpu->impl_def_attr_exemptions.start[index];
         uint32_t end = cpu->impl_def_attr_exemptions.end[index];
         if(start <= address && end >= address) {
-            *found_index = index;
+            if(found_index != NULL) {
+                *found_index = index;
+            }
             return true;
         }
     }
@@ -921,8 +924,7 @@ static inline bool try_get_impl_def_attr_exemption_region(uint32_t address, uint
 
 static inline bool is_impl_def_exempt_from_attribution(uint32_t address)
 {
-    uint32_t found_index;  //  unused
-    return try_get_impl_def_attr_exemption_region(address, /* start_at: */ 0, &found_index);
+    return try_get_impl_def_attr_exemption_region(address, /* start_at: */ 0, /* found_index: */ NULL);
 }
 
 //  Region granularity is 32B, the remaining RBAR/RLAR bits contain flags like region enabled etc.
