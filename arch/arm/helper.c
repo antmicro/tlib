@@ -841,6 +841,13 @@ static uint32_t v7m_pop(CPUState *env)
     return val;
 }
 
+static inline int fp_get_reservation_size(CPUState *env)
+{
+    const int reg_size = sizeof(env->vfp.regs[0]);
+    return reg_size * 8 + sizeof(vfp_get_fpscr(env)) + 4 /* Reserved for MVE */
+           + (env->secure && ((env->v7m.fpccr & ARM_FPCCR_TS_MASK) > 0) ? (reg_size * 8) : 0);
+}
+
 static inline void swap_u32(uint32_t *a, uint32_t *b)
 {
     uint32_t tmp;
@@ -955,10 +962,10 @@ void do_v7m_exception_exit(CPUState *env)
         if(env->v7m.fpccr & ARM_FPCCR_LSPACT_MASK) {
             /* FP state is still valid, pop space from stack  */
             env->v7m.fpccr ^= ARM_FPCCR_LSPACT_MASK;
-            env->regs[13] += 0x48;
+            env->regs[13] += fp_get_reservation_size(env);
         } else {
             if(~env->vfp.xregs[ARM_VFP_FPEXC] & ARM_VFP_FPEXC_FPUEN_MASK) {
-                /* FPU is disabled, revert SP and rise Usage Fault  */
+                /* FPU is disabled, revert SP and raise Usage Fault  */
                 env->regs[13] -= 0x20;
                 env->v7m.control[env->secure] &= ~ARM_CONTROL_FPCA_MASK;
                 env->exception_index = EXCP_UDEF;
@@ -969,8 +976,17 @@ void do_v7m_exception_exit(CPUState *env)
                 env->vfp.regs[i] |= ((uint64_t)v7m_pop(env)) << 32;
             }
             vfp_set_fpscr(env, v7m_pop(env));
-            /* Pop Reserved field  */
-            env->regs[13] += 0x4;
+            /* Pop Reserved/VPR field  */
+            v7m_pop(env);
+
+            if(arm_feature(env, ARM_FEATURE_V8)) {
+                if(env->secure && (env->v7m.fpccr & ARM_FPCCR_TS_MASK) > 0) {
+                    for(int i = 8; i < 16; ++i) {
+                        env->vfp.regs[i] = v7m_pop(env);
+                        env->vfp.regs[i] |= ((uint64_t)v7m_pop(env)) << 32;
+                    }
+                }
+            }
         }
     }
     /* Set CONTROL.FPCA to NOT(type[ARM_EXC_RETURN_NFPCA])  */
@@ -1032,7 +1048,7 @@ void HELPER(fp_lsp)(CPUState *env)
             /* Reserved for MVE VPR register, UNKNOWN if not implemented */
             stl_phys(fpcar, 0xBADCAFEE);
             fpcar += 4;
-            if((env->v7m.fpccr & ARM_FPCCR_TS_MASK) > 0) {
+            if(env->secure && (env->v7m.fpccr & ARM_FPCCR_TS_MASK) > 0) {
                 for(int i = 8; i < 16; ++i) {
                     stl_phys(fpcar, env->vfp.regs[i]);
                     stl_phys(fpcar + 4, env->vfp.regs[i] >> 32);
@@ -1216,29 +1232,39 @@ static void do_interrupt_v7m(CPUState *env)
         if(env->v7m.fpccr & ARM_FPCCR_LSPEN_MASK) {
             /* Set lazy FP state preservation  */
             env->v7m.fpccr |= ARM_FPCCR_LSPACT_MASK;
-            env->regs[13] -= 0x48;
+            env->regs[13] -= fp_get_reservation_size(env);
             env->v7m.fpcar = env->regs[13];
         } else {
             if(~env->vfp.xregs[ARM_VFP_FPEXC] & ARM_VFP_FPEXC_FPUEN_MASK) {
-                /* FPU is disabled, revert SP and rise Usage Fault  */
+                /* FPU is disabled, revert SP and raise Usage Fault  */
                 if(xpsr & 0x200) {
                     env->regs[13] |= 4;
                 }
                 env->exception_index = EXCP_UDEF;
                 cpu_loop_exit(env);
             }
-            /* Push Reserved field  */
-            env->regs[13] -= 0x4;
+
+            if(arm_feature(env, ARM_FEATURE_V8)) {
+                if(env->secure && (env->v7m.fpccr & ARM_FPCCR_TS_MASK) > 0) {
+                    for(int i = 0; i < 8; ++i) {
+                        v7m_push(env, env->vfp.regs[16 - i] >> 32);
+                        v7m_push(env, env->vfp.regs[16 - i]);
+                    }
+                }
+            }
+            /* Reserved for MVE VPR register, UNKNOWN if not implemented */
+            v7m_push(env, 0xBADCAFEE);
             uint32_t fpscr = vfp_get_fpscr(env);
             v7m_push(env, fpscr);
-            /* Set default values from FPDSCR to FPSCR in new context */
-            vfp_set_fpscr(env, (fpscr & ~ARM_FPDSCR_VALUES_MASK) | (env->v7m.fpdscr & ARM_FPDSCR_VALUES_MASK));
+
             for(int i = 0; i < 8; ++i) {
                 /* We need to swap low and high register parts, to pop them correctly on state restore.
                  * The state can be restored on excp exit, or by specific load instructions */
                 v7m_push(env, env->vfp.regs[8 - i] >> 32);
                 v7m_push(env, env->vfp.regs[8 - i]);
             }
+            /* Set default values from FPDSCR to FPSCR in new context */
+            vfp_set_fpscr(env, (fpscr & ~ARM_FPDSCR_VALUES_MASK) | (env->v7m.fpdscr & ARM_FPDSCR_VALUES_MASK));
         }
     }
     /* Switch to the handler mode.  */
