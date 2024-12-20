@@ -891,6 +891,11 @@ static void switch_v7m_security_state(CPUState *env, bool secure)
     env->secure = secure;
 }
 
+static inline bool tz_v8m_should_pop_additional_registers(uint32_t type)
+{
+    return (type & 1) == 0 && (type & (1 << 6)) > 0;
+}
+
 void do_v7m_exception_exit(CPUState *env)
 {
     uint32_t type;
@@ -922,7 +927,7 @@ void do_v7m_exception_exit(CPUState *env)
     /* Pop registers.  */
     if(cpu->v7m.has_trustzone) {
         /* We need to pop additional state registers, if they were pushed before */
-        if((type & 1) == 0 && (type & (1 << 6)) > 0) {
+        if(tz_v8m_should_pop_additional_registers(type)) {
             uint32_t signature = v7m_pop(env);
             if(signature != INTEGRITY_SIGN) {
                 tlib_printf(LOG_LEVEL_WARNING,
@@ -967,6 +972,12 @@ void do_v7m_exception_exit(CPUState *env)
             if(~env->vfp.xregs[ARM_VFP_FPEXC] & ARM_VFP_FPEXC_FPUEN_MASK) {
                 /* FPU is disabled, revert SP and raise Usage Fault  */
                 env->regs[13] -= 0x20;
+                if(cpu->v7m.has_trustzone) {
+                    /* We need to adjust SP for additional state registers, if they were pushed before */
+                    if(tz_v8m_should_pop_additional_registers(type)) {
+                        env->regs[13] -= 10 * 4;
+                    }
+                }
                 env->v7m.control[env->secure] &= ~ARM_CONTROL_FPCA_MASK;
                 env->exception_index = EXCP_UDEF;
                 cpu_loop_exit(env);
