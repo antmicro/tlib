@@ -1009,16 +1009,38 @@ void do_v7m_secure_return(CPUState *env)
 
 void HELPER(fp_lsp)(CPUState *env)
 {
+    const int regSize = sizeof(env->vfp.regs[0]);
+
+    bool is_secure = !!(env->v7m.fpccr[M_REG_S] & ARM_FPCCR_S_MASK);
     /* Save FP state if FPCCR.LSPACT is set  */
     if(unlikely(env->v7m.fpccr & ARM_FPCCR_LSPACT_MASK)) {
         env->v7m.fpccr ^= ARM_FPCCR_LSPACT_MASK;
-        uint32_t fpcar = env->v7m.fpcar & ~0x3;
+        /* Bits[0:2] are RES0 (range inclusive) */
+        uint32_t fpcar = env->v7m.fpcar & ~0b111;
+        /* Remember, we operate with double-precision aliases here
+         * so for D7, up to S14, S15 are preserved, and so on */
         for(int i = 0; i < 8; ++i) {
-            stl_phys(fpcar + i * 8, env->vfp.regs[i]);
-            stl_phys(fpcar + i * 8 + 4, env->vfp.regs[i] >> 32);
+            stl_phys(fpcar, env->vfp.regs[i]);
+            stl_phys(fpcar + 4, env->vfp.regs[i] >> 32);
+            fpcar += regSize;
         }
         uint32_t fpscr = vfp_get_fpscr(env);
-        stl_phys(fpcar + 0x40, fpscr);
+        stl_phys(fpcar, fpscr);
+        fpcar += sizeof(fpscr);
+
+        if(arm_feature(env, ARM_FEATURE_V8)) {
+            /* Reserved for MVE VPR register, UNKNOWN if not implemented */
+            stl_phys(fpcar, 0xBADCAFEE);
+            fpcar += 4;
+            if((env->v7m.fpccr & ARM_FPCCR_TS_MASK) > 0) {
+                for(int i = 8; i < 16; ++i) {
+                    stl_phys(fpcar, env->vfp.regs[i]);
+                    stl_phys(fpcar + 4, env->vfp.regs[i] >> 32);
+                    fpcar += regSize;
+                }
+            }
+        }
+
         /* Set default values from FPDSCR to FPSCR in new context */
         vfp_set_fpscr(env, (fpscr & ~ARM_FPDSCR_VALUES_MASK) | (env->v7m.fpdscr & ARM_FPDSCR_VALUES_MASK));
     }
