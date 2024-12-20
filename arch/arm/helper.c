@@ -2104,14 +2104,9 @@ inline bool is_impl_def_exempt_from_attribution(uint32_t address, bool *applies_
     return try_get_impl_def_attr_exemption_region(address, /* start_at: */ 0, /* found_index: */ NULL, applies_to_whole_page);
 }
 
-/* `applies_to_whole_page` can only be changed to false by this function because of IDAU exemption regions. */
 static inline bool pmsav8_is_exempt_from_attribution(uint32_t address, int access_type, bool *applies_to_whole_page)
 {
-    /* First architecture-defined exemptions; ARMv8-M Manual: Rule LDTN */
-    if(access_type == ACCESS_INST_FETCH && address >= 0xE0000000 && address <= 0xEFFFFFFF) {
-        return true;
-    }
-
+    /* ARMv8-M Manual: Rule LDTN */
     switch(address) {
         case 0xE0000000 ... 0xE0003FFF:  //  ITM, DWT, FPB, PMU
         case 0xE0005000 ... 0xE0005FFF:  //  RAS error record registers
@@ -2122,8 +2117,20 @@ static inline bool pmsav8_is_exempt_from_attribution(uint32_t address, int acces
             return true;
     }
 
-    /* If none matched then the result depends on implementation-defined attribution exemptions. */
-    return is_impl_def_exempt_from_attribution(address, applies_to_whole_page);
+    if(is_impl_def_exempt_from_attribution(address, applies_to_whole_page)) {
+        return true;
+    }
+
+    if(access_type == ACCESS_INST_FETCH && address >= 0xE0000000 && address <= 0xEFFFFFFF) {
+        /* We don't want to cache this special case as we have no guarantee there will be no
+         * security fault for data accesses. This case is checked last because of that.
+         */
+        if(applies_to_whole_page != NULL) {
+            *applies_to_whole_page = false;
+        }
+        return true;
+    }
+    return false;
 }
 
 /* `applies_to_whole_page` can be passed NULL in which case the function won't be checking if the
@@ -2274,7 +2281,7 @@ static inline void pmsav8_get_security_attribution(CPUState *env, uint32_t addre
         ExternalIDAURequest request = { address, (int32_t)secure, access_type, access_width };
         *idau_valid = tlib_custom_idau_handler(&request, idau_region, &idau_attribution);
 
-        //  Custom IDAU's attribution isn't guaranteed to be the same for the whole page.
+        //  Custom IDAU's attribution isn't guaranteed to be the same for the whole page (and all access types).
         if(applies_to_whole_page != NULL) {
             *applies_to_whole_page = false;
         }
@@ -2390,7 +2397,7 @@ static inline int pmsav8_check_access(CPUState *env, uint32_t address, bool secu
 
 #ifdef TARGET_PROTO_ARM_M
 static inline bool pmsav8_check_security_attribution(CPUState *env, uint32_t address, bool is_secure, int access_type,
-                                                     bool suppress_faults, uint32_t *page_size)
+                                                     bool suppress_faults, uint32_t *page_size, int *allowed_permissions)
 {
     bool idau_valid, sau_valid, applies_to_whole_page = true;
     int idau_region, sau_region;
@@ -2401,17 +2408,37 @@ static inline bool pmsav8_check_security_attribution(CPUState *env, uint32_t add
 
     uint32_t fault_status = 0;
 
-    //  See: B10.2 Security attribution
-    if(access_type == ACCESS_INST_FETCH) {
-        if(((attribution == SA_NONSECURE) && is_secure) || ((attribution == SA_SECURE) && !is_secure)) {
+    /* See: B10.2 Security attribution
+     * Summary:
+     *   Access:        Memory: SA_NONSECURE  SA_SECURE_NSC  SA_SECURE
+     *   Secure fetch           FAULT         OK             OK
+     *   Secure store/load      OK            OK             OK
+     *   Non-secure fetch       OK            OK             FAULT
+     *   Non-secure store/load  OK            FAULT          FAULT
+     *
+     * In secure access to SA_NONSECURE memory and non-secure access to SA_SECURE_NSC memory cases
+     * we can't cache fetch or store/load permissions, respectively, even when MPU would potentially
+     * allow them because then the security check won't be started for the failing cases.
+     *
+     * In these cases MPU permissions will be restricted using `allowed_permissions`.
+     */
+    *allowed_permissions = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
+    if(((attribution == SA_NONSECURE) && is_secure) || ((attribution == SA_SECURE) && !is_secure)) {
+        if(access_type == ACCESS_INST_FETCH) {
             /* The fault ocurred, the fault type is determined by the direction into which domain we are crossing
              * while trying to execute code (fetch instruction for execution) */
             fault_status = is_secure ? SECURE_FAULT_INVTRAN : SECURE_FAULT_INVEP;
+        } else {
+            *allowed_permissions = PAGE_READ | PAGE_WRITE;
         }
-    } else {  //  LOAD or STORE
-        if(attribution_is_secure(attribution) && !is_secure) {
+    }
+
+    if(fault_status == 0 && attribution_is_secure(attribution) && !is_secure) {
+        if(access_type != ACCESS_INST_FETCH) {
             /* TODO: LSPERR is possible here, but requires FPU support for TZ */
             fault_status = SECURE_FAULT_AUVIOL;
+        } else {
+            *allowed_permissions = PAGE_EXEC;
         }
     }
 
@@ -2461,15 +2488,19 @@ inline int get_phys_addr(CPUState *env, uint32_t address, bool is_secure, int ac
      *
      * `TARGET_PAGE_SIZE` is used as default for IDAU/SAU so that the final `page_size` isn't
      * changed if security attribution check wasn't performed.
+     *
+     * The same goes for allowed permissions which are necessary in case security check differs
+     * based on access type though in this case we can just modify permissions provided by MMU/MPU.
      */
     target_ulong idau_sau_page_size = TARGET_PAGE_SIZE;
+    int idau_sau_allowed_permissions = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
 
     int ret;
 #ifdef TARGET_PROTO_ARM_M
     /* TrustZone: Security attribution happens here */
     if(env->v7m.has_trustzone) {
         if(!pmsav8_check_security_attribution(env, address, is_secure, access_type, /* suppress_faults: */ no_page_fault,
-                                              &idau_sau_page_size)) {
+                                              &idau_sau_page_size, &idau_sau_allowed_permissions)) {
             //  No need to update `page_size` in this case, we only cache successful translations.
             return TRANSLATE_FAIL;
         }
@@ -2512,7 +2543,10 @@ inline int get_phys_addr(CPUState *env, uint32_t address, bool is_secure, int ac
     } else {
         ret = get_phys_addr_v5(env, address, access_type, is_user, phys_ptr, prot, page_size);
     }
+
+    //  See the comment above `idau_sau_page_size` and `idau_sau_allowed_permissions` declarations.
     *page_size = MIN(idau_sau_page_size, *page_size);
+    *prot = *prot & idau_sau_allowed_permissions;
 
     if(ret == TRANSLATE_SUCCESS || no_page_fault) {
         return ret;
