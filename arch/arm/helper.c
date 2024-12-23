@@ -3873,6 +3873,7 @@ void HELPER(v8m_sg)(CPUState *env)
     /* Clear bit[0] of LR to indicate we will return to Non-Secure mode, if we were previously in Non-Secure state */
     env->regs[14] &= ~1;
     switch_v7m_security_state(env, true);
+    env->v7m.control[env->secure] &= ~ARM_CONTROL_SFPA_MASK;
     tlib_printf(LOG_LEVEL_NOISY, "Executed SG at 0x%" PRIx32, sg_pc);
 }
 
