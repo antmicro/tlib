@@ -2457,6 +2457,10 @@ static inline bool pmsav8_check_security_attribution(CPUState *env, uint32_t add
 }
 #endif
 
+/* Returns TRANSLATE_SUCCESS (0x0) on success. In case of failure:
+ * - for no PMSA returns c5_data/insn value
+ * - for PMSA returns enum mpu_result
+ * - if TrustZone is active, and SecureFault occurs, will return `TRANSLATE_FAIL` constant, and set SecureFaultStatus register */
 inline int get_phys_addr(CPUState *env, uint32_t address, bool is_secure, int access_type, bool is_user, uint32_t *phys_ptr,
                          int *prot, target_ulong *page_size, int no_page_fault)
 {
@@ -2585,9 +2589,6 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, i
 
     MMUMode mode = mmu_index_to_mode(mmu_idx);
     ret = get_phys_addr(env, address, mode.secure, access_type, mode.user, &phys_addr, &prot, &page_size, no_page_fault);
-    //  returns TRANSLATE_SUCCESS (0x0) on success
-    //  for no PMSA returns c5_data/insn value
-    //  for PMSA returns enum mpu_result
 
     if(ret == TRANSLATE_SUCCESS) {
         /* Map a single [sub]page.  */
