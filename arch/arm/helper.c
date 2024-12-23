@@ -1244,7 +1244,7 @@ static void do_interrupt_v7m(CPUState *env)
             stack_status |= v7m_push(env, INTEGRITY_SIGN);
         }
 
-        tlib_printf(LOG_LEVEL_NOISY, "Loading to LR, value 0x%" PRIx32, lr);
+        tlib_printf(LOG_LEVEL_NOISY, "Loading to LR, while entering exception with TrustZone, value 0x%" PRIx32, lr);
         switch_v7m_security_state(env, lr & 1);
     }
     switch_v7m_sp(env, 0);
