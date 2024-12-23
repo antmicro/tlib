@@ -3855,13 +3855,16 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
             return 1;
     }
 #ifdef TARGET_PROTO_ARM_M
-    /* set CONTROL.FPCA if FPCCR.ASPEN is set */
+    /* set CONTROL.FPCA if FPCCR.ASPEN is set
+     * or CONTROL.SFPA in Secure state */
     tmp = tcg_temp_new_i32();
-    tcg_gen_shri_i32(tmp, cpu_fpccr, ARM_FPCCR_ASPEN - ARM_CONTROL_FPCA);
-    tcg_gen_andi_i32(tmp, tmp, ARM_CONTROL_FPCA_MASK);
-    if(env->secure) {
+    if(!s->ns) {
+        tcg_gen_shri_i32(tmp, cpu_fpccr, ARM_FPCCR_ASPEN - ARM_CONTROL_SFPA);
+        tcg_gen_andi_i32(tmp, tmp, ARM_CONTROL_SFPA_MASK);
         tcg_gen_or_i32(cpu_control_s, cpu_control_s, tmp);
     } else {
+        tcg_gen_shri_i32(tmp, cpu_fpccr, ARM_FPCCR_ASPEN - ARM_CONTROL_FPCA);
+        tcg_gen_andi_i32(tmp, tmp, ARM_CONTROL_FPCA_MASK);
         tcg_gen_or_i32(cpu_control_ns, cpu_control_ns, tmp);
     }
     tcg_temp_free_i32(tmp);
