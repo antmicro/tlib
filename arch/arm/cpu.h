@@ -610,6 +610,8 @@ static inline bool in_user_mode(CPUState *env)
 #define ARM_FPDSCR_VALUES_MASK           0x07c00000
 #define ARM_EXC_RETURN_HANDLER_MODE_MASK 0x8
 
+#define RETPSR_SFPA (1 << 20)
+
 #define ARM_CPACR_CP10      20
 #define ARM_CPACR_CP10_MASK (3 << ARM_CPACR_CP10)
 

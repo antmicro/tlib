@@ -1021,17 +1021,19 @@ void do_v7m_exception_exit(CPUState *env)
 
 void do_v7m_secure_return(CPUState *env)
 {
-    uint32_t xpsr;
+    uint32_t partialRETPSR;
 
     switch_v7m_security_state(env, true);
     /* Only Thumb mode is supported for this architecture */
     env->thumb = true;
 
-    xpsr = v7m_pop(env);
-    xpsr_write(env, xpsr, 0xffffffff);
+    partialRETPSR = v7m_pop(env);
+    env->v7m.control[env->secure] |=
+        deposit32(env->v7m.control[env->secure], ARM_CONTROL_SFPA, 1, partialRETPSR & (1 << 20) ? 1 : 0);
+    env->v7m.exception = partialRETPSR & ~(1 << 20);
     env->regs[15] = v7m_pop(env) & ~1;
 
-    tlib_printf(LOG_LEVEL_NOISY, "Secure return to 0x%08" PRIx32 ", xpsr: 0x%08" PRIx32, env->regs[15], xpsr);
+    tlib_printf(LOG_LEVEL_NOISY, "Secure return to 0x%08" PRIx32 ", xpsr: 0x%08" PRIx32, env->regs[15], xpsr_read(env));
 }
 
 void HELPER(fp_lsp)(CPUState *env)
@@ -3820,10 +3822,13 @@ void HELPER(v8m_blxns)(CPUState *env, uint32_t addr, uint32_t link)
              *   savedPSR.Exception = IPSR.Exception;
              *   savedPSR.SFPA = CONTROL_S.SFPA;
              * """
-             * pushing entire xpsr for now, but it's an overkill */
-            v7m_push(env, xpsr_read(env));
+             * RGVB: The IPSR is stacked in the partial RETPSR, and CONTROL.SFPA is stacked in bit [20] of the partial RETPSR. */
+            uint32_t partialRETPSR = env->v7m.exception;
+            partialRETPSR |= extract32(env->v7m.control[M_REG_NS], ARM_CONTROL_SFPA, 1) > 0 ? RETPSR_SFPA : 0;
+            v7m_push(env, partialRETPSR);
         }
 
+        env->v7m.control[env->secure] &= ~ARM_CONTROL_SFPA_MASK;
         /* Now we switch stacks and jump to non-secure mode */
         switch_v7m_security_state(env, false);
         if(link) {
