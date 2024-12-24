@@ -961,6 +961,7 @@ void do_v7m_exception_exit(CPUState *env)
     env->regs[14] = v7m_pop(env);
     env->regs[15] = v7m_pop(env) & ~1;
     xpsr = v7m_pop(env);
+    env->v7m.control[env->secure] |= (xpsr & RETPSR_SFPA) ? ARM_CONTROL_SFPA_MASK : 0;
     xpsr_write(env, xpsr, 0xfffffdff);
     /* Pop extended frame  */
     if(~type & ARM_EXC_RETURN_NFPCA_MASK) {
@@ -1029,8 +1030,8 @@ void do_v7m_secure_return(CPUState *env)
 
     partialRETPSR = v7m_pop(env);
     env->v7m.control[env->secure] |=
-        deposit32(env->v7m.control[env->secure], ARM_CONTROL_SFPA, 1, partialRETPSR & (1 << 20) ? 1 : 0);
-    env->v7m.exception = partialRETPSR & ~(1 << 20);
+        deposit32(env->v7m.control[env->secure], ARM_CONTROL_SFPA, 1, partialRETPSR & RETPSR_SFPA ? 1 : 0);
+    env->v7m.exception = partialRETPSR & ~RETPSR_SFPA;
     env->regs[15] = v7m_pop(env) & ~1;
 
     tlib_printf(LOG_LEVEL_NOISY, "Secure return to 0x%08" PRIx32 ", xpsr: 0x%08" PRIx32, env->regs[15], xpsr_read(env));
@@ -1239,9 +1240,13 @@ static void do_interrupt_v7m(CPUState *env)
         env->regs[13] -= 4;
         xpsr |= 0x200;
     }
+
+    xpsr |= env->v7m.control[env->secure] & ARM_CONTROL_SFPA_MASK ? RETPSR_SFPA : 0;
+
     /* Push extended frame  */
     if(env->v7m.control[env->secure] & ARM_CONTROL_FPCA_MASK) {
         env->v7m.control[env->secure] &= ~ARM_CONTROL_FPCA_MASK;
+        env->v7m.control[env->secure] &= ~ARM_CONTROL_SFPA_MASK;
         if(env->v7m.fpccr & ARM_FPCCR_LSPEN_MASK) {
             /* Set lazy FP state preservation  */
             env->v7m.fpccr |= ARM_FPCCR_LSPACT_MASK;
