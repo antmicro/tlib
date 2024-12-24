@@ -3820,6 +3820,9 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
 
 void HELPER(v8m_blxns)(CPUState *env, uint32_t addr, uint32_t link)
 {
+    /* UNDEF should be generated in Non-secure mode */
+    tlib_assert(env->secure);
+
     tlib_printf(LOG_LEVEL_NOISY, "B%sXNS jump at 0x%x to 0x%x", link ? "L" : "", env->regs[15], addr);
 
     /* Only switch to Non-Secure if bit[0] of target addr is 0 */
