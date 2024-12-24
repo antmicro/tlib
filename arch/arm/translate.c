@@ -72,7 +72,6 @@
 static TCGv_i64 cpu_V0, cpu_V1, cpu_M0;
 static TCGv_i32 cpu_R[16];
 #ifdef TARGET_PROTO_ARM_M
-static TCGv_i32 cpu_control_s;
 static TCGv_i32 cpu_control_ns;
 static TCGv_i32 cpu_fpccr;
 #endif
@@ -94,7 +93,6 @@ void translate_init(void)
         cpu_R[i] = tcg_global_mem_new_i32(TCG_AREG0, offsetof(CPUState, regs[i]), regnames[i]);
     }
 #ifdef TARGET_PROTO_ARM_M
-    cpu_control_s = tcg_global_mem_new_i32(TCG_AREG0, offsetof(CPUState, v7m.control[M_REG_S]), "control_s");
     cpu_control_ns = tcg_global_mem_new_i32(TCG_AREG0, offsetof(CPUState, v7m.control[M_REG_NS]), "control_ns");
     cpu_fpccr = tcg_global_mem_new_i32(TCG_AREG0, offsetof(CPUState, v7m.fpccr), "fpccr");
 #endif
@@ -3856,17 +3854,16 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
     }
 #ifdef TARGET_PROTO_ARM_M
     /* set CONTROL.FPCA if FPCCR.ASPEN is set
-     * or CONTROL.SFPA in Secure state */
+     * additionally set CONTROL.SFPA in Secure state */
     tmp = tcg_temp_new_i32();
     if(!s->ns) {
         tcg_gen_shri_i32(tmp, cpu_fpccr, ARM_FPCCR_ASPEN - ARM_CONTROL_SFPA);
         tcg_gen_andi_i32(tmp, tmp, ARM_CONTROL_SFPA_MASK);
-        tcg_gen_or_i32(cpu_control_s, cpu_control_s, tmp);
-    } else {
-        tcg_gen_shri_i32(tmp, cpu_fpccr, ARM_FPCCR_ASPEN - ARM_CONTROL_FPCA);
-        tcg_gen_andi_i32(tmp, tmp, ARM_CONTROL_FPCA_MASK);
         tcg_gen_or_i32(cpu_control_ns, cpu_control_ns, tmp);
     }
+    tcg_gen_shri_i32(tmp, cpu_fpccr, ARM_FPCCR_ASPEN - ARM_CONTROL_FPCA);
+    tcg_gen_andi_i32(tmp, tmp, ARM_CONTROL_FPCA_MASK);
+    tcg_gen_or_i32(cpu_control_ns, cpu_control_ns, tmp);
     tcg_temp_free_i32(tmp);
 #endif
     return 0;

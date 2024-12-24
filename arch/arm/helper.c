@@ -961,7 +961,7 @@ void do_v7m_exception_exit(CPUState *env)
     env->regs[14] = v7m_pop(env);
     env->regs[15] = v7m_pop(env) & ~1;
     xpsr = v7m_pop(env);
-    env->v7m.control[env->secure] |= (xpsr & RETPSR_SFPA) ? ARM_CONTROL_SFPA_MASK : 0;
+    env->v7m.control[M_REG_NS] |= (xpsr & RETPSR_SFPA) ? ARM_CONTROL_SFPA_MASK : 0;
     xpsr_write(env, xpsr, 0xfffffdff);
     /* Pop extended frame  */
     if(~type & ARM_EXC_RETURN_NFPCA_MASK) {
@@ -979,7 +979,7 @@ void do_v7m_exception_exit(CPUState *env)
                         env->regs[13] -= 10 * 4;
                     }
                 }
-                env->v7m.control[env->secure] &= ~ARM_CONTROL_FPCA_MASK;
+                env->v7m.control[M_REG_NS] &= ~ARM_CONTROL_FPCA_MASK;
                 env->exception_index = EXCP_UDEF;
                 cpu_loop_exit(env);
             }
@@ -1002,8 +1002,8 @@ void do_v7m_exception_exit(CPUState *env)
         }
     }
     /* Set CONTROL.FPCA to NOT(type[ARM_EXC_RETURN_NFPCA])  */
-    env->v7m.control[env->secure] ^= (env->v7m.control[env->secure] ^ ~type >> (ARM_EXC_RETURN_NFPCA - ARM_CONTROL_FPCA)) &
-                                     ARM_CONTROL_FPCA_MASK;
+    env->v7m.control[M_REG_NS] ^= (env->v7m.control[M_REG_NS] ^ ~type >> (ARM_EXC_RETURN_NFPCA - ARM_CONTROL_FPCA)) &
+                                  ARM_CONTROL_FPCA_MASK;
     /* Undo stack alignment.  */
     if(xpsr & 0x200) {
         env->regs[13] |= 4;
@@ -1029,8 +1029,7 @@ void do_v7m_secure_return(CPUState *env)
     env->thumb = true;
 
     partialRETPSR = v7m_pop(env);
-    env->v7m.control[env->secure] |=
-        deposit32(env->v7m.control[env->secure], ARM_CONTROL_SFPA, 1, partialRETPSR & RETPSR_SFPA ? 1 : 0);
+    env->v7m.control[M_REG_NS] |= deposit32(env->v7m.control[M_REG_NS], ARM_CONTROL_SFPA, 1, partialRETPSR & RETPSR_SFPA ? 1 : 0);
     env->v7m.exception = partialRETPSR & ~RETPSR_SFPA;
     env->regs[15] = v7m_pop(env) & ~1;
 
@@ -1129,7 +1128,7 @@ static void do_interrupt_v7m(CPUState *env)
     }
 
     /* v7-M and v8-M share FP stack FP context active fields */
-    if(env->v7m.control[env->secure] & ARM_CONTROL_FPCA_MASK) {
+    if(env->v7m.control[M_REG_NS] & ARM_CONTROL_FPCA_MASK) {
         lr ^= ARM_EXC_RETURN_NFPCA_MASK;
     }
 
@@ -1240,13 +1239,12 @@ static void do_interrupt_v7m(CPUState *env)
         env->regs[13] -= 4;
         xpsr |= 0x200;
     }
-
-    xpsr |= env->v7m.control[env->secure] & ARM_CONTROL_SFPA_MASK ? RETPSR_SFPA : 0;
+    xpsr |= env->v7m.control[M_REG_NS] & ARM_CONTROL_SFPA_MASK ? RETPSR_SFPA : 0;
 
     /* Push extended frame  */
-    if(env->v7m.control[env->secure] & ARM_CONTROL_FPCA_MASK) {
-        env->v7m.control[env->secure] &= ~ARM_CONTROL_FPCA_MASK;
-        env->v7m.control[env->secure] &= ~ARM_CONTROL_SFPA_MASK;
+    if(env->v7m.control[M_REG_NS] & ARM_CONTROL_FPCA_MASK) {
+        env->v7m.control[M_REG_NS] &= ~ARM_CONTROL_FPCA_MASK;
+        env->v7m.control[M_REG_NS] &= ~ARM_CONTROL_SFPA_MASK;
         if(env->v7m.fpccr & ARM_FPCCR_LSPEN_MASK) {
             /* Set lazy FP state preservation  */
             env->v7m.fpccr |= ARM_FPCCR_LSPACT_MASK;
@@ -2854,7 +2852,8 @@ uint32_t HELPER(v7m_mrs)(CPUState *env, uint32_t reg)
             return env->v7m.faultmask[is_secure];
         case NON_SECURE_REG(20):
         case 20: /* CONTROL */
-            return env->v7m.control[is_secure];
+            return env->v7m.control[is_secure] | (env->v7m.control[M_REG_NS] & ARM_CONTROL_FPCA_MASK) |
+                   (is_secure ? (env->v7m.control[M_REG_NS] & ARM_CONTROL_SFPA_MASK) : 0);
         case NON_SECURE_REG(24): /* SP_NS */
             return env->v7m.process_sp ? env->v7m.other_ss_psp : env->v7m.other_ss_msp;
         default:
@@ -3842,7 +3841,7 @@ void HELPER(v8m_blxns)(CPUState *env, uint32_t addr, uint32_t link)
             v7m_push(env, partialRETPSR);
         }
 
-        env->v7m.control[env->secure] &= ~ARM_CONTROL_SFPA_MASK;
+        env->v7m.control[M_REG_NS] &= ~ARM_CONTROL_SFPA_MASK;
         /* Now we switch stacks and jump to non-secure mode */
         switch_v7m_security_state(env, false);
         if(link) {
@@ -3892,7 +3891,7 @@ void HELPER(v8m_sg)(CPUState *env)
     /* Clear bit[0] of LR to indicate we will return to Non-Secure mode, if we were previously in Non-Secure state */
     env->regs[14] &= ~1;
     switch_v7m_security_state(env, true);
-    env->v7m.control[env->secure] &= ~ARM_CONTROL_SFPA_MASK;
+    env->v7m.control[M_REG_NS] &= ~ARM_CONTROL_SFPA_MASK;
     tlib_printf(LOG_LEVEL_NOISY, "Executed SG at 0x%" PRIx32, sg_pc);
 }
 
@@ -3957,7 +3956,7 @@ void HELPER(v8m_vlstm)(CPUState *env, uint32_t rn, uint32_t lowRegsOnly)
     /* Instruction is UNDEF in Non-secure state - helper should not be called */
     tlib_assert(env->secure);
 
-    if((env->v7m.control[env->secure] & ARM_CONTROL_SFPA_MASK) == 0) {
+    if((env->v7m.control[M_REG_NS] & ARM_CONTROL_SFPA_MASK) == 0) {
         /* Secure FPU disabled; this bit is not banked, SS doesn't matter when reading */
         return;
     }
@@ -3999,7 +3998,7 @@ void HELPER(v8m_vlstm)(CPUState *env, uint32_t rn, uint32_t lowRegsOnly)
         }
         vfp_set_fpscr(env, 0);
     }
-    env->v7m.control[env->secure] &= ~ARM_CONTROL_FPCA_MASK;
+    env->v7m.control[M_REG_NS] &= ~ARM_CONTROL_FPCA_MASK;
 }
 
 void HELPER(v8m_vlldm)(CPUState *env, uint32_t rn, uint32_t lowRegsOnly)
@@ -4008,7 +4007,7 @@ void HELPER(v8m_vlldm)(CPUState *env, uint32_t rn, uint32_t lowRegsOnly)
     tlib_assert(env->secure);
     tlib_assert(sizeof(env->vfp.regs[0]) <= sizeof(uint64_t));
 
-    if((env->v7m.control[env->secure] & ARM_CONTROL_SFPA_MASK) == 0) {
+    if((env->v7m.control[M_REG_NS] & ARM_CONTROL_SFPA_MASK) == 0) {
         /* Secure FPU disabled; this bit is not banked, SS doesn't matter when reading */
         return;
     }
@@ -4036,7 +4035,7 @@ void HELPER(v8m_vlldm)(CPUState *env, uint32_t rn, uint32_t lowRegsOnly)
             }
         }
     }
-    env->v7m.control[env->secure] |= ARM_CONTROL_FPCA_MASK;
+    env->v7m.control[M_REG_NS] |= ARM_CONTROL_FPCA_MASK;
 }
 
 #endif

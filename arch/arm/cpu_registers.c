@@ -104,6 +104,20 @@ uint32_t tlib_get_register_value_32_with_security(int reg_number, bool is_secure
         tlib_abortf("Read from undefined CPU register number %d detected", reg_number);
     }
 
+#if defined(TARGET_ARM32) && defined(TARGET_PROTO_ARM_M)
+    /* CONTROL is a special case, since in TrustZone we hold the Non-banked bits
+     * in the Non-secure bank. So we need to remember to OR the values to get
+     * the real contents of the register (or clear SFPA if in Non-secure mode) */
+    if(reg_number == Control_32) {
+        if(env->secure) {
+            const uint32_t unbanked_bits = ARM_CONTROL_FPCA_MASK | ARM_CONTROL_SFPA_MASK;
+            return (*ptr) | (env->v7m.control[M_REG_NS] & unbanked_bits);
+        } else {
+            return (*ptr) & ~ARM_CONTROL_SFPA_MASK;
+        }
+    }
+#endif
+
     return *ptr;
 }
 
@@ -149,6 +163,18 @@ void tlib_set_register_value_32_with_security(int reg_number, uint32_t value, bo
     if(ptr == NULL) {
         tlib_abortf("Write to undefined CPU register number %d detected", reg_number);
     }
+
+#if defined(TARGET_ARM32) && defined(TARGET_PROTO_ARM_M)
+    if(reg_number == Control_32) {
+        if(is_secure) {
+            /* Non-banked bits are always stored in Non-secure CONTROL */
+            uint32_t *control_ns = get_reg_pointer_32_with_security(Control_32, false);
+            *control_ns = *control_ns | (value & (ARM_CONTROL_FPCA_MASK | ARM_CONTROL_SFPA_MASK));
+        } else {
+            value &= ~ARM_CONTROL_SFPA_MASK;
+        }
+    }
+#endif
 
     *ptr = value;
 }

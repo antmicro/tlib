@@ -324,7 +324,10 @@ typedef struct CPUState {
         uint32_t process_sp;   /* Is the currently selected SP Process or Main SP */
         uint32_t vecbase[M_REG_NUM_BANKS];
         uint32_t basepri[M_REG_NUM_BANKS];
-        uint32_t control[M_REG_NUM_BANKS]; /* TODO: SFPA and FPCA bits are not banked - required for FPU support */
+        /* SFPA and FPCA bits are not banked - required for FPU support in TrustZone.
+         * When accessing them, make sure to always use `M_REG_NS` (Non-secure)
+         * bank for this register. The rest of the bits are banked. */
+        uint32_t control[M_REG_NUM_BANKS];
         uint32_t fault_status[M_REG_NUM_BANKS];
         uint32_t secure_fault_status;  /* SFSR */
         uint32_t secure_fault_address; /* SFAR. It can be shared with MMFAR, but it's more hassle, so let's keep it separate */
