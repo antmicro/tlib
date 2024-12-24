@@ -1313,6 +1313,12 @@ static void do_interrupt_v7m(CPUState *env)
             stack_status |= v7m_push(env, 0xDEADBEEF);
             /* Push integrity signature */
             stack_status |= v7m_push(env, INTEGRITY_SIGN);
+
+            /* On transition between security states, let's clear registers (RWBND) */
+            for(int i = 0; i < 12; ++i) {
+                env->regs[i] = 0;
+            }
+            env->regs[14] = 0;
         }
 
         tlib_printf(LOG_LEVEL_NOISY, "Loading to LR, while entering exception with TrustZone, value 0x%" PRIx32, lr);
