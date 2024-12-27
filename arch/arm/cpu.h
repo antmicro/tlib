@@ -335,7 +335,6 @@ typedef struct CPUState {
         uint32_t exception;
         uint32_t primask[M_REG_NUM_BANKS];
         uint32_t faultmask[M_REG_NUM_BANKS];
-        uint32_t pending_exception;
         uint32_t cpacr[M_REG_NUM_BANKS];
         uint32_t fpccr;
         uint32_t fpcar[M_REG_NUM_BANKS];
