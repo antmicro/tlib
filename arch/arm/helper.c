@@ -531,7 +531,8 @@ void cpu_reset(CPUState *env)
     //  Set initial Security State to Secure if there is TrustZone support
     env->secure = env->v7m.has_trustzone;
 
-    env->v7m.fpccr = (env->v7m.fpccr & ~ARM_FPCCR_LSPACT_MASK) | ARM_FPCCR_ASPEN_MASK | ARM_FPCCR_LSPEN_MASK;
+    fpccr_write(env, (fpccr_read(env, false) & ~ARM_FPCCR_LSPACT_MASK) | ARM_FPCCR_ASPEN_MASK | ARM_FPCCR_LSPEN_MASK, false);
+    fpccr_write(env, (fpccr_read(env, true) & ~ARM_FPCCR_LSPACT_MASK) | ARM_FPCCR_ASPEN_MASK | ARM_FPCCR_LSPEN_MASK, true);
 #endif
 
     env->vfp.xregs[ARM_VFP_FPEXC] = 0;
@@ -845,7 +846,7 @@ static inline int fp_get_reservation_size(CPUState *env)
 {
     const int reg_size = sizeof(env->vfp.regs[0]);
     return reg_size * 8 + sizeof(vfp_get_fpscr(env)) + 4 /* Reserved for MVE */
-           + (env->secure && ((env->v7m.fpccr & ARM_FPCCR_TS_MASK) > 0) ? (reg_size * 8) : 0);
+           + (env->secure && ((env->v7m.fpccr[env->secure] & ARM_FPCCR_TS_MASK) > 0) ? (reg_size * 8) : 0);
 }
 
 static inline void swap_u32(uint32_t *a, uint32_t *b)
@@ -999,9 +1000,9 @@ void do_v7m_exception_exit(CPUState *env)
     xpsr_write(env, xpsr, 0xfffffdff);
     /* Pop extended frame  */
     if(~type & ARM_EXC_RETURN_NFPCA_MASK) {
-        if(env->v7m.fpccr & ARM_FPCCR_LSPACT_MASK) {
+        if(env->v7m.fpccr[env->secure] & ARM_FPCCR_LSPACT_MASK) {
             /* FP state is still valid, pop space from stack  */
-            env->v7m.fpccr ^= ARM_FPCCR_LSPACT_MASK;
+            env->v7m.fpccr[env->secure] ^= ARM_FPCCR_LSPACT_MASK;
             env->regs[13] += fp_get_reservation_size(env);
         } else {
             if(~env->vfp.xregs[ARM_VFP_FPEXC] & ARM_VFP_FPEXC_FPUEN_MASK) {
@@ -1027,7 +1028,7 @@ void do_v7m_exception_exit(CPUState *env)
             v7m_pop(env);
 
             if(arm_feature(env, ARM_FEATURE_V8)) {
-                if(env->secure && (env->v7m.fpccr & ARM_FPCCR_TS_MASK) > 0) {
+                if(env->secure && (env->v7m.fpccr[env->secure] & ARM_FPCCR_TS_MASK) > 0) {
                     for(int i = 8; i < 16; ++i) {
                         env->vfp.regs[i] = v7m_pop(env);
                         env->vfp.regs[i] |= ((uint64_t)v7m_pop(env)) << 32;
@@ -1077,8 +1078,8 @@ void HELPER(fp_lsp)(CPUState *env)
 
     bool is_secure = !!(env->v7m.fpccr[M_REG_S] & ARM_FPCCR_S_MASK);
     /* Save FP state if FPCCR.LSPACT is set  */
-    if(unlikely(env->v7m.fpccr & ARM_FPCCR_LSPACT_MASK)) {
-        env->v7m.fpccr ^= ARM_FPCCR_LSPACT_MASK;
+    if(unlikely(env->v7m.fpccr[env->secure] & ARM_FPCCR_LSPACT_MASK)) {
+        env->v7m.fpccr[env->secure] ^= ARM_FPCCR_LSPACT_MASK;
         /* Bits[0:2] are RES0 (range inclusive) */
         uint32_t fpcar = env->v7m.fpcar[env->secure] & ~0b111;
         /* Remember, we operate with double-precision aliases here
@@ -1096,7 +1097,7 @@ void HELPER(fp_lsp)(CPUState *env)
             /* Reserved for MVE VPR register, UNKNOWN if not implemented */
             stl_phys(fpcar, 0xBADCAFEE);
             fpcar += 4;
-            if(env->secure && (env->v7m.fpccr & ARM_FPCCR_TS_MASK) > 0) {
+            if(env->secure && (env->v7m.fpccr[env->secure] & ARM_FPCCR_TS_MASK) > 0) {
                 for(int i = 8; i < 16; ++i) {
                     stl_phys(fpcar, env->vfp.regs[i]);
                     stl_phys(fpcar + 4, env->vfp.regs[i] >> 32);
@@ -1279,9 +1280,9 @@ static void do_interrupt_v7m(CPUState *env)
     if(env->v7m.control[M_REG_NS] & ARM_CONTROL_FPCA_MASK) {
         env->v7m.control[M_REG_NS] &= ~ARM_CONTROL_FPCA_MASK;
         env->v7m.control[M_REG_NS] &= ~ARM_CONTROL_SFPA_MASK;
-        if(env->v7m.fpccr & ARM_FPCCR_LSPEN_MASK) {
+        if(fpccr_read(env, env->secure) & ARM_FPCCR_LSPEN_MASK) {
             /* Set lazy FP state preservation  */
-            env->v7m.fpccr |= ARM_FPCCR_LSPACT_MASK;
+            env->v7m.fpccr[env->secure] |= ARM_FPCCR_LSPACT_MASK;
             env->regs[13] -= fp_get_reservation_size(env);
             env->v7m.fpcar[env->secure] = env->regs[13];
         } else {
@@ -1295,7 +1296,7 @@ static void do_interrupt_v7m(CPUState *env)
             }
 
             if(arm_feature(env, ARM_FEATURE_V8)) {
-                if(env->secure && (env->v7m.fpccr & ARM_FPCCR_TS_MASK) > 0) {
+                if(env->secure && (env->v7m.fpccr[env->secure] & ARM_FPCCR_TS_MASK) > 0) {
                     for(int i = 0; i < 8; ++i) {
                         v7m_push(env, env->vfp.regs[16 - i] >> 32);
                         v7m_push(env, env->vfp.regs[16 - i]);
@@ -3997,7 +3998,7 @@ void HELPER(v8m_vlstm)(CPUState *env, uint32_t rn, uint32_t lowRegsOnly)
         /* Secure FPU disabled; this bit is not banked, SS doesn't matter when reading */
         return;
     }
-    if((env->v7m.fpccr & ARM_FPCCR_LSPACT) > 0) {
+    if((env->v7m.fpccr[M_REG_S] & ARM_FPCCR_LSPACT) > 0) {
         /* The HW raises exception here, as it's a possible attack scenario */
         env->v7m.secure_fault_status |= SECURE_FAULT_LSERR;
         env->exception_index = EXCP_SECURE;
@@ -4005,7 +4006,7 @@ void HELPER(v8m_vlstm)(CPUState *env, uint32_t rn, uint32_t lowRegsOnly)
     }
 
     uint32_t address = env->regs[rn];
-    if((env->v7m.fpccr & ARM_FPCCR_LSPEN_MASK) > 0) {
+    if((env->v7m.fpccr[M_REG_S] & ARM_FPCCR_LSPEN_MASK) > 0) {
         /* If Lazy preservation is already enabled, just update the FPCAR address
          * Low three bits are RES0 */
         env->v7m.fpcar[env->secure] = address & ~0x7;
@@ -4022,7 +4023,7 @@ void HELPER(v8m_vlstm)(CPUState *env, uint32_t rn, uint32_t lowRegsOnly)
         /* No MVE, store all ones */
         vlstm_store_helper(env, &address, ~0x0);
 
-        bool pushCalleeFrame = (env->v7m.fpccr & ARM_FPCCR_TS_MASK) > 0;
+        bool pushCalleeFrame = (env->v7m.fpccr[M_REG_S] & ARM_FPCCR_TS_MASK) > 0;
         if(pushCalleeFrame) {
             for(int i = 8; i < 16; ++i) {
                 vlstm_store_helper(env, &address, env->vfp.regs[i]);
@@ -4049,9 +4050,10 @@ void HELPER(v8m_vlldm)(CPUState *env, uint32_t rn, uint32_t lowRegsOnly)
         return;
     }
 
-    if((env->v7m.fpccr & ARM_FPCCR_LSPACT_MASK) > 0) {
+    /* Do writes and reads directly on FPCCR is risky, but we know what we are doing */
+    if((env->v7m.fpccr[M_REG_S] & ARM_FPCCR_LSPACT_MASK) > 0) {
         /* The state is still active */
-        env->v7m.fpccr &= ~ARM_FPCCR_LSPACT_MASK;
+        env->v7m.fpccr[M_REG_S] &= ~ARM_FPCCR_LSPACT_MASK;
     } else {
         uint32_t address = env->regs[rn];
 
@@ -4065,7 +4067,7 @@ void HELPER(v8m_vlldm)(CPUState *env, uint32_t rn, uint32_t lowRegsOnly)
         /* No MVE, these we can ignore */
         vlldm_load_helper(env, &address, &scratch);
 
-        if((env->v7m.fpccr & ARM_FPCCR_TS_MASK) > 0) {
+        if((env->v7m.fpccr[M_REG_S] & ARM_FPCCR_TS_MASK) > 0) {
             for(int i = 8; i < 16; ++i) {
                 vlldm_load_helper(env, &address, &scratch);
                 env->vfp.regs[i] = scratch;

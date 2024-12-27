@@ -65,8 +65,6 @@ uint32_t *get_reg_pointer_32_with_security(int reg, bool is_secure)
             return &(cpu->v7m.process_sp);
         case OtherSP_32:
             return &(cpu->v7m.other_sp);
-        case FPCCR_32:
-            return &(cpu->v7m.fpccr);
         case FPCAR_32:
             return &(cpu->v7m.fpcar[is_secure]);
         case FPDSCR_32:
@@ -93,7 +91,9 @@ uint32_t tlib_get_register_value_32_with_security(int reg_number, bool is_secure
 #endif
     }
 #ifdef TARGET_PROTO_ARM_M
-    else if(reg_number == PRIMASK_32) {
+    else if(reg_number == FPCCR_32) {
+        return fpccr_read(env, is_secure);
+    } else if(reg_number == PRIMASK_32) {
         //  PRIMASK: b0: IRQ mask enabled/disabled, b1-b31: reserved.
         return cpu->v7m.primask[is_secure] & PRIMASK_EN ? 1 : 0;
     }
@@ -148,7 +148,9 @@ void tlib_set_register_value_32_with_security(int reg_number, uint32_t value, bo
         return;
     }
 #ifdef TARGET_PROTO_ARM_M
-    else if(reg_number == PRIMASK_32) {
+    else if(reg_number == FPCCR_32) {
+        return fpccr_write(env, value, is_secure);
+    } else if(reg_number == PRIMASK_32) {
         cpu->v7m.primask[is_secure] &= !PRIMASK_EN;
         //  PRIMASK: b0: IRQ mask enabled/disabled, b1-b31: reserved.
         if(value == 1) {
