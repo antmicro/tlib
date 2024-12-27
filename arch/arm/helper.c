@@ -918,6 +918,17 @@ void do_v7m_exception_exit(CPUState *env)
     }
 
     if(env->v7m.has_trustzone) {
+        /* RNCQN: If the PE was in Non-secure state when EXC_RETURN was loaded into the PC
+         * and EXC_RETURN.ES is one, an INVER SecureFault is generated [...] */
+        if(!env->secure && (type & 0x1) == 1) {
+            type &= ~0x1;
+            env->v7m.secure_fault_status |= SECURE_FAULT_INVER;
+            env->exception_index = EXCP_SECURE;
+            cpu_loop_exit(env);
+        }
+    }
+
+    if(env->v7m.has_trustzone) {
         /* Location of return stack type (Secure/Non-Secure) */
         switch_v7m_security_state(env, type & (1 << 6));
     }
