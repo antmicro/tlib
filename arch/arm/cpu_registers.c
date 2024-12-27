@@ -40,7 +40,14 @@ uint64_t *get_reg_pointer_64(int reg)
 CPU_REGISTER_ACCESSOR(64)
 #endif
 #if defined(TARGET_ARM32) || defined(TARGET_ARM64)
+uint32_t *get_reg_pointer_32_with_security(int reg, bool is_secure);
+
 uint32_t *get_reg_pointer_32(int reg)
+{
+    return get_reg_pointer_32_with_security(reg, cpu->secure);
+}
+
+uint32_t *get_reg_pointer_32_with_security(int reg, bool is_secure)
 {
     switch(reg) {
         case R_0_32 ... R_15_32:
@@ -49,11 +56,11 @@ uint32_t *get_reg_pointer_32(int reg)
             return &(cpu->uncached_cpsr);
 #if defined(TARGET_ARM32) && defined(TARGET_PROTO_ARM_M)
         case Control_32:
-            return &(cpu->v7m.control[cpu->secure]);
+            return &(cpu->v7m.control[is_secure]);
         case BasePri_32:
-            return &(cpu->v7m.basepri[cpu->secure]);
+            return &(cpu->v7m.basepri[is_secure]);
         case VecBase_32:
-            return &(cpu->v7m.vecbase[cpu->secure]);
+            return &(cpu->v7m.vecbase[is_secure]);
         case CurrentSP_32:
             return &(cpu->v7m.process_sp);
         case OtherSP_32:
@@ -67,16 +74,16 @@ uint32_t *get_reg_pointer_32(int reg)
         case CPACR_32:
             return &(cpu->v7m.cpacr);
         case PRIMASK_32:
-            return &(cpu->v7m.primask[cpu->secure]);
+            return &(cpu->v7m.primask[is_secure]);
         case FAULTMASK_32:
-            return &(cpu->v7m.faultmask[cpu->secure]);
+            return &(cpu->v7m.faultmask[is_secure]);
 #endif
         default:
             return NULL;
     }
 }
 
-uint32_t tlib_get_register_value_32(int reg_number)
+uint32_t tlib_get_register_value_32_with_security(int reg_number, bool is_secure)
 {
     if(reg_number == CPSR_32) {
 #if defined(TARGET_ARM32) && defined(TARGET_PROTO_ARM_M)
@@ -88,11 +95,11 @@ uint32_t tlib_get_register_value_32(int reg_number)
 #ifdef TARGET_PROTO_ARM_M
     else if(reg_number == PRIMASK_32) {
         //  PRIMASK: b0: IRQ mask enabled/disabled, b1-b31: reserved.
-        return cpu->v7m.primask[cpu->secure] & PRIMASK_EN ? 1 : 0;
+        return cpu->v7m.primask[is_secure] & PRIMASK_EN ? 1 : 0;
     }
 #endif
 
-    uint32_t *ptr = get_reg_pointer_32(reg_number);
+    uint32_t *ptr = get_reg_pointer_32_with_security(reg_number, is_secure);
     if(ptr == NULL) {
         tlib_abortf("Read from undefined CPU register number %d detected", reg_number);
     }
@@ -100,9 +107,23 @@ uint32_t tlib_get_register_value_32(int reg_number)
     return *ptr;
 }
 
+#if defined(TARGET_ARM32) && defined(TARGET_PROTO_ARM_M)
+uint32_t tlib_get_register_value_32_non_secure(int reg_number)
+{
+    tlib_assert(cpu->v7m.has_trustzone);
+    return tlib_get_register_value_32_with_security(reg_number, false);
+}
+EXC_INT_1(uint32_t, tlib_get_register_value_32_non_secure, int, reg_number)
+#endif
+
+uint32_t tlib_get_register_value_32(int reg_number)
+{
+    return tlib_get_register_value_32_with_security(reg_number, cpu->secure);
+}
+
 EXC_INT_1(uint32_t, tlib_get_register_value_32, int, reg_number)
 
-void tlib_set_register_value_32(int reg_number, uint32_t value)
+void tlib_set_register_value_32_with_security(int reg_number, uint32_t value, bool is_secure)
 {
     if(reg_number == CPSR_32) {
 #if defined(TARGET_ARM32) && defined(TARGET_PROTO_ARM_M)
@@ -114,22 +135,36 @@ void tlib_set_register_value_32(int reg_number, uint32_t value)
     }
 #ifdef TARGET_PROTO_ARM_M
     else if(reg_number == PRIMASK_32) {
-        cpu->v7m.primask[cpu->secure] &= !PRIMASK_EN;
+        cpu->v7m.primask[is_secure] &= !PRIMASK_EN;
         //  PRIMASK: b0: IRQ mask enabled/disabled, b1-b31: reserved.
         if(value == 1) {
-            cpu->v7m.primask[cpu->secure] |= PRIMASK_EN;
+            cpu->v7m.primask[is_secure] |= PRIMASK_EN;
             tlib_nvic_find_pending_irq();
         }
         return;
     }
 #endif
 
-    uint32_t *ptr = get_reg_pointer_32(reg_number);
+    uint32_t *ptr = get_reg_pointer_32_with_security(reg_number, is_secure);
     if(ptr == NULL) {
         tlib_abortf("Write to undefined CPU register number %d detected", reg_number);
     }
 
     *ptr = value;
+}
+
+#if defined(TARGET_ARM32) && defined(TARGET_PROTO_ARM_M)
+void tlib_set_register_value_32_non_secure(int reg_number, uint32_t value)
+{
+    tlib_assert(cpu->v7m.has_trustzone);
+    tlib_set_register_value_32_with_security(reg_number, value, false);
+}
+EXC_VOID_2(tlib_set_register_value_32_non_secure, int, reg_number, uint32_t, value)
+#endif
+
+void tlib_set_register_value_32(int reg_number, uint32_t value)
+{
+    tlib_set_register_value_32_with_security(reg_number, value, cpu->secure);
 }
 
 EXC_VOID_2(tlib_set_register_value_32, int, reg_number, uint32_t, value)
