@@ -1075,15 +1075,21 @@ void do_v7m_secure_return(CPUState *env)
 void HELPER(fp_lsp)(CPUState *env)
 {
     const int regSize = sizeof(env->vfp.regs[0]);
+    tlib_assert(regSize == 8);
 
     bool is_secure = !!(env->v7m.fpccr[M_REG_S] & ARM_FPCCR_S_MASK);
     /* Save FP state if FPCCR.LSPACT is set  */
-    if(unlikely(env->v7m.fpccr[env->secure] & ARM_FPCCR_LSPACT_MASK)) {
-        env->v7m.fpccr[env->secure] ^= ARM_FPCCR_LSPACT_MASK;
+    if(unlikely(env->v7m.fpccr[is_secure] & ARM_FPCCR_LSPACT_MASK)) {
+        /* Rule ITWPT: Arm recommends that when performing lazy Floating-point state preservation both the Secure and Non-secure
+         * FPCCR.LSPACT flags should be cleared. */
+        env->v7m.fpccr[M_REG_S] &= ~ARM_FPCCR_LSPACT_MASK;
+        env->v7m.fpccr[M_REG_NS] &= ~ARM_FPCCR_LSPACT_MASK;
         /* Bits[0:2] are RES0 (range inclusive) */
-        uint32_t fpcar = env->v7m.fpcar[env->secure] & ~0b111;
+        uint32_t fpcar = env->v7m.fpcar[is_secure] & ~0b111;
         /* Remember, we operate with double-precision aliases here
-         * so for D7, up to S14, S15 are preserved, and so on */
+         * so for D7, up to S14, S15 are preserved, and so on
+         * TODO: Memory operations should be done with privilege
+         * (Security attribution) of FPCCR.S bit */
         for(int i = 0; i < 8; ++i) {
             stl_phys(fpcar, env->vfp.regs[i]);
             stl_phys(fpcar + 4, env->vfp.regs[i] >> 32);
@@ -1097,7 +1103,7 @@ void HELPER(fp_lsp)(CPUState *env)
             /* Reserved for MVE VPR register, UNKNOWN if not implemented */
             stl_phys(fpcar, 0xBADCAFEE);
             fpcar += 4;
-            if(env->secure && (env->v7m.fpccr[env->secure] & ARM_FPCCR_TS_MASK) > 0) {
+            if(is_secure && (env->v7m.fpccr[is_secure] & ARM_FPCCR_TS_MASK) > 0) {
                 for(int i = 8; i < 16; ++i) {
                     stl_phys(fpcar, env->vfp.regs[i]);
                     stl_phys(fpcar + 4, env->vfp.regs[i] >> 32);
@@ -1106,7 +1112,9 @@ void HELPER(fp_lsp)(CPUState *env)
             }
         }
 
-        /* Set default values from FPDSCR to FPSCR in new context */
+        /* Set default values from FPDSCR to FPSCR in new context
+         * use the current Security state for the context creation.
+         * FPCCR.S bit will be updated at the end of the instruction by generated code in `disas_vfp_insn` */
         vfp_set_fpscr(env, (fpscr & ~ARM_FPDSCR_VALUES_MASK) | (env->v7m.fpdscr[env->secure] & ARM_FPDSCR_VALUES_MASK));
     }
 }
@@ -3998,7 +4006,8 @@ void HELPER(v8m_vlstm)(CPUState *env, uint32_t rn, uint32_t lowRegsOnly)
         /* Secure FPU disabled; this bit is not banked, SS doesn't matter when reading */
         return;
     }
-    if((env->v7m.fpccr[M_REG_S] & ARM_FPCCR_LSPACT) > 0) {
+    /* The S bit determines who claimed FPU registers - Secure or Non-secure world */
+    if((env->v7m.fpccr[(env->v7m.fpccr[M_REG_S] & ARM_FPCCR_S_MASK) > 0 ? M_REG_S : M_REG_NS] & ARM_FPCCR_LSPACT) > 0) {
         /* The HW raises exception here, as it's a possible attack scenario */
         env->v7m.secure_fault_status |= SECURE_FAULT_LSERR;
         env->exception_index = EXCP_SECURE;
@@ -4052,7 +4061,7 @@ void HELPER(v8m_vlldm)(CPUState *env, uint32_t rn, uint32_t lowRegsOnly)
 
     /* Do writes and reads directly on FPCCR is risky, but we know what we are doing */
     if((env->v7m.fpccr[M_REG_S] & ARM_FPCCR_LSPACT_MASK) > 0) {
-        /* The state is still active */
+        /* The state is still active, doesn't need to be restored. So do nothing at all */
         env->v7m.fpccr[M_REG_S] &= ~ARM_FPCCR_LSPACT_MASK;
     } else {
         uint32_t address = env->regs[rn];
