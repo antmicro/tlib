@@ -344,8 +344,6 @@ typedef struct CPUState {
         uint32_t msplim[M_REG_NUM_BANKS];
         uint32_t psplim[M_REG_NUM_BANKS];
         uint32_t handler_mode;
-        uint32_t
-            original_exception; /* The original exception, which we'll ack when completing. TZ-specific, always zero otherwise */
         uint32_t has_trustzone;
     } v7m;
 

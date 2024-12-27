@@ -908,15 +908,6 @@ void do_v7m_exception_exit(CPUState *env)
     }
 
     type = env->regs[15];
-    if(env->v7m.exception != 0) {
-        /* This ensures we properly complete banked secure exceptions */
-        tlib_nvic_complete_irq(env->v7m.has_trustzone ? env->v7m.original_exception : env->v7m.exception);
-    }
-
-    if(env->interrupt_end_callback_enabled) {
-        tlib_on_interrupt_end(env->exception_index);
-    }
-
     if(env->v7m.has_trustzone) {
         /* RNCQN: If the PE was in Non-secure state when EXC_RETURN was loaded into the PC
          * and EXC_RETURN.ES is one, an INVER SecureFault is generated [...] */
@@ -926,6 +917,36 @@ void do_v7m_exception_exit(CPUState *env)
             env->exception_index = EXCP_SECURE;
             cpu_loop_exit(env);
         }
+    }
+
+    if(env->v7m.exception != 0) {
+        /* This ensures we properly complete banked secure exceptions */
+        bool need_secure_bit = false;
+        if(env->v7m.has_trustzone) {
+            if(env->v7m.exception < ARMV7M_EXCP_HARDIRQ0) {
+                switch(env->v7m.exception) {
+                    case ARMV7M_EXCP_NMI:
+                    case ARMV7M_EXCP_BUS:
+                    case ARMV7M_EXCP_RESET:
+                    case ARMV7M_EXCP_SECURE:
+                        break;
+                    case ARMV7M_EXCP_HARD:
+                        if(!tlib_nvic_interrupt_targets_secure(env->v7m.exception)) {
+                            goto banked_exception;
+                        }
+                        break;
+                    banked_exception:
+                    default:
+                        need_secure_bit = env->secure;
+                        break;
+                }
+            }
+        }
+        tlib_nvic_complete_irq(env->v7m.exception | (need_secure_bit ? BANKED_SECURE_EXCP_BIT : 0));
+    }
+
+    if(env->interrupt_end_callback_enabled) {
+        tlib_on_interrupt_end(env->exception_index);
     }
 
     if(env->v7m.has_trustzone) {
@@ -1195,7 +1216,6 @@ static void do_interrupt_v7m(CPUState *env)
         case EXCP_IRQ:
             env->v7m.exception = tlib_nvic_acknowledge_irq();
             if(env->v7m.has_trustzone) {
-                env->v7m.original_exception = env->v7m.exception;
                 /* If we have TrustZone, NVIC_ITNSx determines the security state
                  * the hardware IRQ is taken to */
                 bool secure_target = env->secure;
