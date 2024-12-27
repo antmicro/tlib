@@ -928,12 +928,14 @@ void do_v7m_exception_exit(CPUState *env)
     if(cpu->v7m.has_trustzone) {
         /* We need to pop additional state registers, if they were pushed before */
         if(tz_v8m_should_pop_additional_registers(type)) {
+            uint32_t integrity = INTEGRITY_SIGN;
+            integrity |= (type & ARM_EXC_RETURN_NFPCA_MASK) >> ARM_EXC_RETURN_NFPCA;
             uint32_t signature = v7m_pop(env);
-            if(signature != INTEGRITY_SIGN) {
+            if(signature != integrity) {
                 tlib_printf(LOG_LEVEL_WARNING,
                             "Integrity signature mismatch on stack, expected 0x%" PRIx32 ", got 0x%" PRIx32 ", type 0x%" PRIx32
                             ". SecureFault!",
-                            INTEGRITY_SIGN, signature, type);
+                            integrity, signature, type);
                 /* On security integrity signature mismatch, report SecureFault */
                 env->v7m.secure_fault_status |= SECURE_FAULT_INVIS;
                 env->v7m.secure_fault_address = env->regs[15];
@@ -974,9 +976,10 @@ void do_v7m_exception_exit(CPUState *env)
                 /* FPU is disabled, revert SP and raise Usage Fault  */
                 env->regs[13] -= 0x20;
                 if(cpu->v7m.has_trustzone) {
-                    /* We need to adjust SP for additional state registers, if they were pushed before */
+                    /* We need to adjust SP for additional state registers (8 + reserved + integrity), if they were pushed before
+                     */
                     if(tz_v8m_should_pop_additional_registers(type)) {
-                        env->regs[13] -= 10 * 4;
+                        env->regs[13] -= 10 * sizeof(env->regs[0]);
                     }
                 }
                 env->v7m.control[M_REG_NS] &= ~ARM_CONTROL_FPCA_MASK;
@@ -1310,7 +1313,10 @@ static void do_interrupt_v7m(CPUState *env)
             /* Marked as reserved in docs */
             stack_status |= v7m_push(env, 0xDEADBEEF);
             /* Push integrity signature */
-            stack_status |= v7m_push(env, INTEGRITY_SIGN);
+            uint32_t integrity = INTEGRITY_SIGN;
+            /* Set SFTC bit */
+            integrity |= (lr & ARM_EXC_RETURN_NFPCA_MASK) >> ARM_EXC_RETURN_NFPCA;
+            stack_status |= v7m_push(env, integrity);
 
             /* On transition between security states, let's clear registers (RWBND) */
             for(int i = 0; i < 12; ++i) {

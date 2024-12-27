@@ -127,8 +127,8 @@
 #define PERMISSION_FAULT_STATUS_BITS 0b1101
 
 #define FNC_RETURN 0xFEFFFFFF
-//  TODO: handle bit[0] properly with FPU in TrustZone
-#define INTEGRITY_SIGN 0xFEFA125B
+//  Bit[0] - "SFTC" - is used to check if FPU was enabled when taking exception (corresponds to: ARM_EXC_RETURN_NFPCA)
+#define INTEGRITY_SIGN 0xFEFA125A
 
 typedef struct DisasContext {
     DisasContextBase base;
@@ -602,12 +602,13 @@ static inline bool in_user_mode(CPUState *env)
 #define ARM_EXC_RETURN_NFPCA 4
 #define ARM_VFP_FPEXC_FPUEN  30
 
-#define ARM_CONTROL_FPCA_MASK            (1 << ARM_CONTROL_FPCA)
-#define ARM_CONTROL_SFPA_MASK            (1 << ARM_CONTROL_SFPA)
-#define ARM_FPCCR_LSPACT_MASK            (1 << ARM_FPCCR_LSPACT)
-#define ARM_FPCCR_TS_MASK                (1 << ARM_FPCCR_TS)
-#define ARM_FPCCR_LSPEN_MASK             (1 << ARM_FPCCR_LSPEN)
-#define ARM_FPCCR_ASPEN_MASK             (1 << ARM_FPCCR_ASPEN)
+#define ARM_CONTROL_FPCA_MASK (1 << ARM_CONTROL_FPCA)
+#define ARM_CONTROL_SFPA_MASK (1 << ARM_CONTROL_SFPA)
+#define ARM_FPCCR_LSPACT_MASK (1 << ARM_FPCCR_LSPACT)
+#define ARM_FPCCR_TS_MASK     (1 << ARM_FPCCR_TS)
+#define ARM_FPCCR_LSPEN_MASK  (1 << ARM_FPCCR_LSPEN)
+#define ARM_FPCCR_ASPEN_MASK  (1 << ARM_FPCCR_ASPEN)
+/* Also known as EXC_RETURN.FType */
 #define ARM_EXC_RETURN_NFPCA_MASK        (1 << ARM_EXC_RETURN_NFPCA)
 #define ARM_VFP_FPEXC_FPUEN_MASK         (1 << ARM_VFP_FPEXC_FPUEN)
 #define ARM_FPDSCR_VALUES_MASK           0x07c00000
