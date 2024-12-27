@@ -1000,7 +1000,14 @@ void do_v7m_exception_exit(CPUState *env)
     xpsr_write(env, xpsr, 0xfffffdff);
     /* Pop extended frame  */
     if(~type & ARM_EXC_RETURN_NFPCA_MASK) {
-        if(env->v7m.fpccr[env->secure] & ARM_FPCCR_LSPACT_MASK) {
+        if(!env->secure && !!(env->v7m.fpccr[M_REG_S] & ARM_FPCCR_LSPACT_MASK)) {
+            /* Rule RLMSY: The PE generates an LSERR SecureFault on exception return before unstacking the Floating-point context
+             * or Additional floating-point context, when the following conditions are met: EXC_RETURN.FType is 0. Secure lazy
+             * floating-point state preservation is active, that is, FPCCR_S.LSPACT is 1. The return is to Non-secure state. */
+            env->exception_index = EXCP_SECURE;
+            env->v7m.secure_fault_status |= SECURE_FAULT_LSERR;
+            cpu_loop_exit(env);
+        } else if(env->v7m.fpccr[env->secure] & ARM_FPCCR_LSPACT_MASK) {
             /* FP state is still valid, pop space from stack  */
             env->v7m.fpccr[env->secure] ^= ARM_FPCCR_LSPACT_MASK;
             env->regs[13] += fp_get_reservation_size(env);
@@ -1028,6 +1035,8 @@ void do_v7m_exception_exit(CPUState *env)
             v7m_pop(env);
 
             if(arm_feature(env, ARM_FEATURE_V8)) {
+                /* At this point, the internal state is Secure, so it's OK to just use env->secure here,
+                 * instead of `type.S` bit*/
                 if(env->secure && (env->v7m.fpccr[env->secure] & ARM_FPCCR_TS_MASK) > 0) {
                     for(int i = 8; i < 16; ++i) {
                         env->vfp.regs[i] = v7m_pop(env);
