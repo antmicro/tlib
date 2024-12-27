@@ -68,11 +68,11 @@ uint32_t *get_reg_pointer_32_with_security(int reg, bool is_secure)
         case FPCCR_32:
             return &(cpu->v7m.fpccr);
         case FPCAR_32:
-            return &(cpu->v7m.fpcar);
+            return &(cpu->v7m.fpcar[is_secure]);
         case FPDSCR_32:
-            return &(cpu->v7m.fpdscr);
+            return &(cpu->v7m.fpdscr[is_secure]);
         case CPACR_32:
-            return &(cpu->v7m.cpacr);
+            return &(cpu->v7m.cpacr[is_secure]);
         case PRIMASK_32:
             return &(cpu->v7m.primask[is_secure]);
         case FAULTMASK_32:

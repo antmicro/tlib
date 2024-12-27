@@ -336,10 +336,10 @@ typedef struct CPUState {
         uint32_t primask[M_REG_NUM_BANKS];
         uint32_t faultmask[M_REG_NUM_BANKS];
         uint32_t pending_exception;
-        uint32_t cpacr;
+        uint32_t cpacr[M_REG_NUM_BANKS];
         uint32_t fpccr;
-        uint32_t fpcar;
-        uint32_t fpdscr;
+        uint32_t fpcar[M_REG_NUM_BANKS];
+        uint32_t fpdscr[M_REG_NUM_BANKS];
         /* msplim/psplim are armv8-m specific */
         uint32_t msplim[M_REG_NUM_BANKS];
         uint32_t psplim[M_REG_NUM_BANKS];
@@ -814,7 +814,8 @@ static inline void cpu_get_tb_cpu_state(CPUState *env, target_ulong *pc, target_
 
     if((env->vfp.xregs[ARM_VFP_FPEXC] & ARM_VFP_FPEXC_FPUEN_MASK)
 #ifdef TARGET_PROTO_ARM_M
-       && (privmode || ((env->v7m.cpacr & ARM_CPACR_CP10_MASK) >> ARM_CPACR_CP10) == ARM_CPN_ACCESS_FULL)
+       /* We encode "env->secure" before into flags */
+       && (privmode || ((env->v7m.cpacr[env->secure] & ARM_CPACR_CP10_MASK) >> ARM_CPACR_CP10) == ARM_CPN_ACCESS_FULL)
 #endif
     ) {
         *flags |= ARM_TBFLAG_VFPEN_MASK;

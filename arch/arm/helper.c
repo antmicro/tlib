@@ -1045,7 +1045,7 @@ void HELPER(fp_lsp)(CPUState *env)
     if(unlikely(env->v7m.fpccr & ARM_FPCCR_LSPACT_MASK)) {
         env->v7m.fpccr ^= ARM_FPCCR_LSPACT_MASK;
         /* Bits[0:2] are RES0 (range inclusive) */
-        uint32_t fpcar = env->v7m.fpcar & ~0b111;
+        uint32_t fpcar = env->v7m.fpcar[env->secure] & ~0b111;
         /* Remember, we operate with double-precision aliases here
          * so for D7, up to S14, S15 are preserved, and so on */
         for(int i = 0; i < 8; ++i) {
@@ -1071,7 +1071,7 @@ void HELPER(fp_lsp)(CPUState *env)
         }
 
         /* Set default values from FPDSCR to FPSCR in new context */
-        vfp_set_fpscr(env, (fpscr & ~ARM_FPDSCR_VALUES_MASK) | (env->v7m.fpdscr & ARM_FPDSCR_VALUES_MASK));
+        vfp_set_fpscr(env, (fpscr & ~ARM_FPDSCR_VALUES_MASK) | (env->v7m.fpdscr[env->secure] & ARM_FPDSCR_VALUES_MASK));
     }
 }
 
@@ -1249,7 +1249,7 @@ static void do_interrupt_v7m(CPUState *env)
             /* Set lazy FP state preservation  */
             env->v7m.fpccr |= ARM_FPCCR_LSPACT_MASK;
             env->regs[13] -= fp_get_reservation_size(env);
-            env->v7m.fpcar = env->regs[13];
+            env->v7m.fpcar[env->secure] = env->regs[13];
         } else {
             if(~env->vfp.xregs[ARM_VFP_FPEXC] & ARM_VFP_FPEXC_FPUEN_MASK) {
                 /* FPU is disabled, revert SP and raise Usage Fault  */
@@ -1280,7 +1280,7 @@ static void do_interrupt_v7m(CPUState *env)
                 v7m_push(env, env->vfp.regs[8 - i]);
             }
             /* Set default values from FPDSCR to FPSCR in new context */
-            vfp_set_fpscr(env, (fpscr & ~ARM_FPDSCR_VALUES_MASK) | (env->v7m.fpdscr & ARM_FPDSCR_VALUES_MASK));
+            vfp_set_fpscr(env, (fpscr & ~ARM_FPDSCR_VALUES_MASK) | (env->v7m.fpdscr[env->secure] & ARM_FPDSCR_VALUES_MASK));
         }
     }
     /* Switch to the handler mode.  */
@@ -3971,7 +3971,7 @@ void HELPER(v8m_vlstm)(CPUState *env, uint32_t rn, uint32_t lowRegsOnly)
     if((env->v7m.fpccr & ARM_FPCCR_LSPEN_MASK) > 0) {
         /* If Lazy preservation is already enabled, just update the FPCAR address
          * Low three bits are RES0 */
-        env->v7m.fpcar = address & ~0x7;
+        env->v7m.fpcar[env->secure] = address & ~0x7;
     } else {
         /* We store, in this order, the following FPU registers, at the address passed in register "rn":
          *  S[0]-S[15]
