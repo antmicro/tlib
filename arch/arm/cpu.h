@@ -599,20 +599,24 @@ static inline bool in_user_mode(CPUState *env)
 #define ARM_FPCCR_LSPACT     0
 #define ARM_FPCCR_S          2
 #define ARM_FPCCR_TS         26
-#define ARM_FPCCR_LSPEN      30
+#define ARM_FPCCR_CLRONRETS  27
+#define ARM_FPCCR_CLRONRET   28
 #define ARM_FPCCR_LSPENS     29
+#define ARM_FPCCR_LSPEN      30
 #define ARM_FPCCR_ASPEN      31
 #define ARM_EXC_RETURN_NFPCA 4
 #define ARM_VFP_FPEXC_FPUEN  30
 
-#define ARM_CONTROL_FPCA_MASK (1 << ARM_CONTROL_FPCA)
-#define ARM_CONTROL_SFPA_MASK (1 << ARM_CONTROL_SFPA)
-#define ARM_FPCCR_LSPACT_MASK (1 << ARM_FPCCR_LSPACT)
-#define ARM_FPCCR_S_MASK      (1 << ARM_FPCCR_S)
-#define ARM_FPCCR_TS_MASK     (1 << ARM_FPCCR_TS)
-#define ARM_FPCCR_LSPEN_MASK  (1 << ARM_FPCCR_LSPEN)
-#define ARM_FPCCR_LSPENS_MASK (1 << ARM_FPCCR_LSPENS)
-#define ARM_FPCCR_ASPEN_MASK  (1 << ARM_FPCCR_ASPEN)
+#define ARM_CONTROL_FPCA_MASK    (1 << ARM_CONTROL_FPCA)
+#define ARM_CONTROL_SFPA_MASK    (1 << ARM_CONTROL_SFPA)
+#define ARM_FPCCR_LSPACT_MASK    (1 << ARM_FPCCR_LSPACT)
+#define ARM_FPCCR_S_MASK         (1 << ARM_FPCCR_S)
+#define ARM_FPCCR_TS_MASK        (1 << ARM_FPCCR_TS)
+#define ARM_FPCCR_CLRONRETS_MASK (1 << ARM_FPCCR_CLRONRETS)
+#define ARM_FPCCR_CLRONRET_MASK  (1 << ARM_FPCCR_CLRONRET)
+#define ARM_FPCCR_LSPENS_MASK    (1 << ARM_FPCCR_LSPENS)
+#define ARM_FPCCR_LSPEN_MASK     (1 << ARM_FPCCR_LSPEN)
+#define ARM_FPCCR_ASPEN_MASK     (1 << ARM_FPCCR_ASPEN)
 /* Also known as EXC_RETURN.FType */
 #define ARM_EXC_RETURN_NFPCA_MASK        (1 << ARM_EXC_RETURN_NFPCA)
 #define ARM_VFP_FPEXC_FPUEN_MASK         (1 << ARM_VFP_FPEXC_FPUEN)
@@ -923,11 +927,13 @@ static inline uint32_t fpccr_read(CPUState *env, bool is_secure)
     uint32_t read_mask = ~0x3FFF800;
     if(!is_secure) {
         /* Bits marked as RAZ if read from Non-secure */
-        read_mask ^= ARM_FPCCR_TS_MASK | ARM_FPCCR_S_MASK | ARM_FPCCR_LSPENS_MASK;
+        read_mask ^= ARM_FPCCR_TS_MASK | ARM_FPCCR_S_MASK | ARM_FPCCR_LSPENS_MASK | ARM_FPCCR_CLRONRETS_MASK;
     }
     uint32_t fpccr = env->v7m.fpccr[is_secure] & read_mask;
     /* LSPEN is not banked, and always readable. Always stored in Secure register */
     fpccr |= env->v7m.fpccr[M_REG_S] & ARM_FPCCR_LSPEN_MASK;
+    /* Same for CLRONRET */
+    fpccr |= env->v7m.fpccr[M_REG_S] & ARM_FPCCR_CLRONRET_MASK;
     return fpccr;
 }
 
@@ -938,13 +944,18 @@ static inline void fpccr_write(CPUState *env, uint32_t value, bool is_secure)
     uint32_t write_mask = UINT32_MAX;
     if(!is_secure) {
         /* These are not banked, but exist only in Secure mode */
-        write_mask ^= ARM_FPCCR_TS_MASK | ARM_FPCCR_S_MASK | ARM_FPCCR_LSPENS_MASK | ARM_FPCCR_LSPEN_MASK;
-        /* LSPEN is only writable if LSPENS is set. Store it in Secure bank */
+        write_mask ^= ARM_FPCCR_TS_MASK | ARM_FPCCR_S_MASK | ARM_FPCCR_LSPENS_MASK | ARM_FPCCR_LSPEN_MASK |
+                      ARM_FPCCR_CLRONRETS_MASK | ARM_FPCCR_CLRONRET_MASK;
+        /* LSPEN is only writable if LSPENS is unset. Store it in Secure bank */
         if((env->v7m.fpccr[M_REG_S] & ARM_FPCCR_LSPENS_MASK) == 0) {
             env->v7m.fpccr[M_REG_S] =
                 deposit32(env->v7m.fpccr[M_REG_S], ARM_FPCCR_LSPEN, 1, value & ARM_FPCCR_LSPEN_MASK ? 1 : 0);
         }
-        /* CLRONRET(S) behaves the same, but we don't have it */
+        /* Similarly for CLRONRETS */
+        if((env->v7m.fpccr[M_REG_S] & ARM_FPCCR_CLRONRETS_MASK) == 0) {
+            env->v7m.fpccr[M_REG_S] =
+                deposit32(env->v7m.fpccr[M_REG_S], ARM_FPCCR_CLRONRET, 1, value & ARM_FPCCR_CLRONRET_MASK ? 1 : 0);
+        }
     }
     env->v7m.fpccr[is_secure] = value & write_mask;
 }

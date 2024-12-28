@@ -957,6 +957,22 @@ void do_v7m_exception_exit(CPUState *env)
     /* Switch to the target stack.  */
     switch_v7m_sp(env, (type & 4) != 0);
 
+    if((env->v7m.control[M_REG_NS] & ARM_CONTROL_FPCA_MASK) && (fpccr_read(env, env->secure) & ARM_FPCCR_CLRONRET_MASK)) {
+        if(fpccr_read(env, true) & ARM_FPCCR_LSPACT_MASK) {
+            /* Secure LSPACT won't be set if TrustZone is disabled */
+            tlib_assert(env->v7m.has_trustzone);
+            env->v7m.secure_fault_status |= SECURE_FAULT_LSERR;
+            env->exception_index = EXCP_SECURE;
+            cpu_loop_exit(env);
+        } else {
+            for(int i = 0; i < 8; ++i) {
+                env->vfp.regs[i] = 0;
+            }
+            vfp_set_fpscr(env, 0);
+            /* TODO: VPR should be cleared too */
+        }
+    }
+
     /* Pop registers.  */
     if(cpu->v7m.has_trustzone) {
         /* We need to pop additional state registers, if they were pushed before */
@@ -3978,8 +3994,8 @@ static inline bool vlstm_store_helper(CPUState *env, uint32_t *address, uint64_t
     target_ulong page_size = 0;
     int prot = 0;
 
-    int ret = get_phys_addr(env, *address, env->secure, ACCESS_DATA_STORE, !in_privileged_mode(env), &phys_ptr, &prot, &page_size,
-                            false);
+    int ret = get_phys_addr(env, *address, !!(fpccr_read(env, true) & ARM_FPCCR_S_MASK), ACCESS_DATA_STORE,
+                            !in_privileged_mode(env), &phys_ptr, &prot, &page_size, false);
     if(ret == TRANSLATE_SUCCESS) {
         stq_phys(*address, val);
         *address += sizeof(val);
@@ -3995,8 +4011,8 @@ static inline bool vlldm_load_helper(CPUState *env, uint32_t *address, uint64_t 
     target_ulong page_size = 0;
     int prot = 0;
 
-    int ret = get_phys_addr(env, *address, env->secure, ACCESS_DATA_STORE, !in_privileged_mode(env), &phys_ptr, &prot, &page_size,
-                            false);
+    int ret = get_phys_addr(env, *address, !!(fpccr_read(env, true) & ARM_FPCCR_S_MASK), ACCESS_DATA_STORE,
+                            !in_privileged_mode(env), &phys_ptr, &prot, &page_size, false);
     if(ret == TRANSLATE_SUCCESS) {
         *val = ldq_phys(*address);
         *address += sizeof(*val);
