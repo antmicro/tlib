@@ -462,6 +462,11 @@ static inline void mark_fs_dirty()
     env->mstatus |= (MSTATUS_FS | MSTATUS_XS);
 }
 
+static inline bool cpu_in_clic_mode(CPUState *env)
+{
+    return get_field(env->mtvec, MTVEC_MODE) == MTVEC_MODE_CLIC;
+}
+
 static inline void set_default_mstatus()
 {
     if (riscv_has_ext(env, RISCV_FEATURE_RVD) || riscv_has_ext(env, RISCV_FEATURE_RVF)) {

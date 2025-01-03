@@ -111,7 +111,7 @@ static int riscv_clic_interrupt_pending(CPUState *env)
 {
     target_ulong priv = env->priv;
 
-    if (get_field(env->mtvec, MTVEC_MODE) != MTVEC_MODE_CLIC) {
+    if (!cpu_in_clic_mode(env)) {
         return EXCP_NONE;
     }
 
@@ -164,8 +164,7 @@ int riscv_cpu_hw_interrupts_pending(CPUState *env)
     target_ulong priv = env->priv;
     target_ulong enabled_interrupts = (target_ulong) - 1UL;
 
-    uint8_t is_in_clic_mode = get_field(env->mtvec, MTVEC_MODE) == MTVEC_MODE_CLIC;
-    if(is_in_clic_mode) {
+    if (cpu_in_clic_mode(env)) {
         return riscv_clic_interrupt_pending(env);
     }
 
@@ -448,7 +447,7 @@ void do_interrupt(CPUState *env)
     target_ulong fixed_cause = 0;
     target_ulong bit = 0;
     uint8_t is_interrupt = 0;
-    uint8_t is_in_clic_mode = get_field(env->mtvec, MTVEC_MODE) == MTVEC_MODE_CLIC;
+    uint8_t is_in_clic_mode = cpu_in_clic_mode(env);
 
     if (env->exception_index & (RISCV_EXCP_INT_FLAG)) {
         /* hacky for now. the MSB (bit 63) indicates interrupt but cs->exception

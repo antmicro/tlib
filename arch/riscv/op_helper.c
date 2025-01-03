@@ -416,7 +416,7 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
     }
     case CSR_MIP: {
         /* MIP is hardwired to zero in CLIC mode */
-        if (get_field(env->mtvec, MTVEC_MODE) == MTVEC_MODE_CLIC) {
+        if (cpu_in_clic_mode(env)) {
             break;
         }
         target_ulong mask = IRQ_SS | IRQ_ST | IRQ_SE;
@@ -431,7 +431,7 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
     }
     case CSR_MIE: {
         /* MIE is hardwired to zero in CLIC mode */
-        if (get_field(env->mtvec, MTVEC_MODE) == MTVEC_MODE_CLIC) {
+        if (cpu_in_clic_mode(env)) {
             break;
         }
         env->mie = (env->mie & ~all_ints) | (val_to_write & all_ints);
@@ -439,7 +439,7 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
     }
     case CSR_MIDELEG:
         /* MIDELEG is hardwired to zero in CLIC mode */
-        if (get_field(env->mtvec, MTVEC_MODE) == MTVEC_MODE_CLIC) {
+        if (cpu_in_clic_mode(env)) {
             break;
         }
         env->mideleg = (env->mideleg & ~delegable_ints) | (val_to_write & delegable_ints);
@@ -493,7 +493,7 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
     }
     case CSR_SIP: {
         /* SIP is hardwired to zero in CLIC mode */
-        if (get_field(env->mtvec, MTVEC_MODE) == MTVEC_MODE_CLIC) {
+        if (cpu_in_clic_mode(env)) {
             break;
         }
         target_ulong deleg = env->mideleg;
@@ -504,7 +504,7 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
     }
     case CSR_SIE: {
         /* SIE is hardwired to zero in CLIC mode */
-        if (get_field(env->mtvec, MTVEC_MODE) == MTVEC_MODE_CLIC) {
+        if (cpu_in_clic_mode(env)) {
             break;
         }
         target_ulong deleg = env->mideleg;
@@ -810,7 +810,7 @@ static inline target_ulong csr_read_helper(CPUState *env, target_ulong csrno)
     }
     case CSR_SIP: {
         /* SIP is hardwired to zero in CLIC mode */
-        if (get_field(env->mtvec, MTVEC_MODE) == MTVEC_MODE_CLIC) {
+        if (cpu_in_clic_mode(env)) {
             return 0;
         }
         target_ulong mask = IRQ_US | IRQ_SS | IRQ_UT | IRQ_ST | IRQ_UE | IRQ_SE;
@@ -818,7 +818,7 @@ static inline target_ulong csr_read_helper(CPUState *env, target_ulong csrno)
     }
     case CSR_SIE: {
         /* SIP is hardwired to zero in CLIC mode */
-        if (get_field(env->mtvec, MTVEC_MODE) == MTVEC_MODE_CLIC) {
+        if (cpu_in_clic_mode(env)) {
             return 0;
         }
         target_ulong mask = IRQ_US | IRQ_SS | IRQ_UT | IRQ_ST | IRQ_UE | IRQ_SE;
@@ -829,7 +829,7 @@ static inline target_ulong csr_read_helper(CPUState *env, target_ulong csrno)
     case CSR_STVAL:
         return env->stval;
     case CSR_STVEC:
-        return env->stvec | ((env->mtvec & MTVEC_MODE) == MTVEC_MODE_CLIC ? MTVEC_MODE_CLIC : 0);
+        return env->stvec | (cpu_in_clic_mode(env) ? MTVEC_MODE_CLIC : 0);
     case CSR_SCOUNTEREN:
         return env->scounteren;
     case CSR_STVT:
@@ -850,10 +850,10 @@ static inline target_ulong csr_read_helper(CPUState *env, target_ulong csrno)
         return env->mstatus;
     case CSR_MIP:
         /* MIP is hardwired to zero in CLIC mode */
-        return (get_field(env->mtvec, MTVEC_MODE) == MTVEC_MODE_CLIC) ? 0 : env->mip;
+        return cpu_in_clic_mode(env) ? 0 : env->mip;
     case CSR_MIE:
         /* MIE is hardwired to zero in CLIC mode */
-        return (get_field(env->mtvec, MTVEC_MODE) == MTVEC_MODE_CLIC) ? 0 : env->mie;
+        return cpu_in_clic_mode(env) ? 0 : env->mie;
     case CSR_MEPC:
         return env->mepc;
     case CSR_MSCRATCH:
@@ -884,7 +884,7 @@ static inline target_ulong csr_read_helper(CPUState *env, target_ulong csrno)
         return env->medeleg;
     case CSR_MIDELEG:
         /* MIDELEG is hardwired to zero in CLIC mode */
-        return (get_field(env->mtvec, MTVEC_MODE) == MTVEC_MODE_CLIC) ? 0 : env->mideleg;
+        return cpu_in_clic_mode(env) ? 0 : env->mideleg;
     case CSR_PMPCFG0 ... CSR_PMPCFG_LAST:
         return pmpcfg_csr_read(env, csrno - CSR_PMPCFG0);
     case CSR_PMPADDR0 ... CSR_PMPADDR_LAST:
@@ -1140,7 +1140,7 @@ target_ulong helper_sret(CPUState *env, target_ulong cpu_pc_deb)
     // SCAUSE_SPIL not affected by sret
     csr_write_helper(env, scause, CSR_SCAUSE);
 
-    if (get_field(env->mtvec, MTVEC_MODE) == MTVEC_MODE_CLIC) {
+    if (cpu_in_clic_mode(env)) {
         target_ulong sintstatus = env->mintstatus;
         sintstatus = set_field(sintstatus, MINTSTATUS_SIL, get_field(env->scause, SCAUSE_SPIL));
         csr_write_helper(env, sintstatus, CSR_SINTSTATUS);
@@ -1195,7 +1195,7 @@ target_ulong helper_mret(CPUState *env, target_ulong cpu_pc_deb)
     // MCAUSE_MPIL not affected by mret
     csr_write_helper(env, mcause, CSR_MCAUSE);
 
-    if (get_field(env->mtvec, MTVEC_MODE) == MTVEC_MODE_CLIC) {
+    if (cpu_in_clic_mode(env)) {
         target_ulong mintstatus = env->mintstatus;
         mintstatus = set_field(mintstatus, MINTSTATUS_MIL, get_field(env->mcause, MCAUSE_MPIL));
         csr_write_helper(env, mintstatus, CSR_MINTSTATUS);
