@@ -412,6 +412,11 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
         dirty |= (mstatus & MSTATUS_XS) == MSTATUS_XS;
         mstatus = set_field(mstatus, MSTATUS_SD, dirty);
         env->mstatus = mstatus;
+        if (cpu_in_clic_mode(env)) {
+            /* See CSR_MCAUSE for explanation, why this happens (MPP and MPIE are aliased in MCAUSE/MSTATUS into each other) */
+            env->mcause = set_field(env->mcause, MCAUSE_MPP, get_field(env->mstatus, MSTATUS_MPP));
+            env->mcause = set_field(env->mcause, MCAUSE_MPIE, get_field(env->mstatus, MSTATUS_MPIE));
+        }
         break;
     }
     case CSR_MIP: {
@@ -585,6 +590,20 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
         break;
     case CSR_MCAUSE:
         env->mcause = val_to_write;
+        if (cpu_in_clic_mode(env)) {
+            /* From CLIC manual (Version v0.9, 2024-06-28: Draft), section: "5.7.6. Changes to xcause CSRs":
+             * The mcause.mpp and mcause.mpie fields mirror the mstatus.mpp and mstatus.mpie fields, and are aliased
+             * into mcause to reduce context save/restore code. */
+            /* Here, copy the aliased bits, and try to write to MSTATUS */
+            target_ulong new_mstatus = env->mstatus;
+            new_mstatus = set_field(new_mstatus, MSTATUS_MPP, get_field(env->mcause, MCAUSE_MPP));
+            new_mstatus = set_field(new_mstatus, MSTATUS_MPIE, get_field(env->mcause, MCAUSE_MPIE));
+            csr_write_helper(env, new_mstatus, CSR_MSTATUS);
+            /* Now copy the aliased bits back from MSTATUS, so we are sure that the write succeeded
+             * as MSTATUS helper can not permit setting some bits (e.g. MPP if targets unsupported mode) */
+            env->mcause = set_field(env->mcause, MCAUSE_MPP, get_field(env->mstatus, MSTATUS_MPP));
+            env->mcause = set_field(env->mcause, MCAUSE_MPIE, get_field(env->mstatus, MSTATUS_MPIE));
+        }
         break;
     case CSR_MTVAL:
         env->mtval = val_to_write;

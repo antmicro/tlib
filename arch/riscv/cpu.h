@@ -475,6 +475,10 @@ static inline void set_default_mstatus()
         env->mstatus = 0;
     }
     env->mstatus = set_field(env->mstatus, MSTATUS_MPP, PRV_M);
+    if (cpu_in_clic_mode(env)) {
+        /* MPP and MPIE are mirrored */
+        env->mcause = set_field(env->mcause, MCAUSE_MPP, PRV_M);
+    }
 }
 
 static inline int supported_fpu_extensions_count(CPUState *env)
