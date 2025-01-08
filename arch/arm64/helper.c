@@ -1222,6 +1222,10 @@ uint32_t establish_interrupts_target_el(uint32_t current_el, uint64_t scr_el3, u
             tlib_abortf("Invalid SCR_EL3 (0x%" PRIx64 ") and HCR_EL2 (0x%" PRIx64 ") for an EL1 interrupt", scr_el3, hcr_el2);
             break;
         }
+    } else if (check_scr_el3(scr_el3, 1, -1, 1, 0, 0, -1)) {
+        tlib_printf(LOG_LEVEL_DEBUG,
+                    "Setting different interrupt targets for FIQ, IRQ and SError is not currently supported. Ignoring interrupt.");
+        return IRQ_IGNORED;
     } else {
         tlib_abortf("Unexpected register state in process_interrupt!");
     }
