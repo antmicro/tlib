@@ -127,6 +127,8 @@ uint32_t *get_reg_pointer_32(int reg)
         return &(cpu->mip);
     case SPTBR_32:     // same index as SATP_32
         return (cpu->privilege_architecture >= RISCV_PRIV1_10) ? &(cpu->satp) : &(cpu->sptbr);
+    case MTVT_32:
+        return &(cpu->mtvt);
     case MSTATUS_32:
         return &(cpu->mstatus);
     case MISA_32:
