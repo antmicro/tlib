@@ -1940,6 +1940,14 @@ ARMCPRegInfo cortex_a53_regs[] =
     ARM64_CP_REG_DEFINE(L2MERRSR_EL1,    3,   1,  15,   2,   3,  1, RW)
 };
 
+ARMCPRegInfo cortex_a55_regs[] =
+{
+    // The params are:   name           op0, op1, crn, crm, op2, el, extra_type, ...
+    ARM64_CP_REG_DEFINE(CLUSTERCFR_EL1,  3,   0,  15,   3,   0,  1, RW)
+    ARM64_CP_REG_DEFINE(CLUSTERIDR_EL1,  3,   0,  15,   3,   1,  1, RW)
+    ARM64_CP_REG_DEFINE(CPUECTLR_EL1,    3,   0,  15,   1,   4,  1, RW)
+};
+
 ARMCPRegInfo cortex_a75_a76_a78_common_regs[] =
 {
     // Beware that register summaries in the manual have the 'op0' parameter
@@ -2182,7 +2190,7 @@ void add_implementation_defined_registers(CPUState *env, uint32_t cpu_model_id)
         cp_regs_add(env, cortex_a53_regs, ARM_CP_ARRAY_COUNT(cortex_a53_regs));
         break;
     case ARM_CPUID_CORTEXA55:
-        // currently no custom registers
+        cp_regs_add(env, cortex_a55_regs, ARM_CP_ARRAY_COUNT(cortex_a55_regs));
         break;
     case ARM_CPUID_CORTEXA75:
         cp_regs_add(env, cortex_a75_a76_a78_common_regs, ARM_CP_ARRAY_COUNT(cortex_a75_a76_a78_common_regs));
@@ -2210,8 +2218,7 @@ uint32_t get_implementation_defined_registers_count(uint32_t cpu_model_id)
     case ARM_CPUID_CORTEXA53:
         return ARM_CP_ARRAY_COUNT(cortex_a53_regs);
     case ARM_CPUID_CORTEXA55:
-        // currently no custom registers
-        return 0;
+        return ARM_CP_ARRAY_COUNT(cortex_a55_regs);
     case ARM_CPUID_CORTEXA75:
         return ARM_CP_ARRAY_COUNT(cortex_a75_a76_a78_common_regs);
     case ARM_CPUID_CORTEXA76:
