@@ -245,6 +245,11 @@ int32_t tlib_init(char *cpu_name)
     }
     tlb_flush(env, 1, true);
     tlib_set_maximum_block_size(TCG_MAX_INSNS);
+#if defined(__aarch64__)
+    // Chaining is currently unreliable on the aarch64 backend so 
+    // default to not using it for now
+    tlib_set_chaining_enabled(false);
+#endif
     env->atomic_memory_state = NULL;
     return 0;
 }
