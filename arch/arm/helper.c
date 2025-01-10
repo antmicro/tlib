@@ -1097,6 +1097,25 @@ void do_v7m_secure_return(CPUState *env)
     tlib_printf(LOG_LEVEL_NOISY, "Secure return to 0x%08" PRIx32 ", xpsr: 0x%08" PRIx32, env->regs[15], xpsr_read(env));
 }
 
+static inline bool lsp_store_helper(CPUState *env, uint32_t *address, uint32_t val)
+{
+    /* No address translation in ARM-M, so discard phys_ptr */
+    uint32_t phys_ptr = 0;
+    target_ulong page_size = 0;
+    int prot = 0;
+
+    int ret = get_phys_addr(env, *address, !!(fpccr_read(env, true) & ARM_FPCCR_S_MASK), ACCESS_DATA_STORE,
+                            /* TODO: FPCCR_USER should determine this */ false, &phys_ptr, &prot, &page_size, false);
+    if(ret == TRANSLATE_SUCCESS) {
+        stl_phys(*address, val);
+        *address += sizeof(val);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+/* FPU Lazy State Preservation logic */
 void HELPER(fp_lsp)(CPUState *env)
 {
     const int regSize = sizeof(env->vfp.regs[0]);
@@ -1110,29 +1129,26 @@ void HELPER(fp_lsp)(CPUState *env)
         env->v7m.fpccr[M_REG_S] &= ~ARM_FPCCR_LSPACT_MASK;
         env->v7m.fpccr[M_REG_NS] &= ~ARM_FPCCR_LSPACT_MASK;
         /* Bits[0:2] are RES0 (range inclusive) */
-        uint32_t fpcar = env->v7m.fpcar[is_secure] & ~0b111;
+        uint32_t address = env->v7m.fpcar[is_secure] & ~0b111;
         /* Remember, we operate with double-precision aliases here
          * so for D7, up to S14, S15 are preserved, and so on
          * TODO: Memory operations should be done with privilege
          * (Security attribution) of FPCCR.S bit */
+        bool any_failed = false;
         for(int i = 0; i < 8; ++i) {
-            stl_phys(fpcar, env->vfp.regs[i]);
-            stl_phys(fpcar + 4, env->vfp.regs[i] >> 32);
-            fpcar += regSize;
+            any_failed |= !lsp_store_helper(env, &address, env->vfp.regs[i]);
+            any_failed |= !lsp_store_helper(env, &address, env->vfp.regs[i] >> 32);
         }
         uint32_t fpscr = vfp_get_fpscr(env);
-        stl_phys(fpcar, fpscr);
-        fpcar += sizeof(fpscr);
+        any_failed |= !lsp_store_helper(env, &address, fpscr);
 
         if(arm_feature(env, ARM_FEATURE_V8)) {
             /* Reserved for MVE VPR register, UNKNOWN if not implemented */
-            stl_phys(fpcar, 0xBADCAFEE);
-            fpcar += 4;
+            any_failed |= !lsp_store_helper(env, &address, 0xBADCAFEE);
             if(is_secure && (env->v7m.fpccr[is_secure] & ARM_FPCCR_TS_MASK) > 0) {
                 for(int i = 8; i < 16; ++i) {
-                    stl_phys(fpcar, env->vfp.regs[i]);
-                    stl_phys(fpcar + 4, env->vfp.regs[i] >> 32);
-                    fpcar += regSize;
+                    any_failed |= !lsp_store_helper(env, &address, env->vfp.regs[i]);
+                    any_failed |= !lsp_store_helper(env, &address, env->vfp.regs[i] >> 32);
                 }
             }
         }
@@ -1141,6 +1157,12 @@ void HELPER(fp_lsp)(CPUState *env)
          * use the current Security state for the context creation.
          * FPCCR.S bit will be updated at the end of the instruction by generated code in `disas_vfp_insn` */
         vfp_set_fpscr(env, (fpscr & ~ARM_FPDSCR_VALUES_MASK) | (env->v7m.fpdscr[env->secure] & ARM_FPDSCR_VALUES_MASK));
+
+        if(any_failed) {
+            env->v7m.secure_fault_status |= SECURE_FAULT_LSPERR;
+            env->exception_index = EXCP_SECURE;
+            cpu_loop_exit(env);
+        }
     }
 }
 
@@ -2610,7 +2632,6 @@ static inline bool pmsav8_check_security_attribution(CPUState *env, uint32_t add
 
     if(fault_status == 0 && attribution_is_secure(attribution) && !is_secure) {
         if(access_type != ACCESS_INST_FETCH) {
-            /* TODO: LSPERR is possible here, but requires FPU support for TZ */
             fault_status = SECURE_FAULT_AUVIOL;
         } else {
             *allowed_permissions = PAGE_EXEC;
