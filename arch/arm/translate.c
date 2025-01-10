@@ -9811,8 +9811,7 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                 if(!lowRegsOnly) {
                     ARCH(8_1M);
                 }
-                /* Sync PC to restore instruction count if an exceptcion is raised at runtime in the helper */
-                int op2 = (insn >> 20) & 1;
+                /* Sync PC to restore instruction count if an exception is raised at runtime in the helper */
                 gen_sync_pc(s);
                 if(op2 == 0) {
                     gen_helper_v8m_vlstm(cpu_env, rn, lowRegsOnly);

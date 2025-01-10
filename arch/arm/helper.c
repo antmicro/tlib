@@ -4011,7 +4011,7 @@ static inline bool vlldm_load_helper(CPUState *env, uint32_t *address, uint64_t 
     target_ulong page_size = 0;
     int prot = 0;
 
-    int ret = get_phys_addr(env, *address, !!(fpccr_read(env, true) & ARM_FPCCR_S_MASK), ACCESS_DATA_STORE,
+    int ret = get_phys_addr(env, *address, !!(fpccr_read(env, true) & ARM_FPCCR_S_MASK), ACCESS_DATA_LOAD,
                             !in_privileged_mode(env), &phys_ptr, &prot, &page_size, false);
     if(ret == TRANSLATE_SUCCESS) {
         *val = ldq_phys(*address);
@@ -4031,12 +4031,17 @@ void HELPER(v8m_vlstm)(CPUState *env, uint32_t rn, uint32_t lowRegsOnly)
         /* Secure FPU disabled; this bit is not banked, SS doesn't matter when reading */
         return;
     }
+    /* This is a Thumb2 instruction, PC needs to be subtracted, since it points to next half of insn
+     * the PC was synced before calling this helper */
+    const uint32_t insn_pc = env->regs[15] - 2;
+
     /* The S bit determines who claimed FPU registers - Secure or Non-secure world */
     if((env->v7m.fpccr[(env->v7m.fpccr[M_REG_S] & ARM_FPCCR_S_MASK) > 0 ? M_REG_S : M_REG_NS] & ARM_FPCCR_LSPACT) > 0) {
         /* The HW raises exception here, as it's a possible attack scenario */
-        env->v7m.secure_fault_status |= SECURE_FAULT_LSERR;
+        env->v7m.secure_fault_address = insn_pc;
+        env->v7m.secure_fault_status |= SECURE_FAULT_LSERR | SECURE_FAULT_SFARVALID;
         env->exception_index = EXCP_SECURE;
-        cpu_loop_exit(env);
+        cpu_loop_exit_restore(env, insn_pc, true);
     }
 
     uint32_t address = env->regs[rn];
@@ -4048,19 +4053,20 @@ void HELPER(v8m_vlstm)(CPUState *env, uint32_t rn, uint32_t lowRegsOnly)
         /* We store, in this order, the following FPU registers, at the address passed in register "rn":
          *  S[0]-S[15]
          *  FPSCR
-         *  VPR (but we don't have it, so 32-bit all-ones value)
+         *  VPR (but we don't have it, so 32-bit UNKNOWN value)
          *  S[16]-S[31] */
+        bool any_failed = false;
         for(int i = 0; i < 8; ++i) {
-            vlstm_store_helper(env, &address, env->vfp.regs[i]);
+            any_failed |= !vlstm_store_helper(env, &address, env->vfp.regs[i]);
         }
-        vlstm_store_helper(env, &address, vfp_get_fpscr(env));
-        /* No MVE, store all ones */
-        vlstm_store_helper(env, &address, ~0x0);
+        any_failed |= !vlstm_store_helper(env, &address, vfp_get_fpscr(env));
+        /* No MVE, store bogus value (same as in lazy preservation) */
+        any_failed |= !vlstm_store_helper(env, &address, 0xBADCAFEE);
 
         bool pushCalleeFrame = (env->v7m.fpccr[M_REG_S] & ARM_FPCCR_TS_MASK) > 0;
         if(pushCalleeFrame) {
             for(int i = 8; i < 16; ++i) {
-                vlstm_store_helper(env, &address, env->vfp.regs[i]);
+                any_failed |= !vlstm_store_helper(env, &address, env->vfp.regs[i]);
             }
         }
 
@@ -4069,6 +4075,13 @@ void HELPER(v8m_vlstm)(CPUState *env, uint32_t rn, uint32_t lowRegsOnly)
             memset(env->vfp.regs + 16, 0, 16 * sizeof(env->vfp.regs[0]));
         }
         vfp_set_fpscr(env, 0);
+
+        if(any_failed) {
+            env->v7m.secure_fault_address = insn_pc;
+            env->v7m.secure_fault_status |= SECURE_FAULT_AUVIOL | SECURE_FAULT_SFARVALID;
+            env->exception_index = EXCP_SECURE;
+            cpu_loop_exit_restore(env, insn_pc, true);
+        }
     }
     env->v7m.control[M_REG_NS] &= ~ARM_CONTROL_FPCA_MASK;
 }
@@ -4092,20 +4105,30 @@ void HELPER(v8m_vlldm)(CPUState *env, uint32_t rn, uint32_t lowRegsOnly)
         uint32_t address = env->regs[rn];
 
         uint64_t scratch = 0;
+        bool any_failed = false;
         for(int i = 0; i < 8; ++i) {
-            vlldm_load_helper(env, &address, &scratch);
+            any_failed |= !vlldm_load_helper(env, &address, &scratch);
             env->vfp.regs[i] = scratch;
         }
-        vlldm_load_helper(env, &address, &scratch);
+        any_failed |= !vlldm_load_helper(env, &address, &scratch);
         vfp_set_fpscr(env, scratch);
         /* No MVE, these we can ignore */
-        vlldm_load_helper(env, &address, &scratch);
+        any_failed |= !vlldm_load_helper(env, &address, &scratch);
 
         if((env->v7m.fpccr[M_REG_S] & ARM_FPCCR_TS_MASK) > 0) {
             for(int i = 8; i < 16; ++i) {
-                vlldm_load_helper(env, &address, &scratch);
+                any_failed |= !vlldm_load_helper(env, &address, &scratch);
                 env->vfp.regs[i] = scratch;
             }
+        }
+
+        if(any_failed) {
+            /* This is Thumb2 instruction, PC needs to be subtracted, since it'll point to next half of insn */
+            const uint32_t insn_pc = env->regs[15] - 2;
+            env->v7m.secure_fault_address = insn_pc;
+            env->v7m.secure_fault_status |= SECURE_FAULT_AUVIOL | SECURE_FAULT_SFARVALID;
+            env->exception_index = EXCP_SECURE;
+            cpu_loop_exit_restore(env, insn_pc, true);
         }
     }
     env->v7m.control[M_REG_NS] |= ARM_CONTROL_FPCA_MASK;
