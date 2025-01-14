@@ -3756,7 +3756,52 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                 } else {
                     rd = VFP_SREG_D(insn);
                 }
-                if((insn & 0x01200000) == 0x01000000) {
+
+                if(rn == 0xf && (insn & 0x1B00000) == 0x900000 && (insn & 0xE00) == 0xA00) {
+#ifdef TARGET_PROTO_ARM_M
+                    /* VSCCLRM T1/T2 encodings */
+                    ARCH(8_1M);
+                    if(s->ns) {
+                        goto illegal_op;
+                    }
+
+                    /* T1 encoding */
+                    bool double_precision = ((insn >> 8) & 1) > 0;
+                    int reg_count = insn & 0xFF;
+                    int first_reg = 0;
+
+                    if(double_precision) {
+                        reg_count >>= 1;
+                        first_reg = (insn >> 18) | ((insn >> 12) & 0xf);
+                    } else {
+                        first_reg = ((insn >> 11) & 0x1e) | ((insn >> 22) & 1);
+                    }
+
+                    TCGv_i64 zero;
+                    if(double_precision) {
+                        zero = tcg_const_i64(0);
+                    } else {
+                        zero = tcg_const_i32(0);
+                    }
+                    for(int i = 0; i < reg_count; ++i) {
+                        int currentReg = i + first_reg;
+                        if(double_precision) {
+                            tcg_gen_st_i64(zero, cpu_env, vfp_reg_offset(true, currentReg));
+                        } else {
+                            tcg_gen_st_i32(zero, cpu_env, vfp_reg_offset(false, currentReg));
+                        }
+                    }
+                    if(double_precision) {
+                        tcg_temp_free_i64(zero);
+                    } else {
+                        tcg_temp_free_i32(zero);
+                    }
+
+                    /* We should clear VPR here, but our MVE implementation doesn't have it yet */
+#else
+                    goto illegal_op;
+#endif
+                } else if((insn & 0x01200000) == 0x01000000) {
                     /* Single load/store */
                     offset = (insn & 0xff) << 2;
                     if((insn & (1 << 23)) == 0) {
@@ -3852,6 +3897,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
             break;
         default:
             /* Should never happen.  */
+        illegal_op:
             return 1;
     }
 #ifdef TARGET_PROTO_ARM_M
@@ -9104,7 +9150,7 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
     TCGv addr;
     TCGv_i64 tmp64;
     int op;
-    int op1, op2, op3, op4;
+    int op1, op4;
     int shiftop;
     int conds;
     int logic_cc;
@@ -9787,9 +9833,7 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
              */
 
             op1 = (insn >> 21) & 0xf;
-            op3 = (insn >> 16) & 0xf;
             op4 = (insn >> 6) & 0x7;
-            op2 = (insn >> 20) & 1;
 
             if(arm_feature(env, ARM_FEATURE_V8) && is_insn_vstrw(insn)) {
                 ARCH(MVE);
@@ -9811,57 +9855,14 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                 if(!lowRegsOnly) {
                     ARCH(8_1M);
                 }
-                /* Sync PC to restore instruction count if an exception is raised at runtime in the helper */
+                /* Sync PC to restore instruction count if an exceptcion is raised at runtime in the helper */
+                int op2 = (insn >> 20) & 1;
                 gen_sync_pc(s);
                 if(op2 == 0) {
                     gen_helper_v8m_vlstm(cpu_env, rn, lowRegsOnly);
                 } else {
                     gen_helper_v8m_vlldm(cpu_env, rn, lowRegsOnly);
                 }
-#else
-                goto illegal_op;
-#endif
-            } else if(((insn >> 25) & 0xf) == 0b0110 && ((op1 & 0b1101) == 0b0100) && op2 == 1 && op3 == 0xf) {
-#ifdef TARGET_PROTO_ARM_M
-                /* VSCCLRM T1/T2 encodings */
-                ARCH(8_1M);
-                if(s->ns) {
-                    goto illegal_op;
-                }
-
-                /* T1 encoding */
-                bool doublePrecision = ((insn >> 8) & 1) > 0;
-                int regCount = insn & 0xFF;
-                int firstReg = 0;
-
-                if(doublePrecision) {
-                    regCount >>= 1;
-                    firstReg = (insn >> 18) | ((insn >> 12) & 0xf);
-                } else {
-                    firstReg = ((insn >> 11) & 0x1e) | ((insn >> 22) & 1);
-                }
-
-                TCGv_i64 zero;
-                if(doublePrecision) {
-                    zero = tcg_const_i64(0);
-                } else {
-                    zero = tcg_const_i32(0);
-                }
-                for(int i = 0; i < regCount; ++i) {
-                    int currentReg = i + firstReg;
-                    if(doublePrecision) {
-                        tcg_gen_st_i64(zero, cpu_env, vfp_reg_offset(true, currentReg));
-                    } else {
-                        tcg_gen_st_i32(zero, cpu_env, vfp_reg_offset(false, currentReg));
-                    }
-                }
-                if(doublePrecision) {
-                    tcg_temp_free_i64(zero);
-                } else {
-                    tcg_temp_free_i32(zero);
-                }
-
-                /* We should clear VPR here, but our MVE implementation doesn't have it yet */
 #else
                 goto illegal_op;
 #endif
