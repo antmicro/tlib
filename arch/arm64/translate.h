@@ -90,18 +90,15 @@ static inline int get_mem_index(DisasContext *s)
 
 static inline void disas_set_insn_syndrome(DisasContext *s, uint32_t syn)
 {
-    // TODO: Restore after implementing 'tcg_set_insn_start_param' and 'tcg_last_op'
-    //       which is needed for setting 'insn_start' in 'aarch64_tr_insn_start'.
-    // /* We don't need to save all of the syndrome so we mask and shift
-    //  * out unneeded bits to help the sleb128 encoder do a better job.
-    //  */
-    // syn &= ARM_INSN_START_WORD2_MASK;
-    // syn >>= ARM_INSN_START_WORD2_SHIFT;
+    /* We don't need to save all of the syndrome so we mask and shift
+     * out unneeded bits to help the sleb128 encoder do a better job.
+     */
+    syn &= ARM_INSN_START_WORD2_MASK;
+    syn >>= ARM_INSN_START_WORD2_SHIFT;
 
-    // /* We check and clear insn_start_idx to catch multiple updates.  */
-    // tlib_assert(s->insn_start != NULL);
-    // tcg_set_insn_start_param(s->insn_start, 2, syn);
-    // s->insn_start = NULL;
+    /* We clear insn_start_args after setting the param to catch multiple updates.  */
+    tcg_set_insn_start_param(s->insn_start_args, 2, syn);
+    s->insn_start_args = NULL;
 }
 
 /* is_jmp field values */
