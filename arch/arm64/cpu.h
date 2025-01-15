@@ -3876,8 +3876,8 @@ typedef struct DisasContext {
     bool guarded_page;
     /* Bottom two bits of XScale c15_cpar coprocessor access control reg */
     int c15_cpar;
-    /* TCG op of the current insn_start.  */
-    TCGOp *insn_start;
+    /* First arg of the current insn_start.  */
+    TCGArg *insn_start_args;
 #define TMP_A64_MAX 16
     int tmp_a64_count;
     TCGv_i64 tmp_a64[TMP_A64_MAX];

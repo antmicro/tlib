@@ -14869,8 +14869,8 @@ static void aarch64_tr_insn_start(DisasContextBase *dcbase, CPUState *cpu)
 {
     DisasContext *dc = container_of(dcbase, DisasContext, base);
 
+    dc->insn_start_args = gen_opparam_ptr;
     tcg_gen_insn_start(dc->base.pc, 0, 0);
-    // dc->insn_start = tcg_last_op();
 }
 
 static void aarch64_tr_translate_insn(DisasContextBase *dcbase, CPUState *env)

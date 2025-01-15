@@ -9518,8 +9518,8 @@ void arm_tr_insn_start(DisasContextBase *dcbase, CPUState *cpu)
     } else {
         condexec_bits = (dc->condexec_cond << 4) | (dc->condexec_mask >> 1);
     }
+    dc->insn_start_args = gen_opparam_ptr;
     tcg_gen_insn_start(dc->base.pc_next, condexec_bits, 0);
-    //dc->insn_start = tcg_last_op();
 }
 
 static bool arm_check_kernelpage(DisasContext *dc)
