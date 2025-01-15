@@ -735,6 +735,14 @@ static inline size_t tcg_current_code_size(TCGContext *s)
     return (uintptr_t)s->code_ptr - (uintptr_t)s->code_buf;
 }
 
+/* Set the given parameter in the given insn_start op's params */
+static inline void tcg_set_insn_start_param(TCGArg *params, int i, TCGArg value)
+{
+    tlib_assert(params != NULL);
+    tlib_assert(i < TARGET_INSN_START_WORDS);
+    params[i] = value;
+}
+
 /* TCG targets may use a different definition of tcg_tb_exec. */
 #if !defined(tcg_tb_exec)
 # define tcg_tb_exec(env, tb_ptr) \
