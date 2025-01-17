@@ -357,6 +357,7 @@ void cpu_gen_code(CPUState *env, TranslationBlock *tb, int *gen_code_size_ptr, i
 
     gen_code_size = tcg_gen_code(s, gen_code_buf);
     *gen_code_size_ptr = gen_code_size;
+    tcg_perf_out_symbol_from_tb(tb, gen_code_size, "cpu_gen_code");
 
     search_size = encode_search(tb, gen_code_buf + gen_code_size);
     *search_size_ptr = search_size;
