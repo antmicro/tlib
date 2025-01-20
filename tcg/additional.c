@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010-2021 Antmicro Ltd <www.antmicro.com>
+ * Copyright (c) 2010-2025 Antmicro Ltd <www.antmicro.com>
  * Copyright (c) 2011-2015 Realtime Embedded AB <www.rte.se>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy

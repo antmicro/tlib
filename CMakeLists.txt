@@ -44,6 +44,7 @@ if(PROFILING_BUILD)
         # Unfortunately without frame pointers perf might have problem with unwinding stack
         # and call traces in reports will become less readable if using frame pointers for stack unwinding.
         -fno-omit-frame-pointer
+        -DGENERATE_PERF_MAP
         -g3
     )
 elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
