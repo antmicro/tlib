@@ -672,14 +672,22 @@ int get_phys_addr_pmsav8(CPUState *env, target_ulong address, int access_type, u
             }
             if (access_type == ACCESS_INST_FETCH) {
                 env->cp15.ifar_s = address;
-                env->exception.syndrome = SYN_EC_INSTRUCTION_ABORT_LOWER_EL << SYN_EC_SHIFT; // Exception class - Prefetch Abort routed to Hyp
+                env->exception.syndrome = syn_instruction_abort(/* same_el */ false, /* s1ptw */ false, /* ifsc */ 0);
             } else {
                 env->cp15.dfar_s = address;
-                env->exception.syndrome = (SYN_EC_DATA_ABORT_LOWER_EL << SYN_EC_SHIFT)       // Exception class - Data Abort routed to Hyp
-                    | SYN_DATA_ABORT_ISV
-                    | (access_size << 22)                                                    // Syndrome access size
-                    | (access_type == ACCESS_DATA_STORE ? (1 << 6) : 0)
-                    | fault_type;
+                env->exception.syndrome = syn_data_abort_with_iss(
+                    /* same_el */ false,
+                    /* access_size */ access_size,
+                    /* sign_extend */ false, /* will be set by insn_start data */
+                    /* insn_rt */ 0, /* will be set by insn_start data */
+                    /* is_64bit_gpr_ldst */ false, /* will be set by insn_start data */
+                    /* acquire_or_release */ false, /* will be set by insn_start data */
+                    /* set */ 0,
+                    /* cm */ false,
+                    /* s1ptw */ false,
+                    /* wnr */ access_type == ACCESS_DATA_STORE,
+                    /* dfsc */ fault_type,
+                    /* is_16bit */ true); /* will be set by insn_start data, here true is the neutral value (results in 0) */
             }
         }
     }
