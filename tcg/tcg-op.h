@@ -1431,6 +1431,8 @@ static inline void tcg_gen_bswap16_i32(TCGv_i32 ret, TCGv_i32 arg, int flags)
             tcg_gen_shli_i32(t1, t1, 8);
         } else {
             tcg_gen_shli_i32(t1, arg, 8);
+            // Make sure that top bytes are zero
+            tcg_gen_andi_i32(t1, t1, 0xffff);
         }
 
         tcg_gen_or_i32(ret, t0, t1);
@@ -1619,6 +1621,8 @@ static inline void tcg_gen_bswap16_i64(TCGv_i64 ret, TCGv_i64 arg, int flags)
             tcg_gen_shli_i64(t1, t1, 8);
         } else {
             tcg_gen_shli_i64(t1, arg, 8);
+            // Make sure that top bytes are zero
+            tcg_gen_andi_i64(t1, t1, 0xffff);
         }
 
         tcg_gen_or_i64(ret, t0, t1);
