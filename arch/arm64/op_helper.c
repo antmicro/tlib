@@ -545,7 +545,7 @@ static void msr_mrs_banked_exc_checks(CPUARMState *env, uint32_t tgtmode,
         if (curmode != ARM_CPU_MODE_HYP && curmode != ARM_CPU_MODE_MON) {
             goto undef;
         }
-        if (regno == 16) {
+        if (regno == 16 && tgtmode == ARM_CPU_MODE_HYP) {
             tlib_printf(LOG_LEVEL_ERROR, "Accessing SPSR_Hyp from Hyp mode is unpredictable!");
         }
         return;
