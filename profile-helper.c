@@ -13,7 +13,7 @@
 
 int tcg_perf_tb_info_to_string(TranslationBlock *tb, char *buffer, int maxsize)
 {
-    snprintf(buffer, maxsize, ";addr:%p;size:%x;jmp_next:%p,%p;jmp_first:%p,icount:%x;", &(*tb), tb->size, tb->jmp_next[0],
+    snprintf(buffer, maxsize, ";addr:%p;size:%x;jmp_next:%p,%p;jmp_first:%p,icount:%d;", &(*tb), tb->size, tb->jmp_next[0],
              tb->jmp_next[1], tb->jmp_first, tb->icount);
     return strlen(buffer);
 }

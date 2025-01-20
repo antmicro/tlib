@@ -72,6 +72,7 @@ struct TranslationBlock;
 
 void tcg_perf_init_labeling();
 void tcg_perf_fini_labeling();
+void tcg_perf_flush_map();
 void tcg_perf_out_symbol_s(void *s, int size, const char *label, struct TranslationBlock *tb);
 void tcg_perf_out_symbol_i(void *s, int size, int label, struct TranslationBlock *tb);
 void tcg_perf_out_symbol(void *s, int size, struct TranslationBlock *tb);

@@ -375,6 +375,8 @@ static bool code_gen_try_expand()
 
 void code_gen_free(void)
 {
+    // Perf labels need to be flushed since they hold pointers to tbs which will be invalidated here
+    tcg_perf_flush_map();
     free_code_gen_buf();
     tlib_free(tbs);
 }

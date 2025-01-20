@@ -269,12 +269,6 @@ static inline void tcg_perf_flush_symbol(tcg_perf_map_symbol *s)
     fprintf(perf_map_handle, "\n");
 }
 
-void tcg_perf_flush_map()
-{
-    RETURN_EMPTY_PERF_HANDLE;
-    tcg_perf_symbol_tree_recurse_helper(symbols, tcg_perf_flush_symbol);
-}
-
 static inline void tcg_perf_free_symbol(tcg_perf_map_symbol *s)
 {
     if (s->label) {
@@ -283,13 +277,20 @@ static inline void tcg_perf_free_symbol(tcg_perf_map_symbol *s)
     TCG_free(s);
 }
 
+void tcg_perf_flush_map()
+{
+    RETURN_EMPTY_PERF_HANDLE;
+    tcg_perf_symbol_tree_recurse_helper(symbols, tcg_perf_flush_symbol);
+    tcg_perf_symbol_tree_recurse_helper(symbols, tcg_perf_free_symbol);
+    symbols = NULL;
+}
+
+
 void tcg_perf_fini_labeling()
 {
     if (likely(perf_map_handle != NULL)) {
         tcg_perf_flush_map();
         fclose(perf_map_handle);
-
-        tcg_perf_symbol_tree_recurse_helper(symbols, tcg_perf_free_symbol);
     }
 }
 
@@ -432,7 +433,9 @@ inline void tcg_perf_init_labeling()
 inline void tcg_perf_fini_labeling()
 {
 }
-
+void tcg_perf_flush_map()
+{
+}
 inline void tcg_perf_out_symbol(void *s, int size, struct TranslationBlock *tb)
 {
 }
