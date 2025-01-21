@@ -9941,10 +9941,15 @@ void restore_state_to_opc(CPUARMState *env, TranslationBlock *tb,
     if (is_a64(env)) {
         env->pc = data[0];
         env->condexec_bits = 0;
-        env->exception.syndrome = data[2] << ARM_INSN_START_WORD2_SHIFT;
     } else {
         env->regs[15] = data[0];
         env->condexec_bits = data[1];
+    }
+
+    if (env->exception.dabt_syndrome_partial) {
+        env->exception.syndrome |= data[2] << ARM_INSN_START_WORD2_SHIFT;
+        env->exception.dabt_syndrome_partial = false;
+    } else {
         env->exception.syndrome = data[2] << ARM_INSN_START_WORD2_SHIFT;
     }
 }

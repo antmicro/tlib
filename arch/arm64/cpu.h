@@ -771,6 +771,7 @@ typedef struct CPUState {
         uint32_t fsr; /* AArch32 format fault status register info */
         uint64_t vaddress; /* virtual addr associated with exception, if any */
         uint32_t target_el; /* EL the exception should be targeted for */
+        bool dabt_syndrome_partial; /* syndrome is incomplete and should be ORed with insn_start data */
         /* If we implement EL2 we will also need to store information
          * about the intermediate physical address for stage 2 faults.
          */
