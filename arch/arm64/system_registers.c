@@ -383,7 +383,8 @@ RW_FUNCTIONS_EL1_ACCESSING_EL2_IF_E2H_SET(64, zcr_el1,          env->vfp.zcr_el)
 
 WRITE_FUNCTION(64, ats1, {
     if (arm_feature(env, ARM_FEATURE_PMSA)) {
-        env->cp15.par_ns = value;
+        // TODO: Translate VA to IPA here
+        env->cp15.par_ns = value & TARGET_PAGE_MASK;
     } else {
         tlib_printf(LOG_LEVEL_WARNING, "%s register is only implemented for CPUs with the PMSA feature", info->name);
     }
