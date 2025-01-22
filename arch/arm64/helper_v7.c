@@ -285,8 +285,8 @@ case_EXCP_SWI_SVC:
         mask = CPSR_I;
         offset = 4;
         uint32_t ec = env->exception.syndrome >> SYN_EC_SHIFT;
-        // For Data Aborts, set the proper Syndrome Register Transfer
-        if (ec == 0x24) {
+        // For Data Aborts, mark the syndrome as invalid if it came from Thumb mode
+        if (ec == SYN_EC_DATA_ABORT_LOWER_EL || ec == SYN_EC_DATA_ABORT_SAME_EL) {
             // At this point, PC points to the instruction that attempted the transfer
             // (it was restored by restore_state_to_opc)
             uint32_t prev_pc = env->regs[15];
@@ -298,9 +298,6 @@ case_EXCP_SWI_SVC:
                 env->exception.syndrome &= ~(SYN_DATA_ABORT_ISV);
                 break;
             }
-            uint32_t *prev_pc_ptr = get_ram_ptr(prev_pc);
-            uint32_t rt = (*prev_pc_ptr >> 12) & 0xf;
-            env->exception.syndrome |= rt << 16;
         }
         break;
     }
@@ -657,19 +654,6 @@ int get_phys_addr_pmsav8(CPUState *env, target_ulong address, int access_type, u
             set_mmu_fault_registers(access_type, address, fault_type);
         } else {
             env->exception_index = EXCP_HYP_TRAP;
-            int access_size = 0;
-            switch (access_width) {
-                case 1:
-                    access_size = 0;
-                    break;
-                case 2:
-                    access_size = 1;
-                    break;
-                default:
-                    // For any other access_width set the size to word.
-                    access_size = 2;
-                    break;
-            }
             if (access_type == ACCESS_INST_FETCH) {
                 env->cp15.ifar_s = address;
                 env->exception.syndrome = syn_instruction_abort(/* same_el */ false, /* s1ptw */ false, /* ifsc */ 0);
@@ -677,7 +661,7 @@ int get_phys_addr_pmsav8(CPUState *env, target_ulong address, int access_type, u
                 env->cp15.dfar_s = address;
                 env->exception.syndrome = syn_data_abort_with_iss(
                     /* same_el */ false,
-                    /* access_size */ access_size,
+                    /* access_size */ 0, /* will be set by insn_start data */
                     /* sign_extend */ false, /* will be set by insn_start data */
                     /* insn_rt */ 0, /* will be set by insn_start data */
                     /* is_64bit_gpr_ldst */ false, /* will be set by insn_start data */
