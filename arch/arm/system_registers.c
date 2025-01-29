@@ -519,6 +519,7 @@ RW_FUNCTIONS(64, c12_vbar, env->cp15.c12_vbar, env->cp15.c12_vbar = value & ~0xF
 #define READ_AS_ZERO(cp, op1, crn, crm, op2, el) \
     ARM32_CP_REG_DEFINE(ZERO,          cp, op1, crn, crm,   op2,  el,  RO | CONST(0))              // Marked as Read-As-Zero in docs
 
+// clang-format off
 static ARMCPRegInfo general_coprocessor_registers[] = {
     // ================== Coprocessor 14 ==================
     // The params are:  name              cp, op1, crn, crm, op2,  el,  extra_type, ...
@@ -945,6 +946,7 @@ static ARMCPRegInfo feature_cbar_ro[] = {
     // The params are:  name              cp, op1, crn, crm, op2,  el,  extra_type, ...
     ARM32_CP_REG_DEFINE(CBAR,             15,   4,   15,   0,   0,  1,  RO, FIELD(cp15.c15_cbar)) // CBAR, Configuration Base Address Register
 };
+// clang-format on
 
 // The keys are dynamically allocated so let's make TTable free them when removing the entry.
 static void entry_remove_callback(TTable_entry *entry)

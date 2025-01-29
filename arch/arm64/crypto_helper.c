@@ -42,6 +42,7 @@ static void clear_tail_16(void *vd, uint32_t desc)
     clear_tail(vd, opr_sz, max_sz);
 }
 
+// clang-format off
 // FIPS-197: Figure 7.
 static uint8_t const AES_sbox[256] = {
     /* S-box for encryption */
@@ -115,6 +116,7 @@ static uint8_t const AES_isbox[256] = {
     0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26,
     0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d
 };
+// clang-format on
 
 // Shift tables are based on FIPS-197's figures 8 and 13.
 // Values indicate positions in the 4x4 table before the transformation
@@ -167,6 +169,7 @@ void HELPER(crypto_aese)(void *vd, void *vn, void *vm, uint32_t desc)
 
 static void do_crypto_aesmc(uint64_t *rd, uint64_t *rm, bool decrypt)
 {
+    // clang-format off
     static uint32_t const mc[][256] = { {
         /* MixColumns lookup table */
         0x00000000, 0x03010102, 0x06020204, 0x05030306,
@@ -300,6 +303,7 @@ static void do_crypto_aesmc(uint64_t *rd, uint64_t *rm, bool decrypt)
         0x92b479a7, 0x99b970a9, 0x84ae6bbb, 0x8fa362b5,
         0xbe805d9f, 0xb58d5491, 0xa89a4f83, 0xa397468d,
     } };
+    // clang-format on
 
     union CRYPTO_STATE st = { .l = { rm[0], rm[1] } };
     int i;
@@ -782,6 +786,7 @@ DO_SM3TT(crypto_sm3tt2b, 3)
 
 #undef DO_SM3TT
 
+// clang-format off
 uint8_t const sm4_sbox[] = {
     0xd6, 0x90, 0xe9, 0xfe, 0xcc, 0xe1, 0x3d, 0xb7,
     0x16, 0xb6, 0x14, 0xc2, 0x28, 0xfb, 0x2c, 0x05,
@@ -816,6 +821,7 @@ uint8_t const sm4_sbox[] = {
     0x18, 0xf0, 0x7d, 0xec, 0x3a, 0xdc, 0x4d, 0x20,
     0x79, 0xee, 0x5f, 0x3e, 0xd7, 0xcb, 0x39, 0x48,
 };
+// clang-format on
 
 static void do_crypto_sm4e(uint64_t *rd, uint64_t *rn, uint64_t *rm)
 {

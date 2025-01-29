@@ -339,6 +339,7 @@ static inline uint32_t encode_aarch64_generic_timer_register(CPUState *env, cons
     return encode_as_aarch64_register(op0, op1, crn, crm, op2);
 }
 
+// clang-format off
 READ_FUNCTION(64, mpidr_el1, mpidr_el1_register(env))
 
 RW_FUNCTIONS(64, fpcr,  vfp_get_fpcr(env), vfp_set_fpcr(env, value))
@@ -1616,6 +1617,7 @@ ARMCPRegInfo aarch64_registers[] = {
     ARM64_CP_REG_DEFINE(ZCR_EL2,                 3,   4,   1,   2,   0,  2, RW, FIELD(vfp.zcr_el[2]))
     ARM64_CP_REG_DEFINE(ZCR_EL3,                 3,   6,   1,   2,   0,  3, RW, FIELD(vfp.zcr_el[3]))
 };
+// clang-format on
 
 /* TLBI helpers */
 
@@ -1701,6 +1703,7 @@ WRITE_FUNCTION(64, tlbi_vmall,
     tlb_flush_masked(env, indexes_mask);
 })
 
+// clang-format off
 ARMCPRegInfo aarch64_instructions[] = {
     // The params are:   name                   op0, op1, crn, crm, op2, el, extra_type, ...
     ARM64_CP_REG_DEFINE(AT S12E0R,               1,   4,   7,   8,   6,  0, WO | INSTRUCTION)
@@ -1907,6 +1910,7 @@ ARMCPRegInfo aarch64_instructions[] = {
     ARM64_CP_REG_DEFINE(TLBI VMALLS12E1OS,       1,   4,   8,   1,   6,  1, WO | INSTRUCTION, WRITEFN(tlbi_vmall))
     ARM64_CP_REG_DEFINE(TLBI VMALLS12E1OSNXS,    1,   4,   9,   1,   6,  1, WO | INSTRUCTION, WRITEFN(tlbi_vmall))
 };
+// clang-format on
 
 void cp_reg_add(CPUState *env, ARMCPRegInfo *reg_info)
 {
@@ -1928,6 +1932,7 @@ void cp_reg_add(CPUState *env, ARMCPRegInfo *reg_info)
  * The 'op0' field is always 3 and 'crn' can only be either 11 or 15.
  */
 
+// clang-format off
 ARMCPRegInfo cortex_a53_regs[] =
 {
     // The params are:   name           op0, op1, crn, crm, op2, el, extra_type, ...
@@ -2183,6 +2188,7 @@ ARMCPRegInfo mpu_registers[] = {
     ARM32_CP_REG_DEFINE(HPRLAR22,            15,   5,   6,  11,   1,  2, RW, RW_FNS(hprlarn22)) // Hyp Protection Region Limit Address Register 22
     ARM32_CP_REG_DEFINE(HPRLAR23,            15,   5,   6,  11,   5,  2, RW, RW_FNS(hprlarn23)) // Hyp Protection Region Limit Address Register 23
 };
+// clang-format on
 
 void add_implementation_defined_registers(CPUState *env, uint32_t cpu_model_id)
 {
