@@ -887,6 +887,8 @@ static void do_gpr_st_memidx(DisasContext *s, TCGv_i64 source,
     if (iss_valid) {
         uint32_t syn;
 
+        // Bits [0, 14) and [26; 32) of syn are not stored in the insn, they are added at execution time.
+        // That's all of the parameters from set to dfsc here (and the ec).
         syn = syn_data_abort_with_iss(0,
                                       (memop & MO_SIZE),
                                       false,
@@ -928,6 +930,8 @@ static void do_gpr_ld_memidx(DisasContext *s, TCGv_i64 dest, TCGv_i64 tcg_addr,
     if (iss_valid) {
         uint32_t syn;
 
+        // Bits [0, 14) and [26; 32) of syn are not stored in the insn, they are added at execution time.
+        // That's all of the parameters from set to dfsc here (and the ec).
         syn = syn_data_abort_with_iss(0,
                                       (memop & MO_SIZE),
                                       (memop & MO_SIGN) != 0,

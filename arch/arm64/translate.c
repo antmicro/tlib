@@ -199,7 +199,6 @@ static void disas_set_da_iss(DisasContext *s, MemOp memop, ISSInfo issinfo)
     int sas = memop & MO_SIZE;
     bool sse = memop & MO_SIGN;
     bool is_acqrel = issinfo & ISSIsAcqRel;
-    bool is_write = issinfo & ISSIsWrite;
     bool is_16bit = issinfo & ISSIs16Bit;
     int srt = issinfo & ISSRegMask;
 
@@ -218,8 +217,11 @@ static void disas_set_da_iss(DisasContext *s, MemOp memop, ISSInfo issinfo)
         return;
     }
 
+    /* Bits [0, 14) and [26; 32) of syn are not stored in the insn, they are added at execution time.
+     * That's all of the parameters from set to dfsc here (and the ec).
+     */
     syn = syn_data_abort_with_iss(0, sas, sse, srt, 0, is_acqrel,
-                                  0, 0, 0, is_write, 0, is_16bit);
+                                  0, 0, 0, 0, 0, is_16bit);
     disas_set_insn_syndrome(s, syn);
 }
 
