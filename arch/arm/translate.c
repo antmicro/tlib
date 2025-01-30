@@ -9147,7 +9147,7 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
            6, 14 are MRRC/MCRR T1,T2
            7, 15 are MCR/MRC T1,T2
          */
-        if (is_insn_vstrw(insn)) {
+        if (arm_feature(env, ARM_FEATURE_V8) && is_insn_vstrw(insn)) {
             ARCH(MVE);
             return trans_vstrw(s, insn);
         } else if (((insn >> 24) & 3) == 3) {
