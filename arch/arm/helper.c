@@ -176,6 +176,7 @@ static void cpu_reset_model_id(CPUState *env, uint32_t id)
         set_feature(env, ARM_FEATURE_VFP3);
         set_feature(env, ARM_FEATURE_NEON);
         set_feature(env, ARM_FEATURE_THUMB2EE);
+        set_feature(env, ARM_FEATURE_LPAE);
         env->vfp.xregs[ARM_VFP_FPSID] = 0x410330c0;
         env->vfp.xregs[ARM_VFP_MVFR0] = 0x11110222;
         env->vfp.xregs[ARM_VFP_MVFR1] = 0x00011100;
@@ -237,6 +238,7 @@ static void cpu_reset_model_id(CPUState *env, uint32_t id)
         set_feature(env, ARM_FEATURE_THUMB2EE);
         set_feature(env, ARM_FEATURE_ARM_DIV);
         set_feature(env, ARM_FEATURE_V7MP);
+        set_feature(env, ARM_FEATURE_LPAE);
         env->vfp.xregs[ARM_VFP_FPSID] = 0x410430f0;
         env->vfp.xregs[ARM_VFP_MVFR0] = 0x10110222;
         env->vfp.xregs[ARM_VFP_MVFR1] = 0x11111111;
