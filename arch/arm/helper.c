@@ -1370,6 +1370,74 @@ do_fault:
     return code | (domain << 4); //TRANSLATE_FAIL
 }
 
+static int get_phys_addr_lpae(CPUState *env, uint32_t address, int access_type, int is_user, uint32_t *phys_ptr, int *prot,
+                            target_ulong *page_size)
+{
+    // NOTE: the implementation is limited to u-boot usecase (i.e. identity mapping, no faults)
+    uint32_t table;
+    uint64_t desc;
+    uint32_t index;
+    int type;
+    uint32_t phys_addr;
+
+    /* page table walk */
+
+    /* LEVEL 1 */
+    table = env->cp15.c2_base0_ea;
+    index = address >> 30;
+    desc = ldq_phys(table + index * 8);
+    type = desc & 3;
+
+    switch (type) {
+        case 0:
+        case 2:
+            // descriptor type: invalid
+            goto do_fault;
+        case 1:
+            // descriptor type: block
+            phys_addr = (desc >> 30) | (address & 0x3FFFFFFF);
+            *page_size = 0x40000000;
+            goto success;
+    }
+    // type: table
+    // TODO: check page fault etc.
+    table = desc & 0xfffff000; // level 2 PT address = desc[31:13]
+
+    /* LEVEL 2 */
+    index = (address >> 21) & 0b111111111;
+    desc = ldq_phys(table + index * 8);
+    type = desc & 3;
+
+    switch (type) {
+        case 0:
+        case 2:
+            // descriptor type: invalid
+            goto do_fault;
+        case 1:
+            // descriptor type: block
+            phys_addr = (desc & 0xFFE00000) | (address & 0x1FFFFF);
+            *page_size = 0x200000;
+            goto success;
+    }
+    // type: table
+    // TODO: check page fault etc.
+    table = desc & 0xfffff000;
+
+    /* LEVEL 3 */
+    index = (address >> 12) & 0b111111111;
+    desc = ldq_phys(table + index * 8);
+    // TODO: check page fault etc.
+    phys_addr = (desc & 0xfffff000) | (address & 0xfff);
+    *page_size = 0x1000;
+success:
+    *phys_ptr = phys_addr;
+    *prot = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
+    return TRANSLATE_SUCCESS;
+
+do_fault:
+    return TRANSLATE_FAIL;
+}
+
 static int get_phys_addr_v6(CPUState *env, uint32_t address, int access_type, int is_user, uint32_t *phys_ptr, int *prot,
                             target_ulong *page_size)
 {
@@ -1876,6 +1944,8 @@ inline int get_phys_addr(CPUState *env, uint32_t address, int access_type, int i
         // on successful translation.
         *page_size = TARGET_PAGE_SIZE;
         return get_phys_addr_mpu(env, address, access_type, is_user, phys_ptr, prot, page_size);
+    } else if (env->cp15.c2_ttbcr_eae) {
+        return get_phys_addr_lpae(env, address, access_type, is_user, phys_ptr, prot, page_size);
     } else if (env->cp15.c1_sys & (1 << 23)) {
         return get_phys_addr_v6(env, address, access_type, is_user, phys_ptr, prot, page_size);
     } else {

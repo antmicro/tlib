@@ -204,6 +204,8 @@ typedef struct CPUState {
         uint32_t c2_base_mask;   /* MMU translation table base 0 mask. */
         uint32_t c2_data;        /* MPU data cachable bits.  */
         uint32_t c2_insn;        /* MPU instruction cachable bits.  */
+        uint32_t c2_ttbcr_eae;   /* Extended Address Enable: 0 - no LPAE, 1 - LPAE */
+        uint64_t c2_base0_ea;    /* LPAE MMU translation table base 0 */
         uint32_t c3;             /* MMU domain access control register
                                     MPU write buffer control.  */
         uint32_t c5_insn;        /* Fault status registers.  */

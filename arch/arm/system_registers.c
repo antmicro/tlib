@@ -93,6 +93,9 @@ READ_FUNCTION(64, c0_mpidr, get_mpidr(env))
 
 static inline void set_ttbcr(CPUState *env, uint64_t val)
 {
+    if (arm_feature(env, ARM_FEATURE_LPAE)) {
+        env->cp15.c2_ttbcr_eae = (val >> 31) & 1;
+    }
     val &= 7;
     env->cp15.c2_control = val;
     env->cp15.c2_mask = ~(((uint32_t)0xffffffffu) >> val);
@@ -757,10 +760,6 @@ static ARMCPRegInfo has_mpu_fault_addr_register[] = {
     ARM32_CP_REG_DEFINE(MPU_FAULT_ADDR, 15, ANY,   6,   7, ANY,   1,  RW, FIELD(cp15.c6_addr))
 };
 
-/*
-   According to docs: "On an ARMv7-A implementation that includes the Large Physical Address Extension or Virtualization Extensions,
-   the CP15 c2 register includes some 64-bit system control registers." This might be TODO in the future
- */
 static ARMCPRegInfo has_mmu_registers[] = {
     // The params are:  name              cp, op1, crn, crm, op2,  el,  extra_type, ...
     ARM32_CP_REG_DEFINE(TTBR0,            15,   0,   2,   0,   0,   1,  RW, FIELD(cp15.c2_base0)) // Translation Table Base Register 0
@@ -771,6 +770,9 @@ static ARMCPRegInfo has_mmu_registers[] = {
     // Note that in WFAR we use the same address as in IFAR. This reg probably shouldn't exist in ISA newer then ARMv5
     ARM32_CP_REG_DEFINE(WFAR,             15,   0,   6,   0,   1,   1,  RW, FIELD(cp15.c6_insn))  // WFAR, Watchpoint Fault Address Register
     ARM32_CP_REG_DEFINE(IFAR,             15,   0,   6,   0,   2,   1,  RW, FIELD(cp15.c6_insn))  // IFAR, Instruction Fault Address Register
+
+    // LPAE (64 bit variants)             cp  op1  crn  crm        el   extra_type, ...
+    ARM32_CP_64BIT_CRN_DEFINE(TTBR0_EA,   15,   0,   1,   2,        1,  RW, FIELD(cp15.c2_base0_ea)) // Translation Table Base Register 0 (64-bit)
 };
 
 static ARMCPRegInfo has_cp15_c13_registers[] = {
