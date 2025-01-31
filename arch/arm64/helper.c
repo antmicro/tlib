@@ -719,6 +719,9 @@ void do_interrupt_a64(CPUState *env)
 
     // save current PC to ELR_ELn
     env->elr_el[target_el] = CPU_PC(env);
+    if (!env->aarch64) {
+        aarch64_sync_32_to_64(env);
+    }
     env->aarch64 = true;
     pstate_write_with_sp_change(env, new_pstate);
 
