@@ -718,32 +718,33 @@ void helper_mark_tbs_as_dirty(CPUState *env, target_ulong pc, int access_width, 
 {
     int n;
     PageDesc *p;
-    tb_page_addr_t phys_pc;
+    tb_page_addr_t phys_page;
     TranslationBlock *tb, *tb_next;
     tb_page_addr_t tb_start, tb_end;
+    target_ulong phys_pc;
 
     if (cpu->tb_cache_disabled) {
         return;
     }
 
     // Try to find the page using the tlb contents
-    phys_pc = get_page_addr_code(cpu, pc, false);
-    if (phys_pc == -1 || !(p = page_find(phys_pc >> TARGET_PAGE_BITS))) {
+    phys_page = get_page_addr_code(cpu, pc, false);
+    if (phys_page == -1 || !(p = page_find(phys_page >> TARGET_PAGE_BITS))) {
         if ((env->current_tb != 0) && (pc < env->current_tb->pc) && (pc >= (env->current_tb->pc + env->current_tb->size))) {
             // we are not on the same mem page, the mapping just does not exist
             return;
         }
         // Find the page using the platform specific mapping function
         // This is way slower, but it should be used only if the same page is being executed
-        phys_pc = cpu_get_phys_page_debug(cpu, pc);
-        if (phys_pc == -1 || !(p = page_find(phys_pc >> TARGET_PAGE_BITS))) {
+        phys_page = cpu_get_phys_page_debug(cpu, pc);
+        if (phys_page == -1 || !(p = page_find(phys_page >> TARGET_PAGE_BITS))) {
             return;
         }
     }
+    phys_pc = phys_page | (pc & ~TARGET_PAGE_MASK);
 
     if (broadcast && cpu->tb_broadcast_dirty) {
-        target_ulong masked_address = phys_pc & TARGET_PAGE_MASK;
-        append_dirty_address(masked_address);
+        append_dirty_address(phys_pc);
     }
 
     // Below code is a simplified version of the `tb_invalidate_phys_page_range_inner` search
