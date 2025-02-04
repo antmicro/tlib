@@ -192,6 +192,13 @@ EXC_VOID_1(tlib_set_exception_vector_address, uint32_t, address)
 
 #ifdef TARGET_PROTO_ARM_M
 
+void tlib_set_sleep_on_exception_exit(int32_t value)
+{
+    cpu->sleep_on_exception_exit = !!value;
+}
+
+EXC_VOID_1(tlib_set_sleep_on_exception_exit, int32_t, value)
+
 void tlib_set_interrupt_vector_base(uint32_t address)
 {
     cpu->v7m.vecbase = address;

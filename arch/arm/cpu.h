@@ -302,6 +302,9 @@ typedef struct CPUState {
         uint32_t rlar[MAX_MPU_REGIONS];
         uint32_t mair[2]; /* The number of these registers is *not* configurable */
     } pmsav8;
+
+    int32_t sleep_on_exception_exit;
+
 #endif
 
     /* Thumb-2 EE state.  */
@@ -726,6 +729,17 @@ static inline void cpu_pc_from_tb(CPUState *env, TranslationBlock *tb)
 }
 
 void do_v7m_exception_exit(CPUState *env);
+
+#ifdef TARGET_PROTO_ARM_M
+static inline bool automatic_sleep_after_interrupt(CPUState *env)
+{
+    if (env->sleep_on_exception_exit) {
+        env->wfi = 1;
+        return true;
+    }
+    return false;
+}
+#endif
 
 static inline void find_pending_irq_if_primask_unset(CPUState *env)
 {

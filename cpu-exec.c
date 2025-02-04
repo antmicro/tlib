@@ -383,7 +383,10 @@ int cpu_exec(CPUState *env)
                 if (env->regs[15] >= 0xffffff00) {
                     do_v7m_exception_exit(env);
                     next_tb = 0;
-                }
+                    if (automatic_sleep_after_interrupt(env)) {                     
+                        return EXCP_WFI;                        
+                    }                    
+                }                
 #endif
                 if(unlikely(env->mmu_fault))
                 {
