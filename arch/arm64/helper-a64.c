@@ -966,6 +966,7 @@ void HELPER(exception_return)(CPUARMState *env, uint64_t new_pc)
     bool return_to_aa64 = (spsr & PSTATE_nRW) == 0;
 
     arm_clear_exclusive(env);
+    aarch64_save_sp(env);
 
     /* We must squash the PSTATE.SS bit to zero unless both of the
      * following hold:
@@ -1025,10 +1026,12 @@ void HELPER(exception_return)(CPUARMState *env, uint64_t new_pc)
 
         env->aarch64 = true;
         spsr &= aarch64_pstate_valid_mask(&env_archcpu(env)->isar);
-        pstate_write_with_sp_change(env, spsr);
+        pstate_write(env, spsr);
+        aarch64_restore_sp(env);
         if (!arm_singlestep_active(env)) {
             env->pstate &= ~PSTATE_SS;
         }
+        helper_rebuild_hflags_a64(env, new_el);
 
         /*
          * Apply TBI to the exception return address.  We had to delay this

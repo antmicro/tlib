@@ -721,9 +721,14 @@ void do_interrupt_a64(CPUState *env)
     env->elr_el[target_el] = CPU_PC(env);
     if (!env->aarch64) {
         aarch64_sync_32_to_64(env);
+        env->condexec_bits = 0;
+    } else {
+        aarch64_save_sp(env);
     }
     env->aarch64 = true;
-    pstate_write_with_sp_change(env, new_pstate);
+    pstate_write(env, new_pstate);
+    aarch64_restore_sp(env);
+    helper_rebuild_hflags_a64(env, target_el);
 
     tlib_printf(LOG_LEVEL_DEBUG, "%s: excp=%d, addr=0x%" PRIx64 ", target_el=%d, syndrome=0x%x, pc=0x%" PRIx64 ", far=0x%" PRIx64,
                 __func__, env->exception_index, addr, target_el, env->exception.syndrome, CPU_PC(env), env->exception.vaddress);
