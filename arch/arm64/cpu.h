@@ -1008,6 +1008,7 @@ static inline uint64_t *sve_bswap64(uint64_t *dst, uint64_t *src, int nr)
 #endif
 
 void aarch64_sync_64_to_32(CPUARMState *env);
+void aarch64_sync_32_to_64(CPUARMState *env);
 
 static inline bool is_a64(CPUARMState *env)
 {

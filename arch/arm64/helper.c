@@ -1428,3 +1428,59 @@ void HELPER(rebuild_hflags_a32)(CPUState * env, int el)
     // TODO: Disable for now. Enable when adding scalable matrix extension
     DP_TBFLAG_A32(env->hflags, SME_TRAP_NONSTREAMING, 0);
 }
+
+void aarch64_sync_64_to_32(CPUARMState *env)
+{
+    for (int i = 0; i < 15; i++) {
+        env->regs[i] = env->xregs[i];
+    }
+
+    env->regs[15] = env->pc;
+
+    env->banked_r14[r14_bank_number(ARM_CPU_MODE_IRQ)] = env->xregs[16];
+    env->banked_r13[bank_number(ARM_CPU_MODE_IRQ)] = env->xregs[17];
+
+    env->banked_r14[r14_bank_number(ARM_CPU_MODE_SVC)] = env->xregs[18];
+    env->banked_r13[bank_number(ARM_CPU_MODE_SVC)] = env->xregs[19];
+
+    env->banked_r14[r14_bank_number(ARM_CPU_MODE_ABT)] = env->xregs[20];
+    env->banked_r13[bank_number(ARM_CPU_MODE_ABT)] = env->xregs[21];
+
+    env->banked_r14[r14_bank_number(ARM_CPU_MODE_UND)] = env->xregs[22];
+    env->banked_r13[bank_number(ARM_CPU_MODE_UND)] = env->xregs[23];
+
+    for (int i = 24; i < 29; ++i) {
+        env->fiq_regs[i - 24] = env->xregs[i];
+    }
+
+    env->banked_r13[bank_number(ARM_CPU_MODE_FIQ)] = env->xregs[29];
+    env->banked_r14[r14_bank_number(ARM_CPU_MODE_FIQ)] = env->xregs[30];
+}
+
+void aarch64_sync_32_to_64(CPUARMState *env)
+{
+    for (int i = 0; i < 15; i++) {
+        env->xregs[i] = env->regs[i];
+    }
+
+    env->pc = env->regs[15];
+
+    env->xregs[16] = env->banked_r14[r14_bank_number(ARM_CPU_MODE_IRQ)];
+    env->xregs[17] = env->banked_r13[bank_number(ARM_CPU_MODE_IRQ)];
+
+    env->xregs[18] = env->banked_r14[r14_bank_number(ARM_CPU_MODE_SVC)];
+    env->xregs[19] = env->banked_r13[bank_number(ARM_CPU_MODE_SVC)];
+
+    env->xregs[20] = env->banked_r14[r14_bank_number(ARM_CPU_MODE_ABT)];
+    env->xregs[21] = env->banked_r13[bank_number(ARM_CPU_MODE_ABT)];
+
+    env->xregs[22] = env->banked_r14[r14_bank_number(ARM_CPU_MODE_UND)];
+    env->xregs[23] = env->banked_r13[bank_number(ARM_CPU_MODE_UND)];
+
+    for (int i = 24; i < 29; ++i) {
+        env->xregs[i] = env->fiq_regs[i - 24];
+    }
+
+    env->xregs[29] = env->banked_r13[bank_number(ARM_CPU_MODE_FIQ)];
+    env->xregs[30] = env->banked_r14[r14_bank_number(ARM_CPU_MODE_FIQ)];
+}
