@@ -892,8 +892,6 @@ static int el_from_spsr(uint32_t spsr)
     }
 }
 
-// TODO: Remove the attribute after restoring code using the function.
-__attribute__((unused))
 static void cpsr_write_from_spsr_elx(CPUARMState *env,
                                      uint32_t val)
 {
@@ -1000,27 +998,26 @@ void HELPER(exception_return)(CPUARMState *env, uint64_t new_pc)
     }
 
     if (!return_to_aa64) {
-        tlib_abort("Returning from exception to AArch32 unimplemented.");
-        // env->aarch64 = false;
-        // /* We do a raw CPSR write because aarch64_sync_64_to_32()
-        //  * will sort the register banks out for us, and we've already
-        //  * caught all the bad-mode cases in el_from_spsr().
-        //  */
-        // cpsr_write_from_spsr_elx(env, spsr);
-        // if (!arm_singlestep_active(env)) {
-        //     env->pstate &= ~PSTATE_SS;
-        // }
-        // aarch64_sync_64_to_32(env);
+        env->aarch64 = false;
+        /* We do a raw CPSR write because aarch64_sync_64_to_32()
+         * will sort the register banks out for us, and we've already
+         * caught all the bad-mode cases in el_from_spsr().
+         */
+        cpsr_write_from_spsr_elx(env, spsr);
+        if (!arm_singlestep_active(env)) {
+            env->pstate &= ~PSTATE_SS;
+        }
+        aarch64_sync_64_to_32(env);
 
-        // if (spsr & CPSR_T) {
-        //     env->regs[15] = new_pc & ~0x1;
-        // } else {
-        //     env->regs[15] = new_pc & ~0x3;
-        // }
-        // helper_rebuild_hflags_a32(env, new_el);
-        // tlib_printf(LOG_LEVEL_NOISY, "Exception return from AArch64 EL%d to "
-        //               "AArch32 EL%d PC 0x%" PRIx32,
-        //               cur_el, new_el, env->regs[15]);
+        if (spsr & CPSR_T) {
+            env->regs[15] = new_pc & ~0x1;
+        } else {
+            env->regs[15] = new_pc & ~0x3;
+        }
+        helper_rebuild_hflags_a32(env, new_el);
+        tlib_printf(LOG_LEVEL_NOISY, "Exception return from AArch64 EL%d to "
+                      "AArch32 EL%d PC 0x%" PRIx32,
+                      cur_el, new_el, env->regs[15]);
     } else {
         int tbii;
 
