@@ -1912,7 +1912,7 @@ void cp_reg_add(CPUState *env, ARMCPRegInfo *reg_info)
 {
     uint32_t *key = tlib_malloc(sizeof(uint32_t));
 
-    if(arm_feature(env, ARM_FEATURE_AARCH64)) {
+    if(reg_info->type & ARM_CP_AARCH64) {
         *key = ENCODE_AA64_CP_REG(reg_info->cp, reg_info->crn, reg_info->crm, reg_info->op0, reg_info->op1, reg_info->op2);
     } else {
         bool ns = true;  //  TODO: Handle secure state banking in a correct way
@@ -2244,30 +2244,25 @@ void entry_remove_callback(TTable_entry *entry)
 
 void system_instructions_and_registers_init(CPUState *env, uint32_t cpu_model_id)
 {
-    uint32_t instructions_count, registers_count;
-    ARMCPRegInfo *instructions, *registers;
-    if(arm_feature(env, ARM_FEATURE_AARCH64)) {
-        instructions = aarch64_instructions;
-        instructions_count = ARM_CP_ARRAY_COUNT(aarch64_instructions);
-        registers = aarch64_registers;
-        registers_count = ARM_CP_ARRAY_COUNT(aarch64_registers);
-    } else {
-        instructions = aarch32_instructions;
-        instructions_count = ARM_CP_ARRAY_COUNT(aarch32_instructions);
-        registers = aarch32_registers;
-        registers_count = ARM_CP_ARRAY_COUNT(aarch32_registers);
-    }
-
-    uint32_t implementation_defined_registers_count = get_implementation_defined_registers_count(cpu_model_id);
-    uint32_t ttable_size = instructions_count + registers_count + implementation_defined_registers_count;
+    uint32_t ttable_size = ARM_CP_ARRAY_COUNT(aarch32_instructions) + ARM_CP_ARRAY_COUNT(aarch32_registers);
+    ttable_size += get_implementation_defined_registers_count(cpu_model_id);
     if(arm_feature(env, ARM_FEATURE_PMSA)) {
         ttable_size += ARM_CP_ARRAY_COUNT(mpu_registers);
     }
+    if(arm_feature(env, ARM_FEATURE_AARCH64)) {
+        ttable_size += ARM_CP_ARRAY_COUNT(aarch64_instructions) + ARM_CP_ARRAY_COUNT(aarch64_registers);
+    }
     env->cp_regs = ttable_create(ttable_size, entry_remove_callback, ttable_compare_key_uint32);
 
-    cp_regs_add(env, instructions, instructions_count);
-    cp_regs_add(env, registers, registers_count);
+    cp_regs_add(env, aarch32_instructions, ARM_CP_ARRAY_COUNT(aarch32_instructions));
+    cp_regs_add(env, aarch32_registers, ARM_CP_ARRAY_COUNT(aarch32_registers));
+
     add_implementation_defined_registers(env, cpu_model_id);
+
+    if(arm_feature(env, ARM_FEATURE_AARCH64)) {
+        cp_regs_add(env, aarch64_instructions, ARM_CP_ARRAY_COUNT(aarch64_instructions));
+        cp_regs_add(env, aarch64_registers, ARM_CP_ARRAY_COUNT(aarch64_registers));
+    }
 
     if(arm_feature(env, ARM_FEATURE_PMSA)) {
         cp_regs_add(env, mpu_registers, ARM_CP_ARRAY_COUNT(mpu_registers));

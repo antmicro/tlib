@@ -39,6 +39,7 @@
 #define ARM_CP_INSTRUCTION  (1 << 21)  //  For system instructions
 #define ARM_CP_GIC          (1 << 22)  //  GIC register
 #define ARM_CP_GTIMER       (1 << 23)  //  Generic Timer register
+#define ARM_CP_AARCH64      (1 << 24)  //  Register is only accessible in AArch64 state, else only in AArch32 state
 
 //  Minimum EL access
 #define ARM_CP_EL_SHIFT 28
@@ -140,7 +141,7 @@ static inline bool cp_access_ok(int current_el, const ARMCPRegInfo *reg_info, bo
 //  All ARM64 (AArch64) registers use the same CP value. Width can always be 64 since ARM_CP_64BIT only matters for AArch32
 //  registers.
 #define ARM64_CP_REG_DEFINE(name, op0, op1, crn, crm, op2, el, extra_type, ...) \
-    ARM_CP_REG_DEFINE(name, CP_REG_ARM64_SYSREG_CP, op0, op1, crn, crm, op2, 64, el, extra_type, __VA_ARGS__)
+    ARM_CP_REG_DEFINE(name, CP_REG_ARM64_SYSREG_CP, op0, op1, crn, crm, op2, 64, el, extra_type | ARM_CP_AARCH64, __VA_ARGS__)
 
 #define ARM32_CP_REG_DEFINE(name, cp, op1, crn, crm, op2, el, extra_type, ...) \
     ARM_CP_REG_DEFINE(name, cp, 0, op1, crn, crm, op2, 32, el, extra_type, __VA_ARGS__)
