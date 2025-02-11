@@ -865,37 +865,39 @@ static inline void tcg_out_qemu_st(TCGContext *s, int bits, int reg_data, int re
 
     //  Logic taken from arm32 target
     //  Compute TLB offset(?)
-    tcg_out_lsr_imm(s, 64, TCG_REG_R2, reg_addr, TARGET_PAGE_BITS);
-    tcg_out_and_imm(s, 64, TCG_REG_R0, TCG_REG_R2, CPU_TLB_SIZE - 1);
-    tcg_out_add_shift_reg(s, 64, false, TCG_REG_R0, TCG_AREG0, TCG_REG_R0, SHIFT_LSL,
-                          CPU_TLB_ENTRY_BITS);  //  TCG_AREG0 holds the pointer to env/CPUState
+    if(s->use_tlb) {
+        tcg_out_lsr_imm(s, 64, TCG_REG_R2, reg_addr, TARGET_PAGE_BITS);
+        tcg_out_and_imm(s, 64, TCG_REG_R0, TCG_REG_R2, CPU_TLB_SIZE - 1);
+        tcg_out_add_shift_reg(s, 64, false, TCG_REG_R0, TCG_AREG0, TCG_REG_R0, SHIFT_LSL,
+                              CPU_TLB_ENTRY_BITS);  //  TCG_AREG0 holds the pointer to env/CPUState
 
-    //  Read tlb table
-    tcg_out_ld_offset(s, 64, false, TCG_REG_R1, TCG_REG_R0, tlb_table_n_0_addr_write[mem_index]);
+        //  Read tlb table
+        tcg_out_ld_offset(s, 64, false, TCG_REG_R1, TCG_REG_R0, tlb_table_n_0_addr_write[mem_index]);
 
-    //  Check if we hit, and branch to tlb miss code if not
-    tcg_out_cmp_shift_reg(s, 64, TCG_REG_R1, TCG_REG_R2, SHIFT_LSL, TARGET_PAGE_BITS);
-    miss_label = (void *)s->code_ptr;
-    tcg_out_b_cond_noaddr(s);
+        //  Check if we hit, and branch to tlb miss code if not
+        tcg_out_cmp_shift_reg(s, 64, TCG_REG_R1, TCG_REG_R2, SHIFT_LSL, TARGET_PAGE_BITS);
+        miss_label = (void *)s->code_ptr;
+        tcg_out_b_cond_noaddr(s);
 
-    //  TLB hit case
-    //  Load the host to guest offset into r1
-    tcg_out_ld_offset(s, 64, false, TCG_REG_R1, TCG_REG_R0, tlb_table_n_0_addend[mem_index]);
+        //  TLB hit case
+        //  Load the host to guest offset into r1
+        tcg_out_ld_offset(s, 64, false, TCG_REG_R1, TCG_REG_R0, tlb_table_n_0_addend[mem_index]);
 
-    if(bswap) {
-        //  Byte order needs to be swapped before storing
-        tcg_out_bswap(s, bits, TCG_REG_R0, reg_data);
-        tcg_out_st_reg_offset(s, bits, TCG_REG_R0, reg_addr, TCG_REG_R1);
-    } else {
-        //  Execute the store
-        tcg_out_st_reg_offset(s, bits, reg_data, reg_addr, TCG_REG_R1);
+        if(bswap) {
+            //  Byte order needs to be swapped before storing
+            tcg_out_bswap(s, bits, TCG_REG_R0, reg_data);
+            tcg_out_st_reg_offset(s, bits, TCG_REG_R0, reg_addr, TCG_REG_R1);
+        } else {
+            //  Execute the store
+            tcg_out_st_reg_offset(s, bits, reg_data, reg_addr, TCG_REG_R1);
+        }
+        //  Branch to end of function
+        end_label = (void *)s->code_ptr;
+        tcg_out_b_noaddr(s);
+
+        //  TLB miss case
+        reloc_condbr_19(miss_label, (tcg_target_long)s->code_ptr, COND_NE);  //  Put label at this point in the generated code
     }
-    //  Branch to end of function
-    end_label = (void *)s->code_ptr;
-    tcg_out_b_noaddr(s);
-
-    //  TLB miss case
-    reloc_condbr_19(miss_label, (tcg_target_long)s->code_ptr, COND_NE);  //  Put label at this point in the generated code
 
     //  Put the address in r0, data in R1, and mem_index in R2
     tcg_out_mov(s, TCG_TYPE_I64, TCG_REG_R0, reg_addr);
@@ -920,7 +922,9 @@ static inline void tcg_out_qemu_st(TCGContext *s, int bits, int reg_data, int re
             tcg_abortf("tcg_out_qemu_st called with incorrect #%i bits as argument", bits);
     }
 
-    reloc_jump26(end_label, (tcg_target_long)s->code_ptr);  //  End of function label
+    if(s->use_tlb) {
+        reloc_jump26(end_label, (tcg_target_long)s->code_ptr);  //  End of function label
+    }
 }
 static inline void tcg_out_qemu_ld(TCGContext *s, int bits, bool sign_extend, int reg_data, int reg_addr, int mem_index)
 {
@@ -932,38 +936,40 @@ static inline void tcg_out_qemu_ld(TCGContext *s, int bits, bool sign_extend, in
     bswap = false;
 #endif
     //  Same TLB lookup logic as in st
-    //  Compute TLB offset(?)
-    tcg_out_lsr_imm(s, 64, TCG_REG_R2, reg_addr, TARGET_PAGE_BITS);
-    tcg_out_and_imm(s, 64, TCG_REG_R0, TCG_REG_R2, CPU_TLB_SIZE - 1);
-    tcg_out_add_shift_reg(s, 64, false, TCG_REG_R0, TCG_AREG0, TCG_REG_R0, SHIFT_LSL,
-                          CPU_TLB_ENTRY_BITS);  //  TCG_AREG0 holds the pointer to env/CPUState
+    if(s->use_tlb) {
+        //  Compute TLB offset(?)
+        tcg_out_lsr_imm(s, 64, TCG_REG_R2, reg_addr, TARGET_PAGE_BITS);
+        tcg_out_and_imm(s, 64, TCG_REG_R0, TCG_REG_R2, CPU_TLB_SIZE - 1);
+        tcg_out_add_shift_reg(s, 64, false, TCG_REG_R0, TCG_AREG0, TCG_REG_R0, SHIFT_LSL,
+                              CPU_TLB_ENTRY_BITS);  //  TCG_AREG0 holds the pointer to env/CPUState
 
-    //  Read tlb table
-    tcg_out_ld_offset(s, 64, false, TCG_REG_R1, TCG_REG_R0, tlb_table_n_0_addr_write[mem_index]);
+        //  Read tlb table
+        tcg_out_ld_offset(s, 64, false, TCG_REG_R1, TCG_REG_R0, tlb_table_n_0_addr_write[mem_index]);
 
-    //  Check if we hit, and branch to tlb miss code if not
-    tcg_out_cmp_shift_reg(s, 64, TCG_REG_R1, TCG_REG_R2, SHIFT_LSL, TARGET_PAGE_BITS);
-    miss_label = (void *)s->code_ptr;
-    tcg_out_b_cond_noaddr(s);
+        //  Check if we hit, and branch to tlb miss code if not
+        tcg_out_cmp_shift_reg(s, 64, TCG_REG_R1, TCG_REG_R2, SHIFT_LSL, TARGET_PAGE_BITS);
+        miss_label = (void *)s->code_ptr;
+        tcg_out_b_cond_noaddr(s);
 
-    //  TLB hit case
-    //  Load the host to guest offset into r1
-    tcg_out_ld_offset(s, 64, false, TCG_REG_R1, TCG_REG_R0, tlb_table_n_0_addend[mem_index]);
+        //  TLB hit case
+        //  Load the host to guest offset into r1
+        tcg_out_ld_offset(s, 64, false, TCG_REG_R1, TCG_REG_R0, tlb_table_n_0_addend[mem_index]);
 
-    if(bswap) {
-        //  Byte order needs to be swapped after load
-        tcg_out_ld_reg_offset(s, bits, sign_extend, TCG_REG_R0, reg_addr, TCG_REG_R1);
-        tcg_out_bswap(s, bits, reg_data, TCG_REG_R0);
-    } else {
-        //  Execute the load
-        tcg_out_ld_reg_offset(s, bits, sign_extend, reg_data, reg_addr, TCG_REG_R1);
+        if(bswap) {
+            //  Byte order needs to be swapped after load
+            tcg_out_ld_reg_offset(s, bits, sign_extend, TCG_REG_R0, reg_addr, TCG_REG_R1);
+            tcg_out_bswap(s, bits, reg_data, TCG_REG_R0);
+        } else {
+            //  Execute the load
+            tcg_out_ld_reg_offset(s, bits, sign_extend, reg_data, reg_addr, TCG_REG_R1);
+        }
+        //  Branch to end of function
+        end_label = (void *)s->code_ptr;
+        tcg_out_b_noaddr(s);
+
+        //  TLB miss case
+        reloc_condbr_19(miss_label, (tcg_target_long)s->code_ptr, COND_NE);  //  Put label at this point in the generated code
     }
-    //  Branch to end of function
-    end_label = (void *)s->code_ptr;
-    tcg_out_b_noaddr(s);
-
-    //  TLB miss case
-    reloc_condbr_19(miss_label, (tcg_target_long)s->code_ptr, COND_NE);  //  Put label at this point in the generated code
 
     //  Put the address in r0, and mem_index in r1
     tcg_out_mov(s, TCG_TYPE_I64, TCG_REG_R0, reg_addr);
@@ -993,7 +999,9 @@ static inline void tcg_out_qemu_ld(TCGContext *s, int bits, bool sign_extend, in
         tcg_out_mov(s, TCG_TYPE_I64, reg_data, TCG_REG_R0);
     }
 
-    reloc_jump26(end_label, (tcg_target_long)s->code_ptr);  //  End of function label
+    if(s->use_tlb) {
+        reloc_jump26(end_label, (tcg_target_long)s->code_ptr);  //  End of function label
+    }
 }
 
 //  Variable used to store the return address. Used in INDEX_op_exit_tb
