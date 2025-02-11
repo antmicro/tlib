@@ -128,6 +128,18 @@ void HELPER(acquire_global_memory_lock)(CPUState *env)
     acquire_global_memory_lock(env);
 }
 
+uintptr_t HELPER(translate_page_aligned_address_and_fill_tlb_u32)(target_ulong addr, uint32_t mmu_idx)
+{
+    void *return_address = GETPC();
+    return translate_page_aligned_address_and_fill_tlb_u32(addr, mmu_idx, return_address);
+}
+
+uintptr_t HELPER(translate_page_aligned_address_and_fill_tlb_u64)(target_ulong addr, uint32_t mmu_idx)
+{
+    void *return_address = GETPC();
+    return translate_page_aligned_address_and_fill_tlb_u64(addr, mmu_idx, return_address);
+}
+
 void HELPER(release_global_memory_lock)(CPUState *env)
 {
     release_global_memory_lock(env);
@@ -153,19 +165,37 @@ void HELPER(cancel_reservation)(CPUState *env)
     cancel_reservation(env);
 }
 
-uintptr_t HELPER(translate_page_aligned_address_and_fill_tlb_u32)(target_ulong addr, uint32_t mmu_idx)
+void HELPER(register_thread_address_access)(CPUState *env, target_ulong address)
 {
-    return translate_page_aligned_address_and_fill_tlb_u32(addr, mmu_idx);
+    register_thread_address_access(env, address);
 }
 
-uintptr_t HELPER(translate_page_aligned_address_and_fill_tlb_u64)(target_ulong addr, uint32_t mmu_idx)
+uint32_t HELPER(store_conditional_u32)(CPUState *cpu_env, target_ulong dest, uint32_t value, uint32_t mem_index)
 {
-    return translate_page_aligned_address_and_fill_tlb_u64(addr, mmu_idx);
+    void *return_address = GETPC();
+    return store_conditional_u32(cpu_env, dest, value, mem_index, return_address);
+}
+
+uint32_t HELPER(store_conditional_u64)(CPUState *cpu_env, target_ulong dest, uint64_t value, uint32_t mem_index)
+{
+    void *return_address = GETPC();
+    return store_conditional_u64(cpu_env, dest, value, mem_index, return_address);
+}
+
+void HELPER(hash_table_unlock)(CPUState *cpu_env, target_ulong address)
+{
+    hash_table_unlock(cpu_env, address);
+}
+
+void HELPER(hash_table_lock)(CPUState *cpu_env, target_ulong address)
+{
+    hash_table_lock(cpu_env, address);
 }
 
 uintptr_t HELPER(translate_page_aligned_address_and_fill_tlb_u128)(target_ulong addr, uint32_t mmu_idx)
 {
-    return translate_page_aligned_address_and_fill_tlb_u128(addr, mmu_idx);
+    void *return_address = GETPC();
+    return translate_page_aligned_address_and_fill_tlb_u128(addr, mmu_idx, return_address);
 }
 
 void HELPER(var_log)(target_ulong v)

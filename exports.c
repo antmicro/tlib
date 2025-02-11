@@ -269,6 +269,20 @@ int32_t tlib_atomic_memory_state_init(uintptr_t atomic_memory_state_ptr, int32_t
 
 EXC_INT_2(int32_t, tlib_atomic_memory_state_init, uintptr_t, atomic_memory_state_ptr, int32_t, atomic_id)
 
+/* Must be called after tlib_atomic_memory_state_init */
+int32_t tlib_store_table_init(uintptr_t store_table_ptr)
+{
+    tlib_assert(cpu->atomic_id != -1);
+
+    cpu->store_table = (hst_entry_t *)store_table_ptr;
+    initialize_store_table(cpu->store_table);
+
+    //  Use the same id as the atomic memory state, since hst behaves similarly.
+    return cpu->atomic_id;
+}
+
+EXC_INT_1(int32_t, tlib_store_table_init, uintptr_t, store_table_ptr)
+
 void tlib_dispose()
 {
     tcg_perf_fini_labeling();
