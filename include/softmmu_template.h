@@ -146,8 +146,6 @@ __attribute__((always_inline)) inline DATA_TYPE REGPARM glue(glue(glue(__ld, SUF
     uintptr_t addend;
     bool is_insn_fetch = (env->current_tb == NULL);
 
-    acquire_global_memory_lock(cpu);
-
     /* test if there is match for unaligned or IO access */
     /* XXX: could done more in memory macro in a non portable way */
     index = (addr >> TARGET_PAGE_BITS) & (CPU_TLB_SIZE - 1);
@@ -230,7 +228,6 @@ redo:
         }
     }
 
-    release_global_memory_lock(cpu);
     return res;
 }
 
@@ -353,10 +350,9 @@ __attribute__((always_inline)) inline void REGPARM glue(glue(__st, SUFFIX), MMUS
     void *retaddr = GETPC();
     int index;
     uintptr_t addend;
-
-    acquire_global_memory_lock(cpu);
+#ifndef TARGET_RISCV
     register_address_access(cpu, addr);
-
+#endif
     index = (addr >> TARGET_PAGE_BITS) & (CPU_TLB_SIZE - 1);
 
     tlb_addr = cpu->tlb_table[mmu_idx][index].addr_write;
@@ -426,7 +422,6 @@ redo:
     }
 
     mark_tbs_containing_pc_as_dirty(addr, DATA_SIZE, 1);
-    release_global_memory_lock(cpu);
 }
 
 /* handles all unaligned cases */

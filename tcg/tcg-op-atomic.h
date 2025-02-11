@@ -40,11 +40,9 @@ static inline void tcg_gen_atomic_cmpxchg_i32(TCGv_i32 retv, TCGv addr, TCGv_i32
 
     tcg_gen_ext_i32(t2, cmpv, memop & MO_SIZE);
 
-    gen_helper_acquire_global_memory_lock(cpu_env);
     tcg_gen_qemu_ld_i32(t1, addr, idx, memop & ~MO_SIGN);
     tcg_gen_movcond_i32(TCG_COND_EQ, t2, t1, t2, newv, t1);
-    tcg_gen_qemu_st_i32(t2, addr, idx, memop);
-    gen_helper_release_global_memory_lock(cpu_env);
+    tcg_gen_qemu_st_i32_unsafe(t2, addr, idx, memop);
 
     tcg_temp_free_i32(t2);
 
@@ -65,11 +63,9 @@ static inline void tcg_gen_atomic_cmpxchg_i64(TCGv_i64 retv, TCGv addr, TCGv_i64
 
     tcg_gen_ext_i64(t2, cmpv, memop & MO_SIZE);
 
-    gen_helper_acquire_global_memory_lock(cpu_env);
     tcg_gen_qemu_ld_i64(t1, addr, idx, memop & ~MO_SIGN);
     tcg_gen_movcond_i64(TCG_COND_EQ, t2, t1, t2, newv, t1);
-    tcg_gen_qemu_st_i64(t2, addr, idx, memop);
-    gen_helper_release_global_memory_lock(cpu_env);
+    tcg_gen_qemu_st_i64_unsafe(t2, addr, idx, memop);
 
     tcg_temp_free_i64(t2);
 
@@ -86,8 +82,6 @@ static inline void tcg_gen_atomic_cmpxchg_i128(TCGv_i128 result, TCGv guestAddre
 {
     TCGMemOp memop = tcg_canonicalize_memop(MO_64, 1, 0);
 
-    gen_helper_acquire_global_memory_lock(cpu_env);
-
     //  Load the actual value located at the address.
     tcg_gen_qemu_ld_i128(result, guestAddressLow, memIndex, memop & ~MO_SIGN);
 
@@ -99,11 +93,9 @@ static inline void tcg_gen_atomic_cmpxchg_i128(TCGv_i128 result, TCGv guestAddre
     //  We didn't jump to `fail`, meaning the 128-bit comparison succeeded.
 
     //  CAS success: store the new value.
-    tcg_gen_qemu_st_i128(newValue, guestAddressLow, memIndex, memop);
+    tcg_gen_qemu_st_i128_unsafe(newValue, guestAddressLow, memIndex, memop);
 
     gen_set_label(fail);
-
-    gen_helper_release_global_memory_lock(cpu_env);
 }
 
 //  'new_val' controls whether a value before or after the operation should be returned.

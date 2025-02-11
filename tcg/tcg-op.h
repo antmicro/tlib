@@ -29,6 +29,10 @@
 #include "tcg-mo.h"
 #include "tcg.h"
 #include "additional.h"
+#include "../include/hash-table-test.h"
+
+typedef struct CPUState CPUState;
+extern CPUState *cpu;
 
 #if TARGET_LONG_BITS == 64
 #define tcg_gen_movi_tl      tcg_gen_movi_i64
@@ -2762,27 +2766,35 @@ static inline void tcg_gen_umax_i64(TCGv_i64 ret, TCGv_i64 a, TCGv_i64 b)
 #endif
 
 #if TARGET_LONG_BITS == 32
-#define TCGv                     TCGv_i32
-#define tcg_temp_new()           tcg_temp_new_i32()
-#define tcg_global_reg_new       tcg_global_reg_new_i32
-#define tcg_global_mem_new       tcg_global_mem_new_i32
-#define tcg_temp_local_new()     tcg_temp_local_new_i32()
-#define tcg_temp_free            tcg_temp_free_i32
-#define tcg_gen_qemu_ldst_op     tcg_gen_op3i_i32
-#define tcg_gen_qemu_ldst_op_i64 tcg_gen_qemu_ldst_op_i64_i32
-#define TCGV_UNUSED(x)           TCGV_UNUSED_I32(x)
-#define TCGV_EQUAL(a, b)         TCGV_EQUAL_I32(a, b)
+#define TCGv                          TCGv_i32
+#define tcg_temp_new()                tcg_temp_new_i32()
+#define tcg_global_reg_new            tcg_global_reg_new_i32
+#define tcg_global_mem_new            tcg_global_mem_new_i32
+#define tcg_temp_local_new()          tcg_temp_local_new_i32()
+#define tcg_temp_free                 tcg_temp_free_i32
+#define tcg_gen_qemu_ld_op            tcg_gen_op3i_i32
+#define tcg_gen_qemu_st_op            tcg_gen_st_op_i32
+#define tcg_gen_qemu_st_op_unsafe     tcg_gen_op3i_i32
+#define tcg_gen_qemu_ld_op_i64        tcg_gen_qemu_ldst_op_i64_i32
+#define tcg_gen_qemu_st_op_i64        tcg_gen_qemu_st_op_i64_i32
+#define tcg_gen_qemu_st_op_i64_unsafe tcg_gen_qemu_ldst_op_i64_i32
+#define TCGV_UNUSED(x)                TCGV_UNUSED_I32(x)
+#define TCGV_EQUAL(a, b)              TCGV_EQUAL_I32(a, b)
 #else
-#define TCGv                     TCGv_i64
-#define tcg_temp_new()           tcg_temp_new_i64()
-#define tcg_global_reg_new       tcg_global_reg_new_i64
-#define tcg_global_mem_new       tcg_global_mem_new_i64
-#define tcg_temp_local_new()     tcg_temp_local_new_i64()
-#define tcg_temp_free            tcg_temp_free_i64
-#define tcg_gen_qemu_ldst_op     tcg_gen_op3i_i64
-#define tcg_gen_qemu_ldst_op_i64 tcg_gen_qemu_ldst_op_i64_i64
-#define TCGV_UNUSED(x)           TCGV_UNUSED_I64(x)
-#define TCGV_EQUAL(a, b)         TCGV_EQUAL_I64(a, b)
+#define TCGv                          TCGv_i64
+#define tcg_temp_new()                tcg_temp_new_i64()
+#define tcg_global_reg_new            tcg_global_reg_new_i64
+#define tcg_global_mem_new            tcg_global_mem_new_i64
+#define tcg_temp_local_new()          tcg_temp_local_new_i64()
+#define tcg_temp_free                 tcg_temp_free_i64
+#define tcg_gen_qemu_ld_op            tcg_gen_op3i_i64
+#define tcg_gen_qemu_st_op            tcg_gen_st_op_i64
+#define tcg_gen_qemu_st_op_unsafe     tcg_gen_op3i_i64
+#define tcg_gen_qemu_ld_op_i64        tcg_gen_qemu_ldst_op_i64_i64
+#define tcg_gen_qemu_st_op_i64        tcg_gen_qemu_st_op_i64_i64
+#define tcg_gen_qemu_st_op_i64_unsafe tcg_gen_qemu_ldst_op_i64_i64
+#define TCGV_UNUSED(x)                TCGV_UNUSED_I64(x)
+#define TCGV_EQUAL(a, b)              TCGV_EQUAL_I64(a, b)
 #endif
 
 #if TARGET_INSN_START_WORDS == 1
@@ -2836,6 +2848,44 @@ static inline void tcg_gen_exit_tb(tcg_target_long val)
 static inline void tcg_gen_goto_tb(int idx)
 {
     tcg_gen_op1i(INDEX_op_goto_tb, idx);
+}
+
+#define TB_HELPER_FROM_TCG_OP
+#include "../include/tb-helper.h"
+#undef TB_HELPER_FROM_TCG_OP
+
+/* handle guest stores */
+
+static inline void tcg_gen_qemu_st_op_i64_i32(TCGOpcode opc, TCGv_i64 val, TCGv_i32 addr, TCGArg mem_index)
+{
+    gen_helper_hash_table_lock(cpu_env, addr);
+    gen_helper_register_thread_address_access(cpu_env, addr);
+    tcg_gen_qemu_ldst_op_i64_i32(opc, val, addr, mem_index);
+    gen_helper_hash_table_unlock(cpu_env, addr);
+}
+
+static inline void tcg_gen_st_op_i32(TCGOpcode opc, TCGv_i32 arg, TCGv_i32 addr, TCGArg mem_index)
+{
+    gen_helper_hash_table_lock(cpu_env, addr);
+    gen_helper_register_thread_address_access(cpu_env, addr);
+    tcg_gen_op3i_i32(opc, arg, addr, mem_index);
+    gen_helper_hash_table_unlock(cpu_env, addr);
+}
+
+static inline void tcg_gen_qemu_st_op_i64_i64(TCGOpcode opc, TCGv_i64 val, TCGv_i64 addr, TCGArg mem_index)
+{
+    gen_helper_hash_table_lock(cpu_env, addr);
+    gen_helper_register_thread_address_access(cpu_env, addr);
+    tcg_gen_qemu_ldst_op_i64_i64(opc, val, addr, mem_index);
+    gen_helper_hash_table_unlock(cpu_env, addr);
+}
+
+static inline void tcg_gen_st_op_i64(TCGOpcode opc, TCGv_i64 arg, TCGv_i64 addr, TCGArg mem_index)
+{
+    gen_helper_hash_table_lock(cpu_env, addr);
+    gen_helper_register_thread_address_access(cpu_env, addr);
+    tcg_gen_op3i_i64(opc, arg, addr, mem_index);
+    gen_helper_hash_table_unlock(cpu_env, addr);
 }
 
 #if TCG_TARGET_REG_BITS == 32
@@ -2910,42 +2960,54 @@ static inline void tcg_gen_qemu_ld64(TCGv_i64 ret, TCGv addr, int mem_index)
 
 static inline void tcg_gen_qemu_st8(TCGv arg, TCGv addr, int mem_index)
 {
+    gen_helper_hash_table_lock(cpu_env, addr);
+    gen_helper_register_thread_address_access(cpu_env, addr);
     tcg_request_block_interrupt_check();
 #if TARGET_LONG_BITS == 32
     tcg_gen_op3i_i32(INDEX_op_qemu_st8, arg, addr, mem_index);
 #else
     tcg_gen_op4i_i32(INDEX_op_qemu_st8, TCGV_LOW(arg), TCGV_LOW(addr), TCGV_HIGH(addr), mem_index);
 #endif
+    gen_helper_hash_table_unlock(cpu_env, addr);
 }
 
 static inline void tcg_gen_qemu_st16(TCGv arg, TCGv addr, int mem_index)
 {
+    gen_helper_hash_table_lock(cpu_env, addr);
+    gen_helper_register_thread_address_access(cpu_env, addr);
     tcg_request_block_interrupt_check();
 #if TARGET_LONG_BITS == 32
     tcg_gen_op3i_i32(INDEX_op_qemu_st16, arg, addr, mem_index);
 #else
     tcg_gen_op4i_i32(INDEX_op_qemu_st16, TCGV_LOW(arg), TCGV_LOW(addr), TCGV_HIGH(addr), mem_index);
 #endif
+    gen_helper_hash_table_unlock(cpu_env, addr);
 }
 
 static inline void tcg_gen_qemu_st32(TCGv arg, TCGv addr, int mem_index)
 {
+    gen_helper_hash_table_lock(cpu_env, addr);
+    gen_helper_register_thread_address_access(cpu_env, addr);
     tcg_request_block_interrupt_check();
 #if TARGET_LONG_BITS == 32
     tcg_gen_op3i_i32(INDEX_op_qemu_st32, arg, addr, mem_index);
 #else
     tcg_gen_op4i_i32(INDEX_op_qemu_st32, TCGV_LOW(arg), TCGV_LOW(addr), TCGV_HIGH(addr), mem_index);
 #endif
+    gen_helper_hash_table_unlock(cpu_env, addr);
 }
 
 static inline void tcg_gen_qemu_st64(TCGv_i64 arg, TCGv addr, int mem_index)
 {
+    gen_helper_hash_table_lock(cpu_env, addr);
+    gen_helper_register_thread_address_access(cpu_env, addr);
     tcg_request_block_interrupt_check();
 #if TARGET_LONG_BITS == 32
     tcg_gen_op4i_i32(INDEX_op_qemu_st64, TCGV_LOW(arg), TCGV_HIGH(arg), addr, mem_index);
 #else
     tcg_gen_op5i_i32(INDEX_op_qemu_st64, TCGV_LOW(arg), TCGV_HIGH(arg), TCGV_LOW(addr), TCGV_HIGH(addr), mem_index);
 #endif
+    gen_helper_hash_table_unlock(cpu_env, addr);
 }
 
 #define tcg_gen_ld_ptr(R, A, O) tcg_gen_ld_i32(TCGV_PTR_TO_NAT(R), (A), (O))
@@ -2955,69 +3017,81 @@ static inline void tcg_gen_qemu_st64(TCGv_i64 arg, TCGv addr, int mem_index)
 
 static inline void tcg_gen_qemu_ld8u(TCGv ret, TCGv addr, int mem_index)
 {
-    tcg_gen_qemu_ldst_op(INDEX_op_qemu_ld8u, ret, addr, mem_index);
+    tcg_gen_qemu_ld_op(INDEX_op_qemu_ld8u, ret, addr, mem_index);
 }
 
 static inline void tcg_gen_qemu_ld8s(TCGv ret, TCGv addr, int mem_index)
 {
-    tcg_gen_qemu_ldst_op(INDEX_op_qemu_ld8s, ret, addr, mem_index);
+    tcg_gen_qemu_ld_op(INDEX_op_qemu_ld8s, ret, addr, mem_index);
 }
 
 static inline void tcg_gen_qemu_ld16u(TCGv ret, TCGv addr, int mem_index)
 {
-    tcg_gen_qemu_ldst_op(INDEX_op_qemu_ld16u, ret, addr, mem_index);
+    tcg_gen_qemu_ld_op(INDEX_op_qemu_ld16u, ret, addr, mem_index);
 }
 
 static inline void tcg_gen_qemu_ld16s(TCGv ret, TCGv addr, int mem_index)
 {
-    tcg_gen_qemu_ldst_op(INDEX_op_qemu_ld16s, ret, addr, mem_index);
+    tcg_gen_qemu_ld_op(INDEX_op_qemu_ld16s, ret, addr, mem_index);
 }
 
 static inline void tcg_gen_qemu_ld32u(TCGv ret, TCGv addr, int mem_index)
 {
 #if TARGET_LONG_BITS == 32
-    tcg_gen_qemu_ldst_op(INDEX_op_qemu_ld32, ret, addr, mem_index);
+    tcg_gen_qemu_ld_op(INDEX_op_qemu_ld32, ret, addr, mem_index);
 #else
-    tcg_gen_qemu_ldst_op(INDEX_op_qemu_ld32u, ret, addr, mem_index);
+    tcg_gen_qemu_ld_op(INDEX_op_qemu_ld32u, ret, addr, mem_index);
 #endif
 }
 
 static inline void tcg_gen_qemu_ld32s(TCGv ret, TCGv addr, int mem_index)
 {
 #if TARGET_LONG_BITS == 32
-    tcg_gen_qemu_ldst_op(INDEX_op_qemu_ld32, ret, addr, mem_index);
+    tcg_gen_qemu_ld_op(INDEX_op_qemu_ld32, ret, addr, mem_index);
 #else
-    tcg_gen_qemu_ldst_op(INDEX_op_qemu_ld32s, ret, addr, mem_index);
+    tcg_gen_qemu_ld_op(INDEX_op_qemu_ld32s, ret, addr, mem_index);
 #endif
 }
 
 static inline void tcg_gen_qemu_ld64(TCGv_i64 ret, TCGv addr, int mem_index)
 {
-    tcg_gen_qemu_ldst_op_i64(INDEX_op_qemu_ld64, ret, addr, mem_index);
+    tcg_gen_qemu_ld_op_i64(INDEX_op_qemu_ld64, ret, addr, mem_index);
 }
 
 static inline void tcg_gen_qemu_st8(TCGv arg, TCGv addr, int mem_index)
 {
     tcg_request_block_interrupt_check();
-    tcg_gen_qemu_ldst_op(INDEX_op_qemu_st8, arg, addr, mem_index);
+    tcg_gen_qemu_st_op(INDEX_op_qemu_st8, arg, addr, mem_index);
 }
 
 static inline void tcg_gen_qemu_st16(TCGv arg, TCGv addr, int mem_index)
 {
     tcg_request_block_interrupt_check();
-    tcg_gen_qemu_ldst_op(INDEX_op_qemu_st16, arg, addr, mem_index);
+    tcg_gen_qemu_st_op(INDEX_op_qemu_st16, arg, addr, mem_index);
 }
 
 static inline void tcg_gen_qemu_st32(TCGv arg, TCGv addr, int mem_index)
 {
     tcg_request_block_interrupt_check();
-    tcg_gen_qemu_ldst_op(INDEX_op_qemu_st32, arg, addr, mem_index);
+    tcg_gen_qemu_st_op(INDEX_op_qemu_st32, arg, addr, mem_index);
+}
+
+static inline void tcg_gen_qemu_st32_unsafe(TCGv arg, TCGv addr, int mem_index)
+{
+    tcg_request_block_interrupt_check();
+    tcg_gen_qemu_st_op_unsafe(INDEX_op_qemu_st32, arg, addr, mem_index);
 }
 
 static inline void tcg_gen_qemu_st64(TCGv_i64 arg, TCGv addr, int mem_index)
 {
     tcg_request_block_interrupt_check();
-    tcg_gen_qemu_ldst_op_i64(INDEX_op_qemu_st64, arg, addr, mem_index);
+    tcg_gen_qemu_st_op_i64(INDEX_op_qemu_st64, arg, addr, mem_index);
+}
+
+static inline void tcg_gen_qemu_st64_unsafe(TCGv_i64 arg, TCGv addr, int mem_index)
+{
+    tcg_request_block_interrupt_check();
+    tcg_gen_qemu_st_op_i64_unsafe(INDEX_op_qemu_st64, arg, addr, mem_index);
 }
 
 #define tcg_gen_ld_ptr(R, A, O) tcg_gen_ld_i64(TCGV_PTR_TO_NAT(R), (A), (O))
@@ -3130,7 +3204,7 @@ static inline void tcg_gen_qemu_ld_i32(TCGv_i32 val, TCGv addr, TCGArg idx, TCGM
         }
     }
 
-    tcg_gen_qemu_ldst_op(old_ld_opc[memop & MO_SSIZE], val, addr, idx);
+    tcg_gen_qemu_ld_op(old_ld_opc[memop & MO_SSIZE], val, addr, idx);
 
     if((orig_memop ^ memop) & MO_BSWAP) {
         switch(orig_memop & MO_SIZE) {
@@ -3147,12 +3221,17 @@ static inline void tcg_gen_qemu_ld_i32(TCGv_i32 val, TCGv addr, TCGArg idx, TCGM
     }
 }
 
-static inline void tcg_gen_qemu_st_i32(TCGv_i32 val, TCGv_i32 addr, TCGArg idx, TCGMemOp memop)
+typedef void (*tcg_st_op_func32)(TCGOpcode opc, TCGv_i32 val, TCGv_i32 addr, TCGArg idx);
+
+static inline void tcg_gen_qemu_st_i32_common(TCGv_i32 val, TCGv_i32 addr, TCGArg idx, TCGMemOp memop,
+                                              tcg_st_op_func32 emit_st_op)
 {
     TCGv_i32 swap = -1;
     tcg_request_block_interrupt_check();
     tcg_gen_req_mo(TCG_MO_LD_ST | TCG_MO_ST_ST);
+
     memop = tcg_canonicalize_memop(memop, 0, 1);
+
     if(!TCG_TARGET_HAS_MEMORY_BSWAP && (memop & MO_BSWAP)) {
         swap = tcg_temp_new_i32();
         switch(memop & MO_SIZE) {
@@ -3169,11 +3248,27 @@ static inline void tcg_gen_qemu_st_i32(TCGv_i32 val, TCGv_i32 addr, TCGArg idx, 
         val = swap;
         memop &= ~MO_BSWAP;
     }
-    tcg_gen_qemu_ldst_op(old_st_opc[memop & MO_SIZE], val, addr, idx);
+
+    emit_st_op(old_st_opc[memop & MO_SIZE], val, addr, idx);
 
     if(swap != -1) {
         tcg_temp_free_i32(swap);
     }
+}
+
+static inline void tcg_gen_qemu_st_i32(TCGv_i32 val, TCGv_i32 addr, TCGArg idx, TCGMemOp memop)
+{
+    tcg_gen_qemu_st_i32_common(val, addr, idx, memop, tcg_gen_qemu_st_op);
+}
+
+/*
+ * Performs an "unsafe" store.
+ * This means that it will NOT acquire the hash table lock and
+ * NOT invalidate any memory reservation
+ */
+static inline void tcg_gen_qemu_st_i32_unsafe(TCGv_i32 val, TCGv_i32 addr, TCGArg idx, TCGMemOp memop)
+{
+    tcg_gen_qemu_st_i32_common(val, addr, idx, memop, tcg_gen_qemu_st_op_unsafe);
 }
 
 static inline void tcg_gen_qemu_ld_i64(TCGv_i64 val, TCGv addr, TCGArg idx, TCGMemOp memop)
@@ -3201,7 +3296,7 @@ static inline void tcg_gen_qemu_ld_i64(TCGv_i64 val, TCGv addr, TCGArg idx, TCGM
         }
     }
 
-    tcg_gen_qemu_ldst_op_i64(old_ld_opc[memop & MO_SSIZE], val, addr, idx);
+    tcg_gen_qemu_ld_op_i64(old_ld_opc[memop & MO_SSIZE], val, addr, idx);
 
     if((orig_memop ^ memop) & MO_BSWAP) {
         int flags = (orig_memop & MO_SIGN ? TCG_BSWAP_IZ | TCG_BSWAP_OS : TCG_BSWAP_IZ | TCG_BSWAP_OZ);
@@ -3246,7 +3341,9 @@ static inline void tcg_gen_qemu_ld_i128(TCGv_i128 result, TCGv guestAddressLow, 
     tcg_temp_free(guestAddressHigh);
 }
 
-static inline void tcg_gen_qemu_st_i64(TCGv_i64 val, TCGv addr, TCGArg idx, TCGMemOp memop)
+typedef void (*tcg_st_op_func64)(TCGOpcode opc, TCGv_i64 val, TCGv addr, TCGArg idx);
+
+static inline void tcg_gen_qemu_st_i64_common(TCGv_i64 val, TCGv addr, TCGArg idx, TCGMemOp memop, tcg_st_op_func64 emit_st_op)
 {
     TCGv_i64 swap = -1;
 
@@ -3281,11 +3378,26 @@ static inline void tcg_gen_qemu_st_i64(TCGv_i64 val, TCGv addr, TCGArg idx, TCGM
         memop &= ~MO_BSWAP;
     }
 
-    tcg_gen_qemu_ldst_op(old_st_opc[memop & MO_SIZE], val, addr, idx);
+    emit_st_op(old_st_opc[memop & MO_SIZE], val, addr, idx);
 
     if(swap != -1) {
         tcg_temp_free_i64(swap);
     }
+}
+
+static inline void tcg_gen_qemu_st_i64(TCGv_i64 val, TCGv addr, TCGArg idx, TCGMemOp memop)
+{
+    tcg_gen_qemu_st_i64_common(val, addr, idx, memop, tcg_gen_qemu_st_op);
+}
+
+/*
+ * Performs an "unsafe" store.
+ * This means that it will NOT acquire the hash table lock and
+ * NOT invalidate any memory reservation
+ */
+static inline void tcg_gen_qemu_st_i64_unsafe(TCGv_i64 val, TCGv addr, TCGArg idx, TCGMemOp memop)
+{
+    tcg_gen_qemu_st_i64_common(val, addr, idx, memop, tcg_gen_qemu_st_op_unsafe);
 }
 
 /*
@@ -3295,18 +3407,18 @@ static inline void tcg_gen_qemu_st_i64(TCGv_i64 val, TCGv addr, TCGArg idx, TCGM
  * and the other at `guestAddressLow + sizeof(uint64_t)`.
  * Endianness is taken into account.
  */
-static inline void tcg_gen_qemu_st_i128(TCGv_i128 value, TCGv guestAddressLow, TCGArg memIndex, TCGMemOp memop)
+static inline void tcg_gen_qemu_st_i128_unsafe(TCGv_i128 value, TCGv guestAddressLow, TCGArg memIndex, TCGMemOp memop)
 {
     //  Compute the address of the upper 64 bits.
     TCGv guestAddressHigh = tcg_temp_local_new();
     tcg_gen_addi_tl(guestAddressHigh, guestAddressLow, sizeof(uint64_t));
 
 #ifdef TARGET_WORDS_BIGENDIAN
-    tcg_gen_qemu_st_i64(value.low, guestAddressHigh, memIndex, memop);
-    tcg_gen_qemu_st_i64(value.high, guestAddressLow, memIndex, memop);
+    tcg_gen_qemu_st_i64_unsafe(value.low, guestAddressHigh, memIndex, memop);
+    tcg_gen_qemu_st_i64_unsafe(value.high, guestAddressLow, memIndex, memop);
 #else
-    tcg_gen_qemu_st_i64(value.low, guestAddressLow, memIndex, memop);
-    tcg_gen_qemu_st_i64(value.high, guestAddressHigh, memIndex, memop);
+    tcg_gen_qemu_st_i64_unsafe(value.low, guestAddressLow, memIndex, memop);
+    tcg_gen_qemu_st_i64_unsafe(value.high, guestAddressHigh, memIndex, memop);
 #endif
 
     tcg_temp_free(guestAddressHigh);

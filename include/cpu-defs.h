@@ -27,6 +27,7 @@
 #include "targphys.h"
 #include "infrastructure.h"
 #include "atomic.h"
+#include "hash-table-test.h"
 #include "unwind.h"
 
 /* The return address may point to the start of the next instruction.
@@ -257,6 +258,13 @@ enum block_interrupt_cause {
        operations. It doesn't correspond to Infrastructure's cpuId */         \
     uint32_t atomic_id;                                                       \
     atomic_memory_state_t *atomic_memory_state;                               \
+    target_phys_addr_t reserved_address;                                      \
+    target_phys_addr_t reserved_val;                                          \
+    target_phys_addr_t locked_address;                                        \
+                                                                              \
+    /* A table used to implement Hash table-based Store Test (HST)  */        \
+    hst_entry_t *store_table;                                                 \
+                                                                              \
     /* STARTING FROM HERE FIELDS ARE NOT SERIALIZED */                        \
     struct TranslationBlock *current_tb; /* currently executing TB  */        \
     CPU_COMMON_TLB                                                            \

@@ -23,9 +23,6 @@
 #include "infrastructure.h"
 #include "cpu.h"
 #include "tcg-op.h"
-#include <global_helper.h>
-#define GEN_HELPER 1
-#include <global_helper.h>
 #include <string.h>
 #include "debug.h"
 

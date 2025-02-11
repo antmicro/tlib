@@ -111,10 +111,11 @@
 /* ??? This is highly specific to the host cpu.  There are even special
    extension instructions that may be required, e.g. ia64's addp4.  But
    for now we don't support any 64-bit targets with 32-bit pointers.  */
-#define dh_is_signed_ptr     0
-#define dh_is_signed_uintptr 0
-#define dh_is_signed_env     dh_is_signed_ptr
-#define dh_is_signed(t)      dh_is_signed_##t
+#define dh_is_signed_ptr       0
+#define dh_is_signed_uintptr   0
+#define dh_is_signed_sc_result 0
+#define dh_is_signed_env       dh_is_signed_ptr
+#define dh_is_signed(t)        dh_is_signed_##t
 
 #define dh_sizemask(t, n)                  \
     sizemask |= dh_is_64bit(t) << (n * 2); \
