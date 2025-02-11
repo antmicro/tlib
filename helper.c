@@ -4,6 +4,7 @@
 #include "debug.h"
 #include "atomic.h"
 #include "address-translation.h"
+#include "hst.h"
 
 //  Dirty addresses handling
 #define MAX_DIRTY_ADDRESSES_LIST_COUNT 100
@@ -50,6 +51,16 @@ void HELPER(invalidate_dirty_addresses_shared)(CPUState *env)
             tb_invalidate_phys_page_range_inner(start, end, false, false);
         }
     }
+}
+
+void HELPER(debug_print)(uint64_t debugCode)
+{
+    tlib_printf(LOG_LEVEL_DEBUG, "debug code: 0x%016llx", debugCode);
+}
+
+void HELPER(print)(uint32_t logLevel, uint64_t code)
+{
+    tlib_printf(logLevel, "debug code: 0x%016llx", code);
 }
 
 //  verify if there are instructions left to execute, update instructions count
@@ -153,19 +164,32 @@ void HELPER(cancel_reservation)(CPUState *env)
     cancel_reservation(env);
 }
 
-uintptr_t HELPER(translate_page_aligned_address_and_fill_tlb_u32)(target_ulong addr, uint32_t mmu_idx)
+uintptr_t HELPER(translate_page_aligned_address_and_fill_tlb_u32)(target_ulong addr, AccessKind access, uint32_t mmu_idx)
 {
-    return translate_page_aligned_address_and_fill_tlb_u32(addr, mmu_idx);
+    void* return_address = GETPC();
+    return translate_page_aligned_address_and_fill_tlb_u32(addr, mmu_idx, access, return_address);
 }
 
-uintptr_t HELPER(translate_page_aligned_address_and_fill_tlb_u64)(target_ulong addr, uint32_t mmu_idx)
+uintptr_t HELPER(translate_page_aligned_address_and_fill_tlb_u64)(target_ulong addr, AccessKind access, uint32_t mmu_idx)
 {
-    return translate_page_aligned_address_and_fill_tlb_u64(addr, mmu_idx);
+    void* return_address = GETPC();
+    return translate_page_aligned_address_and_fill_tlb_u64(addr, mmu_idx, access, return_address);
 }
 
-uintptr_t HELPER(translate_page_aligned_address_and_fill_tlb_u128)(target_ulong addr, uint32_t mmu_idx)
+uintptr_t HELPER(translate_page_aligned_address_and_fill_tlb_u128)(target_ulong addr, AccessKind access, uint32_t mmu_idx)
 {
-    return translate_page_aligned_address_and_fill_tlb_u128(addr, mmu_idx);
+    void* return_address = GETPC();
+    return translate_page_aligned_address_and_fill_tlb_u128(addr, mmu_idx, access, return_address);
+}
+
+void HELPER(hash_table_lock)(CPUState * env, target_ulong address)
+{
+    hash_table_lock(env, address);
+}
+
+void HELPER(hash_table_unlock)(CPUState * env, target_ulong address)
+{
+    hash_table_unlock(env, address);
 }
 
 void HELPER(var_log)(target_ulong v)

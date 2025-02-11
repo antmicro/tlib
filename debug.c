@@ -29,6 +29,38 @@
 #include <string.h>
 #include "debug.h"
 
+void tcg_gen_debug_print(uint64_t debugCode)
+{
+    TCGv_i64 msg = tcg_temp_new_i64();
+    tcg_gen_movi_i64(msg, debugCode);
+    gen_helper_debug_print(msg);
+    tcg_temp_free_i64(msg);
+}
+
+void tcg_gen_debug_printv(TCGv_i64 msg)
+{
+    gen_helper_debug_print(msg);
+}
+
+void tcg_gen_error_print(uint64_t errorCode)
+{
+    TCGv_i64 msg = tcg_temp_new_i64();
+    tcg_gen_movi_i64(msg, errorCode);
+    TCGv_i32 logLevel = tcg_temp_new_i32();
+    tcg_gen_movi_i32(logLevel, 3); // error
+    gen_helper_print(logLevel, msg);
+    tcg_temp_free_i64(msg);
+    tcg_temp_free_i32(logLevel);
+}
+
+void tcg_gen_error_printv(TCGv_i64 msg)
+{
+    TCGv_i32 logLevel = tcg_temp_new_i32();
+    tcg_gen_movi_i32(logLevel, 3); // error
+    gen_helper_print(logLevel, msg);
+    tcg_temp_free_i32(logLevel);
+}
+
 char *msgs[MAX_MSG_COUNT];
 #define MAX_MSG_LENGTH 4096
 

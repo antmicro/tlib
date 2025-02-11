@@ -27,6 +27,7 @@
 #include "targphys.h"
 #include "infrastructure.h"
 #include "atomic.h"
+#include "hash-table-store-test.h"
 #include "unwind.h"
 
 /* The return address may point to the start of the next instruction.
@@ -185,93 +186,102 @@ enum block_interrupt_cause {
 
 #define CPU_TEMP_BUF_NLONGS    128
 #define cpu_common_first_field instructions_count_limit
-#define CPU_COMMON                                                            \
-    /* --------------------------------------- */                             \
-    /* warning: cleared by CPU reset           */                             \
-    /* --------------------------------------- */                             \
-    /* instruction counting is used to execute callback after given           \
-       number of instructions */                                              \
-    /* the types of instructions_count_* need to match the TCG-generated      \
-       accesses in `gen_update_instructions_count` in translate-all.c */      \
-    uint32_t instructions_count_limit;                                        \
-    uint32_t instructions_count_value;                                        \
-    uint32_t instructions_count_declaration;                                  \
-    uint64_t instructions_count_total_value;                                  \
-    /* soft mmu support */                                                    \
-    /* in order to avoid passing too many arguments to the MMIO               \
-       helpers, we store some rarely used information in the CPU              \
-       context) */                                                            \
-    uintptr_t mem_io_pc;       /* host pc at which the memory was             \
-                                      accessed */                             \
-    target_ulong mem_io_vaddr; /* target virtual addr at which the            \
-                                     memory was accessed */                   \
-    uint32_t wfi;              /* Nonzero if the CPU is in suspend state */   \
-    uint32_t interrupt_request;                                               \
-    volatile sig_atomic_t exit_request;                                       \
-    int tb_restart_request;                                                   \
-    int tb_interrupt_request_from_callback;                                   \
-                                                                              \
-    uint32_t io_access_regions_count;                                         \
-    uint64_t io_access_regions[MAX_IO_ACCESS_REGIONS_COUNT];                  \
-    /* in previous run cpu_exec returned with WFI */                          \
-    bool was_not_working;                                                     \
-                                                                              \
-    /* --------------------------------------- */                             \
-    /* from this point: preserved by CPU reset */                             \
-    /* --------------------------------------- */                             \
-    /* Core interrupt code */                                                 \
-    jmp_buf jmp_env;                                                          \
-    int exception_index;                                                      \
-    int nr_cores;   /* number of cores within this CPU package */             \
-    int nr_threads; /* number of threads within this CPU */                   \
-    bool mmu_fault;                                                           \
-                                                                              \
-    /* External mmu settings */                                               \
-    bool external_mmu_enabled;                                                \
-    ExtMmuRange external_mmu_window[MAX_EXTERNAL_MMU_RANGES];                 \
-    /* user data */                                                           \
-    /* chaining is enabled by default */                                      \
-    int chaining_disabled;                                                    \
-    /* tb cache is enabled by default */                                      \
-    int tb_cache_disabled;                                                    \
-    /* indicates if cpu should notify about marking tbs as dirty */           \
-    bool tb_broadcast_dirty;                                                  \
-    /* indicates if the block_finished hook is registered, implicitly         \
-                          disabling block chaining */                         \
-    int block_finished_hook_present;                                          \
-    /* indicates if the block_begin hook is registered */                     \
-    int block_begin_hook_present;                                             \
-    int sync_pc_every_instruction_disabled;                                   \
-    int cpu_wfi_state_change_hook_present;                                    \
-    uint32_t millicycles_per_instruction;                                     \
-    int interrupt_begin_callback_enabled;                                     \
-    int interrupt_end_callback_enabled;                                       \
-    int32_t tlib_is_on_memory_access_enabled;                                 \
-    int allow_unaligned_accesses;                                             \
-                                                                              \
-    bool count_opcodes;                                                       \
-    uint32_t opcode_counters_size;                                            \
-    opcode_counter_descriptor opcode_counters[MAX_OPCODE_COUNTERS];           \
-                                                                              \
-    /* A unique, sequential id representing CPU for atomic (atomic.c)         \
-       operations. It doesn't correspond to Infrastructure's cpuId */         \
-    uint32_t atomic_id;                                                       \
-    atomic_memory_state_t *atomic_memory_state;                               \
-    /* STARTING FROM HERE FIELDS ARE NOT SERIALIZED */                        \
-    struct TranslationBlock *current_tb; /* currently executing TB  */        \
-    CPU_COMMON_TLB                                                            \
-    QTAILQ_HEAD(breakpoints_head, CPUBreakpoint) breakpoints;                 \
-    QTAILQ_HEAD(cached_address_head, CachedRegiserDescriptor) cached_address; \
-    struct TranslationBlock *tb_jmp_cache[TB_JMP_CACHE_SIZE];                 \
-    /* buffer for temporaries in the code generator */                        \
-    long temp_buf[CPU_TEMP_BUF_NLONGS];                                       \
-    /* when set any exception will force `cpu_exec` to finish immediately */  \
-    int32_t return_on_exception;                                              \
-    bool guest_profiler_enabled;                                              \
-                                                                              \
-    uint64_t io_access_count;                                                 \
-    uint64_t previous_io_access_read_value;                                   \
-    uint64_t previous_io_access_read_address;                                 \
+#define CPU_COMMON                                                             \
+    /* --------------------------------------- */                              \
+    /* warning: cleared by CPU reset           */                              \
+    /* --------------------------------------- */                              \
+    /* instruction counting is used to execute callback after given            \
+       number of instructions */                                               \
+    /* the types of instructions_count_* need to match the TCG-generated       \
+       accesses in `gen_update_instructions_count` in translate-all.c */       \
+    uint32_t instructions_count_limit;                                         \
+    uint32_t instructions_count_value;                                         \
+    uint32_t instructions_count_declaration;                                   \
+    uint64_t instructions_count_total_value;                                   \
+    /* soft mmu support */                                                     \
+    /* in order to avoid passing too many arguments to the MMIO                \
+       helpers, we store some rarely used information in the CPU               \
+       context) */                                                             \
+    uintptr_t mem_io_pc;       /* host pc at which the memory was              \
+                                      accessed */                              \
+    target_ulong mem_io_vaddr; /* target virtual addr at which the             \
+                                     memory was accessed */                    \
+    uint32_t wfi;              /* Nonzero if the CPU is in suspend state */    \
+    uint32_t interrupt_request;                                                \
+    volatile sig_atomic_t exit_request;                                        \
+    int tb_restart_request;                                                    \
+    int tb_interrupt_request_from_callback;                                    \
+                                                                               \
+    uint32_t io_access_regions_count;                                          \
+    uint64_t io_access_regions[MAX_IO_ACCESS_REGIONS_COUNT];                   \
+    /* in previous run cpu_exec returned with WFI */                           \
+    bool was_not_working;                                                      \
+                                                                               \
+    /* --------------------------------------- */                              \
+    /* from this point: preserved by CPU reset */                              \
+    /* --------------------------------------- */                              \
+    /* Core interrupt code */                                                  \
+    jmp_buf jmp_env;                                                           \
+    int exception_index;                                                       \
+    int nr_cores;   /* number of cores within this CPU package */              \
+    int nr_threads; /* number of threads within this CPU */                    \
+    bool mmu_fault;                                                            \
+                                                                               \
+    /* External mmu settings */                                                \
+    bool external_mmu_enabled;                                                 \
+    ExtMmuRange external_mmu_window[MAX_EXTERNAL_MMU_RANGES];                  \
+    /* user data */                                                            \
+    /* chaining is enabled by default */                                       \
+    int chaining_disabled;                                                     \
+    /* tb cache is enabled by default */                                       \
+    int tb_cache_disabled;                                                     \
+    /* indicates if cpu should notify about marking tbs as dirty */            \
+    bool tb_broadcast_dirty;                                                   \
+    /* indicates if the block_finished hook is registered, implicitly          \
+                          disabling block chaining */                          \
+    int block_finished_hook_present;                                           \
+    /* indicates if the block_begin hook is registered */                      \
+    int block_begin_hook_present;                                              \
+    int sync_pc_every_instruction_disabled;                                    \
+    int cpu_wfi_state_change_hook_present;                                     \
+    uint32_t millicycles_per_instruction;                                      \
+    int interrupt_begin_callback_enabled;                                      \
+    int interrupt_end_callback_enabled;                                        \
+    int32_t tlib_is_on_memory_access_enabled;                                  \
+    int allow_unaligned_accesses;                                              \
+                                                                               \
+    bool count_opcodes;                                                        \
+    uint32_t opcode_counters_size;                                             \
+    opcode_counter_descriptor opcode_counters[MAX_OPCODE_COUNTERS];            \
+                                                                               \
+    /* A unique, sequential id representing CPU for atomic (atomic.c)          \
+       operations. It doesn't correspond to Infrastructure's cpuId */          \
+    uint32_t atomic_id;                                                        \
+    atomic_memory_state_t *atomic_memory_state;                                \
+                                                                               \
+    /* Keeps track of the currently active reservation */                      \
+    target_ulong reserved_address;                                             \
+    uint64_t reserved_value;                                                   \
+    /* A table used to implement Hash table-based Store Test (HST)  */         \
+    hst_entry_t *store_table;                                                  \
+    /* How many prefix bits of an address are dedicated to the store table. */ \
+    uint8_t store_table_bits;                                                  \
+                                                                               \
+    /* STARTING FROM HERE FIELDS ARE NOT SERIALIZED */                         \
+    struct TranslationBlock *current_tb; /* currently executing TB  */         \
+    CPU_COMMON_TLB                                                             \
+    QTAILQ_HEAD(breakpoints_head, CPUBreakpoint) breakpoints;                  \
+    QTAILQ_HEAD(cached_address_head, CachedRegiserDescriptor) cached_address;  \
+    struct TranslationBlock *tb_jmp_cache[TB_JMP_CACHE_SIZE];                  \
+    /* buffer for temporaries in the code generator */                         \
+    long temp_buf[CPU_TEMP_BUF_NLONGS];                                        \
+    /* when set any exception will force `cpu_exec` to finish immediately */   \
+    int32_t return_on_exception;                                               \
+    bool guest_profiler_enabled;                                               \
+                                                                               \
+    uint64_t io_access_count;                                                  \
+    uint64_t previous_io_access_read_value;                                    \
+    uint64_t previous_io_access_read_address;                                  \
     struct CachedRegiserDescriptor *last_crd;
 
 #define RESET_OFFSET offsetof(CPUState, jmp_env)

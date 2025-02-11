@@ -25,11 +25,14 @@
 #include "cpu_registers.h"
 #include "atomic-intrinsics.h"
 #include "tcg-op-atomic.h"
+#include "hash-table-store-test.h"
 
 /* global register indices */
 static TCGv cpu_gpr[32], cpu_pc, cpu_opcode;
 static TCGv_i64 cpu_fpr[32]; /* assume F and D extensions */
 static TCGv cpu_vstart;
+static TCGv reserved_address;
+static TCGv_i64 reserved_value;
 
 #include "tb-helper.h"
 
@@ -61,6 +64,8 @@ void translate_init(void)
     cpu_pc = tcg_global_mem_new(TCG_AREG0, offsetof(CPUState, pc), "pc");
     cpu_opcode = tcg_global_mem_new(TCG_AREG0, offsetof(CPUState, opcode), "opcode");
     cpu_vstart = tcg_global_mem_new(TCG_AREG0, offsetof(CPUState, vstart), "vstart");
+    reserved_address = tcg_global_mem_new(TCG_AREG0, offsetof(CPUState, reserved_address), "reserved_address");
+    reserved_value = tcg_global_mem_new_i64(TCG_AREG0, offsetof(CPUState, reserved_value), "reserved_value");
 }
 
 static inline void kill_unknown(DisasContext *dc, int excp);
@@ -485,24 +490,6 @@ static void gen_mulhsu(TCGv ret, TCGv arg1, TCGv arg2)
 
     tcg_temp_free(rl);
     tcg_temp_free(rh);
-}
-
-static void gen_sc(TCGv source1, TCGv source2, TCGv dat, DisasContext *dc, int is_sc_d)
-{
-    int finish_label;
-    finish_label = gen_new_label();
-    gen_helper_check_address_reservation(dat, cpu_env, source1);
-    tcg_gen_brcondi_tl(TCG_COND_NE, dat, 0, finish_label);
-    if(is_sc_d) {
-        tcg_gen_qemu_st64(source2, source1, dc->base.mem_idx);
-    } else {
-        tcg_gen_qemu_st32(source2, source1, dc->base.mem_idx);
-    }
-    //  Successful store - access the address to cancel reservation for other CPUs
-    gen_helper_register_address_access(cpu_env, source1);
-    gen_set_label(finish_label);
-    //  Always cancel the reservation for the current CPU
-    gen_helper_cancel_reservation(cpu_env);
 }
 
 static void gen_fsgnj(DisasContext *dc, uint32_t rd, uint32_t rs1, uint32_t rs2, int rm,
@@ -2013,6 +2000,89 @@ static void gen_v_store(DisasContext *dc, uint32_t opc, uint32_t rest, uint32_t 
 #endif  //  HOST_LONG_BITS != 32
 }
 
+extern void tcg_gen_debug_print(uint64_t debugCode);
+
+static void gen_sc(CPUState *env, TCGv result, TCGv value, TCGv guestAddress, int memIndex, int size)
+{
+    tlib_assert(size == 32  || size == 64);
+
+    int done = gen_new_label();
+
+    int addressReserved = gen_new_label();
+    tcg_gen_brcond_tl(TCG_COND_EQ, reserved_address, guestAddress, addressReserved);
+
+    // Didn't branch above, then the address wasn't reserved, so we fail...
+
+    // Non-zero value in rd indicates SC failure.
+    tcg_gen_movi_tl(result, 1);
+    tcg_gen_br(done);
+
+    gen_set_label(addressReserved);
+
+    gen_store_table_lock(env, guestAddress, memIndex);
+
+    // Check if address is reserved.
+    TCGv reservedResult = tcg_temp_new();
+    gen_store_table_check(env, reservedResult, guestAddress);
+
+    int fail = gen_new_label();
+
+    // If address is not reserved (i.e. reservedResult = 0), jump to fail block.
+    tcg_gen_brcondi_tl(TCG_COND_EQ, reservedResult, 0, fail);
+    tcg_temp_free(reservedResult);
+
+    /* Didn't branch to fail block, this means SC should try to perform the store... */
+
+    int fallback = gen_new_label();
+    int store_done = gen_new_label();
+    TCGv_i64 exchanged_value = tcg_temp_local_new_i64();
+
+    // Try to use host intrinsic CAS.
+    if (size == 64) {
+        tcg_try_gen_atomic_compare_and_swap_intrinsic_i64(exchanged_value, reserved_value, guestAddress, value, memIndex, fallback);
+    } else {
+        tcg_try_gen_atomic_compare_and_swap_intrinsic_i32(exchanged_value, reserved_value, guestAddress, value, memIndex, fallback);
+    }
+    tcg_gen_br(store_done);
+
+    // Otherwise, use global memory lock CAS.
+    gen_set_label(fallback);
+    if (size == 64) {
+        tcg_gen_atomic_cmpxchg_i64(exchanged_value, guestAddress, reserved_value, value, memIndex, MO_64);
+    } else {
+        tcg_gen_atomic_cmpxchg_i32(exchanged_value, guestAddress, reserved_value, value, memIndex, MO_32);
+    }
+
+    gen_set_label(store_done);
+
+    // If the exchanged value was not the one that was reserved, we should fail since
+    // this indicates that another core has interleaved and invalidated the reservation
+    // since we last checked it to be valid.
+    if (size == 64) {
+        tcg_gen_brcond_i64(TCG_COND_NE, exchanged_value, reserved_value, fail);
+    } else {
+        tcg_gen_brcond_i32(TCG_COND_NE, exchanged_value, reserved_value, fail);
+    }
+    tcg_temp_free_i64(exchanged_value);
+
+    // Zero value in rd indicates SC success.
+    tcg_gen_movi_tl(result, 0);
+    gen_store_table_unlock(env, guestAddress);
+    // Skip over the fail block below.
+    tcg_gen_br(done);
+
+    gen_set_label(fail);
+    // Non-zero value in rd indicates SC failure.
+    tcg_gen_movi_tl(result, 1);
+    gen_store_table_unlock(env, guestAddress);
+
+    gen_set_label(done);
+
+    // Regardless of success or failure, executing an SC instruction invalidates any reservation held by this hart.
+    tcg_gen_movi_tl(reserved_address, 0);
+    // reserved_value is left unchanged, as there's no reasonable "invalid" value.
+}
+
 static inline void gen_atomic_with_global_memory_lock(DisasContext *dc, uint32_t opc, TCGv dat, TCGv source1, TCGv source2)
 {
     int done;
@@ -2021,17 +2091,6 @@ static inline void gen_atomic_with_global_memory_lock(DisasContext *dc, uint32_t
     gen_helper_acquire_global_memory_lock(cpu_env);
 
     switch(opc) {
-        /*
-         * Note about LR/SC instructions:
-         * Our implementation reserves the address, not region.
-         */
-        case OPC_RISC_LR_W:
-            tcg_gen_qemu_ld32s(dat, source1, dc->base.mem_idx);
-            gen_helper_reserve_address(cpu_env, source1, tcg_const_i32(0));
-            break;
-        case OPC_RISC_SC_W:
-            gen_sc(source1, source2, dat, dc, 0);
-            break;
         case OPC_RISC_AMOSWAP_W:
             tcg_gen_qemu_ld32s(dat, source1, dc->base.mem_idx);
             tcg_gen_qemu_st32(source2, source1, dc->base.mem_idx);
@@ -2072,17 +2131,6 @@ static inline void gen_atomic_with_global_memory_lock(DisasContext *dc, uint32_t
             tcg_gen_qemu_st32(source2, source1, dc->base.mem_idx);
             break;
 #if defined(TARGET_RISCV64)
-        /*
-         * Note about LR/SC instructions:
-         * Our implementation reserves the address, not region.
-         */
-        case OPC_RISC_LR_D:
-            tcg_gen_qemu_ld64(dat, source1, dc->base.mem_idx);
-            gen_helper_reserve_address(cpu_env, source1, tcg_const_i64(0));
-            break;
-        case OPC_RISC_SC_D:
-            gen_sc(source1, source2, dat, dc, 1);
-            break;
         case OPC_RISC_AMOSWAP_D:
             tcg_gen_qemu_ld64(dat, source1, dc->base.mem_idx);
             tcg_gen_qemu_st64(source2, source1, dc->base.mem_idx);
@@ -2178,6 +2226,19 @@ static void gen_atomic_fetch_and_op(DisasContext *dc, uint32_t opc, TCGv result,
 
     switch(opc) {
         /*
+         * Note about LR/SC instructions:
+         * Our implementation reserves the address, not region.
+        */
+        case OPC_RISC_LR_W:
+            tcg_gen_mov_tl(reserved_address, source1);
+            gen_store_table_set(env, source1);
+            tcg_gen_qemu_ld32s(result, source1, dc->base.mem_idx);
+            tcg_gen_mov_i32(reserved_value, result);
+            break;
+        case OPC_RISC_SC_W:
+            gen_sc(env, result, source2, source1, dc->base.mem_idx, 32);
+            break;
+        /*
          * AMO instructions:
          * rd = *rs1
          * *rs1 = rd OP rs2
@@ -2186,11 +2247,25 @@ static void gen_atomic_fetch_and_op(DisasContext *dc, uint32_t opc, TCGv result,
             gen_amoadd(result, source1, source2, dc->base.mem_idx, 32);
             break;
 #if defined(TARGET_RISCV64)
+        /*
+         * Note about LR/SC instructions:
+         * Our implementation reserves the address, not region.
+        */
+        case OPC_RISC_LR_D:
+            tcg_gen_mov_tl(reserved_address, source1);
+            gen_store_table_set(env, source1);
+            tcg_gen_qemu_ld64(result, source1, dc->base.mem_idx);
+            tcg_gen_mov_i64(reserved_value, result);
+            break;
+        case OPC_RISC_SC_D:
+            gen_sc(env, result, source2, source1, dc->base.mem_idx, 64);
+            break;
         case OPC_RISC_AMOADD_D:
             gen_amoadd(result, source1, source2, dc->base.mem_idx, 64);
             break;
 #endif
         default:
+            gen_store_table_set(env, source1);
             gen_atomic_with_global_memory_lock(dc, opc, result, source1, source2);
             break;
     }

@@ -16,6 +16,9 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
+#include "hash-table-store-test.h"
+#include <stdatomic.h>
+
 #include "cpu.h"
 #include "tcg.h"
 #include "atomic.h"
@@ -262,13 +265,32 @@ CPUDebugExcpHandler *cpu_set_debug_excp_handler(CPUDebugExcpHandler *handler)
     return old_handler;
 }
 
-static void verify_state(CPUState *env)
+/*
+ * Since TCG control flow is unpredictable, it may be the case that when
+ * an atomic operation takes a lock, performs a ld/st, then unlocks the lock,
+ * it gets interrupted by a softmmu fault while doing the ld/st. This eventually
+ * triggers a longjump back to cpu_exec, but notably
+ * _the translation block does not get to finish executing_. I.e., the lock is
+ * never released when this happens. Therefore, this function checks for any
+ * dangling locks that should've been unlocked, and does so.
+ */
+static void unlock_dangling_locks(CPUState *env)
 {
-    if(env->atomic_memory_state == NULL) {
-        return;
-    }
-    if(env->atomic_memory_state->locking_cpu_id == env->atomic_id) {
+    // For the "old" atomics.
+    if (env->atomic_memory_state != NULL
+        && env->atomic_memory_state->locking_cpu_id == env->atomic_id)
+    {
         clear_global_memory_lock(env);
+    }
+
+    // For the "new" atomics.
+    if (unlikely(env->reserved_address != 0)) {
+        uintptr_t lastAccessedByThreadIdAddress = address_hash(env, env->reserved_address);
+        uintptr_t lockAddress = lastAccessedByThreadIdAddress + offsetof(hst_entry_t, lock);
+        uint32_t threadId = get_thread_id(env);
+        // Unlock, _if it was locked by this thread_, otherwise leave untouched.
+        // No point in retrying this, so just do it as a one-off.
+        atomic_compare_exchange_strong((uint32_t*)lockAddress, &threadId, HST_UNLOCKED);
     }
 }
 
@@ -325,7 +347,7 @@ int cpu_exec(CPUState *env)
 
     /* prepare setjmp context for exception handling */
     for(;;) {
-        verify_state(env);
+        unlock_dangling_locks(env);
         if(setjmp(env->jmp_env) == 0) {
             /* if an exception is pending, we execute it here */
             if(env->exception_index >= 0) {

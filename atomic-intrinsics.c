@@ -1,5 +1,6 @@
 #include "cpu.h"
 #include "tb-helper.h"
+#include "address-translation.h"
 
 #if __llvm__
 #pragma clang diagnostic push
@@ -50,16 +51,17 @@ static inline void tcg_gen_translate_address_and_fallback_guard(TCGv_hostptr hos
     /*
      * If address is page-aligned:
      */
-    TCGv_i32 memIndexVar = tcg_temp_new_i32();
-    tcg_gen_movi_i32(memIndexVar, memIndex);
+    TCGv_i32 memIndexVar = tcg_const_i32(memIndex);
+    TCGv_i32 accessType = tcg_const_i32(WRITE);
     if(size == 128) {
-        gen_helper_translate_page_aligned_address_and_fill_tlb_u128(hostAddress, guestAddress, memIndexVar);
+        gen_helper_translate_page_aligned_address_and_fill_tlb_u128(hostAddress, guestAddress, accessType, memIndexVar);
     } else if(size == 64) {
-        gen_helper_translate_page_aligned_address_and_fill_tlb_u64(hostAddress, guestAddress, memIndexVar);
+        gen_helper_translate_page_aligned_address_and_fill_tlb_u64(hostAddress, guestAddress, accessType, memIndexVar);
     } else {
-        gen_helper_translate_page_aligned_address_and_fill_tlb_u32(hostAddress, guestAddress, memIndexVar);
+        gen_helper_translate_page_aligned_address_and_fill_tlb_u32(hostAddress, guestAddress, accessType, memIndexVar);
     }
     tcg_temp_free(memIndexVar);
+    tcg_temp_free_i32(accessType);
 
     //  If it's an MMIO address, it will be returned unchanged.
     //  Since we can't handle that case, we'll have to jump to the fallback.
@@ -143,12 +145,24 @@ void tcg_try_gen_atomic_fetch_add_intrinsic_i64(TCGv_i64 result, TCGv_ptr guestA
 
 #if (TCG_TARGET_HAS_atomic_compare_and_swap_intrinsic_i32 == 1) || \
     (TCG_TARGET_HAS_atomic_compare_and_swap_intrinsic_i64 == 1) || (TCG_TARGET_HAS_atomic_compare_and_swap_intrinsic_i128 == 1)
+static inline void tcg_gen_atomic_compare_and_swap_intrinsic_host(TCGv_unknown actual, TCGv_unknown expected,
+                                                                 TCGv_hostptr hostAddress, TCGv_unknown newValue, uint8_t size)
+{
+    tlib_assert(size == 128 || size == 64 || size == 32);
+
+    if(size == 128) {
+        tcg_gen_atomic_compare_and_swap_intrinsic_i128(actual.size128, expected.size128, hostAddress, newValue.size128);
+    } else if(size == 64) {
+        tcg_gen_atomic_compare_and_swap_intrinsic_i64(actual.size64, expected.size64, hostAddress, newValue.size64);
+    } else {
+        tcg_gen_atomic_compare_and_swap_intrinsic_i32(actual.size32, expected.size32, hostAddress, newValue.size32);
+    }
+}
+
 static inline void tcg_try_gen_atomic_compare_and_swap_intrinsic(TCGv_unknown actual, TCGv_unknown expected,
                                                                  TCGv_ptr guestAddress, TCGv_unknown newValue, uint32_t memIndex,
                                                                  int fallbackLabel, uint8_t size)
 {
-    tlib_assert(size == 128 || size == 64 || size == 32);
-
     /*
      * Jump to fallback if address is not accessible atomically.
      */
@@ -158,13 +172,7 @@ static inline void tcg_try_gen_atomic_compare_and_swap_intrinsic(TCGv_unknown ac
     /*
      * If address is atomically accessible:
      */
-    if(size == 128) {
-        tcg_gen_atomic_compare_and_swap_intrinsic_i128(actual.size128, expected.size128, hostAddress, newValue.size128);
-    } else if(size == 64) {
-        tcg_gen_atomic_compare_and_swap_intrinsic_i64(actual.size64, expected.size64, hostAddress, newValue.size64);
-    } else {
-        tcg_gen_atomic_compare_and_swap_intrinsic_i32(actual.size32, expected.size32, hostAddress, newValue.size32);
-    }
+    tcg_gen_atomic_compare_and_swap_intrinsic_host(actual, expected,  hostAddress, newValue, size);
     tcg_temp_free_hostptr(hostAddress);
 }
 #endif
@@ -180,6 +188,16 @@ void tcg_try_gen_atomic_compare_and_swap_intrinsic_i32(TCGv_i32 actual, TCGv_i32
     tcg_try_gen_atomic_compare_and_swap_intrinsic(actualUnknown, expectedUnknown, guestAddress, newValueUnknown, memIndex,
                                                   fallbackLabel, 32);
 }
+
+void tcg_gen_atomic_compare_and_swap_host_intrinsic_i32(TCGv_i32 actual, TCGv_i32 expected, TCGv_hostptr hostAddress,
+                                                       TCGv_i32 newValue, uint32_t memIndex)
+{
+    TCGv_unknown actualUnknown, expectedUnknown, newValueUnknown;
+    actualUnknown.size32 = actual;
+    expectedUnknown.size32 = expected;
+    newValueUnknown.size32 = newValue;
+    tcg_gen_atomic_compare_and_swap_intrinsic_host(actualUnknown, expectedUnknown, hostAddress, newValueUnknown, 32);
+}
 #else
 /*
  * Always use the fallback, since the target doesn't have the intrinsic implemented.
@@ -188,6 +206,15 @@ void tcg_try_gen_atomic_compare_and_swap_intrinsic_i32(TCGv_i32 actual, TCGv_i32
                                                        TCGv_i32 newValue, uint32_t memIndex, int fallbackLabel)
 {
     tcg_gen_br(fallbackLabel);
+}
+
+/*
+ * Always use the fallback, since the target doesn't have the intrinsic implemented.
+ */
+void tcg_gen_atomic_compare_and_swap_host_intrinsic_i32(TCGv_i32 actual, TCGv_i32 expected, TCGv_hostptr hostAddress,
+                                                       TCGv_i32 newValue, uint32_t memIndex)
+{
+    tcg_gen_host_atomic_cmpxchg_i32(actual, hostAddress, expected, newValue, memIndex, MO_32);
 }
 #endif
 
