@@ -384,7 +384,7 @@ int cpu_exec(CPUState *env)
                     do_v7m_exception_exit(env);
                     next_tb = 0;
                     if (automatic_sleep_after_interrupt(env)) {                     
-                        return EXCP_WFI;                        
+                        env->exit_request = true;
                     }                    
                 }                
 #endif
