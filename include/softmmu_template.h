@@ -146,8 +146,6 @@ __attribute__((always_inline)) inline DATA_TYPE REGPARM glue(glue(glue(__ld, SUF
     uintptr_t addend;
     bool is_insn_fetch = (env->current_tb == NULL);
 
-    acquire_global_memory_lock(cpu);
-
     /* test if there is match for unaligned or IO access */
     /* XXX: could done more in memory macro in a non portable way */
     index = (addr >> TARGET_PAGE_BITS) & (CPU_TLB_SIZE - 1);
@@ -230,7 +228,6 @@ redo:
         }
     }
 
-    release_global_memory_lock(cpu);
     return res;
 }
 
