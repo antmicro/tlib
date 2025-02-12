@@ -675,11 +675,11 @@ TranslationBlock *tb_gen_code(CPUState *env, target_ulong pc, target_ulong cs_ba
 {
     TranslationBlock *tb;
     uint8_t *tc_ptr;
-    tb_page_addr_t phys_pc, phys_page2;
+    tb_page_addr_t phys_page1, phys_page2;
     target_ulong virt_page2;
     int code_gen_size, search_size;
 
-    phys_pc = get_page_addr_code(env, pc, true);
+    phys_page1 = get_page_addr_code(env, pc, true);
     tb = tb_alloc(pc);
     if (!tb) {
         /* flush must be done */
@@ -710,7 +710,7 @@ TranslationBlock *tb_gen_code(CPUState *env, target_ulong pc, target_ulong cs_ba
             phys_page2 = get_page_addr_code(env, virt_page2, true);
         }
     }
-    tb_link_page(tb, phys_pc, phys_page2);
+    tb_link_page(tb, phys_page1, phys_page2);
     return tb;
 }
 
@@ -774,9 +774,11 @@ static void tb_phys_hash_insert(TranslationBlock *tb)
 {
     TranslationBlock **ptb;
     unsigned int h;
-    tb_page_addr_t phys_pc;
+    tb_page_addr_t phys_page;
+    target_ulong phys_pc;
 
-    phys_pc = get_page_addr_code(env, tb->pc, true);
+    phys_page = get_page_addr_code(env, tb->pc, true);
+    phys_pc = phys_page | (tb->pc & ~TARGET_PAGE_MASK);
     h = tb_phys_hash_func(phys_pc);
     ptb = &tb_phys_hash[h];
 
@@ -981,14 +983,14 @@ static inline void tb_alloc_page(TranslationBlock *tb, unsigned int n, tb_page_a
 }
 
 /* add a new TB. phys_page2 is (-1) to indicate that only one page contains the TB. */
-void tb_link_page(TranslationBlock *tb, tb_page_addr_t phys_pc, tb_page_addr_t phys_page2)
+void tb_link_page(TranslationBlock *tb, tb_page_addr_t phys_page1, tb_page_addr_t phys_page2)
 {
     /* Grab the mmap lock to stop another thread invalidating this TB
        before we are done.  */
     mmap_lock();
 
     /* add in the page list */
-    tb_alloc_page(tb, 0, phys_pc & (TARGET_PAGE_MASK | IO_MEM_EXECUTABLE_IO));
+    tb_alloc_page(tb, 0, phys_page1 & (TARGET_PAGE_MASK | IO_MEM_EXECUTABLE_IO));
     if (phys_page2 != -1) {
         tb_alloc_page(tb, 1, phys_page2);
     } else {

@@ -155,8 +155,8 @@ static TranslationBlock *tb_find_slow(CPUState *env, target_ulong pc, target_ulo
     TranslationBlock *tb, **ptb1;
     TranslationBlock *prev_related_tb;
     unsigned int h;
-    tb_page_addr_t phys_pc, phys_page1;
-    target_ulong virt_page2;
+    tb_page_addr_t phys_page1;
+    target_ulong phys_pc, virt_page2;
     uint32_t max_icount;
 
     tb_invalidated_flag = 0;
@@ -164,8 +164,8 @@ static TranslationBlock *tb_find_slow(CPUState *env, target_ulong pc, target_ulo
     max_icount = env->instructions_count_limit - env->instructions_count_value;
 
     /* find translated block using physical mappings */
-    phys_pc = get_page_addr_code(env, pc, true);
-    phys_page1 = phys_pc & TARGET_PAGE_MASK;
+    phys_page1 = get_page_addr_code(env, pc, true);
+    phys_pc = phys_page1 | (pc & ~TARGET_PAGE_MASK);
     h = tb_phys_hash_func(phys_pc);
     ptb1 = &tb_phys_hash[h];
 
