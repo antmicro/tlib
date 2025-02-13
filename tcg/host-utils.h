@@ -33,10 +33,10 @@
 #include "bswap.h"
 
 #ifndef glue
-#define xglue(x, y)   x ## y
-#define glue(x, y)    xglue(x, y)
-#define stringify(s)  tostring(s)
-#define tostring(s)   #s
+#define xglue(x, y)  x##y
+#define glue(x, y)   xglue(x, y)
+#define stringify(s) tostring(s)
+#define tostring(s)  #s
 #endif
 
 #ifndef ARRAY_SIZE
@@ -49,51 +49,47 @@
 #define REGPARM
 #endif
 
-// GCCs older than v10.1 don't support the '__has_builtin' macro but support some builtins.
+//  GCCs older than v10.1 don't support the '__has_builtin' macro but support some builtins.
 #ifndef __has_builtin
-  #ifdef __GNUC__
-    #define __has_builtin(x) _has ## x
-    #define _gcc_version ( __GNUC__*100 + __GNUC_MINOR__ )
+#ifdef __GNUC__
+#define __has_builtin(x) _has##x
+#define _gcc_version     (__GNUC__ * 100 + __GNUC_MINOR__)
 
-    // Supported since GCC v3.4 (commit SHA: 2928cd7a).
-    #define _has__builtin_clz        ( _gcc_version >= 304 )
-    #define _has__builtin_clzll      ( _gcc_version >= 304 )
-    #define _has__builtin_ctz        ( _gcc_version >= 304 )
-    #define _has__builtin_ctzll      ( _gcc_version >= 304 )
-    #define _has__builtin_popcountll ( _gcc_version >= 304 )
+//  Supported since GCC v3.4 (commit SHA: 2928cd7a).
+#define _has__builtin_clz        (_gcc_version >= 304)
+#define _has__builtin_clzll      (_gcc_version >= 304)
+#define _has__builtin_ctz        (_gcc_version >= 304)
+#define _has__builtin_ctzll      (_gcc_version >= 304)
+#define _has__builtin_popcountll (_gcc_version >= 304)
 
-    // Supported since GCC v4.7 (commit SHA: 3801c801).
-    #define _has__builtin_clrsb      ( _gcc_version >= 407 )
-    #define _has__builtin_clrsbll    ( _gcc_version >= 407 )
+//  Supported since GCC v4.7 (commit SHA: 3801c801).
+#define _has__builtin_clrsb   (_gcc_version >= 407)
+#define _has__builtin_clrsbll (_gcc_version >= 407)
 
-    // Supported since GCC v5.1 (commit SHA: 1304953e).
-    #define _has__builtin_add_overflow ( _gcc_version >= 501 )
-    #define _has__builtin_sub_overflow ( _gcc_version >= 501 )
+//  Supported since GCC v5.1 (commit SHA: 1304953e).
+#define _has__builtin_add_overflow (_gcc_version >= 501)
+#define _has__builtin_sub_overflow (_gcc_version >= 501)
 
-    // Currently not supported by GCC.
-    #define _has__builtin_bitreverse8  0
-    #define _has__builtin_bitreverse16 0
-    #define _has__builtin_bitreverse32 0
-    #define _has__builtin_bitreverse64 0
-  #else
-    #define __has_builtin(x) 0
-  #endif
+//  Currently not supported by GCC.
+#define _has__builtin_bitreverse8  0
+#define _has__builtin_bitreverse16 0
+#define _has__builtin_bitreverse32 0
+#define _has__builtin_bitreverse64 0
+#else
+#define __has_builtin(x) 0
+#endif
 #endif
 
 #if defined(TCG_TARGET_I386) && HOST_LONG_BITS == 64
 #define __HAVE_FAST_MULU64__
 static inline void mulu64(uint64_t *plow, uint64_t *phigh, uint64_t a, uint64_t b)
 {
-    __asm__ ("mul %0\n\t"
-             : "=d" (*phigh), "=a" (*plow)
-             : "a" (a), "0" (b));
+    __asm__("mul %0\n\t" : "=d"(*phigh), "=a"(*plow) : "a"(a), "0"(b));
 }
 #define __HAVE_FAST_MULS64__
 static inline void muls64(uint64_t *plow, uint64_t *phigh, int64_t a, int64_t b)
 {
-    __asm__ ("imul %0\n\t"
-             : "=d" (*phigh), "=a" (*plow)
-             : "a" (a), "0" (b));
+    __asm__("imul %0\n\t" : "=d"(*phigh), "=a"(*plow) : "a"(a), "0"(b));
 }
 #else
 void muls64(uint64_t *plow, uint64_t *phigh, int64_t a, int64_t b);
@@ -104,8 +100,7 @@ void mulu64(uint64_t *plow, uint64_t *phigh, uint64_t a, uint64_t b);
 
 static inline int clz32(uint32_t val)
 {
-    if(!val)
-    {
+    if(!val) {
         return 32;
     }
 
@@ -114,27 +109,27 @@ static inline int clz32(uint32_t val)
 #else
     int cnt = 0;
 
-    if (!(val & 0xFFFF0000U)) {
+    if(!(val & 0xFFFF0000U)) {
         cnt += 16;
         val <<= 16;
     }
-    if (!(val & 0xFF000000U)) {
+    if(!(val & 0xFF000000U)) {
         cnt += 8;
         val <<= 8;
     }
-    if (!(val & 0xF0000000U)) {
+    if(!(val & 0xF0000000U)) {
         cnt += 4;
         val <<= 4;
     }
-    if (!(val & 0xC0000000U)) {
+    if(!(val & 0xC0000000U)) {
         cnt += 2;
         val <<= 2;
     }
-    if (!(val & 0x80000000U)) {
+    if(!(val & 0x80000000U)) {
         cnt++;
         val <<= 1;
     }
-    if (!(val & 0x80000000U)) {
+    if(!(val & 0x80000000U)) {
         cnt++;
     }
     return cnt;
@@ -143,8 +138,7 @@ static inline int clz32(uint32_t val)
 
 static inline int clz64(uint64_t val)
 {
-    if(!val)
-    {
+    if(!val) {
         return 64;
     }
 
@@ -153,7 +147,7 @@ static inline int clz64(uint64_t val)
 #else
     int cnt = 0;
 
-    if (!(val >> 32)) {
+    if(!(val >> 32)) {
         cnt += 32;
     } else {
         val >>= 32;
@@ -165,8 +159,7 @@ static inline int clz64(uint64_t val)
 
 static inline int ctz32(uint32_t val)
 {
-    if(!val)
-    {
+    if(!val) {
         return 32;
     }
 
@@ -176,27 +169,27 @@ static inline int ctz32(uint32_t val)
     int cnt;
 
     cnt = 0;
-    if (!(val & 0x0000FFFFUL)) {
+    if(!(val & 0x0000FFFFUL)) {
         cnt += 16;
         val >>= 16;
     }
-    if (!(val & 0x000000FFUL)) {
+    if(!(val & 0x000000FFUL)) {
         cnt += 8;
         val >>= 8;
     }
-    if (!(val & 0x0000000FUL)) {
+    if(!(val & 0x0000000FUL)) {
         cnt += 4;
         val >>= 4;
     }
-    if (!(val & 0x00000003UL)) {
+    if(!(val & 0x00000003UL)) {
         cnt += 2;
         val >>= 2;
     }
-    if (!(val & 0x00000001UL)) {
+    if(!(val & 0x00000001UL)) {
         cnt++;
         val >>= 1;
     }
-    if (!(val & 0x00000001UL)) {
+    if(!(val & 0x00000001UL)) {
         cnt++;
     }
 
@@ -206,8 +199,7 @@ static inline int ctz32(uint32_t val)
 
 static inline int ctz64(uint64_t val)
 {
-    if(!val)
-    {
+    if(!val) {
         return 64;
     }
 
@@ -217,7 +209,7 @@ static inline int ctz64(uint64_t val)
     int cnt;
 
     cnt = 0;
-    if (!((uint32_t)val)) {
+    if(!((uint32_t)val)) {
         cnt += 32;
         val >>= 32;
     }
@@ -231,10 +223,10 @@ static inline int ctpop64(uint64_t val)
 #if __has_builtin(__builtin_popcountll)
     return __builtin_popcountll(val);
 #else
-    val = (val & 0x5555555555555555ULL) + ((val >>  1) & 0x5555555555555555ULL);
-    val = (val & 0x3333333333333333ULL) + ((val >>  2) & 0x3333333333333333ULL);
-    val = (val & 0x0f0f0f0f0f0f0f0fULL) + ((val >>  4) & 0x0f0f0f0f0f0f0f0fULL);
-    val = (val & 0x00ff00ff00ff00ffULL) + ((val >>  8) & 0x00ff00ff00ff00ffULL);
+    val = (val & 0x5555555555555555ULL) + ((val >> 1) & 0x5555555555555555ULL);
+    val = (val & 0x3333333333333333ULL) + ((val >> 2) & 0x3333333333333333ULL);
+    val = (val & 0x0f0f0f0f0f0f0f0fULL) + ((val >> 4) & 0x0f0f0f0f0f0f0f0fULL);
+    val = (val & 0x00ff00ff00ff00ffULL) + ((val >> 8) & 0x00ff00ff00ff00ffULL);
     val = (val & 0x0000ffff0000ffffULL) + ((val >> 16) & 0x0000ffff0000ffffULL);
     val = (val & 0x00000000ffffffffULL) + ((val >> 32) & 0x00000000ffffffffULL);
 
@@ -284,13 +276,9 @@ static inline uint8_t revbit8(uint8_t x)
     return __builtin_bitreverse8(x);
 #else
     /* Assign the correct nibble position.  */
-    x = ((x & 0xf0) >> 4)
-      | ((x & 0x0f) << 4);
+    x = ((x & 0xf0) >> 4) | ((x & 0x0f) << 4);
     /* Assign the correct bit position.  */
-    x = ((x & 0x88) >> 3)
-      | ((x & 0x44) >> 1)
-      | ((x & 0x22) << 1)
-      | ((x & 0x11) << 3);
+    x = ((x & 0x88) >> 3) | ((x & 0x44) >> 1) | ((x & 0x22) << 1) | ((x & 0x11) << 3);
     return x;
 #endif
 }
@@ -307,13 +295,9 @@ static inline uint16_t revbit16(uint16_t x)
     /* Assign the correct byte position.  */
     x = bswap16(x);
     /* Assign the correct nibble position.  */
-    x = ((x & 0xf0f0) >> 4)
-      | ((x & 0x0f0f) << 4);
+    x = ((x & 0xf0f0) >> 4) | ((x & 0x0f0f) << 4);
     /* Assign the correct bit position.  */
-    x = ((x & 0x8888) >> 3)
-      | ((x & 0x4444) >> 1)
-      | ((x & 0x2222) << 1)
-      | ((x & 0x1111) << 3);
+    x = ((x & 0x8888) >> 3) | ((x & 0x4444) >> 1) | ((x & 0x2222) << 1) | ((x & 0x1111) << 3);
     return x;
 #endif
 }
@@ -330,13 +314,9 @@ static inline uint32_t revbit32(uint32_t x)
     /* Assign the correct byte position.  */
     x = bswap32(x);
     /* Assign the correct nibble position.  */
-    x = ((x & 0xf0f0f0f0u) >> 4)
-      | ((x & 0x0f0f0f0fu) << 4);
+    x = ((x & 0xf0f0f0f0u) >> 4) | ((x & 0x0f0f0f0fu) << 4);
     /* Assign the correct bit position.  */
-    x = ((x & 0x88888888u) >> 3)
-      | ((x & 0x44444444u) >> 1)
-      | ((x & 0x22222222u) << 1)
-      | ((x & 0x11111111u) << 3);
+    x = ((x & 0x88888888u) >> 3) | ((x & 0x44444444u) >> 1) | ((x & 0x22222222u) << 1) | ((x & 0x11111111u) << 3);
     return x;
 #endif
 }
@@ -353,13 +333,10 @@ static inline uint64_t revbit64(uint64_t x)
     /* Assign the correct byte position.  */
     x = bswap64(x);
     /* Assign the correct nibble position.  */
-    x = ((x & 0xf0f0f0f0f0f0f0f0ull) >> 4)
-      | ((x & 0x0f0f0f0f0f0f0f0full) << 4);
+    x = ((x & 0xf0f0f0f0f0f0f0f0ull) >> 4) | ((x & 0x0f0f0f0f0f0f0f0full) << 4);
     /* Assign the correct bit position.  */
-    x = ((x & 0x8888888888888888ull) >> 3)
-      | ((x & 0x4444444444444444ull) >> 1)
-      | ((x & 0x2222222222222222ull) << 1)
-      | ((x & 0x1111111111111111ull) << 3);
+    x = ((x & 0x8888888888888888ull) >> 3) | ((x & 0x4444444444444444ull) >> 1) | ((x & 0x2222222222222222ull) << 1) |
+        ((x & 0x1111111111111111ull) << 3);
     return x;
 #endif
 }

@@ -13,62 +13,65 @@
 
 /* This file is named 'system_registers.h' but it also contains definitions of the system instructions.
  *
- * Beware the 'register name' vs 'instruction mnemonic' ambiguity because even ARMCPRegInfo.name is in fact an instruction mnemonic not a register name.
+ * Beware the 'register name' vs 'instruction mnemonic' ambiguity because even ARMCPRegInfo.name is in fact an instruction
+ * mnemonic not a register name.
  *
- * For example, an 'MRS ELR_EL1' instruction is a read with a ELR_EL1 mnemonic but it doesn't always read the ELR_EL1 register. In certain situations, i.e., if EL == 2 and HCR_EL2.E2H is set, it should return value of the ELR_EL2 register.
+ * For example, an 'MRS ELR_EL1' instruction is a read with a ELR_EL1 mnemonic but it doesn't always read the ELR_EL1 register. In
+ * certain situations, i.e., if EL == 2 and HCR_EL2.E2H is set, it should return value of the ELR_EL2 register.
  *
- * Basically all the mnemonics used in MRS/MSR (AArch64), MRC/MCR (AArch32), AT, DC, IC, TLBI etc. instructions should have their entry in 'cp_regs'.
+ * Basically all the mnemonics used in MRS/MSR (AArch64), MRC/MCR (AArch32), AT, DC, IC, TLBI etc. instructions should have their
+ * entry in 'cp_regs'.
  */
 
 inline const char *sysreg_patch_lookup_name(const char *name)
 {
     const char *lookup_name = name;
 
-    if (strcasecmp(name, "DBGDTRRX_EL0") == 0 || strcasecmp(name, "DBGDTRTX_EL0") == 0) {
+    if(strcasecmp(name, "DBGDTRRX_EL0") == 0 || strcasecmp(name, "DBGDTRTX_EL0") == 0) {
         lookup_name = "DBGDTR_RX_TX_EL0";
-    } else if (strcasecmp(lookup_name, "ICV_AP0R_0") == 0) {
+    } else if(strcasecmp(lookup_name, "ICV_AP0R_0") == 0) {
         lookup_name = "ICC_AP0R_0";
-    } else if (strcasecmp(lookup_name, "ICV_AP0R_1") == 0) {
+    } else if(strcasecmp(lookup_name, "ICV_AP0R_1") == 0) {
         lookup_name = "ICC_AP0R_1";
-    } else if (strcasecmp(lookup_name, "ICV_AP0R_2") == 0) {
+    } else if(strcasecmp(lookup_name, "ICV_AP0R_2") == 0) {
         lookup_name = "ICC_AP0R_2";
-    } else if (strcasecmp(lookup_name, "ICV_AP0R_3") == 0) {
+    } else if(strcasecmp(lookup_name, "ICV_AP0R_3") == 0) {
         lookup_name = "ICC_AP0R_3";
-    } else if (strcasecmp(lookup_name, "ICV_AP1R_0") == 0) {
+    } else if(strcasecmp(lookup_name, "ICV_AP1R_0") == 0) {
         lookup_name = "ICC_AP1R_0";
-    } else if (strcasecmp(lookup_name, "ICV_AP1R_1") == 0) {
+    } else if(strcasecmp(lookup_name, "ICV_AP1R_1") == 0) {
         lookup_name = "ICC_AP1R_1";
-    } else if (strcasecmp(lookup_name, "ICV_AP1R_2") == 0) {
+    } else if(strcasecmp(lookup_name, "ICV_AP1R_2") == 0) {
         lookup_name = "ICC_AP1R_2";
-    } else if (strcasecmp(lookup_name, "ICV_AP1R_3") == 0) {
+    } else if(strcasecmp(lookup_name, "ICV_AP1R_3") == 0) {
         lookup_name = "ICC_AP1R_3";
-    } else if (strcasecmp(lookup_name, "ICV_BPR0") == 0) {
+    } else if(strcasecmp(lookup_name, "ICV_BPR0") == 0) {
         lookup_name = "ICC_BPR0";
-    } else if (strcasecmp(lookup_name, "ICV_BPR1") == 0) {
+    } else if(strcasecmp(lookup_name, "ICV_BPR1") == 0) {
         lookup_name = "ICC_BPR1";
-    } else if (strcasecmp(lookup_name, "ICV_CTLR") == 0) {
+    } else if(strcasecmp(lookup_name, "ICV_CTLR") == 0) {
         lookup_name = "ICC_CTLR";
-    } else if (strcasecmp(lookup_name, "ICV_DIR") == 0) {
+    } else if(strcasecmp(lookup_name, "ICV_DIR") == 0) {
         lookup_name = "ICC_DIR";
-    } else if (strcasecmp(lookup_name, "ICV_EOIR0") == 0) {
+    } else if(strcasecmp(lookup_name, "ICV_EOIR0") == 0) {
         lookup_name = "ICC_EOIR0";
-    } else if (strcasecmp(lookup_name, "ICV_EOIR1") == 0) {
+    } else if(strcasecmp(lookup_name, "ICV_EOIR1") == 0) {
         lookup_name = "ICC_EOIR1";
-    } else if (strcasecmp(lookup_name, "ICV_HPPIR0") == 0) {
+    } else if(strcasecmp(lookup_name, "ICV_HPPIR0") == 0) {
         lookup_name = "ICC_HPPIR0";
-    } else if (strcasecmp(lookup_name, "ICV_HPPIR1") == 0) {
+    } else if(strcasecmp(lookup_name, "ICV_HPPIR1") == 0) {
         lookup_name = "ICC_HPPIR1";
-    } else if (strcasecmp(lookup_name, "ICV_IAR0") == 0) {
+    } else if(strcasecmp(lookup_name, "ICV_IAR0") == 0) {
         lookup_name = "ICC_IAR0";
-    } else if (strcasecmp(lookup_name, "ICV_IAR1") == 0) {
+    } else if(strcasecmp(lookup_name, "ICV_IAR1") == 0) {
         lookup_name = "ICC_IAR1";
-    } else if (strcasecmp(lookup_name, "ICV_IGRPEN0") == 0) {
+    } else if(strcasecmp(lookup_name, "ICV_IGRPEN0") == 0) {
         lookup_name = "ICC_IGRPEN0";
-    } else if (strcasecmp(lookup_name, "ICV_IGRPEN1") == 0) {
+    } else if(strcasecmp(lookup_name, "ICV_IGRPEN1") == 0) {
         lookup_name = "ICC_IGRPEN1";
-    } else if (strcasecmp(lookup_name, "ICV_PMR") == 0) {
+    } else if(strcasecmp(lookup_name, "ICV_PMR") == 0) {
         lookup_name = "ICC_PMR";
-    } else if (strcasecmp(lookup_name, "ICV_RPR") == 0) {
+    } else if(strcasecmp(lookup_name, "ICV_RPR") == 0) {
         lookup_name = "ICC_RPR";
     }
 
@@ -86,11 +89,11 @@ static inline uint64_t mpidr_el1_register(CPUState *env)
 {
     uint32_t affinity = tlib_get_mp_index();
 
-    // Aff3 is not located immediately after Aff2 in MPIDR
+    //  Aff3 is not located immediately after Aff2 in MPIDR
     uint64_t aff3 = extract64(affinity, 24, 8) << 32;
     uint32_t aff0_1_2 = extract32(affinity, 0, 24);
 
-    if (arm_current_el(env) == 1 && arm_is_el2_enabled(env)) {
+    if(arm_current_el(env) == 1 && arm_is_el2_enabled(env)) {
         return env->cp15.vmpidr_el2 | aff0_1_2 | aff3;
     }
     return env->arm_core_config.mpidr | aff0_1_2 | aff3;
@@ -108,17 +111,17 @@ static inline uint64_t get_id_aa64pfr0_value(CPUState *env)
 {
     uint64_t return_value = env->arm_core_config.isar.id_aa64pfr0;
 
-    if (!arm_feature(env, ARM_FEATURE_EL3)) {
+    if(!arm_feature(env, ARM_FEATURE_EL3)) {
         return_value = FIELD_DP64(return_value, ID_AA64PFR0, EL3, 0);
     }
 
-    if (!arm_feature(env, ARM_FEATURE_EL2)) {
+    if(!arm_feature(env, ARM_FEATURE_EL2)) {
         return_value = FIELD_DP64(return_value, ID_AA64PFR0, EL2, 0);
     }
 
-    // FP16 isn't currently supported so let's override FP field.
-    // FP and AdvSIMD fields have to be equal according to the manual.
-    if (FIELD_EX64(return_value, ID_AA64PFR0, FP) == 1) {
+    //  FP16 isn't currently supported so let's override FP field.
+    //  FP and AdvSIMD fields have to be equal according to the manual.
+    if(FIELD_EX64(return_value, ID_AA64PFR0, FP) == 1) {
         return_value = FIELD_DP64(return_value, ID_AA64PFR0, ADVSIMD, 0);
         return_value = FIELD_DP64(return_value, ID_AA64PFR0, FP, 0);
     }
@@ -141,7 +144,7 @@ static inline uint64_t pmsav8_mark_overlapping_regions(CPUState *env, int base_r
     uint32_t base_region_mask = 1 << base_region_index;
     uint64_t overlapping_mask = 0;
 
-    if (is_hyper) {
+    if(is_hyper) {
         regions = env->pmsav8.hregions;
         regions_count = pmsav8_number_of_el2_regions(env);
     } else {
@@ -149,20 +152,20 @@ static inline uint64_t pmsav8_mark_overlapping_regions(CPUState *env, int base_r
         regions_count = pmsav8_number_of_el1_regions(env);
     }
 
-    for (int index = 0; index < regions_count; index++) {
-        if (!regions[index].enabled || index == base_region_index) {
+    for(int index = 0; index < regions_count; index++) {
+        if(!regions[index].enabled || index == base_region_index) {
             continue;
         }
 
         uint32_t i_address_start = regions[index].address_start;
         uint32_t i_address_end = regions[index].address_limit;
 
-        // The first two check if the 'regions[index]' region starts or ends in the region being added.
-        // The third one checks the only remaining overlapping option: whether the region being added
-        // is completely contained within the 'regions[index]' region.
-        if (((i_address_start >= address_start) && (i_address_start <= address_end)) ||
-                ((i_address_end >= address_start) && (i_address_end <= address_end)) ||
-                ((address_start > i_address_start) && (address_start < i_address_end))) {
+        //  The first two check if the 'regions[index]' region starts or ends in the region being added.
+        //  The third one checks the only remaining overlapping option: whether the region being added
+        //  is completely contained within the 'regions[index]' region.
+        if(((i_address_start >= address_start) && (i_address_start <= address_end)) ||
+           ((i_address_end >= address_start) && (i_address_end <= address_end)) ||
+           ((address_start > i_address_start) && (address_start < i_address_end))) {
             regions[index].overlapping_regions_mask |= base_region_mask;
             overlapping_mask |= (1 << index);
         }
@@ -174,8 +177,8 @@ static inline void pmsav8_unmark_overlapping_regions(CPUARMState *env, pmsav8_re
                                                      uint64_t mask)
 {
     int index = 0;
-    while (mask != 0) {
-        if (mask & 0b1) {
+    while(mask != 0) {
+        if(mask & 0b1) {
             regions[index].overlapping_regions_mask ^= base_region_mask;
         }
         mask = mask << 1;
@@ -183,16 +186,18 @@ static inline void pmsav8_unmark_overlapping_regions(CPUARMState *env, pmsav8_re
     }
 }
 
-static inline void hyp_pmsav8_regions_bitmask_enable(CPUState *env, uint32_t bitmask) {
-    for (int i = 0; i < MAX_MPU_REGIONS; i += 1, bitmask >>= 1) {
+static inline void hyp_pmsav8_regions_bitmask_enable(CPUState *env, uint32_t bitmask)
+{
+    for(int i = 0; i < MAX_MPU_REGIONS; i += 1, bitmask >>= 1) {
         env->pmsav8.hregions[i].enabled = bitmask & 1;
     }
 }
 
-static inline uint32_t hyp_pmsav8_regions_bitmask_current(CPUState *env) {
+static inline uint32_t hyp_pmsav8_regions_bitmask_current(CPUState *env)
+{
     uint32_t result = 0;
 
-    for (int i = MAX_MPU_REGIONS - 1; i >= 0; i -= 1) {
+    for(int i = MAX_MPU_REGIONS - 1; i >= 0; i -= 1) {
         result = (result << 1) | (env->pmsav8.hregions[i].enabled ? 1 : 0);
     }
 
@@ -201,16 +206,16 @@ static inline uint32_t hyp_pmsav8_regions_bitmask_current(CPUState *env) {
 
 static inline void set_pmsav8_region(CPUState *env, enum pmsav8_register_type type, unsigned int region_index, uint32_t value)
 {
-    if (region_index >= MAX_MPU_REGIONS) {
-        // Writing a value outside of the valid range is UNPREDICTABLE.
-        // We opt for just ignoring it
+    if(region_index >= MAX_MPU_REGIONS) {
+        //  Writing a value outside of the valid range is UNPREDICTABLE.
+        //  We opt for just ignoring it
         return;
     }
     bool is_hyper = (type == HYPER_BASE_ADDRESS) || (type == HYPER_LIMIT_ADDRESS);
     pmsav8_region *regions = is_hyper ? &env->pmsav8.hregions[0] : &env->pmsav8.regions[0];
     pmsav8_region *region = &regions[region_index];
 
-    switch (type) {
+    switch(type) {
         case BASE_ADDRESS:
         case HYPER_BASE_ADDRESS:
             region->address_start = value & ~0x3Flu;
@@ -226,27 +231,27 @@ static inline void set_pmsav8_region(CPUState *env, enum pmsav8_register_type ty
             break;
     }
 
-    // Need to unset the mask in other regions
+    //  Need to unset the mask in other regions
     pmsav8_unmark_overlapping_regions(env, regions, 1 << region_index, region->overlapping_regions_mask);
-    // And mark the ones that now overlap
-    region->overlapping_regions_mask = pmsav8_mark_overlapping_regions(env, region_index, region->address_start,
-                                                                       region->address_limit, is_hyper);
+    //  And mark the ones that now overlap
+    region->overlapping_regions_mask =
+        pmsav8_mark_overlapping_regions(env, region_index, region->address_start, region->address_limit, is_hyper);
 
     tlb_flush(env, 1, true);
 }
 
 static inline uint32_t get_pmsav8_region(CPUState *env, enum pmsav8_register_type type, unsigned int region_index)
 {
-    if (region_index >= MAX_MPU_REGIONS) {
-        // Reading a value outside of the valid range is UNPREDICTABLE.
-        // We opt for just returning 0
+    if(region_index >= MAX_MPU_REGIONS) {
+        //  Reading a value outside of the valid range is UNPREDICTABLE.
+        //  We opt for just returning 0
         return 0;
     }
     bool is_hyper = (type == HYPER_BASE_ADDRESS) || (type == HYPER_LIMIT_ADDRESS);
     pmsav8_region *region = is_hyper ? &env->pmsav8.hregions[region_index] : &env->pmsav8.regions[region_index];
 
     uint32_t return_value;
-    switch (type) {
+    switch(type) {
         case BASE_ADDRESS:
         case HYPER_BASE_ADDRESS:
             return_value = region->address_start;
@@ -264,45 +269,43 @@ static inline uint32_t get_pmsav8_region(CPUState *env, enum pmsav8_register_typ
     return return_value;
 }
 
-// Many 'MRS/MSR *_EL1' instructions access '*_EL2' registers if EL is 2 and HCR_EL2's E2H bit is set.
+//  Many 'MRS/MSR *_EL1' instructions access '*_EL2' registers if EL is 2 and HCR_EL2's E2H bit is set.
 #define RW_FUNCTIONS_EL1_ACCESSING_EL2_IF_E2H_SET(width, mnemonic, field_base) \
     RW_FUNCTIONS_PTR(width, mnemonic, &field_base[el2_and_hcr_el2_e2h_set(env) ? 2 : 1])
 
 static inline bool is_generic_timer_cntp_cntv_register(uint8_t op0, uint8_t op1, uint8_t crn, uint8_t crm, uint8_t op2)
 {
-    // crm is 2 for CNTP_* and 3 for CNTV_* registers.
+    //  crm is 2 for CNTP_* and 3 for CNTV_* registers.
     return op0 == 3 && op1 == 3 && crn == 14 && (crm == 2 || crm == 3) && op2 <= 2;
 }
 
 static inline uint32_t encode_as_aarch64_register(uint8_t op0, uint8_t op1, uint8_t crn, uint8_t crm, uint8_t op2)
 {
-    return (op0 << CP_REG_ARM64_SYSREG_OP0_SHIFT) |
-        (op1 << CP_REG_ARM64_SYSREG_OP1_SHIFT) |
-        (crn << CP_REG_ARM64_SYSREG_CRN_SHIFT) |
-        (crm << CP_REG_ARM64_SYSREG_CRM_SHIFT) |
-        (op2 << CP_REG_ARM64_SYSREG_OP2_SHIFT);
+    return (op0 << CP_REG_ARM64_SYSREG_OP0_SHIFT) | (op1 << CP_REG_ARM64_SYSREG_OP1_SHIFT) |
+           (crn << CP_REG_ARM64_SYSREG_CRN_SHIFT) | (crm << CP_REG_ARM64_SYSREG_CRM_SHIFT) |
+           (op2 << CP_REG_ARM64_SYSREG_OP2_SHIFT);
 }
 
 static inline uint32_t encode_gic_register(CPUState *env, const ARMCPRegInfo *info)
 {
-    // This function is used for accessing GIC registers
+    //  This function is used for accessing GIC registers
     tlib_assert(info->type & ARM_CP_GIC);
-    // There's no op0 in AArch32 instructions. It's the same for all GIC registers on AArch64.
+    //  There's no op0 in AArch32 instructions. It's the same for all GIC registers on AArch64.
     uint8_t op0 = !is_a64(env) ? 0x3 : info->op0;
     uint8_t op1 = info->op1;
     uint8_t crn = info->crn;
     uint8_t crm = info->crm;
     uint8_t op2 = info->op2;
 
-    // Encoding adjustments for GIC registers accessed from AArch32. It's very similar to AArch64.
-    if (!is_a64(env)) {
-        // Adjustments are needed for 64-bit GIC registers accessed with AArch32 MCRR/MRRC instructions
-        // which are only identified by op1 and crm. On AArch32 all of them have crm=12. On AArch64 all of
-        // them have op0=3, op1=0, crn=12, crm=11. The remaining ones are:
-        // * ICC_ASGI1R (AArch32: op1=1; AArch64: op2=6)
-        // * ICC_SGI0R  (AArch32: op1=2; AArch64: op2=7)
-        // * ICC_SGI1R  (AArch32: op1=0; AArch64: op2=5)
-        if (unlikely(info->type & ARM_CP_64BIT) && info->type & ARM_CP_GIC) {
+    //  Encoding adjustments for GIC registers accessed from AArch32. It's very similar to AArch64.
+    if(!is_a64(env)) {
+        //  Adjustments are needed for 64-bit GIC registers accessed with AArch32 MCRR/MRRC instructions
+        //  which are only identified by op1 and crm. On AArch32 all of them have crm=12. On AArch64 all of
+        //  them have op0=3, op1=0, crn=12, crm=11. The remaining ones are:
+        //  * ICC_ASGI1R (AArch32: op1=1; AArch64: op2=6)
+        //  * ICC_SGI0R  (AArch32: op1=2; AArch64: op2=7)
+        //  * ICC_SGI1R  (AArch32: op1=0; AArch64: op2=5)
+        if(unlikely(info->type & ARM_CP_64BIT) && info->type & ARM_CP_GIC) {
             tlib_assert(crm == 12 && op1 <= 2);
             op1 = 0;
             crn = 12;
@@ -315,25 +318,25 @@ static inline uint32_t encode_gic_register(CPUState *env, const ARMCPRegInfo *in
 
 static inline uint32_t encode_aarch64_generic_timer_register(CPUState *env, const ARMCPRegInfo *info)
 {
-    // This function is used for accessing Generic Timer registers on AArch64
+    //  This function is used for accessing Generic Timer registers on AArch64
     tlib_assert(info->type & ARM_CP_64BIT && info->type & ARM_CP_GTIMER);
-    // There's no op0 in AArch32 instructions
+    //  There's no op0 in AArch32 instructions
     uint8_t op0 = !is_a64(env) ? 0x3 : info->op0;
     uint8_t op1 = info->op1;
     uint8_t crn = info->crn;
     uint8_t crm = info->crm;
     uint8_t op2 = info->op2;
 
-    // EL2 accesses to EL1 Physical/Virtual Timers (CNTP_*/CNTV_*) are redirected if HCR_EL2.E2H set.
-    if (el2_and_hcr_el2_e2h_set(env) && is_generic_timer_cntp_cntv_register(op0, op1, crn, crm, op2)) {
-        // ARMv8-A manual's rule LLSLV: in secure state redirect to Secure EL2 Physical/Virtual Timer (CNTHPS_*/CNTHVS_*).
-        // The Secure EL2 timers are added by ARMv8.4's Secure EL2 extension. It's unclear what to do in secure state
-        // without the extension so let's just make sure the extension is disabled and state isn't secure.
+    //  EL2 accesses to EL1 Physical/Virtual Timers (CNTP_*/CNTV_*) are redirected if HCR_EL2.E2H set.
+    if(el2_and_hcr_el2_e2h_set(env) && is_generic_timer_cntp_cntv_register(op0, op1, crn, crm, op2)) {
+        //  ARMv8-A manual's rule LLSLV: in secure state redirect to Secure EL2 Physical/Virtual Timer (CNTHPS_*/CNTHVS_*).
+        //  The Secure EL2 timers are added by ARMv8.4's Secure EL2 extension. It's unclear what to do in secure state
+        //  without the extension so let's just make sure the extension is disabled and state isn't secure.
         tlib_assert(!isar_feature_aa64_sel2(&env->arm_core_config.isar));
         tlib_assert(!arm_is_secure_below_el3(env));
 
-        // ARMv8-A manual's rule RZRWZ: in non-secure state redirect to Non-secure EL2 Physical/Virtual Timer (CNTHP_*/CNTHV_*).
-        // Equivalent CNTP_*->CNTHP_* and CNTV_*->CNTHV_* register opcodes only differ in op1 which is 4 instead of 3.
+        //  ARMv8-A manual's rule RZRWZ: in non-secure state redirect to Non-secure EL2 Physical/Virtual Timer (CNTHP_*/CNTHV_*).
+        //  Equivalent CNTP_*->CNTHP_* and CNTV_*->CNTHV_* register opcodes only differ in op1 which is 4 instead of 3.
         op1 = 4;
     }
     return encode_as_aarch64_register(op0, op1, crn, crm, op2);
@@ -342,30 +345,27 @@ static inline uint32_t encode_aarch64_generic_timer_register(CPUState *env, cons
 // clang-format off
 READ_FUNCTION(64, mpidr_el1, mpidr_el1_register(env))
 
-RW_FUNCTIONS(64, fpcr,  vfp_get_fpcr(env), vfp_set_fpcr(env, value))
-RW_FUNCTIONS(64, fpsr,  vfp_get_fpsr(env), vfp_set_fpsr(env, value))
+RW_FUNCTIONS(64, fpcr, vfp_get_fpcr(env), vfp_set_fpcr(env, value))
+RW_FUNCTIONS(64, fpsr, vfp_get_fpsr(env), vfp_set_fpsr(env, value))
 
 RW_FUNCTIONS(64, generic_timer_aarch64,
              tlib_read_system_register_generic_timer_64(encode_aarch64_generic_timer_register(env, info)),
              tlib_write_system_register_generic_timer_64(encode_aarch64_generic_timer_register(env, info), value))
 
-RW_FUNCTIONS(64, generic_timer_aarch32_32,
-             tlib_read_system_register_generic_timer_32(encode_as_aarch32_32bit_register(info)),
+RW_FUNCTIONS(64, generic_timer_aarch32_32, tlib_read_system_register_generic_timer_32(encode_as_aarch32_32bit_register(info)),
              tlib_write_system_register_generic_timer_32(encode_as_aarch32_32bit_register(info), value))
 
-RW_FUNCTIONS(64, generic_timer_aarch32_64,
-             tlib_read_system_register_generic_timer_64(encode_as_aarch32_64bit_register(info)),
+RW_FUNCTIONS(64, generic_timer_aarch32_64, tlib_read_system_register_generic_timer_64(encode_as_aarch32_64bit_register(info)),
              tlib_write_system_register_generic_timer_64(encode_as_aarch32_64bit_register(info), value))
 
-// Handles AArch32 and AArch64 GIC system registers
-RW_FUNCTIONS(64, interrupt_cpu_interface,
-             tlib_read_system_register_interrupt_cpu_interface(encode_gic_register(env, info)),
+//  Handles AArch32 and AArch64 GIC system registers
+RW_FUNCTIONS(64, interrupt_cpu_interface, tlib_read_system_register_interrupt_cpu_interface(encode_gic_register(env, info)),
              tlib_write_system_register_interrupt_cpu_interface(encode_gic_register(env, info), value))
 
 RW_FUNCTIONS(64, nzcv, nzcv_read(env), nzcv_write(env, value))
 
-RW_FUNCTIONS_PTR(64, cpacr_el1,     cpacr_el1_register_pointer(env))
-RW_FUNCTIONS_PTR(64, spsr_el1,      spsr_el1_register_pointer(env))
+RW_FUNCTIONS_PTR(64, cpacr_el1, cpacr_el1_register_pointer(env))
+RW_FUNCTIONS_PTR(64, spsr_el1, spsr_el1_register_pointer(env))
 
 // TODO: For all of them their EL12 mnemonic should be undefined unless E2H is set.
 RW_FUNCTIONS_EL1_ACCESSING_EL2_IF_E2H_SET(64, contextidr_el1,   env->cp15.contextidr_el)
@@ -383,8 +383,8 @@ RW_FUNCTIONS_EL1_ACCESSING_EL2_IF_E2H_SET(64, vbar_el1,         env->cp15.vbar_e
 RW_FUNCTIONS_EL1_ACCESSING_EL2_IF_E2H_SET(64, zcr_el1,          env->vfp.zcr_el)
 
 WRITE_FUNCTION(64, ats1, {
-    if (arm_feature(env, ARM_FEATURE_PMSA)) {
-        // TODO: Translate VA to IPA here
+    if(arm_feature(env, ARM_FEATURE_PMSA)) {
+        //  TODO: Translate VA to IPA here
         env->cp15.par_ns = value & TARGET_PAGE_MASK;
     } else {
         tlib_printf(LOG_LEVEL_WARNING, "%s register is only implemented for CPUs with the PMSA feature", info->name);
@@ -393,25 +393,25 @@ WRITE_FUNCTION(64, ats1, {
 
 /* PMSAv8 accessors */
 #define PRSELR_REGION_MASK 0xFF
-#define RW_FUNCTIONS_PMSAv8(width) \
-    READ_FUNCTION(width,  prbar,  get_pmsav8_region(env, BASE_ADDRESS,        env->pmsav8.prselr & PRSELR_REGION_MASK)) \
-    READ_FUNCTION(width,  prlar,  get_pmsav8_region(env, LIMIT_ADDRESS,       env->pmsav8.prselr & PRSELR_REGION_MASK)) \
-    READ_FUNCTION(width,  hprbar, get_pmsav8_region(env, HYPER_BASE_ADDRESS,  env->pmsav8.hprselr & PRSELR_REGION_MASK)) \
-    READ_FUNCTION(width,  hprlar, get_pmsav8_region(env, HYPER_LIMIT_ADDRESS, env->pmsav8.hprselr & PRSELR_REGION_MASK)) \
-    WRITE_FUNCTION(width, prbar,  set_pmsav8_region(env, BASE_ADDRESS,        env->pmsav8.prselr & PRSELR_REGION_MASK,  value)) \
-    WRITE_FUNCTION(width, prlar,  set_pmsav8_region(env, LIMIT_ADDRESS,       env->pmsav8.prselr & PRSELR_REGION_MASK,  value)) \
-    WRITE_FUNCTION(width, hprbar, set_pmsav8_region(env, HYPER_BASE_ADDRESS,  env->pmsav8.hprselr & PRSELR_REGION_MASK, value)) \
-    WRITE_FUNCTION(width, hprlar, set_pmsav8_region(env, HYPER_LIMIT_ADDRESS, env->pmsav8.hprselr & PRSELR_REGION_MASK, value))
+#define RW_FUNCTIONS_PMSAv8(width)                                                                                            \
+    READ_FUNCTION(width, prbar, get_pmsav8_region(env, BASE_ADDRESS, env->pmsav8.prselr &PRSELR_REGION_MASK))                 \
+    READ_FUNCTION(width, prlar, get_pmsav8_region(env, LIMIT_ADDRESS, env->pmsav8.prselr &PRSELR_REGION_MASK))                \
+    READ_FUNCTION(width, hprbar, get_pmsav8_region(env, HYPER_BASE_ADDRESS, env->pmsav8.hprselr &PRSELR_REGION_MASK))         \
+    READ_FUNCTION(width, hprlar, get_pmsav8_region(env, HYPER_LIMIT_ADDRESS, env->pmsav8.hprselr &PRSELR_REGION_MASK))        \
+    WRITE_FUNCTION(width, prbar, set_pmsav8_region(env, BASE_ADDRESS, env->pmsav8.prselr &PRSELR_REGION_MASK, value))         \
+    WRITE_FUNCTION(width, prlar, set_pmsav8_region(env, LIMIT_ADDRESS, env->pmsav8.prselr &PRSELR_REGION_MASK, value))        \
+    WRITE_FUNCTION(width, hprbar, set_pmsav8_region(env, HYPER_BASE_ADDRESS, env->pmsav8.hprselr &PRSELR_REGION_MASK, value)) \
+    WRITE_FUNCTION(width, hprlar, set_pmsav8_region(env, HYPER_LIMIT_ADDRESS, env->pmsav8.hprselr &PRSELR_REGION_MASK, value))
 
-#define RW_FUNCTIONS_PMSAv8_REGISTERS(width, index) \
-    READ_FUNCTION(width, prbarn ## index,   get_pmsav8_region(env, BASE_ADDRESS,        index)) \
-    READ_FUNCTION(width, prlarn ## index,   get_pmsav8_region(env, LIMIT_ADDRESS,       index)) \
-    READ_FUNCTION(width, hprbarn ## index,  get_pmsav8_region(env, HYPER_BASE_ADDRESS,  index)) \
-    READ_FUNCTION(width, hprlarn ## index,  get_pmsav8_region(env, HYPER_LIMIT_ADDRESS, index)) \
-    WRITE_FUNCTION(width, prbarn ## index,  set_pmsav8_region(env, BASE_ADDRESS,        index, value)) \
-    WRITE_FUNCTION(width, prlarn ## index,  set_pmsav8_region(env, LIMIT_ADDRESS,       index, value)) \
-    WRITE_FUNCTION(width, hprbarn ## index, set_pmsav8_region(env, HYPER_BASE_ADDRESS,  index, value)) \
-    WRITE_FUNCTION(width, hprlarn ## index, set_pmsav8_region(env, HYPER_LIMIT_ADDRESS, index, value))
+#define RW_FUNCTIONS_PMSAv8_REGISTERS(width, index)                                                 \
+    READ_FUNCTION(width, prbarn##index, get_pmsav8_region(env, BASE_ADDRESS, index))                \
+    READ_FUNCTION(width, prlarn##index, get_pmsav8_region(env, LIMIT_ADDRESS, index))               \
+    READ_FUNCTION(width, hprbarn##index, get_pmsav8_region(env, HYPER_BASE_ADDRESS, index))         \
+    READ_FUNCTION(width, hprlarn##index, get_pmsav8_region(env, HYPER_LIMIT_ADDRESS, index))        \
+    WRITE_FUNCTION(width, prbarn##index, set_pmsav8_region(env, BASE_ADDRESS, index, value))        \
+    WRITE_FUNCTION(width, prlarn##index, set_pmsav8_region(env, LIMIT_ADDRESS, index, value))       \
+    WRITE_FUNCTION(width, hprbarn##index, set_pmsav8_region(env, HYPER_BASE_ADDRESS, index, value)) \
+    WRITE_FUNCTION(width, hprlarn##index, set_pmsav8_region(env, HYPER_LIMIT_ADDRESS, index, value))
 
 RW_FUNCTIONS_PMSAv8_REGISTERS(64, 0)
 RW_FUNCTIONS_PMSAv8_REGISTERS(64, 1)
@@ -444,9 +444,8 @@ RW_FUNCTIONS(64, hprenr, hyp_pmsav8_regions_bitmask_current(env), hyp_pmsav8_reg
 
 /* PSTATE accessors */
 
-#define RW_PSTATE_FUNCTIONS(mnemonic, pstate_field)         \
-    RW_FUNCTIONS(64, mnemonic, pstate_read(env) & pstate_field, \
-        pstate_write_masked(env, value, pstate_field))
+#define RW_PSTATE_FUNCTIONS(mnemonic, pstate_field) \
+    RW_FUNCTIONS(64, mnemonic, pstate_read(env) & pstate_field, pstate_write_masked(env, value, pstate_field))
 
 RW_PSTATE_FUNCTIONS(allint, PSTATE_ALLINT)
 RW_PSTATE_FUNCTIONS(dit,    PSTATE_DIT)
@@ -1630,7 +1629,7 @@ typedef enum {
 static inline uint16_t tlbi_get_mmu_indexes_mask(CPUState *env, const ARMCPRegInfo *ri)
 {
     uint16_t el1_map, el2_map;
-    if (arm_is_secure_below_el3(env)) {
+    if(arm_is_secure_below_el3(env)) {
         el1_map = ARMMMUIdxBit_SE10_1 | ARMMMUIdxBit_SE10_1_PAN | ARMMMUIdxBit_SE10_0;
         el2_map = ARMMMUIdxBit_SE20_2 | ARMMMUIdxBit_SE20_2_PAN | ARMMMUIdxBit_SE20_0;
     } else {
@@ -1638,29 +1637,29 @@ static inline uint16_t tlbi_get_mmu_indexes_mask(CPUState *env, const ARMCPRegIn
         el2_map = ARMMMUIdxBit_E20_2 | ARMMMUIdxBit_E20_2_PAN | ARMMMUIdxBit_E20_0;
     }
 
-    // Fortunately the instruction's min. access EL matches the target EL, e.g. it's 2 for VAE2.
+    //  Fortunately the instruction's min. access EL matches the target EL, e.g. it's 2 for VAE2.
     uint32_t tlbi_target_el = ARM_CP_GET_MIN_EL(ri->type);
-    switch (tlbi_target_el) {
-    case 1:
-        return arm_is_el2_enabled(env) && are_hcr_e2h_and_tge_set(arm_hcr_el2_eff(env)) ? el2_map : el1_map;
-    case 2:
-        return el2_map;
-    case 3:
-        return ARMMMUIdxBit_SE3;
-    default:
-        tlib_assert_not_reached();
+    switch(tlbi_target_el) {
+        case 1:
+            return arm_is_el2_enabled(env) && are_hcr_e2h_and_tge_set(arm_hcr_el2_eff(env)) ? el2_map : el1_map;
+        case 2:
+            return el2_map;
+        case 3:
+            return ARMMMUIdxBit_SE3;
+        default:
+            tlib_assert_not_reached();
     }
 }
 
 TLBIShareability tlbi_get_shareability(CPUState *env, const ARMCPRegInfo *ri)
 {
-    if (strstr(ri->name, "IS") != NULL) {
+    if(strstr(ri->name, "IS") != NULL) {
         return TLBI_IS;
-    } else if (strstr(ri->name, "OS") != NULL) {
+    } else if(strstr(ri->name, "OS") != NULL) {
         return TLBI_OS;
     } else {
-        // The HCR_EL2's FB bit forces inner shareability for EL1.
-        if ((arm_current_el(env) == 1) && (arm_hcr_el2_eff(env) & HCR_FB)) {
+        //  The HCR_EL2's FB bit forces inner shareability for EL1.
+        if((arm_current_el(env) == 1) && (arm_hcr_el2_eff(env) & HCR_FB)) {
             return TLBI_IS;
         }
         return TLBI_NS;
@@ -1670,7 +1669,7 @@ TLBIShareability tlbi_get_shareability(CPUState *env, const ARMCPRegInfo *ri)
 void tlbi_print_stub_logs(CPUState *env, const ARMCPRegInfo *ri)
 {
     TLBIShareability tlbi_shareability = tlbi_get_shareability(env, ri);
-    if (tlbi_shareability != TLBI_NS) {
+    if(tlbi_shareability != TLBI_NS) {
         tlib_printf(LOG_LEVEL_DEBUG, "[%s] %s Shareable domain not implemented yet; falling back to normal variant", ri->name,
                     tlbi_shareability == TLBI_IS ? "Inner" : "Outer");
     }
@@ -1678,16 +1677,14 @@ void tlbi_print_stub_logs(CPUState *env, const ARMCPRegInfo *ri)
 
 WRITE_FUNCTION(64, ic_ialluis, helper_invalidate_dirty_addresses_shared(env))
 
-// TODO: Implement remaining TLBI instructions.
-WRITE_FUNCTION(64, tlbi_flush_all,
-{
+//  TODO: Implement remaining TLBI instructions.
+WRITE_FUNCTION(64, tlbi_flush_all, {
     tlib_printf(LOG_LEVEL_DEBUG, "[%s] Using TLBI stub, forcing full flush", info->name);
 
     tlb_flush(env, 1, true);
 })
 
-WRITE_FUNCTION(64, tlbi_va,
-{
+WRITE_FUNCTION(64, tlbi_va, {
     tlbi_print_stub_logs(env, info);
 
     uint64_t pageaddr = sextract64(value << 12, 0, 56);
@@ -1695,8 +1692,7 @@ WRITE_FUNCTION(64, tlbi_va,
     tlb_flush_page_masked(env, pageaddr, indexes_mask, true);
 })
 
-WRITE_FUNCTION(64, tlbi_vmall,
-{
+WRITE_FUNCTION(64, tlbi_vmall, {
     tlbi_print_stub_logs(env, info);
 
     uint16_t indexes_mask = tlbi_get_mmu_indexes_mask(env, info);
@@ -1916,10 +1912,10 @@ void cp_reg_add(CPUState *env, ARMCPRegInfo *reg_info)
 {
     uint32_t *key = tlib_malloc(sizeof(uint32_t));
 
-    if (arm_feature(env, ARM_FEATURE_AARCH64)) {
+    if(arm_feature(env, ARM_FEATURE_AARCH64)) {
         *key = ENCODE_AA64_CP_REG(reg_info->cp, reg_info->crn, reg_info->crm, reg_info->op0, reg_info->op1, reg_info->op2);
     } else {
-        bool ns = true; // TODO: Handle secure state banking in a correct way
+        bool ns = true;  //  TODO: Handle secure state banking in a correct way
         bool is64 = reg_info->type & ARM_CP_64BIT;
         *key = ENCODE_CP_REG(reg_info->cp, is64, ns, reg_info->crn, reg_info->crm, reg_info->op1, reg_info->op2);
     }
@@ -2192,54 +2188,55 @@ ARMCPRegInfo mpu_registers[] = {
 
 void add_implementation_defined_registers(CPUState *env, uint32_t cpu_model_id)
 {
-    switch (cpu_model_id) {
-    case ARM_CPUID_CORTEXA53:
-        cp_regs_add(env, cortex_a53_regs, ARM_CP_ARRAY_COUNT(cortex_a53_regs));
-        break;
-    case ARM_CPUID_CORTEXA55:
-        cp_regs_add(env, cortex_a55_regs, ARM_CP_ARRAY_COUNT(cortex_a55_regs));
-        break;
-    case ARM_CPUID_CORTEXA75:
-        cp_regs_add(env, cortex_a75_a76_a78_common_regs, ARM_CP_ARRAY_COUNT(cortex_a75_a76_a78_common_regs));
-        break;
-    case ARM_CPUID_CORTEXA76:
-        cp_regs_add(env, cortex_a75_a76_a78_common_regs, ARM_CP_ARRAY_COUNT(cortex_a75_a76_a78_common_regs));
-        cp_regs_add(env, cortex_a76_a78_regs, ARM_CP_ARRAY_COUNT(cortex_a76_a78_regs));
-        break;
-    case ARM_CPUID_CORTEXA78:
-        cp_regs_add(env, cortex_a75_a76_a78_common_regs, ARM_CP_ARRAY_COUNT(cortex_a75_a76_a78_common_regs));
-        cp_regs_add(env, cortex_a76_a78_regs, ARM_CP_ARRAY_COUNT(cortex_a76_a78_regs));
-        cp_regs_add(env, cortex_a78_regs, ARM_CP_ARRAY_COUNT(cortex_a78_regs));
-        break;
-    case ARM_CPUID_CORTEXR52:
-        cp_regs_add(env, cortex_r52_regs, ARM_CP_ARRAY_COUNT(cortex_r52_regs));
-        break;
-    default:
-        tlib_assert_not_reached();
+    switch(cpu_model_id) {
+        case ARM_CPUID_CORTEXA53:
+            cp_regs_add(env, cortex_a53_regs, ARM_CP_ARRAY_COUNT(cortex_a53_regs));
+            break;
+        case ARM_CPUID_CORTEXA55:
+            cp_regs_add(env, cortex_a55_regs, ARM_CP_ARRAY_COUNT(cortex_a55_regs));
+            break;
+        case ARM_CPUID_CORTEXA75:
+            cp_regs_add(env, cortex_a75_a76_a78_common_regs, ARM_CP_ARRAY_COUNT(cortex_a75_a76_a78_common_regs));
+            break;
+        case ARM_CPUID_CORTEXA76:
+            cp_regs_add(env, cortex_a75_a76_a78_common_regs, ARM_CP_ARRAY_COUNT(cortex_a75_a76_a78_common_regs));
+            cp_regs_add(env, cortex_a76_a78_regs, ARM_CP_ARRAY_COUNT(cortex_a76_a78_regs));
+            break;
+        case ARM_CPUID_CORTEXA78:
+            cp_regs_add(env, cortex_a75_a76_a78_common_regs, ARM_CP_ARRAY_COUNT(cortex_a75_a76_a78_common_regs));
+            cp_regs_add(env, cortex_a76_a78_regs, ARM_CP_ARRAY_COUNT(cortex_a76_a78_regs));
+            cp_regs_add(env, cortex_a78_regs, ARM_CP_ARRAY_COUNT(cortex_a78_regs));
+            break;
+        case ARM_CPUID_CORTEXR52:
+            cp_regs_add(env, cortex_r52_regs, ARM_CP_ARRAY_COUNT(cortex_r52_regs));
+            break;
+        default:
+            tlib_assert_not_reached();
     }
 }
 
 uint32_t get_implementation_defined_registers_count(uint32_t cpu_model_id)
 {
-    switch (cpu_model_id) {
-    case ARM_CPUID_CORTEXA53:
-        return ARM_CP_ARRAY_COUNT(cortex_a53_regs);
-    case ARM_CPUID_CORTEXA55:
-        return ARM_CP_ARRAY_COUNT(cortex_a55_regs);
-    case ARM_CPUID_CORTEXA75:
-        return ARM_CP_ARRAY_COUNT(cortex_a75_a76_a78_common_regs);
-    case ARM_CPUID_CORTEXA76:
-        return ARM_CP_ARRAY_COUNT(cortex_a75_a76_a78_common_regs) + ARM_CP_ARRAY_COUNT(cortex_a76_a78_regs);
-    case ARM_CPUID_CORTEXA78:
-        return ARM_CP_ARRAY_COUNT(cortex_a75_a76_a78_common_regs) + ARM_CP_ARRAY_COUNT(cortex_a76_a78_regs) + ARM_CP_ARRAY_COUNT(cortex_a78_regs);
-    case ARM_CPUID_CORTEXR52:
-        return ARM_CP_ARRAY_COUNT(cortex_r52_regs);
-    default:
-        tlib_assert_not_reached();
+    switch(cpu_model_id) {
+        case ARM_CPUID_CORTEXA53:
+            return ARM_CP_ARRAY_COUNT(cortex_a53_regs);
+        case ARM_CPUID_CORTEXA55:
+            return ARM_CP_ARRAY_COUNT(cortex_a55_regs);
+        case ARM_CPUID_CORTEXA75:
+            return ARM_CP_ARRAY_COUNT(cortex_a75_a76_a78_common_regs);
+        case ARM_CPUID_CORTEXA76:
+            return ARM_CP_ARRAY_COUNT(cortex_a75_a76_a78_common_regs) + ARM_CP_ARRAY_COUNT(cortex_a76_a78_regs);
+        case ARM_CPUID_CORTEXA78:
+            return ARM_CP_ARRAY_COUNT(cortex_a75_a76_a78_common_regs) + ARM_CP_ARRAY_COUNT(cortex_a76_a78_regs) +
+                   ARM_CP_ARRAY_COUNT(cortex_a78_regs);
+        case ARM_CPUID_CORTEXR52:
+            return ARM_CP_ARRAY_COUNT(cortex_r52_regs);
+        default:
+            tlib_assert_not_reached();
     }
 }
 
-// The keys are dynamically allocated so let's make TTable free them when removing the entry.
+//  The keys are dynamically allocated so let's make TTable free them when removing the entry.
 void entry_remove_callback(TTable_entry *entry)
 {
     tlib_free(entry->key);
@@ -2249,7 +2246,7 @@ void system_instructions_and_registers_init(CPUState *env, uint32_t cpu_model_id
 {
     uint32_t instructions_count, registers_count;
     ARMCPRegInfo *instructions, *registers;
-    if (arm_feature(env, ARM_FEATURE_AARCH64)) {
+    if(arm_feature(env, ARM_FEATURE_AARCH64)) {
         instructions = aarch64_instructions;
         instructions_count = ARM_CP_ARRAY_COUNT(aarch64_instructions);
         registers = aarch64_registers;
@@ -2263,7 +2260,7 @@ void system_instructions_and_registers_init(CPUState *env, uint32_t cpu_model_id
 
     uint32_t implementation_defined_registers_count = get_implementation_defined_registers_count(cpu_model_id);
     uint32_t ttable_size = instructions_count + registers_count + implementation_defined_registers_count;
-    if (arm_feature(env, ARM_FEATURE_PMSA)) {
+    if(arm_feature(env, ARM_FEATURE_PMSA)) {
         ttable_size += ARM_CP_ARRAY_COUNT(mpu_registers);
     }
     env->cp_regs = ttable_create(ttable_size, entry_remove_callback, ttable_compare_key_uint32);
@@ -2272,7 +2269,7 @@ void system_instructions_and_registers_init(CPUState *env, uint32_t cpu_model_id
     cp_regs_add(env, registers, registers_count);
     add_implementation_defined_registers(env, cpu_model_id);
 
-    if (arm_feature(env, ARM_FEATURE_PMSA)) {
+    if(arm_feature(env, ARM_FEATURE_PMSA)) {
         cp_regs_add(env, mpu_registers, ARM_CP_ARRAY_COUNT(mpu_registers));
     }
 
@@ -2284,13 +2281,13 @@ void system_instructions_and_registers_reset(CPUState *env)
     TTable *cp_regs = env->cp_regs;
 
     int i;
-    for (i = 0; i < cp_regs->count; i++) {
+    for(i = 0; i < cp_regs->count; i++) {
         ARMCPRegInfo *ri = cp_regs->entries[i].value;
 
-        // Nothing to be done for these because:
-        // * all the backing fields except the 'arm_core_config' ones are always reset to zero,
-        // * CONSTs have no backing fields and 'resetvalue' is always used when they're read.
-        if ((ri->resetvalue == 0) || (ri->type & ARM_CP_CONST)) {
+        //  Nothing to be done for these because:
+        //  * all the backing fields except the 'arm_core_config' ones are always reset to zero,
+        //  * CONSTs have no backing fields and 'resetvalue' is always used when they're read.
+        if((ri->resetvalue == 0) || (ri->type & ARM_CP_CONST)) {
             continue;
         }
 
@@ -2298,12 +2295,12 @@ void system_instructions_and_registers_reset(CPUState *env)
         uint64_t value = width == 64 ? ri->resetvalue : ri->resetvalue & UINT32_MAX;
 
         tlib_printf(LOG_LEVEL_NOISY, "Resetting value for '%s': 0x%" PRIx64, ri->name, value);
-        if (ri->fieldoffset) {
+        if(ri->fieldoffset) {
             memcpy((void *)env + ri->fieldoffset, &value, (size_t)(width / 8));
-        } else if (ri->writefn) {
+        } else if(ri->writefn) {
             ri->writefn(env, ri, value);
         } else {
-            // Shouldn't happen so let's make sure it doesn't.
+            //  Shouldn't happen so let's make sure it doesn't.
             tlib_assert_not_reached();
         }
     }

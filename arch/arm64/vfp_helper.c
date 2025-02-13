@@ -31,22 +31,22 @@ static inline int vfp_exceptbits_from_host(int host_bits)
 {
     int target_bits = 0;
 
-    if (host_bits & float_flag_invalid) {
+    if(host_bits & float_flag_invalid) {
         target_bits |= 1;
     }
-    if (host_bits & float_flag_divbyzero) {
+    if(host_bits & float_flag_divbyzero) {
         target_bits |= 2;
     }
-    if (host_bits & float_flag_overflow) {
+    if(host_bits & float_flag_overflow) {
         target_bits |= 4;
     }
-    if (host_bits & (float_flag_underflow | float_flag_output_denormal)) {
+    if(host_bits & (float_flag_underflow | float_flag_output_denormal)) {
         target_bits |= 8;
     }
-    if (host_bits & float_flag_inexact) {
+    if(host_bits & float_flag_inexact) {
         target_bits |= 0x10;
     }
-    if (host_bits & float_flag_input_denormal) {
+    if(host_bits & float_flag_input_denormal) {
         target_bits |= 0x80;
     }
     return target_bits;
@@ -57,22 +57,22 @@ static inline int vfp_exceptbits_to_host(int target_bits)
 {
     int host_bits = 0;
 
-    if (target_bits & 1) {
+    if(target_bits & 1) {
         host_bits |= float_flag_invalid;
     }
-    if (target_bits & 2) {
+    if(target_bits & 2) {
         host_bits |= float_flag_divbyzero;
     }
-    if (target_bits & 4) {
+    if(target_bits & 4) {
         host_bits |= float_flag_overflow;
     }
-    if (target_bits & 8) {
+    if(target_bits & 8) {
         host_bits |= float_flag_underflow;
     }
-    if (target_bits & 0x10) {
+    if(target_bits & 0x10) {
         host_bits |= float_flag_inexact;
     }
-    if (target_bits & 0x80) {
+    if(target_bits & 0x80) {
         host_bits |= float_flag_input_denormal;
     }
     return host_bits;
@@ -85,10 +85,8 @@ static uint32_t vfp_get_fpscr_from_host(CPUARMState *env)
     i = get_float_exception_flags(&env->vfp.fp_status);
     i |= get_float_exception_flags(&env->vfp.standard_fp_status);
     /* FZ16 does not generate an input denormal exception.  */
-    i |= (get_float_exception_flags(&env->vfp.fp_status_f16)
-          & ~float_flag_input_denormal);
-    i |= (get_float_exception_flags(&env->vfp.standard_fp_status_f16)
-          & ~float_flag_input_denormal);
+    i |= (get_float_exception_flags(&env->vfp.fp_status_f16) & ~float_flag_input_denormal);
+    i |= (get_float_exception_flags(&env->vfp.standard_fp_status_f16) & ~float_flag_input_denormal);
     return vfp_exceptbits_from_host(i);
 }
 
@@ -98,38 +96,38 @@ static void vfp_set_fpscr_to_host(CPUARMState *env, uint32_t val)
     uint32_t changed = env->vfp.xregs[ARM_VFP_FPSCR];
 
     changed ^= val;
-    if (changed & (3 << 22)) {
+    if(changed & (3 << 22)) {
         i = (val >> 22) & 3;
-        switch (i) {
-        case FPROUNDING_TIEEVEN:
-            i = float_round_nearest_even;
-            break;
-        case FPROUNDING_POSINF:
-            i = float_round_up;
-            break;
-        case FPROUNDING_NEGINF:
-            i = float_round_down;
-            break;
-        case FPROUNDING_ZERO:
-            i = float_round_to_zero;
-            break;
+        switch(i) {
+            case FPROUNDING_TIEEVEN:
+                i = float_round_nearest_even;
+                break;
+            case FPROUNDING_POSINF:
+                i = float_round_up;
+                break;
+            case FPROUNDING_NEGINF:
+                i = float_round_down;
+                break;
+            case FPROUNDING_ZERO:
+                i = float_round_to_zero;
+                break;
         }
         set_float_rounding_mode(i, &env->vfp.fp_status);
         set_float_rounding_mode(i, &env->vfp.fp_status_f16);
     }
-    if (changed & FPCR_FZ16) {
+    if(changed & FPCR_FZ16) {
         bool ftz_enabled = val & FPCR_FZ16;
         set_flush_to_zero(ftz_enabled, &env->vfp.fp_status_f16);
         set_flush_to_zero(ftz_enabled, &env->vfp.standard_fp_status_f16);
         set_flush_inputs_to_zero(ftz_enabled, &env->vfp.fp_status_f16);
         set_flush_inputs_to_zero(ftz_enabled, &env->vfp.standard_fp_status_f16);
     }
-    if (changed & FPCR_FZ) {
+    if(changed & FPCR_FZ) {
         bool ftz_enabled = val & FPCR_FZ;
         set_flush_to_zero(ftz_enabled, &env->vfp.fp_status);
         set_flush_inputs_to_zero(ftz_enabled, &env->vfp.fp_status);
     }
-    if (changed & FPCR_DN) {
+    if(changed & FPCR_DN) {
         bool dnan_enabled = val & FPCR_DN;
         set_default_nan_mode(dnan_enabled, &env->vfp.fp_status);
         set_default_nan_mode(dnan_enabled, &env->vfp.fp_status_f16);
@@ -151,9 +149,7 @@ uint32_t HELPER(vfp_get_fpscr)(CPUARMState *env)
 {
     uint32_t i, fpscr;
 
-    fpscr = env->vfp.xregs[ARM_VFP_FPSCR]
-            | (env->vfp.vec_len << 16)
-            | (env->vfp.vec_stride << 20);
+    fpscr = env->vfp.xregs[ARM_VFP_FPSCR] | (env->vfp.vec_len << 16) | (env->vfp.vec_stride << 20);
 
     /*
      * M-profile LTPSIZE overlaps A-profile Stride; whichever of the
@@ -179,13 +175,13 @@ void HELPER(vfp_set_fpscr)(CPUARMState *env, uint32_t val)
     ARMCPU *cpu = env_archcpu(env);
 
     /* When ARMv8.2-FP16 is not supported, FZ16 is RES0.  */
-    if (!cpu_isar_feature(any_fp16, cpu)) {
+    if(!cpu_isar_feature(any_fp16, cpu)) {
         val &= ~FPCR_FZ16;
     }
 
     vfp_set_fpscr_to_host(env, val);
 
-    if (!arm_feature(env, ARM_FEATURE_M)) {
+    if(!arm_feature(env, ARM_FEATURE_M)) {
         /*
          * Short-vector length and stride; on M-profile these bits
          * are used for different purposes.
@@ -196,13 +192,11 @@ void HELPER(vfp_set_fpscr)(CPUARMState *env, uint32_t val)
          */
         env->vfp.vec_len = extract32(val, 16, 3);
         env->vfp.vec_stride = extract32(val, 20, 2);
-    } else if (cpu_isar_feature(aa32_mve, cpu)) {
-        env->v7m.ltpsize = extract32(val, FPCR_LTPSIZE_SHIFT,
-                                     FPCR_LTPSIZE_LENGTH);
+    } else if(cpu_isar_feature(aa32_mve, cpu)) {
+        env->v7m.ltpsize = extract32(val, FPCR_LTPSIZE_SHIFT, FPCR_LTPSIZE_LENGTH);
     }
 
-    if (arm_feature(env, ARM_FEATURE_NEON) ||
-        cpu_isar_feature(aa32_mve, cpu)) {
+    if(arm_feature(env, ARM_FEATURE_NEON) || cpu_isar_feature(aa32_mve, cpu)) {
         /*
          * The bit we set within fpscr_q is arbitrary; the register as a
          * whole being zero/non-zero is what counts.
@@ -231,24 +225,24 @@ void vfp_set_fpscr(CPUARMState *env, uint32_t val)
     HELPER(vfp_set_fpscr)(env, val);
 }
 
-#define VFP_HELPER(name, p) HELPER(glue(glue(vfp_,name),p))
+#define VFP_HELPER(name, p) HELPER(glue(glue(vfp_, name), p))
 
-#define VFP_BINOP(name) \
-dh_ctype_f16 VFP_HELPER(name, h)(dh_ctype_f16 a, dh_ctype_f16 b, void *fpstp) \
-{ \
-    float_status *fpst = fpstp; \
-    return float16_ ## name(a, b, fpst); \
-} \
-float32 VFP_HELPER(name, s)(float32 a, float32 b, void *fpstp) \
-{ \
-    float_status *fpst = fpstp; \
-    return float32_ ## name(a, b, fpst); \
-} \
-float64 VFP_HELPER(name, d)(float64 a, float64 b, void *fpstp) \
-{ \
-    float_status *fpst = fpstp; \
-    return float64_ ## name(a, b, fpst); \
-}
+#define VFP_BINOP(name)                                                           \
+    dh_ctype_f16 VFP_HELPER(name, h)(dh_ctype_f16 a, dh_ctype_f16 b, void *fpstp) \
+    {                                                                             \
+        float_status *fpst = fpstp;                                               \
+        return float16_##name(a, b, fpst);                                        \
+    }                                                                             \
+    float32 VFP_HELPER(name, s)(float32 a, float32 b, void *fpstp)                \
+    {                                                                             \
+        float_status *fpst = fpstp;                                               \
+        return float32_##name(a, b, fpst);                                        \
+    }                                                                             \
+    float64 VFP_HELPER(name, d)(float64 a, float64 b, void *fpstp)                \
+    {                                                                             \
+        float_status *fpst = fpstp;                                               \
+        return float64_##name(a, b, fpst);                                        \
+    }
 VFP_BINOP(add)
 VFP_BINOP(sub)
 VFP_BINOP(mul)
@@ -307,84 +301,76 @@ float64 VFP_HELPER(sqrt, d)(float64 a, CPUARMState *env)
 static void softfloat_to_vfp_compare(CPUARMState *env, FloatRelation cmp)
 {
     uint32_t flags;
-    switch (cmp) {
-    case float_relation_equal:
-        flags = 0x6;
-        break;
-    case float_relation_less:
-        flags = 0x8;
-        break;
-    case float_relation_greater:
-        flags = 0x2;
-        break;
-    case float_relation_unordered:
-        flags = 0x3;
-        break;
-    default:
-        g_assert_not_reached();
+    switch(cmp) {
+        case float_relation_equal:
+            flags = 0x6;
+            break;
+        case float_relation_less:
+            flags = 0x8;
+            break;
+        case float_relation_greater:
+            flags = 0x2;
+            break;
+        case float_relation_unordered:
+            flags = 0x3;
+            break;
+        default:
+            g_assert_not_reached();
     }
-    env->vfp.xregs[ARM_VFP_FPSCR] =
-        deposit32(env->vfp.xregs[ARM_VFP_FPSCR], 28, 4, flags);
+    env->vfp.xregs[ARM_VFP_FPSCR] = deposit32(env->vfp.xregs[ARM_VFP_FPSCR], 28, 4, flags);
 }
 
 /* XXX: check quiet/signaling case */
-#define DO_VFP_cmp(P, FLOATTYPE, ARGTYPE, FPST) \
-void VFP_HELPER(cmp, P)(ARGTYPE a, ARGTYPE b, CPUARMState *env)  \
-{ \
-    softfloat_to_vfp_compare(env, \
-        FLOATTYPE ## _compare_quiet(a, b, &env->vfp.FPST)); \
-} \
-void VFP_HELPER(cmpe, P)(ARGTYPE a, ARGTYPE b, CPUARMState *env) \
-{ \
-    softfloat_to_vfp_compare(env, \
-        FLOATTYPE ## _compare(a, b, &env->vfp.FPST)); \
-}
+#define DO_VFP_cmp(P, FLOATTYPE, ARGTYPE, FPST)                                         \
+    void VFP_HELPER(cmp, P)(ARGTYPE a, ARGTYPE b, CPUARMState * env)                    \
+    {                                                                                   \
+        softfloat_to_vfp_compare(env, FLOATTYPE##_compare_quiet(a, b, &env->vfp.FPST)); \
+    }                                                                                   \
+    void VFP_HELPER(cmpe, P)(ARGTYPE a, ARGTYPE b, CPUARMState * env)                   \
+    {                                                                                   \
+        softfloat_to_vfp_compare(env, FLOATTYPE##_compare(a, b, &env->vfp.FPST));       \
+    }
 
-DO_VFP_cmp(h, float16, dh_ctype_f16, fp_status_f16)
-DO_VFP_cmp(s, float32, float32, fp_status)
-DO_VFP_cmp(d, float64, float64, fp_status)
+DO_VFP_cmp(h, float16, dh_ctype_f16, fp_status_f16) DO_VFP_cmp(s, float32, float32, fp_status)
+    DO_VFP_cmp(d, float64, float64, fp_status)
 #undef DO_VFP_cmp
 
 /* Integer to float and float to integer conversions */
 
-// TODO: Shouldn't the argument be 'int32_t x' for 'si'?
+//  TODO: Shouldn't the argument be 'int32_t x' for 'si'?
 #define CONV_ITOF(name, ftype, fsz, sign)                           \
-ftype HELPER(name)(uint32_t x, void *fpstp)                         \
-{                                                                   \
-    float_status *fpst = fpstp;                                     \
-    return sign##int32_to_##float##fsz((sign##int32_t)x, fpst);     \
-}
+    ftype HELPER(name)(uint32_t x, void *fpstp)                     \
+    {                                                               \
+        float_status *fpst = fpstp;                                 \
+        return sign##int32_to_##float##fsz((sign##int32_t)x, fpst); \
+    }
 
-#define CONV_FTOI(name, ftype, fsz, sign, round)                \
-sign##int32_t HELPER(name)(ftype x, void *fpstp)                \
-{                                                               \
-    float_status *fpst = fpstp;                                 \
-    if (float##fsz##_is_any_nan(x)) {                           \
-        float_raise(float_flag_invalid, fpst);                  \
-        return 0;                                               \
-    }                                                           \
-    return float##fsz##_to_##sign##int32##round(x, fpst);       \
-}
+#define CONV_FTOI(name, ftype, fsz, sign, round)              \
+    sign##int32_t HELPER(name)(ftype x, void *fpstp)          \
+    {                                                         \
+        float_status *fpst = fpstp;                           \
+        if(float##fsz##_is_any_nan(x)) {                      \
+            float_raise(float_flag_invalid, fpst);            \
+            return 0;                                         \
+        }                                                     \
+        return float##fsz##_to_##sign##int32##round(x, fpst); \
+    }
 
-#define FLOAT_CONVS(name, p, ftype, fsz, sign)            \
-    CONV_ITOF(vfp_##name##to##p, ftype, fsz, sign)        \
-    CONV_FTOI(vfp_to##name##p, ftype, fsz, sign, )        \
+#define FLOAT_CONVS(name, p, ftype, fsz, sign)     \
+    CONV_ITOF(vfp_##name##to##p, ftype, fsz, sign) \
+    CONV_FTOI(vfp_to##name##p, ftype, fsz, sign, ) \
     CONV_FTOI(vfp_to##name##z##p, ftype, fsz, sign, _round_to_zero)
 
-FLOAT_CONVS(si, h, uint32_t, 16, )
-FLOAT_CONVS(si, s, float32, 32, )
-FLOAT_CONVS(si, d, float64, 64, )
+        FLOAT_CONVS(si, h, uint32_t, 16, ) FLOAT_CONVS(si, s, float32, 32, ) FLOAT_CONVS(si, d, float64, 64, )
 
-FLOAT_CONVS(ui, h, uint32_t, 16, u)
-FLOAT_CONVS(ui, s, float32, 32, u)
-FLOAT_CONVS(ui, d, float64, 64, u)
+            FLOAT_CONVS(ui, h, uint32_t, 16, u) FLOAT_CONVS(ui, s, float32, 32, u) FLOAT_CONVS(ui, d, float64, 64, u)
 
 #undef CONV_ITOF
 #undef CONV_FTOI
 #undef FLOAT_CONVS
 
-/* floating point conversion */
-float64 VFP_HELPER(fcvtd, s)(float32 x, CPUARMState *env)
+    /* floating point conversion */
+    float64 VFP_HELPER(fcvtd, s)(float32 x, CPUARMState *env)
 {
     return float32_to_float64(x, &env->vfp.fp_status);
 }
@@ -413,56 +399,51 @@ uint32_t HELPER(bfcvt_pair)(uint64_t pair, void *status)
  * round-to-nearest so either helper will work.) AArch32 float-to-fix
  * must round-to-zero.
  */
-#define VFP_CONV_FIX_FLOAT(name, p, fsz, ftype, isz, itype)            \
-ftype HELPER(vfp_##name##to##p)(uint##isz##_t  x, uint32_t shift,      \
-                                     void *fpstp) \
-{ return itype##_to_##float##fsz##_scalbn(x, -shift, fpstp); }
-
-#define VFP_CONV_FIX_FLOAT_ROUND(name, p, fsz, ftype, isz, itype)      \
-    ftype HELPER(vfp_##name##to##p##_round_to_nearest)(uint##isz##_t  x, \
-                                                     uint32_t shift,   \
-                                                     void *fpstp)      \
-    {                                                                  \
-        ftype ret;                                                     \
-        float_status *fpst = fpstp;                                    \
-        FloatRoundMode oldmode = fpst->float_rounding_mode;            \
-        fpst->float_rounding_mode = float_round_nearest_even;          \
-        ret = itype##_to_##float##fsz##_scalbn(x, -shift, fpstp);      \
-        fpst->float_rounding_mode = oldmode;                           \
-        return ret;                                                    \
+#define VFP_CONV_FIX_FLOAT(name, p, fsz, ftype, isz, itype)                       \
+    ftype HELPER(vfp_##name##to##p)(uint##isz##_t x, uint32_t shift, void *fpstp) \
+    {                                                                             \
+        return itype##_to_##float##fsz##_scalbn(x, -shift, fpstp);                \
     }
 
-#define VFP_CONV_FLOAT_FIX_ROUND(name, p, fsz, ftype, isz, itype, ROUND, suff) \
-uint##isz##_t HELPER(vfp_to##name##p##suff)(ftype x, uint32_t shift,      \
-                                            void *fpst)                   \
-{                                                                         \
-    if (unlikely(float##fsz##_is_any_nan(x))) {                           \
-        float_raise(float_flag_invalid, fpst);                            \
-        return 0;                                                         \
-    }                                                                     \
-    return float##fsz##_to_##itype##_scalbn(x, ROUND, shift, fpst);       \
-}
+#define VFP_CONV_FIX_FLOAT_ROUND(name, p, fsz, ftype, isz, itype)                                    \
+    ftype HELPER(vfp_##name##to##p##_round_to_nearest)(uint##isz##_t x, uint32_t shift, void *fpstp) \
+    {                                                                                                \
+        ftype ret;                                                                                   \
+        float_status *fpst = fpstp;                                                                  \
+        FloatRoundMode oldmode = fpst->float_rounding_mode;                                          \
+        fpst->float_rounding_mode = float_round_nearest_even;                                        \
+        ret = itype##_to_##float##fsz##_scalbn(x, -shift, fpstp);                                    \
+        fpst->float_rounding_mode = oldmode;                                                         \
+        return ret;                                                                                  \
+    }
 
-// Adds such functions:
-// * vfp_<name>to<p>,
-// * vfp_<name>to<p>_round_to_nearest,
-// * vfp_to<name><p>_round_to_zero,
-// * vfp_to<name><p>
-#define VFP_CONV_FIX(name, p, fsz, ftype, isz, itype)            \
-VFP_CONV_FIX_FLOAT(name, p, fsz, ftype, isz, itype)              \
-VFP_CONV_FIX_FLOAT_ROUND(name, p, fsz, ftype, isz, itype)        \
-VFP_CONV_FLOAT_FIX_ROUND(name, p, fsz, ftype, isz, itype,        \
-                         float_round_to_zero, _round_to_zero)    \
-VFP_CONV_FLOAT_FIX_ROUND(name, p, fsz, ftype, isz, itype,        \
-                         get_float_rounding_mode(fpst), )
+#define VFP_CONV_FLOAT_FIX_ROUND(name, p, fsz, ftype, isz, itype, ROUND, suff)       \
+    uint##isz##_t HELPER(vfp_to##name##p##suff)(ftype x, uint32_t shift, void *fpst) \
+    {                                                                                \
+        if(unlikely(float##fsz##_is_any_nan(x))) {                                   \
+            float_raise(float_flag_invalid, fpst);                                   \
+            return 0;                                                                \
+        }                                                                            \
+        return float##fsz##_to_##itype##_scalbn(x, ROUND, shift, fpst);              \
+    }
 
-// Adds such functions:
-// * vfp_<name>to<p>,
-// * vfp_to<name><p>
-#define VFP_CONV_FIX_A64(name, p, fsz, ftype, isz, itype)        \
-VFP_CONV_FIX_FLOAT(name, p, fsz, ftype, isz, itype)              \
-VFP_CONV_FLOAT_FIX_ROUND(name, p, fsz, ftype, isz, itype,        \
-                         get_float_rounding_mode(fpst), )
+//  Adds such functions:
+//  * vfp_<name>to<p>,
+//  * vfp_<name>to<p>_round_to_nearest,
+//  * vfp_to<name><p>_round_to_zero,
+//  * vfp_to<name><p>
+#define VFP_CONV_FIX(name, p, fsz, ftype, isz, itype)                                              \
+    VFP_CONV_FIX_FLOAT(name, p, fsz, ftype, isz, itype)                                            \
+    VFP_CONV_FIX_FLOAT_ROUND(name, p, fsz, ftype, isz, itype)                                      \
+    VFP_CONV_FLOAT_FIX_ROUND(name, p, fsz, ftype, isz, itype, float_round_to_zero, _round_to_zero) \
+    VFP_CONV_FLOAT_FIX_ROUND(name, p, fsz, ftype, isz, itype, get_float_rounding_mode(fpst), )
+
+//  Adds such functions:
+//  * vfp_<name>to<p>,
+//  * vfp_to<name><p>
+#define VFP_CONV_FIX_A64(name, p, fsz, ftype, isz, itype) \
+    VFP_CONV_FIX_FLOAT(name, p, fsz, ftype, isz, itype)   \
+    VFP_CONV_FLOAT_FIX_ROUND(name, p, fsz, ftype, isz, itype, get_float_rounding_mode(fpst), )
 
 VFP_CONV_FIX(sh, d, 64, float64, 64, int16)
 VFP_CONV_FIX(sl, d, 64, float64, 64, int32)
@@ -560,8 +541,8 @@ uint32_t HELPER(vfp_fcvt_f64_to_f16)(float64 a, void *fpstp, uint32_t ahp_mode)
 
 /* Constants 256 and 512 are used in some helpers; we avoid relying on
  * int->float conversions at run-time.  */
-#define float64_256 make_float64(0x4070000000000000LL)
-#define float64_512 make_float64(0x4080000000000000LL)
+#define float64_256     make_float64(0x4070000000000000LL)
+#define float64_512     make_float64(0x4080000000000000LL)
 #define float16_maxnorm make_float16(0x7bff)
 #define float32_maxnorm make_float32(0x7f7fffff)
 #define float64_maxnorm make_float64(0x7fefffffffffffffLL)
@@ -606,8 +587,8 @@ static uint64_t call_recip_estimate(int *exp, int exp_off, uint64_t frac)
     int result_exp;
 
     /* Handle sub-normals */
-    if (*exp == 0) {
-        if (extract64(frac, 51, 1) == 0) {
+    if(*exp == 0) {
+        if(extract64(frac, 51, 1) == 0) {
             *exp = -1;
             frac <<= 2;
         } else {
@@ -621,9 +602,9 @@ static uint64_t call_recip_estimate(int *exp, int exp_off, uint64_t frac)
 
     result_exp = exp_off - *exp;
     result_frac = deposit64(0, 44, 8, estimate);
-    if (result_exp == 0) {
+    if(result_exp == 0) {
         result_frac = deposit64(result_frac >> 1, 51, 1, 1);
-    } else if (result_exp == -1) {
+    } else if(result_exp == -1) {
         result_frac = deposit64(result_frac >> 2, 50, 2, 1);
         result_exp = 0;
     }
@@ -635,17 +616,17 @@ static uint64_t call_recip_estimate(int *exp, int exp_off, uint64_t frac)
 
 static bool round_to_inf(float_status *fpst, bool sign_bit)
 {
-    switch (fpst->float_rounding_mode) {
-    case float_round_nearest_even: /* Round to Nearest */
-        return true;
-    case float_round_up: /* Round to +Inf */
-        return !sign_bit;
-    case float_round_down: /* Round to -Inf */
-        return sign_bit;
-    case float_round_to_zero: /* Round to Zero */
-        return false;
-    default:
-        g_assert_not_reached();
+    switch(fpst->float_rounding_mode) {
+        case float_round_nearest_even: /* Round to Nearest */
+            return true;
+        case float_round_up: /* Round to +Inf */
+            return !sign_bit;
+        case float_round_down: /* Round to -Inf */
+            return sign_bit;
+        case float_round_to_zero: /* Round to Zero */
+            return false;
+        default:
+            g_assert_not_reached();
     }
 }
 
@@ -659,38 +640,37 @@ uint32_t HELPER(recpe_f16)(uint32_t input, void *fpstp)
     uint32_t f16_frac = extract32(f16_val, 0, 10);
     uint64_t f64_frac;
 
-    if (float16_is_any_nan(f16)) {
+    if(float16_is_any_nan(f16)) {
         float16 nan = f16;
-        if (float16_is_signaling_nan(f16, fpst)) {
+        if(float16_is_signaling_nan(f16, fpst)) {
             float_raise(float_flag_invalid, fpst);
-            if (!fpst->default_nan_mode) {
+            if(!fpst->default_nan_mode) {
                 nan = float16_silence_nan(f16, fpst);
             }
         }
-        if (fpst->default_nan_mode) {
-            nan =  float16_default_nan(fpst);
+        if(fpst->default_nan_mode) {
+            nan = float16_default_nan(fpst);
         }
         return nan;
-    } else if (float16_is_infinity(f16)) {
+    } else if(float16_is_infinity(f16)) {
         return float16_set_sign(float16_zero, float16_is_neg(f16));
-    } else if (float16_is_zero(f16)) {
+    } else if(float16_is_zero(f16)) {
         float_raise(float_flag_divbyzero, fpst);
         return float16_set_sign(float16_infinity, float16_is_neg(f16));
-    } else if (float16_abs(f16) < (1 << 8)) {
+    } else if(float16_abs(f16) < (1 << 8)) {
         /* Abs(value) < 2.0^-16 */
         float_raise(float_flag_overflow | float_flag_inexact, fpst);
-        if (round_to_inf(fpst, f16_sign)) {
+        if(round_to_inf(fpst, f16_sign)) {
             return float16_set_sign(float16_infinity, f16_sign);
         } else {
             return float16_set_sign(float16_maxnorm, f16_sign);
         }
-    } else if (f16_exp >= 29 && fpst->flush_to_zero) {
+    } else if(f16_exp >= 29 && fpst->flush_to_zero) {
         float_raise(float_flag_underflow, fpst);
         return float16_set_sign(float16_zero, float16_is_neg(f16));
     }
 
-    f64_frac = call_recip_estimate(&f16_exp, 29,
-                                   ((uint64_t) f16_frac) << (52 - 10));
+    f64_frac = call_recip_estimate(&f16_exp, 29, ((uint64_t)f16_frac) << (52 - 10));
 
     /* result = sign : result_exp<4:0> : fraction<51:42> */
     f16_val = deposit32(0, 15, 1, f16_sign);
@@ -709,38 +689,37 @@ float32 HELPER(recpe_f32)(float32 input, void *fpstp)
     uint32_t f32_frac = extract32(f32_val, 0, 23);
     uint64_t f64_frac;
 
-    if (float32_is_any_nan(f32)) {
+    if(float32_is_any_nan(f32)) {
         float32 nan = f32;
-        if (float32_is_signaling_nan(f32, fpst)) {
+        if(float32_is_signaling_nan(f32, fpst)) {
             float_raise(float_flag_invalid, fpst);
-            if (!fpst->default_nan_mode) {
+            if(!fpst->default_nan_mode) {
                 nan = float32_silence_nan(f32, fpst);
             }
         }
-        if (fpst->default_nan_mode) {
-            nan =  float32_default_nan(fpst);
+        if(fpst->default_nan_mode) {
+            nan = float32_default_nan(fpst);
         }
         return nan;
-    } else if (float32_is_infinity(f32)) {
+    } else if(float32_is_infinity(f32)) {
         return float32_set_sign(float32_zero, float32_is_neg(f32));
-    } else if (float32_is_zero(f32)) {
+    } else if(float32_is_zero(f32)) {
         float_raise(float_flag_divbyzero, fpst);
         return float32_set_sign(float32_infinity, float32_is_neg(f32));
-    } else if (float32_abs(f32) < (1ULL << 21)) {
+    } else if(float32_abs(f32) < (1ULL << 21)) {
         /* Abs(value) < 2.0^-128 */
         float_raise(float_flag_overflow | float_flag_inexact, fpst);
-        if (round_to_inf(fpst, f32_sign)) {
+        if(round_to_inf(fpst, f32_sign)) {
             return float32_set_sign(float32_infinity, f32_sign);
         } else {
             return float32_set_sign(float32_maxnorm, f32_sign);
         }
-    } else if (f32_exp >= 253 && fpst->flush_to_zero) {
+    } else if(f32_exp >= 253 && fpst->flush_to_zero) {
         float_raise(float_flag_underflow, fpst);
         return float32_set_sign(float32_zero, float32_is_neg(f32));
     }
 
-    f64_frac = call_recip_estimate(&f32_exp, 253,
-                                   ((uint64_t) f32_frac) << (52 - 23));
+    f64_frac = call_recip_estimate(&f32_exp, 253, ((uint64_t)f32_frac) << (52 - 23));
 
     /* result = sign : result_exp<7:0> : fraction<51:29> */
     f32_val = deposit32(0, 31, 1, f32_sign);
@@ -759,32 +738,32 @@ float64 HELPER(recpe_f64)(float64 input, void *fpstp)
     uint64_t f64_frac = extract64(f64_val, 0, 52);
 
     /* Deal with any special cases */
-    if (float64_is_any_nan(f64)) {
+    if(float64_is_any_nan(f64)) {
         float64 nan = f64;
-        if (float64_is_signaling_nan(f64, fpst)) {
+        if(float64_is_signaling_nan(f64, fpst)) {
             float_raise(float_flag_invalid, fpst);
-            if (!fpst->default_nan_mode) {
+            if(!fpst->default_nan_mode) {
                 nan = float64_silence_nan(f64, fpst);
             }
         }
-        if (fpst->default_nan_mode) {
-            nan =  float64_default_nan(fpst);
+        if(fpst->default_nan_mode) {
+            nan = float64_default_nan(fpst);
         }
         return nan;
-    } else if (float64_is_infinity(f64)) {
+    } else if(float64_is_infinity(f64)) {
         return float64_set_sign(float64_zero, float64_is_neg(f64));
-    } else if (float64_is_zero(f64)) {
+    } else if(float64_is_zero(f64)) {
         float_raise(float_flag_divbyzero, fpst);
         return float64_set_sign(float64_infinity, float64_is_neg(f64));
-    } else if ((f64_val & ~(1ULL << 63)) < (1ULL << 50)) {
+    } else if((f64_val & ~(1ULL << 63)) < (1ULL << 50)) {
         /* Abs(value) < 2.0^-1024 */
         float_raise(float_flag_overflow | float_flag_inexact, fpst);
-        if (round_to_inf(fpst, f64_sign)) {
+        if(round_to_inf(fpst, f64_sign)) {
             return float64_set_sign(float64_infinity, f64_sign);
         } else {
             return float64_set_sign(float64_maxnorm, f64_sign);
         }
-    } else if (f64_exp >= 2045 && fpst->flush_to_zero) {
+    } else if(f64_exp >= 2045 && fpst->flush_to_zero) {
         float_raise(float_flag_underflow, fpst);
         return float64_set_sign(float64_zero, float64_is_neg(f64));
     }
@@ -807,14 +786,14 @@ static int do_recip_sqrt_estimate(int a)
     int b, estimate;
 
     tlib_assert(128 <= a && a < 512);
-    if (a < 256) {
+    if(a < 256) {
         a = a * 2 + 1;
     } else {
         a = (a >> 1) << 1;
         a = (a + 1) * 2;
     }
     b = 512;
-    while (a * (b + 1) * (b + 1) < (1 << 28)) {
+    while(a * (b + 1) * (b + 1) < (1 << 28)) {
         b += 1;
     }
     estimate = (b + 1) / 2;
@@ -823,21 +802,20 @@ static int do_recip_sqrt_estimate(int a)
     return estimate;
 }
 
-
-static uint64_t recip_sqrt_estimate(int *exp , int exp_off, uint64_t frac)
+static uint64_t recip_sqrt_estimate(int *exp, int exp_off, uint64_t frac)
 {
     int estimate;
     uint32_t scaled;
 
-    if (*exp == 0) {
-        while (extract64(frac, 51, 1) == 0) {
+    if(*exp == 0) {
+        while(extract64(frac, 51, 1) == 0) {
             frac = frac << 1;
             *exp -= 1;
         }
         frac = extract64(frac, 0, 51) << 1;
     }
 
-    if (*exp & 1) {
+    if(*exp & 1) {
         /* scaled = UInt('01':fraction<51:45>) */
         scaled = deposit32(1 << 7, 0, 7, extract64(frac, 45, 7));
     } else {
@@ -860,32 +838,32 @@ uint32_t HELPER(rsqrte_f16)(uint32_t input, void *fpstp)
     uint16_t f16_frac = extract32(val, 0, 10);
     uint64_t f64_frac;
 
-    if (float16_is_any_nan(f16)) {
+    if(float16_is_any_nan(f16)) {
         float16 nan = f16;
-        if (float16_is_signaling_nan(f16, s)) {
+        if(float16_is_signaling_nan(f16, s)) {
             float_raise(float_flag_invalid, s);
-            if (!s->default_nan_mode) {
+            if(!s->default_nan_mode) {
                 nan = float16_silence_nan(f16, fpstp);
             }
         }
-        if (s->default_nan_mode) {
-            nan =  float16_default_nan(s);
+        if(s->default_nan_mode) {
+            nan = float16_default_nan(s);
         }
         return nan;
-    } else if (float16_is_zero(f16)) {
+    } else if(float16_is_zero(f16)) {
         float_raise(float_flag_divbyzero, s);
         return float16_set_sign(float16_infinity, f16_sign);
-    } else if (f16_sign) {
+    } else if(f16_sign) {
         float_raise(float_flag_invalid, s);
         return float16_default_nan(s);
-    } else if (float16_is_infinity(f16)) {
+    } else if(float16_is_infinity(f16)) {
         return float16_zero;
     }
 
     /* Scale and normalize to a double-precision value between 0.25 and 1.0,
      * preserving the parity of the exponent.  */
 
-    f64_frac = ((uint64_t) f16_frac) << (52 - 10);
+    f64_frac = ((uint64_t)f16_frac) << (52 - 10);
 
     f64_frac = recip_sqrt_estimate(&f16_exp, 44, f64_frac);
 
@@ -906,32 +884,32 @@ float32 HELPER(rsqrte_f32)(float32 input, void *fpstp)
     uint32_t f32_frac = extract32(val, 0, 23);
     uint64_t f64_frac;
 
-    if (float32_is_any_nan(f32)) {
+    if(float32_is_any_nan(f32)) {
         float32 nan = f32;
-        if (float32_is_signaling_nan(f32, s)) {
+        if(float32_is_signaling_nan(f32, s)) {
             float_raise(float_flag_invalid, s);
-            if (!s->default_nan_mode) {
+            if(!s->default_nan_mode) {
                 nan = float32_silence_nan(f32, fpstp);
             }
         }
-        if (s->default_nan_mode) {
-            nan =  float32_default_nan(s);
+        if(s->default_nan_mode) {
+            nan = float32_default_nan(s);
         }
         return nan;
-    } else if (float32_is_zero(f32)) {
+    } else if(float32_is_zero(f32)) {
         float_raise(float_flag_divbyzero, s);
         return float32_set_sign(float32_infinity, float32_is_neg(f32));
-    } else if (float32_is_neg(f32)) {
+    } else if(float32_is_neg(f32)) {
         float_raise(float_flag_invalid, s);
         return float32_default_nan(s);
-    } else if (float32_is_infinity(f32)) {
+    } else if(float32_is_infinity(f32)) {
         return float32_zero;
     }
 
     /* Scale and normalize to a double-precision value between 0.25 and 1.0,
      * preserving the parity of the exponent.  */
 
-    f64_frac = ((uint64_t) f32_frac) << 29;
+    f64_frac = ((uint64_t)f32_frac) << 29;
 
     f64_frac = recip_sqrt_estimate(&f32_exp, 380, f64_frac);
 
@@ -951,25 +929,25 @@ float64 HELPER(rsqrte_f64)(float64 input, void *fpstp)
     int f64_exp = extract64(val, 52, 11);
     uint64_t f64_frac = extract64(val, 0, 52);
 
-    if (float64_is_any_nan(f64)) {
+    if(float64_is_any_nan(f64)) {
         float64 nan = f64;
-        if (float64_is_signaling_nan(f64, s)) {
+        if(float64_is_signaling_nan(f64, s)) {
             float_raise(float_flag_invalid, s);
-            if (!s->default_nan_mode) {
+            if(!s->default_nan_mode) {
                 nan = float64_silence_nan(f64, fpstp);
             }
         }
-        if (s->default_nan_mode) {
-            nan =  float64_default_nan(s);
+        if(s->default_nan_mode) {
+            nan = float64_default_nan(s);
         }
         return nan;
-    } else if (float64_is_zero(f64)) {
+    } else if(float64_is_zero(f64)) {
         float_raise(float_flag_divbyzero, s);
         return float64_set_sign(float64_infinity, float64_is_neg(f64));
-    } else if (float64_is_neg(f64)) {
+    } else if(float64_is_neg(f64)) {
         float_raise(float_flag_invalid, s);
         return float64_default_nan(s);
-    } else if (float64_is_infinity(f64)) {
+    } else if(float64_is_infinity(f64)) {
         return float64_zero;
     }
 
@@ -986,7 +964,7 @@ uint32_t HELPER(recpe_u32)(uint32_t a)
 {
     int input, estimate;
 
-    if ((a & 0x80000000) == 0) {
+    if((a & 0x80000000) == 0) {
         return 0xffffffff;
     }
 
@@ -1000,7 +978,7 @@ uint32_t HELPER(rsqrte_u32)(uint32_t a)
 {
     int estimate;
 
-    if ((a & 0xc0000000) == 0) {
+    if((a & 0xc0000000) == 0) {
         return 0xffffffff;
     }
 
@@ -1010,8 +988,7 @@ uint32_t HELPER(rsqrte_u32)(uint32_t a)
 }
 
 /* VFPv4 fused multiply-accumulate */
-dh_ctype_f16 VFP_HELPER(muladd, h)(dh_ctype_f16 a, dh_ctype_f16 b,
-                                   dh_ctype_f16 c, void *fpstp)
+dh_ctype_f16 VFP_HELPER(muladd, h)(dh_ctype_f16 a, dh_ctype_f16 b, dh_ctype_f16 c, void *fpstp)
 {
     float_status *fpst = fpstp;
     return float16_muladd(a, b, c, 0, fpst);
@@ -1053,7 +1030,7 @@ dh_ctype_f16 HELPER(rinth)(dh_ctype_f16 x, void *fp_status)
     ret = float16_round_to_int(x, fp_status);
 
     /* Suppress any inexact exceptions the conversion produced */
-    if (!(old_flags & float_flag_inexact)) {
+    if(!(old_flags & float_flag_inexact)) {
         new_flags = get_float_exception_flags(fp_status);
         set_float_exception_flags(new_flags & ~float_flag_inexact, fp_status);
     }
@@ -1069,7 +1046,7 @@ float32 HELPER(rints)(float32 x, void *fp_status)
     ret = float32_round_to_int(x, fp_status);
 
     /* Suppress any inexact exceptions the conversion produced */
-    if (!(old_flags & float_flag_inexact)) {
+    if(!(old_flags & float_flag_inexact)) {
         new_flags = get_float_exception_flags(fp_status);
         set_float_exception_flags(new_flags & ~float_flag_inexact, fp_status);
     }
@@ -1087,7 +1064,7 @@ float64 HELPER(rintd)(float64 x, void *fp_status)
     new_flags = get_float_exception_flags(fp_status);
 
     /* Suppress any inexact exceptions the conversion produced */
-    if (!(old_flags & float_flag_inexact)) {
+    if(!(old_flags & float_flag_inexact)) {
         new_flags = get_float_exception_flags(fp_status);
         set_float_exception_flags(new_flags & ~float_flag_inexact, fp_status);
     }
@@ -1098,29 +1075,28 @@ float64 HELPER(rintd)(float64 x, void *fp_status)
 /* Convert ARM rounding mode to softfloat */
 int arm_rmode_to_sf(int rmode)
 {
-    switch (rmode) {
-    case FPROUNDING_TIEAWAY:
-        rmode = float_round_ties_away;
-        break;
-    case FPROUNDING_ODD:
-        /* FIXME: add support for ODD */
-        tlib_printf(LOG_LEVEL_WARNING, "arm: unimplemented rounding mode: %d",
-                      rmode);
-        /* fall through for now */
-        __attribute__((fallthrough));
-    case FPROUNDING_TIEEVEN:
-    default:
-        rmode = float_round_nearest_even;
-        break;
-    case FPROUNDING_POSINF:
-        rmode = float_round_up;
-        break;
-    case FPROUNDING_NEGINF:
-        rmode = float_round_down;
-        break;
-    case FPROUNDING_ZERO:
-        rmode = float_round_to_zero;
-        break;
+    switch(rmode) {
+        case FPROUNDING_TIEAWAY:
+            rmode = float_round_ties_away;
+            break;
+        case FPROUNDING_ODD:
+            /* FIXME: add support for ODD */
+            tlib_printf(LOG_LEVEL_WARNING, "arm: unimplemented rounding mode: %d", rmode);
+            /* fall through for now */
+            __attribute__((fallthrough));
+        case FPROUNDING_TIEEVEN:
+        default:
+            rmode = float_round_nearest_even;
+            break;
+        case FPROUNDING_POSINF:
+            rmode = float_round_up;
+            break;
+        case FPROUNDING_NEGINF:
+            rmode = float_round_down;
+            break;
+        case FPROUNDING_ZERO:
+            rmode = float_round_to_zero;
+            break;
     }
     return rmode;
 }
@@ -1140,11 +1116,11 @@ uint64_t HELPER(fjcvtzs)(float64 value, void *vstatus)
     exp = extract64(value, 52, 11);
     frac = extract64(value, 0, 52);
 
-    if (exp == 0) {
+    if(exp == 0) {
         /* While not inexact for IEEE FP, -0.0 is inexact for JavaScript.  */
         inexact = sign;
-        if (frac != 0) {
-            if (status->flush_inputs_to_zero) {
+        if(frac != 0) {
+            if(status->flush_inputs_to_zero) {
                 float_raise(float_flag_input_denormal, status);
             } else {
                 float_raise(float_flag_inexact, status);
@@ -1152,7 +1128,7 @@ uint64_t HELPER(fjcvtzs)(float64 value, void *vstatus)
             }
         }
         frac = 0;
-    } else if (exp == 0x7ff) {
+    } else if(exp == 0x7ff) {
         /* This operation raises Invalid for both NaN and overflow (Inf).  */
         float_raise(float_flag_invalid, status);
         frac = 0;
@@ -1164,15 +1140,15 @@ uint64_t HELPER(fjcvtzs)(float64 value, void *vstatus)
         frac |= 1ull << 52;
 
         /* Shift the fraction into place.  */
-        if (shift >= 0) {
+        if(shift >= 0) {
             /* The number is so large we must shift the fraction left.  */
-            if (shift >= 64) {
+            if(shift >= 64) {
                 /* The fraction is shifted out entirely.  */
                 frac = 0;
             } else {
                 frac <<= shift;
             }
-        } else if (shift > -64) {
+        } else if(shift > -64) {
             /* Normal case -- shift right and notice if bits shift out.  */
             inexact = (frac << (64 + shift)) != 0;
             frac >>= -shift;
@@ -1182,16 +1158,16 @@ uint64_t HELPER(fjcvtzs)(float64 value, void *vstatus)
         }
 
         /* Notice overflow or inexact exceptions.  */
-        if (true_exp > 31 || frac > (sign ? 0x80000000ull : 0x7fffffff)) {
+        if(true_exp > 31 || frac > (sign ? 0x80000000ull : 0x7fffffff)) {
             /* Overflow, for which this operation raises invalid.  */
             float_raise(float_flag_invalid, status);
             inexact = 1;
-        } else if (inexact) {
+        } else if(inexact) {
             float_raise(float_flag_inexact, status);
         }
 
         /* Honor the sign.  */
-        if (sign) {
+        if(sign) {
             frac = -frac;
         }
     }
@@ -1207,8 +1183,7 @@ uint32_t HELPER(vjcvt)(float64 value, CPUARMState *env)
     uint32_t z = (pair >> 32) == 0;
 
     /* Store Z, clear NCV, in FPSCR.NZCV.  */
-    env->vfp.xregs[ARM_VFP_FPSCR]
-        = (env->vfp.xregs[ARM_VFP_FPSCR] & ~CPSR_NZCV) | (z * CPSR_Z);
+    env->vfp.xregs[ARM_VFP_FPSCR] = (env->vfp.xregs[ARM_VFP_FPSCR] & ~CPSR_NZCV) | (z * CPSR_Z);
 
     return result;
 }
@@ -1219,7 +1194,7 @@ static float32 frint_s(float32 f, float_status *fpst, int intsize)
     int old_flags = get_float_exception_flags(fpst);
     uint32_t exp = extract32(f, 23, 8);
 
-    if (unlikely(exp == 0xff)) {
+    if(unlikely(exp == 0xff)) {
         /* NaN or Inf.  */
         goto overflow;
     }
@@ -1229,20 +1204,20 @@ static float32 frint_s(float32 f, float_status *fpst, int intsize)
     exp = extract32(f, 23, 8);
 
     /* Validate the range of the result.  */
-    if (exp < 126 + intsize) {
+    if(exp < 126 + intsize) {
         /* abs(F) <= INT{N}_MAX */
         return f;
     }
-    if (exp == 126 + intsize) {
+    if(exp == 126 + intsize) {
         uint32_t sign = extract32(f, 31, 1);
         uint32_t frac = extract32(f, 0, 23);
-        if (sign && frac == 0) {
+        if(sign && frac == 0) {
             /* F == INT{N}_MIN */
             return f;
         }
     }
 
- overflow:
+overflow:
     /*
      * Raise Invalid and return INT{N}_MIN as a float.  Revert any
      * inexact exception float32_round_to_int may have raised.
@@ -1267,7 +1242,7 @@ static float64 frint_d(float64 f, float_status *fpst, int intsize)
     int old_flags = get_float_exception_flags(fpst);
     uint32_t exp = extract64(f, 52, 11);
 
-    if (unlikely(exp == 0x7ff)) {
+    if(unlikely(exp == 0x7ff)) {
         /* NaN or Inf.  */
         goto overflow;
     }
@@ -1277,20 +1252,20 @@ static float64 frint_d(float64 f, float_status *fpst, int intsize)
     exp = extract64(f, 52, 11);
 
     /* Validate the range of the result.  */
-    if (exp < 1022 + intsize) {
+    if(exp < 1022 + intsize) {
         /* abs(F) <= INT{N}_MAX */
         return f;
     }
-    if (exp == 1022 + intsize) {
+    if(exp == 1022 + intsize) {
         uint64_t sign = extract64(f, 63, 1);
         uint64_t frac = extract64(f, 0, 52);
-        if (sign && frac == 0) {
+        if(sign && frac == 0) {
             /* F == INT{N}_MIN */
             return f;
         }
     }
 
- overflow:
+overflow:
     /*
      * Raise Invalid and return INT{N}_MIN as a float.  Revert any
      * inexact exception float64_round_to_int may have raised.
@@ -1313,27 +1288,25 @@ void HELPER(check_hcr_el2_trap)(CPUARMState *env, uint32_t rt, uint32_t reg)
 {
     uint32_t syndrome;
 
-    switch (reg) {
-    case ARM_VFP_MVFR0:
-    case ARM_VFP_MVFR1:
-    case ARM_VFP_MVFR2:
-        if (!(arm_hcr_el2_eff(env) & HCR_TID3)) {
-            return;
-        }
-        break;
-    case ARM_VFP_FPSID:
-        if (!(arm_hcr_el2_eff(env) & HCR_TID0)) {
-            return;
-        }
-        break;
-    default:
-        g_assert_not_reached();
+    switch(reg) {
+        case ARM_VFP_MVFR0:
+        case ARM_VFP_MVFR1:
+        case ARM_VFP_MVFR2:
+            if(!(arm_hcr_el2_eff(env) & HCR_TID3)) {
+                return;
+            }
+            break;
+        case ARM_VFP_FPSID:
+            if(!(arm_hcr_el2_eff(env) & HCR_TID0)) {
+                return;
+            }
+            break;
+        default:
+            g_assert_not_reached();
     }
 
-    syndrome = ((SYN_EC_TRAPPED_VMRS << SYN_EC_SHIFT)
-                | SYN_IL
-                | (1 << 24) | (0xe << 20) | (7 << 14)
-                | (reg << 10) | (rt << 5) | 1);
+    syndrome =
+        ((SYN_EC_TRAPPED_VMRS << SYN_EC_SHIFT) | SYN_IL | (1 << 24) | (0xe << 20) | (7 << 14) | (reg << 10) | (rt << 5) | 1);
 
     raise_exception(env, EXCP_HYP_TRAP, syndrome, 2);
 }

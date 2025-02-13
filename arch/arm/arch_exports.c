@@ -25,7 +25,7 @@
 #include "bit_helper.h"
 #include "host-utils.h"
 
-// This is an id representing processor's model (not registration id, and neither SMP id)
+//  This is an id representing processor's model (not registration id, and neither SMP id)
 uint32_t tlib_get_cpu_model_id()
 {
     return cpu->cp15.c0_cpuid;
@@ -46,42 +46,42 @@ uint32_t tlib_evaluate_condition_code(uint32_t condition)
     uint8_t NF = (env->NF & 0x80000000) > 0;
     uint8_t CF = (env->CF == 1);
     uint8_t VF = (env->VF & 0x80000000) > 0;
-    switch (condition) {
-    case 0b0000:        //EQ
-        return ZF == 1;
-    case 0b0001:        //NE
-        return ZF == 0;
-    case 0b0010:        //CS
-        return CF == 1;
-    case 0b0011:        //CC
-        return CF == 0;
-    case 0b0100:        //MI
-        return NF == 1;
-    case 0b0101:        //PL
-        return NF == 0;
-    case 0b0110:        //VS
-        return VF == 1;
-    case 0b0111:        //VC
-        return VF == 0;
-    case 0b1000:        //HI
-        return CF == 1 && ZF == 0;
-    case 0b1001:        //LS
-        return CF == 0 || ZF == 1;
-    case 0b1010:        //GE
-        return NF == VF;
-    case 0b1011:        //LT
-        return NF != VF;
-    case 0b1100:        //GT
-        return ZF == 0 && NF == VF;
-    case 0b1101:        //LE
-        return ZF == 1 || NF != VF;
-    case 0b1110:        //AL
-        return 1;
-    case 0b1111:        //NV
-        return 0;
-    default:
-        tlib_printf(LOG_LEVEL_ERROR, "trying to evaluate incorrect condition code (0x%x)", condition);
-        return 0;
+    switch(condition) {
+        case 0b0000:  //  EQ
+            return ZF == 1;
+        case 0b0001:  //  NE
+            return ZF == 0;
+        case 0b0010:  //  CS
+            return CF == 1;
+        case 0b0011:  //  CC
+            return CF == 0;
+        case 0b0100:  //  MI
+            return NF == 1;
+        case 0b0101:  //  PL
+            return NF == 0;
+        case 0b0110:  //  VS
+            return VF == 1;
+        case 0b0111:  //  VC
+            return VF == 0;
+        case 0b1000:  //  HI
+            return CF == 1 && ZF == 0;
+        case 0b1001:  //  LS
+            return CF == 0 || ZF == 1;
+        case 0b1010:  //  GE
+            return NF == VF;
+        case 0b1011:  //  LT
+            return NF != VF;
+        case 0b1100:  //  GT
+            return ZF == 0 && NF == VF;
+        case 0b1101:  //  LE
+            return ZF == 1 || NF != VF;
+        case 0b1110:  //  AL
+            return 1;
+        case 0b1111:  //  NV
+            return 0;
+        default:
+            tlib_printf(LOG_LEVEL_ERROR, "trying to evaluate incorrect condition code (0x%x)", condition);
+            return 0;
     }
 }
 
@@ -96,7 +96,7 @@ EXC_VOID_1(tlib_set_cpu_model_id, uint32_t, value)
 
 void tlib_toggle_fpu(int32_t enabled)
 {
-    if (enabled) {
+    if(enabled) {
         cpu->vfp.xregs[ARM_VFP_FPEXC] |= ARM_VFP_FPEXC_FPUEN_MASK;
     } else {
         cpu->vfp.xregs[ARM_VFP_FPEXC] &= ~ARM_VFP_FPEXC_FPUEN_MASK;
@@ -128,7 +128,7 @@ EXC_VOID_1(tlib_set_thumb, int, value)
 
 void tlib_set_number_of_mpu_regions(uint32_t value)
 {
-    if (value >= MAX_MPU_REGIONS) {
+    if(value >= MAX_MPU_REGIONS) {
         tlib_abortf("Failed to set number of unified MPU regions to %u, maximal supported value is %u", value, MAX_MPU_REGIONS);
     }
     cpu->number_of_mpu_regions = value;
@@ -145,21 +145,21 @@ EXC_INT_0(uint32_t, tlib_get_number_of_mpu_regions)
 
 void tlib_register_tcm_region(uint32_t address, uint64_t size, uint64_t index)
 {
-    // interface index is the opc2 value when addressing region register via MRC/MCR
-    // region index is the selection register value
+    //  interface index is the opc2 value when addressing region register via MRC/MCR
+    //  region index is the selection register value
     uint32_t interface_index = index >> 32;
     uint32_t region_index = index;
-    if (interface_index >= 2) {
+    if(interface_index >= 2) {
         tlib_abortf("Attempted to register TCM region for interface #%u. Only 2 TCM interfaces are supported", interface_index);
     }
-    if (size == 0) {
+    if(size == 0) {
         cpu->cp15.c9_tcmregion[interface_index][region_index] = 0;
         return;
     }
 
     validate_tcm_region(address, size, region_index, TARGET_PAGE_SIZE);
 
-    cpu->cp15.c9_tcmregion[interface_index][region_index] = address | (ctz64(size / TCM_UNIT_SIZE) << 2) | 1; // always enable
+    cpu->cp15.c9_tcmregion[interface_index][region_index] = address | (ctz64(size / TCM_UNIT_SIZE) << 2) | 1;  //  always enable
 }
 
 EXC_VOID_3(tlib_register_tcm_region, uint32_t, address, uint64_t, size, uint64_t, index)
@@ -250,7 +250,7 @@ EXC_INT_0(uint32_t, tlib_is_mpu_enabled)
 
 void tlib_enable_mpu(int32_t enabled)
 {
-    if (!!enabled != (cpu->cp15.c1_sys & 1)) {
+    if(!!enabled != (cpu->cp15.c1_sys & 1)) {
         cpu->cp15.c1_sys ^= 1;
         tlb_flush(cpu, 1, false);
     }
@@ -260,8 +260,9 @@ EXC_VOID_1(tlib_enable_mpu, int32_t, enabled)
 
 void tlib_set_mpu_region_number(uint32_t value)
 {
-    if (value >= cpu->number_of_mpu_regions) {
-        tlib_abortf("MPU: Trying to use non-existent MPU region. Number of regions: %d, faulting region number: %d", cpu->number_of_mpu_regions, value);
+    if(value >= cpu->number_of_mpu_regions) {
+        tlib_abortf("MPU: Trying to use non-existent MPU region. Number of regions: %d, faulting region number: %d",
+                    cpu->number_of_mpu_regions, value);
     }
     cpu->cp15.c6_region_number = value;
     tlb_flush(cpu, 1, false);
@@ -269,10 +270,10 @@ void tlib_set_mpu_region_number(uint32_t value)
 
 EXC_VOID_1(tlib_set_mpu_region_number, uint32_t, value)
 
-// This function mimics mpu configuration through the "Region Base Address" register
+//  This function mimics mpu configuration through the "Region Base Address" register
 void tlib_set_mpu_region_base_address(uint32_t value)
 {
-    if (value & 0x10) {
+    if(value & 0x10) {
         /* If VALID (0x10) bit is set, we change the region number to zero-extended value of youngest 4 bits */
         tlib_set_mpu_region_number(value & 0xF);
     }
@@ -285,7 +286,7 @@ void tlib_set_mpu_region_base_address(uint32_t value)
 
 EXC_VOID_1(tlib_set_mpu_region_base_address, uint32_t, value)
 
-// This function mimics mpu configuration through the "Region Attribute and Size" register
+//  This function mimics mpu configuration through the "Region Attribute and Size" register
 void tlib_set_mpu_region_size_and_enable(uint32_t value)
 {
     uint32_t index = cpu->cp15.c6_region_number;
@@ -293,14 +294,16 @@ void tlib_set_mpu_region_size_and_enable(uint32_t value)
     cpu->cp15.c6_subregion_disable[index] = (value & MPU_SUBREGION_DISABLE_FIELD_MASK) >> MPU_SUBREGION_DISABLE_FIELD_OFFSET;
     cpu->cp15.c6_access_control[index] = value >> 16;
 #if DEBUG
-    tlib_printf(LOG_LEVEL_DEBUG, "MPU: Set access control 0x%x, permissions 0x%x, size 0x%x, enable 0x%x, for region %lld", value >> 16, ((value >> 16) & MPU_PERMISSION_FIELD_MASK) >> 8 , (value & MPU_SIZE_FIELD_MASK) >> 1, value & MPU_REGION_ENABLED_BIT, index);
+    tlib_printf(LOG_LEVEL_DEBUG, "MPU: Set access control 0x%x, permissions 0x%x, size 0x%x, enable 0x%x, for region %lld",
+                value >> 16, ((value >> 16) & MPU_PERMISSION_FIELD_MASK) >> 8, (value & MPU_SIZE_FIELD_MASK) >> 1,
+                value & MPU_REGION_ENABLED_BIT, index);
 #endif
     tlb_flush(cpu, 1, false);
 }
 
 EXC_VOID_1(tlib_set_mpu_region_size_and_enable, uint32_t, value)
 
-// This function mimics mpu configuration through the "Region Base Address" register
+//  This function mimics mpu configuration through the "Region Base Address" register
 uint32_t tlib_get_mpu_region_base_address()
 {
     return cpu->cp15.c6_base_address[cpu->cp15.c6_region_number] | cpu->cp15.c6_region_number;
@@ -308,11 +311,12 @@ uint32_t tlib_get_mpu_region_base_address()
 
 EXC_INT_0(uint32_t, tlib_get_mpu_region_base_address)
 
-// This function mimics mpu configuration through the "Region Attribute and Size" register
+//  This function mimics mpu configuration through the "Region Attribute and Size" register
 uint32_t tlib_get_mpu_region_size_and_enable()
 {
     uint32_t index = cpu->cp15.c6_region_number;
-    return (cpu->cp15.c6_access_control[index] << 16) | (cpu->cp15.c6_subregion_disable[index] << 8) | cpu->cp15.c6_size_and_enable[index];
+    return (cpu->cp15.c6_access_control[index] << 16) | (cpu->cp15.c6_subregion_disable[index] << 8) |
+           cpu->cp15.c6_size_and_enable[index];
 }
 
 EXC_INT_0(uint32_t, tlib_get_mpu_region_size_and_enable)
@@ -341,10 +345,10 @@ EXC_INT_0(uint32_t, tlib_is_v8)
 
 static void guard_pmsav8(bool is_write)
 {
-    if (!arm_feature(env, ARM_FEATURE_V8)) {
+    if(!arm_feature(env, ARM_FEATURE_V8)) {
         tlib_abort("This feature is only supported on ARM v8-M architecture");
     }
-    if (is_write) {
+    if(is_write) {
         tlb_flush(cpu, 1, false);
     }
 }
@@ -359,7 +363,7 @@ EXC_VOID_1(tlib_set_pmsav8_ctrl, uint32_t, value)
 void tlib_set_pmsav8_rnr(uint32_t value)
 {
     guard_pmsav8(true);
-    if (value > MAX_MPU_REGIONS) {
+    if(value > MAX_MPU_REGIONS) {
         tlib_printf(LOG_LEVEL_ERROR, "Requested RNR value is greater than the maximum MPU regions");
         return;
     }
@@ -386,7 +390,7 @@ EXC_VOID_1(tlib_set_pmsav8_rlar, uint32_t, value)
 void tlib_set_pmsav8_mair(uint32_t index, uint32_t value)
 {
     guard_pmsav8(true);
-    if (index > 1) {
+    if(index > 1) {
         tlib_printf(LOG_LEVEL_ERROR, "Only indexes {0,1} are supported by MAIR registers");
         return;
     }
@@ -427,7 +431,7 @@ EXC_INT_0(uint32_t, tlib_get_pmsav8_rlar)
 uint32_t tlib_get_pmsav8_mair(uint32_t index)
 {
     guard_pmsav8(false);
-    if (index > 1) {
+    if(index > 1) {
         tlib_printf(LOG_LEVEL_ERROR, "Only indexes {0,1} are supported by MAIR registers");
         return 0;
     }

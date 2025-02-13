@@ -41,7 +41,7 @@ static inline void hreg_swap_gpr_tgpr(CPUState *env)
 static inline void hreg_compute_mem_idx(CPUState *env)
 {
     /* Precompute MMU index */
-    if (msr_pr == 0 && msr_hv != 0) {
+    if(msr_pr == 0 && msr_hv != 0) {
         env->mmu_idx = 2;
     } else {
         env->mmu_idx = 1 - msr_pr;
@@ -68,29 +68,29 @@ static inline int hreg_store_msr(CPUState *env, target_ulong value, int alter_hv
 
     excp = 0;
     value &= env->msr_mask;
-    if (!alter_hv) {
+    if(!alter_hv) {
         /* mtmsr cannot alter the hypervisor state */
         value &= ~MSR_HVB;
         value |= env->msr & MSR_HVB;
     }
-    if (((value >> MSR_IR) & 1) != msr_ir || ((value >> MSR_DR) & 1) != msr_dr) {
+    if(((value >> MSR_IR) & 1) != msr_ir || ((value >> MSR_DR) & 1) != msr_dr) {
         /* Flush all tlb when changing translation mode */
         tlb_flush(env, 1, true);
         excp = POWERPC_EXCP_NONE;
         set_interrupt_pending(env, CPU_INTERRUPT_EXITTB);
     }
-    if (unlikely((env->flags & POWERPC_FLAG_TGPR) && ((value ^ env->msr) & (1 << MSR_TGPR)))) {
+    if(unlikely((env->flags & POWERPC_FLAG_TGPR) && ((value ^ env->msr) & (1 << MSR_TGPR)))) {
         /* Swap temporary saved registers with GPRs */
         hreg_swap_gpr_tgpr(env);
     }
-    if (unlikely((value >> MSR_EP) & 1) != msr_ep) {
+    if(unlikely((value >> MSR_EP) & 1) != msr_ep) {
         /* Change the exception prefix on PowerPC 601 */
         env->excp_prefix = ((value >> MSR_EP) & 1) * 0xFFF00000;
     }
     env->msr = value;
     hreg_compute_hflags(env);
-    if (unlikely(msr_pow == 1)) {
-        if ((*env->check_pow)(env)) {
+    if(unlikely(msr_pow == 1)) {
+        if((*env->check_pow)(env)) {
             env->wfi = 1;
             excp = EXCP_WFI;
         }

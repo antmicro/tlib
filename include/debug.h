@@ -7,7 +7,10 @@
 extern char *msgs[MAX_MSG_COUNT];
 
 #ifdef DEBUG_ON
-#define LOG_CURRENT_LOCATION() do{ tlib_printf(LOG_LEVEL_INFO, "We are in %s (%s:%d)", __func__, __FILE__, __LINE__); }while(0)
+#define LOG_CURRENT_LOCATION()                                                             \
+    do {                                                                                   \
+        tlib_printf(LOG_LEVEL_INFO, "We are in %s (%s:%d)", __func__, __FILE__, __LINE__); \
+    } while(0)
 #else
 #define LOG_CURRENT_LOCATION()
 #endif

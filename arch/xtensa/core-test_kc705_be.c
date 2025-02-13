@@ -34,9 +34,5 @@
 #define xtensa_modules xtensa_modules_test_kc705_be
 #include "core-test_kc705_be/xtensa-modules.c.inc"
 
-XtensaConfig test_kc705_be __attribute__((unused)) = {
-    .name = "test_kc705_be",
-    .isa_internal = &xtensa_modules,
-    .clock_freq_khz = 40000,
-    DEFAULT_SECTIONS
-};
+XtensaConfig test_kc705_be __attribute__((
+    unused)) = { .name = "test_kc705_be", .isa_internal = &xtensa_modules, .clock_freq_khz = 40000, DEFAULT_SECTIONS };

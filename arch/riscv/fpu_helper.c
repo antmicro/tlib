@@ -60,39 +60,39 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "cpu.h"
 
 /* convert RISC-V rounding mode to IEEE library numbers */
-unsigned int ieee_rm[] = {
-    float_round_nearest_even, float_round_to_zero, float_round_down, float_round_up, float_round_ties_away
-};
+unsigned int ieee_rm[] = { float_round_nearest_even, float_round_to_zero, float_round_down, float_round_up,
+                           float_round_ties_away };
 
 typedef enum {
-    riscv_float_round_nearest_even = 0, 
-    riscv_float_round_to_zero = 1, 
-    riscv_float_round_down = 2, 
-    riscv_float_round_up = 3, 
+    riscv_float_round_nearest_even = 0,
+    riscv_float_round_to_zero = 1,
+    riscv_float_round_down = 2,
+    riscv_float_round_up = 3,
     riscv_float_round_ties_away = 4
 } riscv_float_round_mode;
 
 /* convert RISC-V Vector Fixed-Point Rounding Mode to IEEE library numbers */
-unsigned int ieee_vxrm[] = {
-    float_round_up, float_round_nearest_even, float_round_down
-};
+unsigned int ieee_vxrm[] = { float_round_up, float_round_nearest_even, float_round_down };
 
 /* obtain rm value to use in computation
  * as the last step, convert rm codes to what the softfloat library expects
  * Adapted from Spike's decode.h:RM
  */
-#define RM         ({                                     \
-if (rm == 7) {                                            \
-    rm = env->frm;                                        \
-}                                                         \
-if (rm > 4) {                                             \
-    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST); \
-}                                                         \
-ieee_rm[rm]; })
+#define RM                                                             \
+    ({                                                                 \
+        if(rm == 7) {                                                  \
+            rm = env->frm;                                             \
+        }                                                              \
+        if(rm > 4) {                                                   \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST); \
+        }                                                              \
+        ieee_rm[rm];                                                   \
+    })
 
-#define require_fp if (!(env->mstatus & MSTATUS_FS)) { \
-    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST); \
-}
+#define require_fp                                                 \
+    if(!(env->mstatus & MSTATUS_FS)) {                             \
+        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST); \
+    }
 
 /* adapted from spike */
 #define isNaNF32UI(ui) (0xFF000000 < (uint32_t)((uint_fast32_t)ui << 1))
@@ -100,15 +100,20 @@ ieee_rm[rm]; })
 #define expF32UI(a)    ((int_fast16_t)(a >> 23) & 0xFF)
 #define fracF32UI(a)   (a & 0x007FFFFF)
 
-union ui32_f32 { uint32_t ui; uint32_t f; };
+union ui32_f32 {
+    uint32_t ui;
+    uint32_t f;
+};
 
-#define isNaNF64UI(ui) (UINT64_C(0xFFE0000000000000) \
-                       < (uint64_t)((uint_fast64_t)ui << 1))
-#define signF64UI(a)   ((bool)((uint64_t) a >> 63))
+#define isNaNF64UI(ui) (UINT64_C(0xFFE0000000000000) < (uint64_t)((uint_fast64_t)ui << 1))
+#define signF64UI(a)   ((bool)((uint64_t)a >> 63))
 #define expF64UI(a)    ((int_fast16_t)(a >> 52) & 0x7FF)
 #define fracF64UI(a)   (a & UINT64_C(0x000FFFFFFFFFFFFF))
 
-union ui64_f64 { uint64_t ui; uint64_t f; };
+union ui64_f64 {
+    uint64_t ui;
+    uint64_t f;
+};
 
 /* convert softfloat library flag numbers to RISC-V */
 unsigned int softfloat_flags_to_riscv(unsigned int flags)
@@ -123,11 +128,11 @@ unsigned int softfloat_flags_to_riscv(unsigned int flags)
 }
 
 /* adapted from Spike's decode.h:set_fp_exceptions */
-#define set_fp_exceptions() do { \
-    env->fflags |= softfloat_flags_to_riscv(get_float_exception_flags(\
-                            &env->fp_status)); \
-    set_float_exception_flags(0, &env->fp_status); \
-} while (0)
+#define set_fp_exceptions()                                                                  \
+    do {                                                                                     \
+        env->fflags |= softfloat_flags_to_riscv(get_float_exception_flags(&env->fp_status)); \
+        set_float_exception_flags(0, &env->fp_status);                                       \
+    } while(0)
 
 uint64_t helper_fmadd_s(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t frs3, uint64_t rm)
 {
@@ -159,7 +164,7 @@ uint64_t helper_fmadd_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t fr
     f2.v = (uint16_t)frs2;
     f3.v = (uint16_t)frs3;
     frs1 = f16_mulAdd(f1, f2, f3).v;
-    
+
     set_fp_exceptions();
     mark_fs_dirty();
     return frs1;
@@ -195,7 +200,7 @@ uint64_t helper_fmsub_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t fr
     f2.v = (uint16_t)frs2;
     f3.v = (uint16_t)(frs3 ^ (uint64_t)INT16_MIN);
     frs1 = f16_mulAdd(f1, f2, f3).v;
-    
+
     set_fp_exceptions();
     mark_fs_dirty();
     return frs1;
@@ -225,13 +230,13 @@ uint64_t helper_fnmsub_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t f
 {
     require_fp;
     set_float_rounding_mode(RM, &env->fp_status);
- 
+
     float16_t f1, f2, f3;
     f1.v = (uint16_t)(frs1 ^ (uint64_t)INT16_MIN);
     f2.v = (uint16_t)frs2;
     f3.v = (uint16_t)frs3;
     frs1 = f16_mulAdd(f1, f2, f3).v;
- 
+
     set_fp_exceptions();
     mark_fs_dirty();
     return frs1;
@@ -261,13 +266,13 @@ uint64_t helper_fnmadd_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t f
 {
     require_fp;
     set_float_rounding_mode(RM, &env->fp_status);
- 
+
     float16_t f1, f2, f3;
     f1.v = (uint16_t)(frs1 ^ (uint64_t)INT16_MIN);
     f2.v = (uint16_t)frs2;
     f3.v = (uint16_t)(frs3 ^ (uint64_t)INT16_MIN);
     frs1 = f16_mulAdd(f1, f2, f3).v;
- 
+
     set_fp_exceptions();
     mark_fs_dirty();
     return frs1;
@@ -549,7 +554,7 @@ uint_fast16_t float32_classify(uint32_t a, float_status *status)
     uint_fast16_t subnormalOrZero = expF32UI(uiA) == 0;
     bool sign = signF32UI(uiA);
 
-// clang-format off
+    // clang-format off
     return
         (sign && infOrNaN && fracF32UI(uiA) == 0)           << 0 |
         (sign && !infOrNaN && !subnormalOrZero)             << 1 |
@@ -561,7 +566,7 @@ uint_fast16_t float32_classify(uint32_t a, float_status *status)
         (!sign && subnormalOrZero && fracF32UI(uiA) == 0)   << 4 |
         (isNaNF32UI(uiA) &&  float32_is_signaling_nan(uiA, status)) << 8 |
         (isNaNF32UI(uiA) && !float32_is_signaling_nan(uiA, status)) << 9;
-// clang-format on
+    // clang-format on
 }
 
 target_ulong helper_fclass_s(CPUState *env, uint64_t frs1)
@@ -820,7 +825,7 @@ uint64_t helper_fsub_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t rm)
     f1.v = (uint16_t)frs1;
     f2.v = (uint16_t)frs2;
     frs1 = f16_sub(f1, f2).v;
-    
+
     set_fp_exceptions();
     mark_fs_dirty();
     return frs1;
@@ -830,7 +835,7 @@ uint64_t helper_fmul_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t rm)
 {
     require_fp;
     set_float_rounding_mode(RM, &env->fp_status);
-    
+
     float16_t f1, f2;
     f1.v = (uint16_t)frs1;
     f2.v = (uint16_t)frs2;
@@ -859,7 +864,7 @@ uint64_t helper_fdiv_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t rm)
 uint64_t helper_fmin_h(CPUState *env, uint64_t frs1, uint64_t frs2)
 {
     require_fp;
-    
+
     float16_t f1, f2;
     f1.v = (uint16_t)frs1;
     f2.v = (uint16_t)frs2;
@@ -874,7 +879,7 @@ uint64_t helper_fmin_h(CPUState *env, uint64_t frs1, uint64_t frs2)
 uint64_t helper_fmax_h(CPUState *env, uint64_t frs1, uint64_t frs2)
 {
     require_fp;
-    
+
     float16_t f1, f2;
     f1.v = (uint16_t)frs1;
     f2.v = (uint16_t)frs2;
@@ -890,11 +895,11 @@ uint64_t helper_fcvt_s_h(CPUState *env, uint64_t rs1, uint64_t rm)
 {
     require_fp;
     set_float_rounding_mode(RM, &env->fp_status);
-    
+
     float16_t f1;
     f1.v = (uint16_t)rs1;
     rs1 = f16_to_f32(f1).v;
-    
+
     set_fp_exceptions();
     mark_fs_dirty();
     return rs1;
@@ -904,11 +909,11 @@ uint64_t helper_fcvt_h_s(CPUState *env, uint64_t rs1, uint64_t rm)
 {
     require_fp;
     set_float_rounding_mode(RM, &env->fp_status);
-    
+
     float32_t f1;
     f1.v = (uint32_t)rs1;
     rs1 = f32_to_f16(f1).v;
-    
+
     set_fp_exceptions();
     mark_fs_dirty();
     return rs1;
@@ -918,11 +923,11 @@ uint64_t helper_fcvt_d_h(CPUState *env, uint64_t rs1, uint64_t rm)
 {
     require_fp;
     set_float_rounding_mode(RM, &env->fp_status);
-    
+
     float16_t f1;
     f1.v = (uint16_t)rs1;
     rs1 = f16_to_f64(f1).v;
-    
+
     set_fp_exceptions();
     mark_fs_dirty();
     return rs1;
@@ -932,11 +937,11 @@ uint64_t helper_fcvt_h_d(CPUState *env, uint64_t rs1, uint64_t rm)
 {
     require_fp;
     set_float_rounding_mode(RM, &env->fp_status);
-    
+
     float64_t f1;
     f1.v = rs1;
     rs1 = f64_to_f16(f1).v;
-    
+
     set_fp_exceptions();
     mark_fs_dirty();
     return rs1;
@@ -964,7 +969,7 @@ target_ulong helper_fle_h(CPUState *env, uint64_t frs1, uint64_t frs2)
     f1.v = (uint16_t)frs1;
     f2.v = (uint16_t)frs2;
     frs1 = f16_le(f1, f2);
-    
+
     set_fp_exceptions();
     return frs1;
 }
@@ -972,12 +977,12 @@ target_ulong helper_fle_h(CPUState *env, uint64_t frs1, uint64_t frs2)
 target_ulong helper_flt_h(CPUState *env, uint64_t frs1, uint64_t frs2)
 {
     require_fp;
-    
+
     float16_t f1, f2;
     f1.v = (uint16_t)frs1;
     f2.v = (uint16_t)frs2;
     frs1 = f16_lt(f1, f2);
-    
+
     set_fp_exceptions();
     return frs1;
 }
@@ -1000,7 +1005,7 @@ target_ulong helper_feq_h(CPUState *env, uint64_t frs1, uint64_t frs2)
     f1.v = (uint16_t)frs1;
     f2.v = (uint16_t)frs2;
     frs1 = f16_eq(f1, f2);
-    
+
     set_fp_exceptions();
     return frs1;
 }
@@ -1037,7 +1042,7 @@ uint64_t helper_fcvt_l_h(CPUState *env, uint64_t frs1, uint64_t rm)
 {
     require_fp;
     set_float_rounding_mode(RM, &env->fp_status);
-    
+
     float16_t f1;
     f1.v = (uint16_t)frs1;
     frs1 = f16_to_i64(f1, RM, true);
@@ -1103,7 +1108,7 @@ uint64_t helper_fcvt_h_lu(CPUState *env, uint64_t rs1, uint64_t rm)
 {
     require_fp;
     set_float_rounding_mode(RM, &env->fp_status);
-    
+
     rs1 = ui64_to_f16(rs1).v;
 
     set_fp_exceptions();
@@ -1115,7 +1120,7 @@ uint64_t helper_fmv_x_h(CPUState *env, uint64_t rs1, uint64_t rm)
 {
     require_fp;
     set_float_rounding_mode(RM, &env->fp_status);
-    
+
     rs1 = (int64_t)((int32_t)((int16_t)rs1));
 
     set_fp_exceptions();
@@ -1127,9 +1132,9 @@ uint64_t helper_fmv_h_x(CPUState *env, uint64_t rs1, uint64_t rm)
 {
     require_fp;
     set_float_rounding_mode(RM, &env->fp_status);
-    
-    // FMV.H.X moves the half-precision value encoded in IEEE 754-2008 standard encoding from the
-    // lower 16 bits of integer register rs1 to the floating-point register rd, NaN-boxing the result
+
+    //  FMV.H.X moves the half-precision value encoded in IEEE 754-2008 standard encoding from the
+    //  lower 16 bits of integer register rs1 to the floating-point register rd, NaN-boxing the result
     rs1 = box_float(RISCV_HALF_PRECISION, rs1);
 
     set_fp_exceptions();
@@ -1154,31 +1159,31 @@ void helper_vfmv_vf(CPUState *env, uint32_t vd, uint64_t f1)
 {
     const target_ulong eew = env->vsew;
     ensure_vector_embedded_extension_for_eew_or_raise_exception(env, eew);
-    if (V_IDX_INVALID(vd)) {
+    if(V_IDX_INVALID(vd)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
     }
-    switch (eew) {
-    case 16:
-        f1 = unbox_float(RISCV_HALF_PRECISION, env, f1);
-        break;
-    case 32:
-        f1 = unbox_float(RISCV_SINGLE_PRECISION, env, f1);
-        break;
-    default:
-        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
-        return;
-    }
-    for (int ei = 0; ei < env->vl; ++ei) {
-        switch (eew) {
+    switch(eew) {
         case 16:
-            ((uint16_t *)V(vd))[ei] = f1;
+            f1 = unbox_float(RISCV_HALF_PRECISION, env, f1);
             break;
         case 32:
-            ((uint32_t *)V(vd))[ei] = f1;
+            f1 = unbox_float(RISCV_SINGLE_PRECISION, env, f1);
             break;
-        case 64:
-            ((uint64_t *)V(vd))[ei] = f1;
-            break;
+        default:
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
+            return;
+    }
+    for(int ei = 0; ei < env->vl; ++ei) {
+        switch(eew) {
+            case 16:
+                ((uint16_t *)V(vd))[ei] = f1;
+                break;
+            case 32:
+                ((uint32_t *)V(vd))[ei] = f1;
+                break;
+            case 64:
+                ((uint64_t *)V(vd))[ei] = f1;
+                break;
         }
     }
 }
@@ -1187,17 +1192,16 @@ void helper_vfmv_fs(CPUState *env, int32_t vd, int32_t vs2)
 {
     const target_ulong eew = env->vsew;
     ensure_vector_float_embedded_extension_or_raise_exception(env, eew);
-    switch(eew)
-    {
+    switch(eew) {
         case 16:
-           env->fpr[vd] = box_float(RISCV_HALF_PRECISION, ((uint16_t *)V(vs2))[0]);
-           break;
+            env->fpr[vd] = box_float(RISCV_HALF_PRECISION, ((uint16_t *)V(vs2))[0]);
+            break;
         case 32:
-           env->fpr[vd] = box_float(RISCV_SINGLE_PRECISION, ((uint32_t *)V(vs2))[0]);
-           break;
+            env->fpr[vd] = box_float(RISCV_SINGLE_PRECISION, ((uint32_t *)V(vs2))[0]);
+            break;
         case 64:
-           env->fpr[vd] = ((uint64_t *)V(vs2))[0];
-           break;
+            env->fpr[vd] = ((uint64_t *)V(vs2))[0];
+            break;
         default:
             raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
             break;
@@ -1208,21 +1212,19 @@ void helper_vfmv_sf(CPUState *env, uint32_t vd, float64 rs1)
 {
     const target_ulong eew = env->vsew;
     ensure_vector_float_embedded_extension_or_raise_exception(env, eew);
-    if (env->vstart >= env->vl)
-    {
+    if(env->vstart >= env->vl) {
         return;
     }
-    switch(eew)
-    {
+    switch(eew) {
         case 16:
-           ((int16_t *)V(vd))[0] = unbox_float(RISCV_HALF_PRECISION, env, rs1);
-           break;
+            ((int16_t *)V(vd))[0] = unbox_float(RISCV_HALF_PRECISION, env, rs1);
+            break;
         case 32:
-           ((int32_t *)V(vd))[0] = unbox_float(RISCV_SINGLE_PRECISION, env, rs1);
-           break;
+            ((int32_t *)V(vd))[0] = unbox_float(RISCV_SINGLE_PRECISION, env, rs1);
+            break;
         case 64:
-           ((int64_t *)V(vd))[0] = rs1;
-           break;
+            ((int64_t *)V(vd))[0] = rs1;
+            break;
         default:
             raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
             break;
@@ -1241,29 +1243,12 @@ uint_fast16_t float64_classify(uint64_t a, float_status *status)
     uint_fast16_t subnormalOrZero = expF64UI(uiA) == 0;
     bool sign = signF64UI(uiA);
 
-    return
-        (sign && infOrNaN &&
-         fracF64UI(uiA) ==
-         0) << 0 |
-    (sign && !infOrNaN &&
-     !subnormalOrZero)             << 1 |
-    (sign && subnormalOrZero &&
-     fracF64UI(uiA))         << 2 |
-    (sign && subnormalOrZero &&
-     fracF64UI(uiA) ==
-     0)    << 3 |
-    (!sign && infOrNaN &&
-     fracF64UI(uiA) ==
-     0)          << 7 |
-    (!sign && !infOrNaN &&
-     !subnormalOrZero)            << 6 |
-    (!sign && subnormalOrZero &&
-     fracF64UI(uiA))        << 5 |
-    (!sign && subnormalOrZero &&
-     fracF64UI(uiA) ==
-     0)   << 4 |
-    (isNaNF64UI(uiA) &&  float64_is_signaling_nan(uiA, status)) << 8 |
-    (isNaNF64UI(uiA) && !float64_is_signaling_nan(uiA, status)) << 9;
+    return (sign && infOrNaN && fracF64UI(uiA) == 0) << 0 | (sign && !infOrNaN && !subnormalOrZero) << 1 |
+           (sign && subnormalOrZero && fracF64UI(uiA)) << 2 | (sign && subnormalOrZero && fracF64UI(uiA) == 0) << 3 |
+           (!sign && infOrNaN && fracF64UI(uiA) == 0) << 7 | (!sign && !infOrNaN && !subnormalOrZero) << 6 |
+           (!sign && subnormalOrZero && fracF64UI(uiA)) << 5 | (!sign && subnormalOrZero && fracF64UI(uiA) == 0) << 4 |
+           (isNaNF64UI(uiA) && float64_is_signaling_nan(uiA, status)) << 8 |
+           (isNaNF64UI(uiA) && !float64_is_signaling_nan(uiA, status)) << 9;
 }
 
 target_ulong helper_fclass_d(CPUState *env, uint64_t frs1)
@@ -1280,43 +1265,35 @@ static inline uint64_t make_mask64(int pos, int len)
     return (UINT64_MAX >> (64 - len)) << pos;
 }
 
-//user needs to truncate output to required length
-static inline uint64_t rsqrte7(uint64_t val, int e, int s, bool sub) {
-  uint64_t exp = extract64(val, s, e);
-  uint64_t sig = extract64(val, 0, s);
-  uint64_t sign = extract64(val, s + e, 1);
-  const int p = 7;
+//  user needs to truncate output to required length
+static inline uint64_t rsqrte7(uint64_t val, int e, int s, bool sub)
+{
+    uint64_t exp = extract64(val, s, e);
+    uint64_t sig = extract64(val, 0, s);
+    uint64_t sign = extract64(val, s + e, 1);
+    const int p = 7;
 
-  static const uint8_t table[] = {
-      52, 51, 50, 48, 47, 46, 44, 43,
-      42, 41, 40, 39, 38, 36, 35, 34,
-      33, 32, 31, 30, 30, 29, 28, 27,
-      26, 25, 24, 23, 23, 22, 21, 20,
-      19, 19, 18, 17, 16, 16, 15, 14,
-      14, 13, 12, 12, 11, 10, 10, 9,
-      9, 8, 7, 7, 6, 6, 5, 4,
-      4, 3, 3, 2, 2, 1, 1, 0,
-      127, 125, 123, 121, 119, 118, 116, 114,
-      113, 111, 109, 108, 106, 105, 103, 102,
-      100, 99, 97, 96, 95, 93, 92, 91,
-      90, 88, 87, 86, 85, 84, 83, 82,
-      80, 79, 78, 77, 76, 75, 74, 73,
-      72, 71, 70, 70, 69, 68, 67, 66,
-      65, 64, 63, 63, 62, 61, 60, 59,
-      59, 58, 57, 56, 56, 55, 54, 53};
+    static const uint8_t table[] = { 52,  51,  50,  48,  47,  46, 44, 43,  42,  41,  40,  39,  38,  36,  35,  34,  33,  32,  31,
+                                     30,  30,  29,  28,  27,  26, 25, 24,  23,  23,  22,  21,  20,  19,  19,  18,  17,  16,  16,
+                                     15,  14,  14,  13,  12,  12, 11, 10,  10,  9,   9,   8,   7,   7,   6,   6,   5,   4,   4,
+                                     3,   3,   2,   2,   1,   1,  0,  127, 125, 123, 121, 119, 118, 116, 114, 113, 111, 109, 108,
+                                     106, 105, 103, 102, 100, 99, 97, 96,  95,  93,  92,  91,  90,  88,  87,  86,  85,  84,  83,
+                                     82,  80,  79,  78,  77,  76, 75, 74,  73,  72,  71,  70,  70,  69,  68,  67,  66,  65,  64,
+                                     63,  63,  62,  61,  60,  59, 59, 58,  57,  56,  56,  55,  54,  53 };
 
-  if (sub) {
-      while (extract64(sig, s - 1, 1) == 0)
-          exp--, sig <<= 1;
+    if(sub) {
+        while(extract64(sig, s - 1, 1) == 0) {
+            exp--, sig <<= 1;
+        }
 
-      sig = (sig << 1) & make_mask64(0 ,s);
-  }
+        sig = (sig << 1) & make_mask64(0, s);
+    }
 
-  int idx = ((exp & 1) << (p-1)) | (sig >> (s-p+1));
-  uint64_t out_sig = (uint64_t)(table[idx]) << (s-p);
-  uint64_t out_exp = (3 * make_mask64(0, e - 1) + ~exp) / 2;
+    int idx = ((exp & 1) << (p - 1)) | (sig >> (s - p + 1));
+    uint64_t out_sig = (uint64_t)(table[idx]) << (s - p);
+    uint64_t out_exp = (3 * make_mask64(0, e - 1) + ~exp) / 2;
 
-  return (sign << (s+e)) | (out_exp << s) | out_sig;
+    return (sign << (s + e)) | (out_exp << s) | out_sig;
 }
 
 float32 f32_rsqrte7(CPUState *env, float32 in)
@@ -1328,32 +1305,32 @@ float32 f32_rsqrte7(CPUState *env, float32 in)
     unsigned int ret = float32_classify(in, &env->fp_status);
     bool sub = false;
     switch(ret) {
-    case 0x001: // -inf
-    case 0x002: // -normal
-    case 0x004: // -subnormal
-    case 0x100: // sNaN
-        flags |= float_flag_invalid;
-        /* falls through */
-    case 0x200: //qNaN
-        uA.ui = float32_default_nan;
-        break;
-    case 0x008: // -0
-        uA.ui = 0xff800000;
-        flags |= float_flag_overflow;
-        break;
-    case 0x010: // +0
-        uA.ui = 0x7f800000;
-        flags |= float_flag_overflow;
-        break;
-    case 0x080: //+inf
-        uA.ui = 0x0;
-        break;
-    case 0x020: //+ sub
-        sub = true;
-        /* falls through */
-    default: // +num
-        uA.ui = rsqrte7(uA.ui, 8, 23, sub);
-        break;
+        case 0x001:  //  -inf
+        case 0x002:  //  -normal
+        case 0x004:  //  -subnormal
+        case 0x100:  //  sNaN
+            flags |= float_flag_invalid;
+            /* falls through */
+        case 0x200:  //  qNaN
+            uA.ui = float32_default_nan;
+            break;
+        case 0x008:  //  -0
+            uA.ui = 0xff800000;
+            flags |= float_flag_overflow;
+            break;
+        case 0x010:  //  +0
+            uA.ui = 0x7f800000;
+            flags |= float_flag_overflow;
+            break;
+        case 0x080:  //+inf
+            uA.ui = 0x0;
+            break;
+        case 0x020:  //+ sub
+            sub = true;
+            /* falls through */
+        default:  //  +num
+            uA.ui = rsqrte7(uA.ui, 8, 23, sub);
+            break;
     }
 
     env->fflags |= softfloat_flags_to_riscv(flags);
@@ -1370,32 +1347,32 @@ float64 f64_rsqrte7(CPUState *env, float64 in)
     unsigned int ret = float64_classify(in, &env->fp_status);
     bool sub = false;
     switch(ret) {
-    case 0x001: // -inf
-    case 0x002: // -normal
-    case 0x004: // -subnormal
-    case 0x100: // sNaN
-        flags |= float_flag_invalid;
-        /* falls through */
-    case 0x200: //qNaN
-        uA.ui = float64_default_nan;
-        break;
-    case 0x008: // -0
-        uA.ui = 0xfff0000000000000ul;
-        flags |= float_flag_overflow;
-        break;
-    case 0x010: // +0
-        uA.ui = 0x7ff0000000000000ul;
-        flags |= float_flag_overflow;
-        break;
-    case 0x080: //+inf
-        uA.ui = 0x0;
-        break;
-    case 0x020: //+ sub
-        sub = true;
-        /* falls through */
-    default: // +num
-        uA.ui = rsqrte7(uA.ui, 11, 52, sub);
-        break;
+        case 0x001:  //  -inf
+        case 0x002:  //  -normal
+        case 0x004:  //  -subnormal
+        case 0x100:  //  sNaN
+            flags |= float_flag_invalid;
+            /* falls through */
+        case 0x200:  //  qNaN
+            uA.ui = float64_default_nan;
+            break;
+        case 0x008:  //  -0
+            uA.ui = 0xfff0000000000000ul;
+            flags |= float_flag_overflow;
+            break;
+        case 0x010:  //  +0
+            uA.ui = 0x7ff0000000000000ul;
+            flags |= float_flag_overflow;
+            break;
+        case 0x080:  //+inf
+            uA.ui = 0x0;
+            break;
+        case 0x020:  //+ sub
+            sub = true;
+            /* falls through */
+        default:  //  +num
+            uA.ui = rsqrte7(uA.ui, 11, 52, sub);
+            break;
     }
 
     env->fflags |= softfloat_flags_to_riscv(flags);
@@ -1403,62 +1380,51 @@ float64 f64_rsqrte7(CPUState *env, float64 in)
     return uA.f;
 }
 
-//user needs to truncate output to required length
-static inline uint64_t recip7(uint64_t val, int e, int s, int rm, bool sub,
-                              bool *round_abnormal)
+//  user needs to truncate output to required length
+static inline uint64_t recip7(uint64_t val, int e, int s, int rm, bool sub, bool *round_abnormal)
 {
     uint64_t exp = extract64(val, s, e);
     uint64_t sig = extract64(val, 0, s);
     uint64_t sign = extract64(val, s + e, 1);
     const int p = 7;
 
-    static const uint8_t table[] = {
-        127, 125, 123, 121, 119, 117, 116, 114,
-        112, 110, 109, 107, 105, 104, 102, 100,
-        99, 97, 96, 94, 93, 91, 90, 88,
-        87, 85, 84, 83, 81, 80, 79, 77,
-        76, 75, 74, 72, 71, 70, 69, 68,
-        66, 65, 64, 63, 62, 61, 60, 59,
-        58, 57, 56, 55, 54, 53, 52, 51,
-        50, 49, 48, 47, 46, 45, 44, 43,
-        42, 41, 40, 40, 39, 38, 37, 36,
-        35, 35, 34, 33, 32, 31, 31, 30,
-        29, 28, 28, 27, 26, 25, 25, 24,
-        23, 23, 22, 21, 21, 20, 19, 19,
-        18, 17, 17, 16, 15, 15, 14, 14,
-        13, 12, 12, 11, 11, 10, 9, 9,
-        8, 8, 7, 7, 6, 5, 5, 4,
-        4, 3, 3, 2, 2, 1, 1, 0};
+    static const uint8_t table[] = { 127, 125, 123, 121, 119, 117, 116, 114, 112, 110, 109, 107, 105, 104, 102, 100, 99, 97, 96,
+                                     94,  93,  91,  90,  88,  87,  85,  84,  83,  81,  80,  79,  77,  76,  75,  74,  72, 71, 70,
+                                     69,  68,  66,  65,  64,  63,  62,  61,  60,  59,  58,  57,  56,  55,  54,  53,  52, 51, 50,
+                                     49,  48,  47,  46,  45,  44,  43,  42,  41,  40,  40,  39,  38,  37,  36,  35,  35, 34, 33,
+                                     32,  31,  31,  30,  29,  28,  28,  27,  26,  25,  25,  24,  23,  23,  22,  21,  21, 20, 19,
+                                     19,  18,  17,  17,  16,  15,  15,  14,  14,  13,  12,  12,  11,  11,  10,  9,   9,  8,  8,
+                                     7,   7,   6,   5,   5,   4,   4,   3,   3,   2,   2,   1,   1,   0 };
 
-    if (sub) {
-        while (extract64(sig, s - 1, 1) == 0)
+    if(sub) {
+        while(extract64(sig, s - 1, 1) == 0) {
             exp--, sig <<= 1;
+        }
 
-        sig = (sig << 1) & make_mask64(0 ,s);
+        sig = (sig << 1) & make_mask64(0, s);
 
-        if (exp != 0 && exp != UINT64_MAX) {
+        if(exp != 0 && exp != UINT64_MAX) {
             *round_abnormal = true;
-            if (rm == 1 ||
-                (rm == 2 && !sign) ||
-                (rm == 3 && sign))
-                return ((sign << (s+e)) | make_mask64(s, e)) - 1;
-            else
-                return (sign << (s+e)) | make_mask64(s, e);
+            if(rm == 1 || (rm == 2 && !sign) || (rm == 3 && sign)) {
+                return ((sign << (s + e)) | make_mask64(s, e)) - 1;
+            } else {
+                return (sign << (s + e)) | make_mask64(s, e);
+            }
         }
     }
 
-    int idx = sig >> (s-p);
-    uint64_t out_sig = (uint64_t)(table[idx]) << (s-p);
+    int idx = sig >> (s - p);
+    uint64_t out_sig = (uint64_t)(table[idx]) << (s - p);
     uint64_t out_exp = 2 * make_mask64(0, e - 1) + ~exp;
-    if (out_exp == 0 || out_exp == UINT64_MAX) {
+    if(out_exp == 0 || out_exp == UINT64_MAX) {
         out_sig = (out_sig >> 1) | make_mask64(s - 1, 1);
-        if (out_exp == UINT64_MAX) {
+        if(out_exp == UINT64_MAX) {
             out_sig >>= 1;
             out_exp = 0;
         }
     }
 
-    return (sign << (s+e)) | (out_exp << s) | out_sig;
+    return (sign << (s + e)) | (out_exp << s) | out_sig;
 }
 
 float32 f32_recip7(CPUState *env, float32 in)
@@ -1471,37 +1437,36 @@ float32 f32_recip7(CPUState *env, float32 in)
     bool sub = false;
     bool round_abnormal = false;
     switch(ret) {
-    case 0x001: // -inf
-        uA.ui = 0x80000000;
-        break;
-    case 0x080: //+inf
-        uA.ui = 0x0;
-        break;
-    case 0x008: // -0
-        uA.ui = 0xff800000;
-        flags |= float_flag_overflow;
-        break;
-    case 0x010: // +0
-        uA.ui = 0x7f800000;
-        flags |= float_flag_overflow;
-        break;
-    case 0x100: // sNaN
-        flags |= float_flag_invalid;
-        /* falls through */
-    case 0x200: //qNaN
-        uA.ui = float32_default_nan;
-        break;
-    case 0x004: // -subnormal
-    case 0x020: //+ sub
-        sub = true;
-        /* falls through */
-    default: // +- normal
-        uA.ui = recip7(uA.ui, 8, 23,
-                       env->frm, sub, &round_abnormal);
-        if (round_abnormal)
-          flags |= float_flag_inexact |
-                                      float_flag_overflow;
-        break;
+        case 0x001:  //  -inf
+            uA.ui = 0x80000000;
+            break;
+        case 0x080:  //+inf
+            uA.ui = 0x0;
+            break;
+        case 0x008:  //  -0
+            uA.ui = 0xff800000;
+            flags |= float_flag_overflow;
+            break;
+        case 0x010:  //  +0
+            uA.ui = 0x7f800000;
+            flags |= float_flag_overflow;
+            break;
+        case 0x100:  //  sNaN
+            flags |= float_flag_invalid;
+            /* falls through */
+        case 0x200:  //  qNaN
+            uA.ui = float32_default_nan;
+            break;
+        case 0x004:  //  -subnormal
+        case 0x020:  //+ sub
+            sub = true;
+            /* falls through */
+        default:  //  +- normal
+            uA.ui = recip7(uA.ui, 8, 23, env->frm, sub, &round_abnormal);
+            if(round_abnormal) {
+                flags |= float_flag_inexact | float_flag_overflow;
+            }
+            break;
     }
 
     env->fflags |= softfloat_flags_to_riscv(flags);
@@ -1519,37 +1484,36 @@ float64 f64_recip7(CPUState *env, float64 in)
     bool sub = false;
     bool round_abnormal = false;
     switch(ret) {
-    case 0x001: // -inf
-        uA.ui = 0x8000000000000000;
-        break;
-    case 0x080: //+inf
-        uA.ui = 0x0;
-        break;
-    case 0x008: // -0
-        uA.ui = 0xfff0000000000000;
-        flags |= float_flag_overflow;
-        break;
-    case 0x010: // +0
-        uA.ui = 0x7ff0000000000000;
-        flags |= float_flag_overflow;
-        break;
-    case 0x100: // sNaN
-        flags |= float_flag_invalid;
-        /* falls through */
-    case 0x200: //qNaN
-        uA.ui = float64_default_nan;
-        break;
-    case 0x004: // -subnormal
-    case 0x020: //+ sub
-        sub = true;
-        /* falls through */
-    default: // +- normal
-        uA.ui = recip7(uA.ui, 11, 52,
-                       env->frm, sub, &round_abnormal);
-        if (round_abnormal)
-            flags |= float_flag_inexact |
-                                        float_flag_overflow;
-        break;
+        case 0x001:  //  -inf
+            uA.ui = 0x8000000000000000;
+            break;
+        case 0x080:  //+inf
+            uA.ui = 0x0;
+            break;
+        case 0x008:  //  -0
+            uA.ui = 0xfff0000000000000;
+            flags |= float_flag_overflow;
+            break;
+        case 0x010:  //  +0
+            uA.ui = 0x7ff0000000000000;
+            flags |= float_flag_overflow;
+            break;
+        case 0x100:  //  sNaN
+            flags |= float_flag_invalid;
+            /* falls through */
+        case 0x200:  //  qNaN
+            uA.ui = float64_default_nan;
+            break;
+        case 0x004:  //  -subnormal
+        case 0x020:  //+ sub
+            sub = true;
+            /* falls through */
+        default:  //  +- normal
+            uA.ui = recip7(uA.ui, 11, 52, env->frm, sub, &round_abnormal);
+            if(round_abnormal) {
+                flags |= float_flag_inexact | float_flag_overflow;
+            }
+            break;
     }
 
     env->fflags |= softfloat_flags_to_riscv(flags);
@@ -1557,7 +1521,7 @@ float64 f64_recip7(CPUState *env, float64 in)
     return uA.f;
 }
 
-// Note that MASKED is not defined for the 2nd include
+//  Note that MASKED is not defined for the 2nd include
 #define MASKED
 #include "fpu_vector_helper_template.h"
 #include "fpu_vector_helper_template.h"

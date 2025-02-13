@@ -39,10 +39,10 @@ XtensaConfig de233_fpu __attribute__((unused)) = {
     .name = "de233_fpu",
     .isa_internal = &xtensa_modules,
     .clock_freq_khz = 40000,
-    .opcode_translators = (const XtensaOpcodeTranslators *[]){
-        &xtensa_core_opcodes,
-        &xtensa_fpu_opcodes,
-        NULL,
-    },
+    .opcode_translators =
+        (const XtensaOpcodeTranslators *[]) {
+                                             &xtensa_core_opcodes,
+                                             &xtensa_fpu_opcodes,
+                                             NULL, },
     DEFAULT_SECTIONS
 };

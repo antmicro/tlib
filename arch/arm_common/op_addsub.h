@@ -4,8 +4,7 @@
 #define GE_ARG
 #endif
 
-#define clamp(x, low, high) \
- ( ((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)) )
+#define clamp(x, low, high) (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
 
 #ifdef PFX_Q
 #define PFX q
@@ -62,7 +61,7 @@ static inline uint8_t glue(unit_sub8_, PFX)(uint8_t a, uint8_t b, uint16_t *ge)
 static inline uint16_t glue(unit_add16_, PFX)(uint16_t a, uint16_t b, uint16_t *ge)
 {
     uint32_t result = (uint32_t)a + (uint32_t)b;
-    if (result > 65535) {
+    if(result > 65535) {
         result = 65535;
     }
     *ge = 0;
@@ -72,7 +71,7 @@ static inline uint16_t glue(unit_add16_, PFX)(uint16_t a, uint16_t b, uint16_t *
 static inline uint8_t glue(unit_add8_, PFX)(uint8_t a, uint8_t b, uint16_t *ge)
 {
     uint32_t result = (uint32_t)a + (uint32_t)b;
-    if (result > 255) {
+    if(result > 255) {
         result = 255;
     }
     *ge = 0;
@@ -112,7 +111,7 @@ static inline uint16_t glue(unit_add16_, PFX)(uint16_t a, uint16_t b, uint16_t *
     sa = (int32_t)((int16_t)a);
     sb = (int32_t)((int16_t)b);
     result = sa + sb;
-    if (result >= 0) {
+    if(result >= 0) {
         *ge = 1;
     } else {
         *ge = 0;
@@ -127,7 +126,7 @@ static inline uint8_t glue(unit_add8_, PFX)(uint8_t a, uint8_t b, uint16_t *ge)
     sa = (int32_t)((int8_t)a);
     sb = (int32_t)((int8_t)b);
     result = sa + sb;
-    if (result >= 0) {
+    if(result >= 0) {
         *ge = 1;
     } else {
         *ge = 0;
@@ -142,7 +141,7 @@ static inline uint16_t glue(unit_sub16_, PFX)(uint16_t a, uint16_t b, uint16_t *
     sa = (int32_t)((int16_t)a);
     sb = (int32_t)((int16_t)b);
     result = sa - sb;
-    if (result >= 0) {
+    if(result >= 0) {
         *ge = 1;
     } else {
         *ge = 0;
@@ -157,7 +156,7 @@ static inline uint8_t glue(unit_sub8_, PFX)(uint8_t a, uint8_t b, uint16_t *ge)
     sa = (int32_t)((int8_t)a);
     sb = (int32_t)((int8_t)b);
     result = sa - sb;
-    if (result >= 0) {
+    if(result >= 0) {
         *ge = 1;
     } else {
         *ge = 0;
@@ -171,7 +170,7 @@ static inline uint16_t glue(unit_add16_, PFX)(uint16_t a, uint16_t b, uint16_t *
 {
     uint32_t result;
     result = (uint32_t)a + (uint32_t)b;
-    if (result > 65535) {
+    if(result > 65535) {
         *ge = 1;
     } else {
         *ge = 0;
@@ -183,7 +182,7 @@ static inline uint8_t glue(unit_add8_, PFX)(uint8_t a, uint8_t b, uint16_t *ge)
 {
     uint32_t result;
     result = (uint32_t)a + (uint32_t)b;
-    if (result > 255) {
+    if(result > 255) {
         *ge = 1;
     } else {
         *ge = 0;
@@ -198,7 +197,7 @@ static inline uint16_t glue(unit_sub16_, PFX)(uint16_t a, uint16_t b, uint16_t *
     sa = (int32_t)((int16_t)a);
     sb = (int32_t)((int16_t)b);
     result = sa - sb;
-    if (result >= 0) {
+    if(result >= 0) {
         *ge = 1;
     } else {
         *ge = 0;
@@ -213,7 +212,7 @@ static inline uint8_t glue(unit_sub8_, PFX)(uint8_t a, uint8_t b, uint16_t *ge)
     sa = (int32_t)((int16_t)a);
     sb = (int32_t)((int16_t)b);
     result = sa - sb;
-    if (result >= 0) {
+    if(result >= 0) {
         *ge = 1;
     } else {
         *ge = 0;

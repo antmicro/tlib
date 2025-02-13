@@ -7,15 +7,14 @@
 #pragma once
 
 #include <stdbool.h>
-#include <stddef.h> // NULL
+#include <stddef.h>  // NULL
 #include <stdint.h>
-#include <string.h> // memset
+#include <string.h>  // memset
 
 #include "callbacks.h"
 #include "infrastructure.h"
 
-typedef struct
-{
+typedef struct {
     void *key;
     void *value;
 } TTable_entry;
@@ -30,8 +29,7 @@ typedef int TTableEntryCompareFn(TTable_entry entry, const void *value);
 typedef void TTableEntryRemoveCallback(TTable_entry *entry);
 typedef bool ValuesArrayTrySetEntryFn(void **array_entry, void *value);
 
-typedef struct
-{
+typedef struct {
     uint32_t count;
     TTable_entry *entries;
     TTableEntryRemoveCallback *entry_remove_callback;
@@ -40,7 +38,7 @@ typedef struct
     bool sorted;
 } TTable;
 
-// Only one of these functions will be used for the given TTable depending on what TTable_entry's key is.
+//  Only one of these functions will be used for the given TTable depending on what TTable_entry's key is.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 static int ttable_compare_key_pointer(TTable_entry entry, const void *value)
@@ -67,10 +65,10 @@ static inline void ttable_sort_by_keys(TTable *ttable)
 {
     tlib_assert(ttable != NULL);
 
-    // O(n^2) sort
-    for (int i = 0; i < ttable->count - 1; ++i) {
-        for (int j = i + 1; j < ttable->count; ++j) {
-            if (ttable->key_compare_function(ttable->entries[i], ttable->entries[j].key) > 0) {
+    //  O(n^2) sort
+    for(int i = 0; i < ttable->count - 1; ++i) {
+        for(int j = i + 1; j < ttable->count; ++j) {
+            if(ttable->key_compare_function(ttable->entries[i], ttable->entries[j].key) > 0) {
                 TTable_entry tmp = ttable->entries[i];
                 ttable->entries[i] = ttable->entries[j];
                 ttable->entries[j] = tmp;
@@ -100,21 +98,22 @@ static inline TTable *ttable_create(uint32_t entries_max, TTableEntryRemoveCallb
 /*
  * Returns entries count.
  */
-static inline uint32_t ttable_create_values_array(TTable *ttable, void ***array_pointer, ValuesArrayTrySetEntryFn *try_set_array_entry)
+static inline uint32_t ttable_create_values_array(TTable *ttable, void ***array_pointer,
+                                                  ValuesArrayTrySetEntryFn *try_set_array_entry)
 {
     tlib_assert(array_pointer != NULL && ttable != NULL);
 
-    if (ttable->count == 0) {
+    if(ttable->count == 0) {
         return 0;
     }
 
     *array_pointer = tlib_malloc(sizeof(ttable->entries->value) * ttable->count);
 
     int i, array_index = 0;
-    for (i = 0; i < ttable->count; i++) {
+    for(i = 0; i < ttable->count; i++) {
         void **array_entry = &(*array_pointer)[array_index];
         bool selected = try_set_array_entry(array_entry, ttable->entries[i].value);
-        if (selected) {
+        if(selected) {
             array_index++;
         }
     }
@@ -135,9 +134,9 @@ static inline void ttable_insert(TTable *ttable, void *key, void *value)
 
     ttable->count++;
 
-    if (ttable->sorted) {
-        // This can be optimized if needed
-        // The current assumption is that there will be not so many insertions after first sort
+    if(ttable->sorted) {
+        //  This can be optimized if needed
+        //  The current assumption is that there will be not so many insertions after first sort
         ttable_sort_by_keys(ttable);
     }
 }
@@ -148,8 +147,8 @@ static inline TTable_entry *ttable_lookup_custom(TTable *ttable, TTableEntryComp
     /* The TTable, if sorted, is sorted using the default compare function so the binary
      * search won't work properly if a different compare function is used.
      */
-    if (ttable->sorted && entry_compare_function == ttable->key_compare_function) {
-        // Binary search
+    if(ttable->sorted && entry_compare_function == ttable->key_compare_function) {
+        //  Binary search
         /*
          * Even though all valid indices would fit in uint32_t, int64_t is used.
          * Using uint32_t could cause the value to be wrapped around to the maximum
@@ -160,28 +159,28 @@ static inline TTable_entry *ttable_lookup_custom(TTable *ttable, TTableEntryComp
          * all possible values of uint32_t
          */
         int64_t left = 0, right = ttable->count - 1;
-        while (left <= right) {
+        while(left <= right) {
             int64_t pivot = (left + right) / 2;
             TTable_entry *entry = &ttable->entries[pivot];
-            if (entry_compare_function(*entry, compare_value) < 0) {
+            if(entry_compare_function(*entry, compare_value) < 0) {
                 left = pivot + 1;
-            } else if (entry_compare_function(*entry, compare_value) > 0) {
+            } else if(entry_compare_function(*entry, compare_value) > 0) {
                 right = pivot - 1;
             } else {
                 return entry;
             }
         }
     } else {
-        // Linear search
-        for (uint32_t i = 0; i < ttable->count; i++) {
+        //  Linear search
+        for(uint32_t i = 0; i < ttable->count; i++) {
             TTable_entry *entry = &ttable->entries[i];
-            if (entry_compare_function(*entry, compare_value) == 0) {
+            if(entry_compare_function(*entry, compare_value) == 0) {
                 return entry;
             }
         }
     }
 
-    // The search was unsuccesful.
+    //  The search was unsuccesful.
     return NULL;
 }
 
@@ -193,7 +192,7 @@ static inline TTable_entry *ttable_lookup(TTable *ttable, void *key)
 static inline void *ttable_lookup_value_eq(TTable *ttable, void *key)
 {
     TTable_entry *entry = ttable_lookup(ttable, key);
-    if (entry) {
+    if(entry) {
         return entry->value;
     }
     return NULL;
@@ -201,7 +200,7 @@ static inline void *ttable_lookup_value_eq(TTable *ttable, void *key)
 
 static inline bool ttable_insert_check(TTable *ttable, void *key, void *value)
 {
-    if (ttable_lookup(ttable, key)) {
+    if(ttable_lookup(ttable, key)) {
         return false;
     }
 
@@ -211,9 +210,9 @@ static inline bool ttable_insert_check(TTable *ttable, void *key, void *value)
 
 static inline void ttable_remove(TTable *ttable)
 {
-    if (ttable->entry_remove_callback) {
+    if(ttable->entry_remove_callback) {
         int i;
-        for (i = 0; i < ttable->count; i++) {
+        for(i = 0; i < ttable->count; i++) {
             ttable->entry_remove_callback(&ttable->entries[i]);
         }
     }

@@ -14,17 +14,15 @@
 static inline void handle_configuration_signal(CPUState *env, ConfigurationSignals signal_id, ConfigurationSignalsState state)
 {
     uint32_t new_value, old_value;
-    switch(signal_id)
-    {
+    switch(signal_id) {
         case IN_DEBUG_ROM_ADDRESS:
             old_value = env->cp14.c1_dbgdrar;
             new_value = FIELD_DP32(old_value, DBGDRAR, ROMADDR, state.debug_rom_address);
             new_value = FIELD_DP32(new_value, DBGDRAR, Valid, DEBUG_ADDRESS_VALID_VALUE);
             env->cp14.c1_dbgdrar = new_value;
             break;
-        case IN_DEBUG_SELF_ADDRESS:
-        {
-            // The signal sets top 15 bits.
+        case IN_DEBUG_SELF_ADDRESS: {
+            //  The signal sets top 15 bits.
             uint32_t address_expanded_to_20bits = state.debug_self_address << 5;
 
             old_value = env->cp14.c2_dbgdsar;
@@ -33,15 +31,14 @@ static inline void handle_configuration_signal(CPUState *env, ConfigurationSigna
             env->cp14.c2_dbgdsar = new_value;
             break;
         }
-        case IN_INITIALIZE_INSTRUCTION_TCM:
-        {
-            // Cortex-R8 doesn't have any TCM selection register.
+        case IN_INITIALIZE_INSTRUCTION_TCM: {
+            //  Cortex-R8 doesn't have any TCM selection register.
             int tcm_region = 0;
             int tcm_op2 = TCM_CP15_OP2_INSTRUCTION_OR_UNIFIED;
 
             uint32_t base_address = state.high_exception_vectors ? 0xFFFF0 : 0x0;
-            // TRM says the ITCM size is *maximum* 64KB if INITRAM and VINITHI are set.
-            // There's no default value but 0 seems invalid. Let's use 64KB.
+            //  TRM says the ITCM size is *maximum* 64KB if INITRAM and VINITHI are set.
+            //  There's no default value but 0 seems invalid. Let's use 64KB.
             uint32_t size = TCM_SIZE_64KB;
 
             old_value = env->cp15.c9_tcmregion[tcm_op2][tcm_region];
@@ -83,10 +80,8 @@ void configuration_signals_apply(CPUState *env)
     ConfigurationSignalsState state = get_state();
 
     uint32_t signal_id;
-    for (signal_id = 0; signal_id < CONFIGURATION_SIGNALS_COUNT; signal_id++)
-    {
-        if (state.included_signals_mask & (UINT64_C(1) << signal_id))
-        {
+    for(signal_id = 0; signal_id < CONFIGURATION_SIGNALS_COUNT; signal_id++) {
+        if(state.included_signals_mask & (UINT64_C(1) << signal_id)) {
             handle_configuration_signal(env, signal_id, state);
         }
     }

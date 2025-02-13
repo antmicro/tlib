@@ -6,13 +6,12 @@
 
 #define MAX_NUMBER_OF_CPUS 32
 
-#define NO_CPU_ID          0xFFFFFFFF
-#define NO_RESERVATION     -1
+#define NO_CPU_ID      0xFFFFFFFF
+#define NO_RESERVATION -1
 
 struct CPUState;
 
-typedef struct address_reservation_t
-{
+typedef struct address_reservation_t {
     uint32_t locking_cpu_id;
     uint64_t address;
     uint8_t active_flag;
@@ -20,8 +19,7 @@ typedef struct address_reservation_t
     uint8_t manual_free;
 } address_reservation_t;
 
-typedef struct atomic_memory_state_t
-{
+typedef struct atomic_memory_state_t {
     uint8_t is_mutex_initialized;
     uint8_t are_reservations_valid;
 

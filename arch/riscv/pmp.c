@@ -28,11 +28,14 @@
 #include "cpu.h"
 
 #ifdef DEBUG_PMP
-#define PMP_DEBUG(fmt, ...) \
-do { tlib_printf(LOG_LEVEL_DEBUG, "pmp: " fmt, ## __VA_ARGS__); } while (0)
+#define PMP_DEBUG(fmt, ...)                                       \
+    do {                                                          \
+        tlib_printf(LOG_LEVEL_DEBUG, "pmp: " fmt, ##__VA_ARGS__); \
+    } while(0)
 #else
 #define PMP_DEBUG(fmt, ...) \
-do {} while (0)
+    do {                    \
+    } while(0)
 #endif
 
 static void pmp_write_cfg(CPUState *env, uint32_t addr_index, uint8_t val);
@@ -53,21 +56,20 @@ static inline uint8_t pmp_get_a_field(uint8_t cfg)
  */
 static inline int pmp_is_locked(CPUState *env, uint32_t pmp_index)
 {
-    if (env->pmp_state.pmp[pmp_index].cfg_reg & PMP_LOCK) {
+    if(env->pmp_state.pmp[pmp_index].cfg_reg & PMP_LOCK) {
         return 1;
     }
 
     /* Top PMP has no 'next' to check */
-    if ((pmp_index + 1u) >= MAX_RISCV_PMPS) {
+    if((pmp_index + 1u) >= MAX_RISCV_PMPS) {
         return 0;
     }
 
     /* In TOR mode, need to check the lock bit of the next pmp
      * (if there is a next)
      */
-    const uint8_t a_field =
-        pmp_get_a_field(env->pmp_state.pmp[pmp_index + 1].cfg_reg);
-    if ((env->pmp_state.pmp[pmp_index + 1u].cfg_reg & PMP_LOCK) && (PMP_AMATCH_TOR == a_field)) {
+    const uint8_t a_field = pmp_get_a_field(env->pmp_state.pmp[pmp_index + 1].cfg_reg);
+    if((env->pmp_state.pmp[pmp_index + 1u].cfg_reg & PMP_LOCK) && (PMP_AMATCH_TOR == a_field)) {
         return 1;
     }
 
@@ -87,15 +89,15 @@ static inline bool pmp_validate_configuration(CPUState *env, uint32_t pmp_index,
     bool locked = (*val & PMP_LOCK) == PMP_LOCK;
     bool shared = (!read && write);
 
-    // If mseccfg.MML is not set, the combination of pmpcfg.RW=01 remains reserved for future standard use.
-    if (!mml && env->privilege_architecture >= RISCV_PRIV1_11 && shared) {
+    //  If mseccfg.MML is not set, the combination of pmpcfg.RW=01 remains reserved for future standard use.
+    if(!mml && env->privilege_architecture >= RISCV_PRIV1_11 && shared) {
         PMP_DEBUG("Reserved permission bit combination (R=0, W=1) during pmpcfg write - clearing W bit");
         *val &= ~PMP_WRITE;
     }
     /* Adding a rule with executable privileges that either is M-mode-only or a locked Shared-Region
      * is not possible and such pmpcfg writes are ignored, leaving pmpcfg unchanged.
      * This restriction can be lifted by setting mseccfg.RLB */
-    if (!rlb && (mml && locked && (exec || shared))) {
+    if(!rlb && (mml && locked && (exec || shared))) {
         return false;
     }
     return true;
@@ -114,7 +116,7 @@ static inline uint32_t pmp_get_num_rules(CPUState *env)
  */
 static inline uint8_t pmp_read_cfg(CPUState *env, uint32_t pmp_index)
 {
-    if (pmp_index < MAX_RISCV_PMPS) {
+    if(pmp_index < MAX_RISCV_PMPS) {
         return env->pmp_state.pmp[pmp_index].cfg_reg;
     }
 
@@ -127,17 +129,17 @@ static inline uint8_t pmp_read_cfg(CPUState *env, uint32_t pmp_index)
  */
 static void pmp_write_cfg(CPUState *env, uint32_t pmp_index, uint8_t val)
 {
-    if (pmp_index >= MAX_RISCV_PMPS) {
+    if(pmp_index >= MAX_RISCV_PMPS) {
         PMP_DEBUG("Ignoring pmpcfg write - out of bounds");
         return;
     }
 
-    if (pmp_is_locked(env, pmp_index) && !(env->mseccfg & MSECCFG_RLB)) {
+    if(pmp_is_locked(env, pmp_index) && !(env->mseccfg & MSECCFG_RLB)) {
         PMP_DEBUG("Ignoring pmpcfg write - locked");
         return;
     }
 
-    if (!pmp_validate_configuration(env, pmp_index, &val)) {
+    if(!pmp_validate_configuration(env, pmp_index, &val)) {
         PMP_DEBUG("Ignoring pmpcfg write - invalid configuration");
         return;
     }
@@ -158,16 +160,16 @@ static void pmp_decode_napot(target_ulong addr, int napot_grain, target_ulong *s
        0111...1111   2^(XLEN+2)-byte NAPOT range
        1111...1111   Reserved
      */
-    if (addr == -1) {
+    if(addr == -1) {
         *start_addr = 0u;
         *end_addr = -1;
         return;
     } else {
-        // NAPOT range equals 2^(NAPOT_GRAIN + 2)
-        // Calculating base and range using 64 bit wide variables, as using
-        // `target_ulong` caused overflows on RV32 when `napot_grain = 32`
+        //  NAPOT range equals 2^(NAPOT_GRAIN + 2)
+        //  Calculating base and range using 64 bit wide variables, as using
+        //  `target_ulong` caused overflows on RV32 when `napot_grain = 32`
         uint64_t range = ((uint64_t)2 << (napot_grain + 2)) - 1;
-        uint64_t base = (addr & ((uint64_t) - 1 << (napot_grain + 1))) << 2;
+        uint64_t base = (addr & ((uint64_t)-1 << (napot_grain + 1))) << 2;
         *start_addr = (target_ulong)base;
         *end_addr = (target_ulong)(base + range);
     }
@@ -191,51 +193,51 @@ static void pmp_update_rule(CPUState *env, uint32_t pmp_index)
     target_ulong sa = 0u;
     target_ulong ea = 0u;
 
-    if (pmp_index >= 1u) {
+    if(pmp_index >= 1u) {
         prev_addr = env->pmp_state.pmp[pmp_index - 1].addr_reg;
     }
 
-    switch (pmp_get_a_field(this_cfg)) {
-    case PMP_AMATCH_OFF:
-        sa = 0u;
-        ea = -1;
-        break;
+    switch(pmp_get_a_field(this_cfg)) {
+        case PMP_AMATCH_OFF:
+            sa = 0u;
+            ea = -1;
+            break;
 
-    case PMP_AMATCH_TOR:
-        sa = prev_addr << 2; /* shift up from [xx:0] to [xx+2:2] */
-        ea = (this_addr << 2) - 1u;
-        break;
+        case PMP_AMATCH_TOR:
+            sa = prev_addr << 2; /* shift up from [xx:0] to [xx+2:2] */
+            ea = (this_addr << 2) - 1u;
+            break;
 
-    case PMP_AMATCH_NA4:
-        sa = this_addr << 2; /* shift up from [xx:0] to [xx+2:2] */
-        ea = (sa + 4u) - 1u;
-        break;
+        case PMP_AMATCH_NA4:
+            sa = this_addr << 2; /* shift up from [xx:0] to [xx+2:2] */
+            ea = (sa + 4u) - 1u;
+            break;
 
-    case PMP_AMATCH_NAPOT:
-        /*  Since priv-1.11 PMP grain must be the same across all PMP regions */
-        napot = ctz64(~this_addr);
-        if (env->privilege_architecture >= RISCV_PRIV1_11) {
-            if (cpu->pmp_napot_grain > napot) {
-                tlib_log(LOG_LEVEL_ERROR, "Tried to set NAPOT region size smaller than the platform defined grain. This region will be enlarged to grain size");
-                napot = cpu->pmp_napot_grain;
+        case PMP_AMATCH_NAPOT:
+            /*  Since priv-1.11 PMP grain must be the same across all PMP regions */
+            napot = ctz64(~this_addr);
+            if(env->privilege_architecture >= RISCV_PRIV1_11) {
+                if(cpu->pmp_napot_grain > napot) {
+                    tlib_log(LOG_LEVEL_ERROR, "Tried to set NAPOT region size smaller than the platform defined grain. This "
+                                              "region will be enlarged to grain size");
+                    napot = cpu->pmp_napot_grain;
+                }
             }
-        }
-        pmp_decode_napot(this_addr, napot, &sa, &ea);
-        break;
+            pmp_decode_napot(this_addr, napot, &sa, &ea);
+            break;
 
-    default:
-        sa = 0u;
-        ea = 0u;
-        break;
+        default:
+            sa = 0u;
+            ea = 0u;
+            break;
     }
 
     env->pmp_state.addr[pmp_index].sa = sa & cpu->pmp_addr_mask;
     env->pmp_state.addr[pmp_index].ea = ea & cpu->pmp_addr_mask;
 
-    for (i = 0; i < MAX_RISCV_PMPS; i++) {
-        const uint8_t a_field =
-            pmp_get_a_field(env->pmp_state.pmp[i].cfg_reg);
-        if (PMP_AMATCH_OFF != a_field) {
+    for(i = 0; i < MAX_RISCV_PMPS; i++) {
+        const uint8_t a_field = pmp_get_a_field(env->pmp_state.pmp[i].cfg_reg);
+        if(PMP_AMATCH_OFF != a_field) {
             env->pmp_state.num_rules++;
         }
     }
@@ -248,7 +250,7 @@ static int pmp_is_in_range(CPUState *env, int pmp_index, target_ulong addr)
     int result = 0;
     addr &= cpu->pmp_addr_mask;
 
-    if ((addr >= env->pmp_state.addr[pmp_index].sa) && (addr <= env->pmp_state.addr[pmp_index].ea)) {
+    if((addr >= env->pmp_state.addr[pmp_index].sa) && (addr <= env->pmp_state.addr[pmp_index].ea)) {
         result = 1;
     } else {
         result = 0;
@@ -269,19 +271,19 @@ int pmp_find_overlapping(CPUState *env, target_ulong addr, target_ulong size, in
     addr &= cpu->pmp_addr_mask;
     uint8_t a_field;
 
-    for (i = starting_index; i < MAX_RISCV_PMPS; i++) {
+    for(i = starting_index; i < MAX_RISCV_PMPS; i++) {
         a_field = pmp_get_a_field(env->pmp_state.pmp[i].cfg_reg);
-        if (a_field == PMP_AMATCH_OFF) {
+        if(a_field == PMP_AMATCH_OFF) {
             continue;
         }
         pmp_sa = env->pmp_state.addr[i].sa;
         pmp_ea = env->pmp_state.addr[i].ea;
 
-        if (pmp_sa < addr) {
-            if (pmp_ea >= addr) {
+        if(pmp_sa < addr) {
+            if(pmp_ea >= addr) {
                 return i;
             }
-        } else if (pmp_sa <= addr + size - 1) {
+        } else if(pmp_sa <= addr + size - 1) {
             return i;
         }
     }
@@ -297,7 +299,7 @@ static inline pmp_priv_t pmp_get_privs_normal(int pmp_index, target_ulong priv)
 
     pmp_priv_t allowed_privs = PMP_READ | PMP_WRITE | PMP_EXEC;
 
-    if ((priv != PRV_M) || pmp_is_locked(env, pmp_index)) {
+    if((priv != PRV_M) || pmp_is_locked(env, pmp_index)) {
         allowed_privs &= env->pmp_state.pmp[pmp_index].cfg_reg;
     }
     return allowed_privs;
@@ -307,7 +309,7 @@ static inline pmp_priv_t pmp_get_privs_normal(int pmp_index, target_ulong priv)
  * of RISC-V Privileged Architecture 1.12 */
 static inline pmp_priv_t pmp_get_privs_mml(int pmp_index, target_ulong priv)
 {
-    // Should not reach this function if Machine Mode Lockdown is not active
+    //  Should not reach this function if Machine Mode Lockdown is not active
     tlib_assert(env->mseccfg & MSECCFG_MML);
 
     uint8_t rule_privs = env->pmp_state.pmp[pmp_index].cfg_reg;
@@ -319,26 +321,26 @@ static inline pmp_priv_t pmp_get_privs_mml(int pmp_index, target_ulong priv)
     /* Shared memory regions
      * they use previously reserved PMP encodings W=1 R=0
      * special case if RWXL = 0b1111 which is Read-only for M/S/U modes */
-    if (is_read && is_write && is_exec && is_locked) {
+    if(is_read && is_write && is_exec && is_locked) {
         return PMP_READ;
     }
 
     pmp_priv_t allowed_privs = 0;
 
-    // Shared memory regions - cont.
-    if (!is_read && is_write) {
-        if (!is_locked) {         // Shared data region
+    //  Shared memory regions - cont.
+    if(!is_read && is_write) {
+        if(!is_locked) {  //  Shared data region
             allowed_privs |= PMP_READ;
             /* Machine has RW by default
              * User/Supervisor has R, but gains W if X=1 */
-            if (priv == PRV_M || is_exec) {
+            if(priv == PRV_M || is_exec) {
                 allowed_privs |= PMP_WRITE;
             }
-        } else {          // Shared code region
-            // M/S/U modes have executable access by default
+        } else {  //  Shared code region
+            //  M/S/U modes have executable access by default
             allowed_privs |= PMP_EXEC;
-            if (priv == PRV_M && is_exec) {
-                // Machine can gain R if X=1
+            if(priv == PRV_M && is_exec) {
+                //  Machine can gain R if X=1
                 allowed_privs |= PMP_READ;
             }
         }
@@ -346,7 +348,7 @@ static inline pmp_priv_t pmp_get_privs_mml(int pmp_index, target_ulong priv)
         /* PMP_LOCK changes behavior - if set it enforces the rule for Machine Mode
          * otherwise if unset it enforces the rule for Supervisor/User mode
          * the other mode is denied by default */
-        if ((is_locked && priv != PRV_M) || (!is_locked && priv == PRV_M)) {
+        if((is_locked && priv != PRV_M) || (!is_locked && priv == PRV_M)) {
             allowed_privs = 0;
         } else {
             allowed_privs = rule_privs & (PMP_READ | PMP_WRITE | PMP_EXEC);
@@ -367,7 +369,7 @@ int pmp_get_access(CPUState *env, target_ulong addr, target_ulong size, int acce
     target_ulong e = 0;
     addr &= cpu->pmp_addr_mask;
 
-    /* 
+    /*
      * According to the RISC-V Privileged Architecture Specification (ch. 3.6),
      * to calculate the effective accessing mode during loads and stores,
      * we have to account for the value of the mstatus.MPRV field.
@@ -375,13 +377,13 @@ int pmp_get_access(CPUState *env, target_ulong addr, target_ulong size, int acce
      * Take that into the account when determining the PMP configuration for a given address.
      */
     target_ulong priv = env->priv;
-    if (get_field(env->mstatus, MSTATUS_MPRV) && (access_type == ACCESS_DATA_LOAD || access_type == ACCESS_DATA_STORE)) {
+    if(get_field(env->mstatus, MSTATUS_MPRV) && (access_type == ACCESS_DATA_LOAD || access_type == ACCESS_DATA_STORE)) {
         priv = get_field(env->mstatus, MSTATUS_MPP);
     }
 
     /* Short cut if no rules */
-    if (0 == pmp_get_num_rules(env)) {
-        if (priv == PRV_M) {
+    if(0 == pmp_get_num_rules(env)) {
+        if(priv == PRV_M) {
             return (env->mseccfg & MSECCFG_MMWP) ? 0 : PMP_READ | PMP_WRITE | PMP_EXEC;
         } else {
             return riscv_has_additional_ext(env, RISCV_FEATURE_SMEPMP) ? 0 : PMP_READ | PMP_WRITE | PMP_EXEC;
@@ -390,39 +392,38 @@ int pmp_get_access(CPUState *env, target_ulong addr, target_ulong size, int acce
 
     /* 1.10 draft priv spec states there is an implicit order
          from low to high */
-    for (i = 0; i < MAX_RISCV_PMPS; i++) {
+    for(i = 0; i < MAX_RISCV_PMPS; i++) {
         s = pmp_is_in_range(env, i, addr);
         e = pmp_is_in_range(env, i, addr + size - 1);
-        const uint8_t a_field =
-            pmp_get_a_field(env->pmp_state.pmp[i].cfg_reg);
-        if (a_field == PMP_AMATCH_OFF) {
+        const uint8_t a_field = pmp_get_a_field(env->pmp_state.pmp[i].cfg_reg);
+        if(a_field == PMP_AMATCH_OFF) {
             continue;
         }
 
         /* partially inside */
-        if ((s + e) == 1) {
+        if((s + e) == 1) {
             PMP_DEBUG("pmp violation - access is partially in inside");
             ret = 0;
             break;
         }
 
         /* fully inside */
-        if ((s + e) == 2) {
+        if((s + e) == 2) {
             ret = (env->mseccfg & MSECCFG_MML) ? pmp_get_privs_mml(i, priv) : pmp_get_privs_normal(i, priv);
             break;
         }
     }
 
     /* No rule matched */
-    if (ret == -1) {
-        if (priv == PRV_M) {
+    if(ret == -1) {
+        if(priv == PRV_M) {
             uint8_t allowed = PMP_READ | PMP_WRITE | PMP_EXEC;
-            /* Executing code with Machine mode privileges is only possible from 
-             * memory regions with a matching M-mode-only rule or a locked 
-             * Shared-Region rule with executable privileges. 
-             * Executing code from a region without a matching rule 
+            /* Executing code with Machine mode privileges is only possible from
+             * memory regions with a matching M-mode-only rule or a locked
+             * Shared-Region rule with executable privileges.
+             * Executing code from a region without a matching rule
              * or with a matching S/U-mode-only rule is denied. */
-            if (env->mseccfg & MSECCFG_MML) {
+            if(env->mseccfg & MSECCFG_MML) {
                 allowed &= ~PMP_EXEC;
             }
             /* Privileged spec v1.10 states if no PMP entry matches an
@@ -451,21 +452,21 @@ void pmpcfg_csr_write(CPUState *env, uint32_t reg_index, target_ulong val)
     PMP_DEBUG("hart " TARGET_FMT_ld " writes: reg%d, val: 0x" TARGET_FMT_lx, env->mhartid, reg_index, val);
 
 #if defined(TARGET_RISCV64)
-    // for RV64 only even pmpcfg registers are used:
-    // pmpcfg0 = [pmp0cfg, pmp1cfg, ..., pmp7cfg]
-    // there is NO pmpcfg1
-    // pmpcfg2 = [pmp8cfg, pmp9cfg, ..., pmp15cfg]
-    // so we obtain the effective index by dividing by 2
-    if (reg_index % 2 != 0) {
+    //  for RV64 only even pmpcfg registers are used:
+    //  pmpcfg0 = [pmp0cfg, pmp1cfg, ..., pmp7cfg]
+    //  there is NO pmpcfg1
+    //  pmpcfg2 = [pmp8cfg, pmp9cfg, ..., pmp15cfg]
+    //  so we obtain the effective index by dividing by 2
+    if(reg_index % 2 != 0) {
         PMP_DEBUG("ignoring write - incorrect address");
         return;
     }
     base_offset /= 2;
 #endif
 
-    for (i = 0; i < sizeof(target_ulong); i++) {
-        // Bits 5 and 6 are WARL since Priviledged ISA 1.11
-        // The soft should ignore them either way in older spec
+    for(i = 0; i < sizeof(target_ulong); i++) {
+        //  Bits 5 and 6 are WARL since Priviledged ISA 1.11
+        //  The soft should ignore them either way in older spec
         cfg_val = (val >> 8 * i) & 0x9f;
         pmp_write_cfg(env, base_offset + i, cfg_val);
     }
@@ -482,12 +483,12 @@ target_ulong pmpcfg_csr_read(CPUState *env, uint32_t reg_index)
     uint32_t base_offset = reg_index * sizeof(target_ulong);
 
 #if defined(TARGET_RISCV64)
-    // for RV64 only even pmpcfg registers are used
-    // see a comment in pmpcfg_csr_write for details
+    //  for RV64 only even pmpcfg registers are used
+    //  see a comment in pmpcfg_csr_write for details
     base_offset /= 2;
 #endif
 
-    for (i = 0; i < sizeof(target_ulong); i++) {
+    for(i = 0; i < sizeof(target_ulong); i++) {
         val = pmp_read_cfg(env, base_offset + i);
         cfg_val |= (target_ulong)val << (i * 8);
     }
@@ -504,8 +505,8 @@ void pmpaddr_csr_write(CPUState *env, uint32_t addr_index, target_ulong val)
 {
     PMP_DEBUG("hart " TARGET_FMT_ld " writes: addr%d, val: 0x" TARGET_FMT_lx, env->mhartid, addr_index, val);
 
-    if (addr_index < MAX_RISCV_PMPS) {
-        if (!pmp_is_locked(env, addr_index) || env->mseccfg & MSECCFG_RLB) {
+    if(addr_index < MAX_RISCV_PMPS) {
+        if(!pmp_is_locked(env, addr_index) || env->mseccfg & MSECCFG_RLB) {
             env->pmp_state.pmp[addr_index].addr_reg = val & cpu->pmp_addr_mask;
             pmp_update_rule(env, addr_index);
         } else {
@@ -523,7 +524,7 @@ target_ulong pmpaddr_csr_read(CPUState *env, uint32_t addr_index)
 {
     PMP_DEBUG("hart " TARGET_FMT_ld "  reads: addr%d, val: 0x" TARGET_FMT_lx, env->mhartid, addr_index,
               env->pmp_state.pmp[addr_index].addr_reg);
-    if (addr_index < MAX_RISCV_PMPS) {
+    if(addr_index < MAX_RISCV_PMPS) {
         return env->pmp_state.pmp[addr_index].addr_reg;
     } else {
         PMP_DEBUG("ignoring read - out of bounds");
@@ -531,10 +532,10 @@ target_ulong pmpaddr_csr_read(CPUState *env, uint32_t addr_index)
     }
 }
 
-bool pmp_is_any_region_locked(CPUState* env)
+bool pmp_is_any_region_locked(CPUState *env)
 {
-    for (int i = 0; i < MAX_RISCV_PMPS; i++) {
-        if (pmp_is_locked(env, i)) {
+    for(int i = 0; i < MAX_RISCV_PMPS; i++) {
+        if(pmp_is_locked(env, i)) {
             return true;
         }
     }

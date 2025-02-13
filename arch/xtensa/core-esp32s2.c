@@ -33,12 +33,8 @@
 
 #define xtensa_modules xtensa_modules_esp32s2
 
-// use the common implementation of ESP32
+//  use the common implementation of ESP32
 #include "core-esp32/xtensa-modules.c.inc"
 
-XtensaConfig esp32s2 __attribute__((unused)) = {
-    .name = "esp32s2",
-    .isa_internal = &xtensa_modules,
-    .clock_freq_khz = 140000,
-    DEFAULT_SECTIONS
-};
+XtensaConfig esp32s2
+    __attribute__((unused)) = { .name = "esp32s2", .isa_internal = &xtensa_modules, .clock_freq_khz = 140000, DEFAULT_SECTIONS };

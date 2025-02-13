@@ -11,11 +11,8 @@ void do_unaligned_access(target_ulong addr, int is_write, int is_user, void *ret
 #define QT0 (env->qt0)
 #define QT1 (env->qt1)
 
-#define BIG_ENDIAN_CONVERT(value)  \
-(((value >> 24) & 0xFF)        |   \
- ((value >> 8) & 0xFF00)       |   \
- ((value << 8) & 0xFF0000)     |   \
- ((value << 24) & 0xFF000000))
+#define BIG_ENDIAN_CONVERT(value) \
+    (((value >> 24) & 0xFF) | ((value >> 8) & 0xFF00) | ((value << 8) & 0xFF0000) | ((value << 24) & 0xFF000000))
 
 /* Leon3 cache control */
 
@@ -29,14 +26,14 @@ void do_unaligned_access(target_ulong addr, int is_write, int is_user, void *ret
 
 /* Cache Control register fields */
 
-#define CACHE_CTRL_IF    (1 <<  4) /* Instruction Cache Freeze on Interrupt */
-#define CACHE_CTRL_DF    (1 <<  5) /* Data Cache Freeze on Interrupt */
-#define CACHE_CTRL_DP    (1 << 14) /* Data cache flush pending */
-#define CACHE_CTRL_IP    (1 << 15) /* Instruction cache flush pending */
-#define CACHE_CTRL_IB    (1 << 16) /* Instruction burst fetch */
-#define CACHE_CTRL_FI    (1 << 21) /* Flush Instruction cache (Write only) */
-#define CACHE_CTRL_FD    (1 << 22) /* Flush Data cache (Write only) */
-#define CACHE_CTRL_DS    (1 << 23) /* Data cache snoop enable */
+#define CACHE_CTRL_IF (1 << 4)  /* Instruction Cache Freeze on Interrupt */
+#define CACHE_CTRL_DF (1 << 5)  /* Data Cache Freeze on Interrupt */
+#define CACHE_CTRL_DP (1 << 14) /* Data cache flush pending */
+#define CACHE_CTRL_IP (1 << 15) /* Instruction cache flush pending */
+#define CACHE_CTRL_IB (1 << 16) /* Instruction burst fetch */
+#define CACHE_CTRL_FI (1 << 21) /* Flush Instruction cache (Write only) */
+#define CACHE_CTRL_FD (1 << 22) /* Flush Data cache (Write only) */
+#define CACHE_CTRL_DS (1 << 23) /* Data cache snoop enable */
 
 static void do_unassigned_access(target_phys_addr_t addr, int is_write, int is_exec, int is_asi, int size);
 
@@ -63,12 +60,12 @@ target_ulong HELPER(ldstub)(uint32_t addr)
     retaddr = GETPC();
     page_index = (addr >> TARGET_PAGE_BITS) & (CPU_TLB_SIZE - 1);
     mmu_idx = env->psrs;
-    if (unlikely(env->tlb_table[mmu_idx][page_index].addr_write != (addr & (TARGET_PAGE_MASK)))) {
+    if(unlikely(env->tlb_table[mmu_idx][page_index].addr_write != (addr & (TARGET_PAGE_MASK)))) {
         /* the page is not in the TLB : fill it */
         tlb_fill(env, addr, 1, mmu_idx, retaddr, 0, 1);
     }
 
-    if (unlikely(env->tlb_table[mmu_idx][page_index].addr_read != (addr & (TARGET_PAGE_MASK)))) {
+    if(unlikely(env->tlb_table[mmu_idx][page_index].addr_read != (addr & (TARGET_PAGE_MASK)))) {
         /* the page is not in the TLB : fill it */
         tlb_fill(env, addr, 0, mmu_idx, retaddr, 0, 1);
     }
@@ -91,12 +88,12 @@ target_ulong HELPER(swap)(target_ulong value, uint32_t addr)
     retaddr = GETPC();
     page_index = (addr >> TARGET_PAGE_BITS) & (CPU_TLB_SIZE - 1);
     mmu_idx = env->psrs;
-    if (unlikely(env->tlb_table[mmu_idx][page_index].addr_write != (addr & (TARGET_PAGE_MASK)))) {
+    if(unlikely(env->tlb_table[mmu_idx][page_index].addr_write != (addr & (TARGET_PAGE_MASK)))) {
         /* the page is not in the TLB : fill it */
         tlb_fill(env, addr, 1, mmu_idx, retaddr, 0, 4);
     }
 
-    if (unlikely(env->tlb_table[mmu_idx][page_index].addr_read != (addr & (TARGET_PAGE_MASK)))) {
+    if(unlikely(env->tlb_table[mmu_idx][page_index].addr_read != (addr & (TARGET_PAGE_MASK)))) {
         /* the page is not in the TLB : fill it */
         tlb_fill(env, addr, 0, mmu_idx, retaddr, 0, 4);
     }
@@ -136,25 +133,25 @@ void helper_shutdown(void)
 
 void helper_check_align(target_ulong addr, uint32_t align)
 {
-    if (addr & align) {
+    if(addr & align) {
         raise_exception(TT_UNALIGNED);
     }
 }
 
 #define F_HELPER(name, p) void helper_f##name##p(void)
 
-#define F_BINOP(name)                                           \
-    float32 helper_f ## name ## s (float32 src1, float32 src2)  \
-    {                                                           \
-        return float32_ ## name (src1, src2, &env->fp_status);  \
-    }                                                           \
-    F_HELPER(name, d)                                           \
-    {                                                           \
-        DT0 = float64_ ## name (DT0, DT1, &env->fp_status);     \
-    }                                                           \
-    F_HELPER(name, q)                                           \
-    {                                                           \
-        QT0 = float128_ ## name (QT0, QT1, &env->fp_status);    \
+#define F_BINOP(name)                                       \
+    float32 helper_f##name##s(float32 src1, float32 src2)   \
+    {                                                       \
+        return float32_##name(src1, src2, &env->fp_status); \
+    }                                                       \
+    F_HELPER(name, d)                                       \
+    {                                                       \
+        DT0 = float64_##name(DT0, DT1, &env->fp_status);    \
+    }                                                       \
+    F_HELPER(name, q)                                       \
+    {                                                       \
+        QT0 = float128_##name(QT0, QT1, &env->fp_status);   \
     }
 
 F_BINOP(add);
@@ -248,25 +245,25 @@ void helper_check_ieee_exceptions(void)
     target_ulong status;
 
     status = get_float_exception_flags(&env->fp_status);
-    if (status) {
+    if(status) {
         /* Copy IEEE 754 flags into FSR */
-        if (status & float_flag_invalid) {
+        if(status & float_flag_invalid) {
             env->fsr |= FSR_NVC;
         }
-        if (status & float_flag_overflow) {
+        if(status & float_flag_overflow) {
             env->fsr |= FSR_OFC;
         }
-        if (status & float_flag_underflow) {
+        if(status & float_flag_underflow) {
             env->fsr |= FSR_UFC;
         }
-        if (status & float_flag_divbyzero) {
+        if(status & float_flag_divbyzero) {
             env->fsr |= FSR_DZC;
         }
-        if (status & float_flag_inexact) {
+        if(status & float_flag_inexact) {
             env->fsr |= FSR_NXC;
         }
 
-        if ((env->fsr & FSR_CEXC_MASK) & ((env->fsr & FSR_TEM_MASK) >> 23)) {
+        if((env->fsr & FSR_CEXC_MASK) & ((env->fsr & FSR_TEM_MASK) >> 23)) {
             /* Unmasked exception, generate a trap */
             env->fsr |= FSR_FTT_IEEE_EXCP;
             raise_exception(TT_FP_EXCP);
@@ -302,77 +299,73 @@ void helper_fsqrtq(void)
     QT0 = float128_sqrt(QT1, &env->fp_status);
 }
 
-#define GEN_FCMP(name, size, reg1, reg2, FS, E)                         \
-    void glue(helper_, name) (void)                                     \
-    {                                                                   \
-        env->fsr &= FSR_FTT_NMASK;                                      \
-        if (E && (glue(size, _is_any_nan)(reg1) ||                      \
-                     glue(size, _is_any_nan)(reg2)) &&                  \
-            (env->fsr & FSR_NVM)) {                                     \
-            env->fsr |= FSR_NVC;                                        \
-            env->fsr |= FSR_FTT_IEEE_EXCP;                              \
-            raise_exception(TT_FP_EXCP);                                \
-        }                                                               \
-        switch (glue(size, _compare) (reg1, reg2, &env->fp_status)) {   \
-        case float_relation_unordered:                                  \
-            if ((env->fsr & FSR_NVM)) {                                 \
-                env->fsr |= FSR_NVC;                                    \
-                env->fsr |= FSR_FTT_IEEE_EXCP;                          \
-                raise_exception(TT_FP_EXCP);                            \
-            } else {                                                    \
-                env->fsr &= ~((FSR_FCC1 | FSR_FCC0) << FS);             \
-                env->fsr |= (FSR_FCC1 | FSR_FCC0) << FS;                \
-                env->fsr |= FSR_NVA;                                    \
-            }                                                           \
-            break;                                                      \
-        case float_relation_less:                                       \
-            env->fsr &= ~((FSR_FCC1 | FSR_FCC0) << FS);                 \
-            env->fsr |= FSR_FCC0 << FS;                                 \
-            break;                                                      \
-        case float_relation_greater:                                    \
-            env->fsr &= ~((FSR_FCC1 | FSR_FCC0) << FS);                 \
-            env->fsr |= FSR_FCC1 << FS;                                 \
-            break;                                                      \
-        default:                                                        \
-            env->fsr &= ~((FSR_FCC1 | FSR_FCC0) << FS);                 \
-            break;                                                      \
-        }                                                               \
+#define GEN_FCMP(name, size, reg1, reg2, FS, E)                                                             \
+    void glue(helper_, name)(void)                                                                          \
+    {                                                                                                       \
+        env->fsr &= FSR_FTT_NMASK;                                                                          \
+        if(E && (glue(size, _is_any_nan)(reg1) || glue(size, _is_any_nan)(reg2)) && (env->fsr & FSR_NVM)) { \
+            env->fsr |= FSR_NVC;                                                                            \
+            env->fsr |= FSR_FTT_IEEE_EXCP;                                                                  \
+            raise_exception(TT_FP_EXCP);                                                                    \
+        }                                                                                                   \
+        switch(glue(size, _compare)(reg1, reg2, &env->fp_status)) {                                         \
+            case float_relation_unordered:                                                                  \
+                if((env->fsr & FSR_NVM)) {                                                                  \
+                    env->fsr |= FSR_NVC;                                                                    \
+                    env->fsr |= FSR_FTT_IEEE_EXCP;                                                          \
+                    raise_exception(TT_FP_EXCP);                                                            \
+                } else {                                                                                    \
+                    env->fsr &= ~((FSR_FCC1 | FSR_FCC0) << FS);                                             \
+                    env->fsr |= (FSR_FCC1 | FSR_FCC0) << FS;                                                \
+                    env->fsr |= FSR_NVA;                                                                    \
+                }                                                                                           \
+                break;                                                                                      \
+            case float_relation_less:                                                                       \
+                env->fsr &= ~((FSR_FCC1 | FSR_FCC0) << FS);                                                 \
+                env->fsr |= FSR_FCC0 << FS;                                                                 \
+                break;                                                                                      \
+            case float_relation_greater:                                                                    \
+                env->fsr &= ~((FSR_FCC1 | FSR_FCC0) << FS);                                                 \
+                env->fsr |= FSR_FCC1 << FS;                                                                 \
+                break;                                                                                      \
+            default:                                                                                        \
+                env->fsr &= ~((FSR_FCC1 | FSR_FCC0) << FS);                                                 \
+                break;                                                                                      \
+        }                                                                                                   \
     }
-#define GEN_FCMPS(name, size, FS, E)                                    \
-    void glue(helper_, name)(float32 src1, float32 src2)                \
-    {                                                                   \
-        env->fsr &= FSR_FTT_NMASK;                                      \
-        if (E && (glue(size, _is_any_nan)(src1) ||                      \
-                     glue(size, _is_any_nan)(src2)) &&                  \
-            (env->fsr & FSR_NVM)) {                                     \
-            env->fsr |= FSR_NVC;                                        \
-            env->fsr |= FSR_FTT_IEEE_EXCP;                              \
-            raise_exception(TT_FP_EXCP);                                \
-        }                                                               \
-        switch (glue(size, _compare) (src1, src2, &env->fp_status)) {   \
-        case float_relation_unordered:                                  \
-            if ((env->fsr & FSR_NVM)) {                                 \
-                env->fsr |= FSR_NVC;                                    \
-                env->fsr |= FSR_FTT_IEEE_EXCP;                          \
-                raise_exception(TT_FP_EXCP);                            \
-            } else {                                                    \
-                env->fsr &= ~((FSR_FCC1 | FSR_FCC0) << FS);             \
-                env->fsr |= (FSR_FCC1 | FSR_FCC0) << FS;                \
-                env->fsr |= FSR_NVA;                                    \
-            }                                                           \
-            break;                                                      \
-        case float_relation_less:                                       \
-            env->fsr &= ~((FSR_FCC1 | FSR_FCC0) << FS);                 \
-            env->fsr |= FSR_FCC0 << FS;                                 \
-            break;                                                      \
-        case float_relation_greater:                                    \
-            env->fsr &= ~((FSR_FCC1 | FSR_FCC0) << FS);                 \
-            env->fsr |= FSR_FCC1 << FS;                                 \
-            break;                                                      \
-        default:                                                        \
-            env->fsr &= ~((FSR_FCC1 | FSR_FCC0) << FS);                 \
-            break;                                                      \
-        }                                                               \
+#define GEN_FCMPS(name, size, FS, E)                                                                        \
+    void glue(helper_, name)(float32 src1, float32 src2)                                                    \
+    {                                                                                                       \
+        env->fsr &= FSR_FTT_NMASK;                                                                          \
+        if(E && (glue(size, _is_any_nan)(src1) || glue(size, _is_any_nan)(src2)) && (env->fsr & FSR_NVM)) { \
+            env->fsr |= FSR_NVC;                                                                            \
+            env->fsr |= FSR_FTT_IEEE_EXCP;                                                                  \
+            raise_exception(TT_FP_EXCP);                                                                    \
+        }                                                                                                   \
+        switch(glue(size, _compare)(src1, src2, &env->fp_status)) {                                         \
+            case float_relation_unordered:                                                                  \
+                if((env->fsr & FSR_NVM)) {                                                                  \
+                    env->fsr |= FSR_NVC;                                                                    \
+                    env->fsr |= FSR_FTT_IEEE_EXCP;                                                          \
+                    raise_exception(TT_FP_EXCP);                                                            \
+                } else {                                                                                    \
+                    env->fsr &= ~((FSR_FCC1 | FSR_FCC0) << FS);                                             \
+                    env->fsr |= (FSR_FCC1 | FSR_FCC0) << FS;                                                \
+                    env->fsr |= FSR_NVA;                                                                    \
+                }                                                                                           \
+                break;                                                                                      \
+            case float_relation_less:                                                                       \
+                env->fsr &= ~((FSR_FCC1 | FSR_FCC0) << FS);                                                 \
+                env->fsr |= FSR_FCC0 << FS;                                                                 \
+                break;                                                                                      \
+            case float_relation_greater:                                                                    \
+                env->fsr &= ~((FSR_FCC1 | FSR_FCC0) << FS);                                                 \
+                env->fsr |= FSR_FCC1 << FS;                                                                 \
+                break;                                                                                      \
+            default:                                                                                        \
+                env->fsr &= ~((FSR_FCC1 | FSR_FCC0) << FS);                                                 \
+                break;                                                                                      \
+        }                                                                                                   \
     }
 
 GEN_FCMPS(fcmps, float32, 0, 0);
@@ -398,9 +391,9 @@ static inline uint32_t get_NZ_icc(int32_t dst)
 {
     uint32_t ret = 0;
 
-    if (dst == 0) {
+    if(dst == 0) {
         ret = PSR_ZERO;
-    } else if (dst < 0) {
+    } else if(dst < 0) {
         ret = PSR_NEG;
     }
     return ret;
@@ -410,7 +403,7 @@ static inline uint32_t get_V_div_icc(target_ulong src2)
 {
     uint32_t ret = 0;
 
-    if (src2 != 0) {
+    if(src2 != 0) {
         ret = PSR_OVF;
     }
     return ret;
@@ -434,7 +427,7 @@ static inline uint32_t get_C_add_icc(uint32_t dst, uint32_t src1)
 {
     uint32_t ret = 0;
 
-    if (dst < src1) {
+    if(dst < src1) {
         ret = PSR_CARRY;
     }
     return ret;
@@ -444,7 +437,7 @@ static inline uint32_t get_C_addx_icc(uint32_t dst, uint32_t src1, uint32_t src2
 {
     uint32_t ret = 0;
 
-    if (((src1 & src2) | (~dst & (src1 | src2))) & (1U << 31)) {
+    if(((src1 & src2) | (~dst & (src1 | src2))) & (1U << 31)) {
         ret = PSR_CARRY;
     }
     return ret;
@@ -454,7 +447,7 @@ static inline uint32_t get_V_add_icc(uint32_t dst, uint32_t src1, uint32_t src2)
 {
     uint32_t ret = 0;
 
-    if (((src1 ^ src2 ^ -1) & (src1 ^ dst)) & (1U << 31)) {
+    if(((src1 ^ src2 ^ -1) & (src1 ^ dst)) & (1U << 31)) {
         ret = PSR_OVF;
     }
     return ret;
@@ -497,7 +490,7 @@ static inline uint32_t get_V_tag_icc(target_ulong src1, target_ulong src2)
 {
     uint32_t ret = 0;
 
-    if ((src1 | src2) & 0x3) {
+    if((src1 | src2) & 0x3) {
         ret = PSR_OVF;
     }
     return ret;
@@ -527,7 +520,7 @@ static inline uint32_t get_C_sub_icc(uint32_t src1, uint32_t src2)
 {
     uint32_t ret = 0;
 
-    if (src1 < src2) {
+    if(src1 < src2) {
         ret = PSR_CARRY;
     }
     return ret;
@@ -537,7 +530,7 @@ static inline uint32_t get_C_subx_icc(uint32_t dst, uint32_t src1, uint32_t src2
 {
     uint32_t ret = 0;
 
-    if (((~src1 & src2) | (dst & (~src1 | src2))) & (1U << 31)) {
+    if(((~src1 & src2) | (dst & (~src1 | src2))) & (1U << 31)) {
         ret = PSR_CARRY;
     }
     return ret;
@@ -547,7 +540,7 @@ static inline uint32_t get_V_sub_icc(uint32_t dst, uint32_t src1, uint32_t src2)
 {
     uint32_t ret = 0;
 
-    if (((src1 ^ src2) & (src1 ^ dst)) & (1U << 31)) {
+    if(((src1 ^ src2) & (src1 ^ dst)) & (1U << 31)) {
         ret = PSR_OVF;
     }
     return ret;
@@ -623,12 +616,17 @@ typedef struct CCTable {
 
 static const CCTable icc_table[CC_OP_NB] = {
     /* CC_OP_DYNAMIC should never happen */
-    [CC_OP_FLAGS] = { compute_all_flags, compute_C_flags }, [CC_OP_DIV] = { compute_all_div, compute_C_div },
-    [CC_OP_ADD] = { compute_all_add, compute_C_add }, [CC_OP_ADDX] = { compute_all_addx, compute_C_addx },
-    [CC_OP_TADD] = { compute_all_tadd, compute_C_add }, [CC_OP_TADDTV] = { compute_all_taddtv, compute_C_add },
-    [CC_OP_SUB] = { compute_all_sub, compute_C_sub }, [CC_OP_SUBX] = { compute_all_subx, compute_C_subx },
-    [CC_OP_TSUB] = { compute_all_tsub, compute_C_sub }, [CC_OP_TSUBTV] = { compute_all_tsubtv, compute_C_sub },
-    [CC_OP_LOGIC] = { compute_all_logic, compute_C_logic },
+    [CC_OP_FLAGS] = { compute_all_flags,  compute_C_flags },
+      [CC_OP_DIV] = { compute_all_div,    compute_C_div   },
+    [CC_OP_ADD] = { compute_all_add,    compute_C_add   },
+      [CC_OP_ADDX] = { compute_all_addx,   compute_C_addx  },
+    [CC_OP_TADD] = { compute_all_tadd,   compute_C_add   },
+      [CC_OP_TADDTV] = { compute_all_taddtv, compute_C_add   },
+    [CC_OP_SUB] = { compute_all_sub,    compute_C_sub   },
+      [CC_OP_SUBX] = { compute_all_subx,   compute_C_subx  },
+    [CC_OP_TSUB] = { compute_all_tsub,   compute_C_sub   },
+      [CC_OP_TSUBTV] = { compute_all_tsubtv, compute_C_sub   },
+    [CC_OP_LOGIC] = { compute_all_logic,  compute_C_logic },
 };
 
 void helper_compute_psr(void)
@@ -663,13 +661,13 @@ static inline void memcpy32(target_ulong *dst, const target_ulong *src)
 static void set_cwp(int new_cwp)
 {
     /* put the modified wrap registers at their proper location */
-    if (env->cwp == env->nwindows - 1) {
+    if(env->cwp == env->nwindows - 1) {
         memcpy32(env->regbase, env->regbase + env->nwindows * 16);
     }
     env->cwp = new_cwp;
 
     /* put the wrap registers at their temporary location */
-    if (new_cwp == env->nwindows - 1) {
+    if(new_cwp == env->nwindows - 1) {
         memcpy32(env->regbase + env->nwindows * 16, env->regbase);
     }
     env->regwptr = env->regbase + (new_cwp * 16);
@@ -729,7 +727,7 @@ void cpu_put_psr(CPUState *env1, target_ulong val)
 
 static int cwp_inc(int cwp)
 {
-    if (unlikely(cwp >= env->nwindows)) {
+    if(unlikely(cwp >= env->nwindows)) {
         cwp -= env->nwindows;
     }
     return cwp;
@@ -749,7 +747,7 @@ int cpu_cwp_inc(CPUState *env1, int cwp)
 
 static int cwp_dec(int cwp)
 {
-    if (unlikely(cwp < 0)) {
+    if(unlikely(cwp < 0)) {
         cwp += env->nwindows;
     }
     return cwp;
@@ -773,58 +771,56 @@ int cpu_cwp_dec(CPUState *env1, int cwp)
 
 static void leon3_cache_control_st(target_ulong addr, uint64_t val, int size)
 {
-    if (size != 4) {
+    if(size != 4) {
         return;
     }
 
-    switch (addr) {
-    case 0x00:              /* Cache control */
+    switch(addr) {
+        case 0x00: /* Cache control */
 
-        /* These values must always be read as zeros */
-        val &= ~CACHE_CTRL_FD;
-        val &= ~CACHE_CTRL_FI;
-        val &= ~CACHE_CTRL_IB;
-        val &= ~CACHE_CTRL_IP;
-        val &= ~CACHE_CTRL_DP;
+            /* These values must always be read as zeros */
+            val &= ~CACHE_CTRL_FD;
+            val &= ~CACHE_CTRL_FI;
+            val &= ~CACHE_CTRL_IB;
+            val &= ~CACHE_CTRL_IP;
+            val &= ~CACHE_CTRL_DP;
 
-        env->cache_control = val;
-        break;
-    case 0x08:              /* Instruction cache configuration */
-    case 0x0C:              /* Data cache configuration */
-        /* Read Only */
-        break;
-    default:
-        break;
-    }
-    ;
+            env->cache_control = val;
+            break;
+        case 0x08: /* Instruction cache configuration */
+        case 0x0C: /* Data cache configuration */
+            /* Read Only */
+            break;
+        default:
+            break;
+    };
 }
 
 static uint64_t leon3_cache_control_ld(target_ulong addr, int size)
 {
     uint64_t ret = 0;
 
-    if (size != 4) {
+    if(size != 4) {
         return 0;
     }
 
-    switch (addr) {
-    case 0x00:              /* Cache control */
-        ret = env->cache_control;
-        break;
+    switch(addr) {
+        case 0x00: /* Cache control */
+            ret = env->cache_control;
+            break;
 
-    /* Configuration registers are read and only always keep those
-       predefined values */
+            /* Configuration registers are read and only always keep those
+               predefined values */
 
-    case 0x08:              /* Instruction cache configuration */
-        ret = 0x10220000;
-        break;
-    case 0x0C:              /* Data cache configuration */
-        ret = 0x18220000;
-        break;
-    default:
-        break;
-    }
-    ;
+        case 0x08: /* Instruction cache configuration */
+            ret = 0x10220000;
+            break;
+        case 0x0C: /* Data cache configuration */
+            ret = 0x18220000;
+            break;
+        default:
+            break;
+    };
     return ret;
 }
 
@@ -833,243 +829,240 @@ uint64_t helper_ld_asi(target_ulong addr, int asi, int size, int sign)
     uint64_t ret = 0;
 
     helper_check_align(addr, size - 1);
-    switch (asi) {
-    case 1:
-        /* XXX: hack
-           copied from case 20
-         */
-    {
-        switch (size) {
+    switch(asi) {
         case 1:
-            ret = ldub_kernel(addr);
-            break;
-        case 2:
-            ret = lduw_kernel(addr);
-            break;
-        default:
-        case 4:
-            ret = ldl_kernel(addr);
-            break;
-        case 8:
-            ret = ldq_kernel(addr);
-            break;
-        }
-        break;
-    }
+            /* XXX: hack
+               copied from case 20
+             */
+            {
+                switch(size) {
+                    case 1:
+                        ret = ldub_kernel(addr);
+                        break;
+                    case 2:
+                        ret = lduw_kernel(addr);
+                        break;
+                    default:
+                    case 4:
+                        ret = ldl_kernel(addr);
+                        break;
+                    case 8:
+                        ret = ldq_kernel(addr);
+                        break;
+                }
+                break;
+            }
 
-    case 2:        /* SuperSparc MXCC registers and Leon3 cache control */
-        switch (addr) {
-        case 0x00: /* Leon3 Cache Control */
-        case 0x08: /* Leon3 Instruction Cache config */
-        case 0x0C: /* Leon3 Date Cache config */
-            if (env->def->features & CPU_FEATURE_CACHE_CTRL) {
-                ret = leon3_cache_control_ld(addr, size);
+        case 2: /* SuperSparc MXCC registers and Leon3 cache control */
+            switch(addr) {
+                case 0x00: /* Leon3 Cache Control */
+                case 0x08: /* Leon3 Instruction Cache config */
+                case 0x0C: /* Leon3 Date Cache config */
+                    if(env->def->features & CPU_FEATURE_CACHE_CTRL) {
+                        ret = leon3_cache_control_ld(addr, size);
+                    }
+                    break;
+                case 0x01c00a00: /* MXCC control register */
+                    if(size == 8) {
+                        ret = env->mxccregs[3];
+                    }
+                    break;
+                case 0x01c00a04: /* MXCC control register */
+                    if(size == 4) {
+                        ret = env->mxccregs[3];
+                    }
+                    break;
+                case 0x01c00c00: /* Module reset register */
+                    if(size == 8) {
+                        ret = env->mxccregs[5];
+                        //  should we do something here?
+                    }
+                    break;
+                case 0x01c00f00: /* MBus port address register */
+                    if(size == 8) {
+                        ret = env->mxccregs[7];
+                    }
+                    break;
             }
             break;
-        case 0x01c00a00: /* MXCC control register */
-            if (size == 8) {
-                ret = env->mxccregs[3];
-            }
-            break;
-        case 0x01c00a04: /* MXCC control register */
-            if (size == 4) {
-                ret = env->mxccregs[3];
-            }
-            break;
-        case 0x01c00c00: /* Module reset register */
-            if (size == 8) {
-                ret = env->mxccregs[5];
-                // should we do something here?
-            }
-            break;
-        case 0x01c00f00: /* MBus port address register */
-            if (size == 8) {
-                ret = env->mxccregs[7];
-            }
-            break;
-        }
-        break;
-    case 3:    /* MMU probe */
-    case 0x18: /* LEON3 MMU probe */
-    {
-        int mmulev;
+        case 3:    /* MMU probe */
+        case 0x18: /* LEON3 MMU probe */
+        {
+            int mmulev;
 
-        mmulev = (addr >> 8) & 15;
-        if (mmulev > 4) {
+            mmulev = (addr >> 8) & 15;
+            if(mmulev > 4) {
+                ret = 0;
+            } else {
+                ret = mmu_probe(env, addr, mmulev);
+            }
+        } break;
+        case 4:    /* read MMU regs */
+        case 0x19: /* LEON3 MMU regs */
+        {
+            int reg = (addr >> 8) & 0x1f;
+
+            ret = env->mmuregs[reg];
+            if(reg == 3) { /* Fault status cleared on read */
+                env->mmuregs[3] = 0;
+            } else if(reg == 0x13) { /* Fault status read */
+                ret = env->mmuregs[3];
+            } else if(reg == 0x14) { /* Fault address read */
+                ret = env->mmuregs[4];
+            }
+        } break;
+        case 5:  //  Turbosparc ITLB Diagnostic
+        case 6:  //  Turbosparc DTLB Diagnostic
+        case 7:  //  Turbosparc IOTLB Diagnostic
+            break;
+        case 9: /* Supervisor code access */
+            switch(size) {
+                case 1:
+                    ret = ldub_code(addr);
+                    break;
+                case 2:
+                    ret = lduw_code(addr);
+                    break;
+                default:
+                case 4:
+                    ret = ldl_code(addr);
+                    break;
+                case 8:
+                    ret = ldq_code(addr);
+                    break;
+            }
+            break;
+        case 0xa: /* User data access */
+            switch(size) {
+                case 1:
+                    ret = ldub_user(addr);
+                    break;
+                case 2:
+                    ret = lduw_user(addr);
+                    break;
+                default:
+                case 4:
+                    ret = ldl_user(addr);
+                    break;
+                case 8:
+                    ret = ldq_user(addr);
+                    break;
+            }
+            break;
+        case 0xb: /* Supervisor data access */
+            switch(size) {
+                case 1:
+                    ret = ldub_kernel(addr);
+                    break;
+                case 2:
+                    ret = lduw_kernel(addr);
+                    break;
+                default:
+                case 4:
+                    ret = ldl_kernel(addr);
+                    break;
+                case 8:
+                    ret = ldq_kernel(addr);
+                    break;
+            }
+            break;
+        case 0xc: /* I-cache tag */
+        case 0xd: /* I-cache data */
+        case 0xe: /* D-cache tag */
+        case 0xf: /* D-cache data */
+            break;
+        case 0x20: /* MMU passthrough */
+        case 0x1c: /* LEON3 MMU passthrougth */
+            switch(size) {
+                case 1:
+                    ret = ldub_phys(addr);
+                    break;
+                case 2:
+                    ret = lduw_phys(addr);
+                    break;
+                default:
+                case 4:
+                    ret = ldl_phys(addr);
+                    break;
+                case 8:
+                    ret = ldq_phys(addr);
+                    break;
+            }
+            break;
+        case 0x21 ... 0x2f: /* MMU passthrough, 0x100000000 to 0xfffffffff */
+            switch(size) {
+                case 1:
+                    ret = ldub_phys((target_phys_addr_t)addr | ((target_phys_addr_t)(asi & 0xf) << 32));
+                    break;
+                case 2:
+                    ret = lduw_phys((target_phys_addr_t)addr | ((target_phys_addr_t)(asi & 0xf) << 32));
+                    break;
+                default:
+                case 4:
+                    ret = ldl_phys((target_phys_addr_t)addr | ((target_phys_addr_t)(asi & 0xf) << 32));
+                    break;
+                case 8:
+                    ret = ldq_phys((target_phys_addr_t)addr | ((target_phys_addr_t)(asi & 0xf) << 32));
+                    break;
+            }
+            break;
+        case 0x30:  //  Turbosparc secondary cache diagnostic
+        case 0x31:  //  Turbosparc RAM snoop
+        case 0x32:  //  Turbosparc page table descriptor diagnostic
+        case 0x39:  /* data cache diagnostic register */
             ret = 0;
-        } else {
-            ret = mmu_probe(env, addr, mmulev);
-        }
-    }
-    break;
-    case 4:    /* read MMU regs */
-    case 0x19: /* LEON3 MMU regs */
-    {
-        int reg = (addr >> 8) & 0x1f;
+            break;
+        case 0x38: /* SuperSPARC MMU Breakpoint Control Registers */
+        {
+            int reg = (addr >> 8) & 3;
 
-        ret = env->mmuregs[reg];
-        if (reg == 3) {           /* Fault status cleared on read */
-            env->mmuregs[3] = 0;
-        } else if (reg == 0x13) { /* Fault status read */
-            ret = env->mmuregs[3];
-        } else if (reg == 0x14) { /* Fault address read */
-            ret = env->mmuregs[4];
-        }
+            switch(reg) {
+                case 0: /* Breakpoint Value (Addr) */
+                    ret = env->mmubpregs[reg];
+                    break;
+                case 1: /* Breakpoint Mask */
+                    ret = env->mmubpregs[reg];
+                    break;
+                case 2: /* Breakpoint Control */
+                    ret = env->mmubpregs[reg];
+                    break;
+                case 3: /* Breakpoint Status */
+                    ret = env->mmubpregs[reg];
+                    env->mmubpregs[reg] = 0ULL;
+                    break;
+            }
+        } break;
+        case 0x49: /* SuperSPARC MMU Counter Breakpoint Value */
+            ret = env->mmubpctrv;
+            break;
+        case 0x4a: /* SuperSPARC MMU Counter Breakpoint Control */
+            ret = env->mmubpctrc;
+            break;
+        case 0x4b: /* SuperSPARC MMU Counter Breakpoint Status */
+            ret = env->mmubpctrs;
+            break;
+        case 0x4c: /* SuperSPARC MMU Breakpoint Action */
+            ret = env->mmubpaction;
+            break;
+        case 8: /* User code access, XXX */
+        default:
+            do_unassigned_access(addr, 0, 0, asi, size);
+            ret = 0;
+            break;
     }
-    break;
-    case 5: // Turbosparc ITLB Diagnostic
-    case 6: // Turbosparc DTLB Diagnostic
-    case 7: // Turbosparc IOTLB Diagnostic
-        break;
-    case 9: /* Supervisor code access */
-        switch (size) {
-        case 1:
-            ret = ldub_code(addr);
-            break;
-        case 2:
-            ret = lduw_code(addr);
-            break;
-        default:
-        case 4:
-            ret = ldl_code(addr);
-            break;
-        case 8:
-            ret = ldq_code(addr);
-            break;
-        }
-        break;
-    case 0xa: /* User data access */
-        switch (size) {
-        case 1:
-            ret = ldub_user(addr);
-            break;
-        case 2:
-            ret = lduw_user(addr);
-            break;
-        default:
-        case 4:
-            ret = ldl_user(addr);
-            break;
-        case 8:
-            ret = ldq_user(addr);
-            break;
-        }
-        break;
-    case 0xb: /* Supervisor data access */
-        switch (size) {
-        case 1:
-            ret = ldub_kernel(addr);
-            break;
-        case 2:
-            ret = lduw_kernel(addr);
-            break;
-        default:
-        case 4:
-            ret = ldl_kernel(addr);
-            break;
-        case 8:
-            ret = ldq_kernel(addr);
-            break;
-        }
-        break;
-    case 0xc:  /* I-cache tag */
-    case 0xd:  /* I-cache data */
-    case 0xe:  /* D-cache tag */
-    case 0xf:  /* D-cache data */
-        break;
-    case 0x20: /* MMU passthrough */
-    case 0x1c: /* LEON3 MMU passthrougth */
-        switch (size) {
-        case 1:
-            ret = ldub_phys(addr);
-            break;
-        case 2:
-            ret = lduw_phys(addr);
-            break;
-        default:
-        case 4:
-            ret = ldl_phys(addr);
-            break;
-        case 8:
-            ret = ldq_phys(addr);
-            break;
-        }
-        break;
-    case 0x21 ... 0x2f: /* MMU passthrough, 0x100000000 to 0xfffffffff */
-        switch (size) {
-        case 1:
-            ret = ldub_phys((target_phys_addr_t)addr | ((target_phys_addr_t)(asi & 0xf) << 32));
-            break;
-        case 2:
-            ret = lduw_phys((target_phys_addr_t)addr | ((target_phys_addr_t)(asi & 0xf) << 32));
-            break;
-        default:
-        case 4:
-            ret = ldl_phys((target_phys_addr_t)addr | ((target_phys_addr_t)(asi & 0xf) << 32));
-            break;
-        case 8:
-            ret = ldq_phys((target_phys_addr_t)addr | ((target_phys_addr_t)(asi & 0xf) << 32));
-            break;
-        }
-        break;
-    case 0x30: // Turbosparc secondary cache diagnostic
-    case 0x31: // Turbosparc RAM snoop
-    case 0x32: // Turbosparc page table descriptor diagnostic
-    case 0x39: /* data cache diagnostic register */
-        ret = 0;
-        break;
-    case 0x38: /* SuperSPARC MMU Breakpoint Control Registers */
-    {
-        int reg = (addr >> 8) & 3;
-
-        switch (reg) {
-        case 0:     /* Breakpoint Value (Addr) */
-            ret = env->mmubpregs[reg];
-            break;
-        case 1:     /* Breakpoint Mask */
-            ret = env->mmubpregs[reg];
-            break;
-        case 2:     /* Breakpoint Control */
-            ret = env->mmubpregs[reg];
-            break;
-        case 3:     /* Breakpoint Status */
-            ret = env->mmubpregs[reg];
-            env->mmubpregs[reg] = 0ULL;
-            break;
-        }
-    }
-    break;
-    case 0x49: /* SuperSPARC MMU Counter Breakpoint Value */
-        ret = env->mmubpctrv;
-        break;
-    case 0x4a: /* SuperSPARC MMU Counter Breakpoint Control */
-        ret = env->mmubpctrc;
-        break;
-    case 0x4b: /* SuperSPARC MMU Counter Breakpoint Status */
-        ret = env->mmubpctrs;
-        break;
-    case 0x4c: /* SuperSPARC MMU Breakpoint Action */
-        ret = env->mmubpaction;
-        break;
-    case 8:    /* User code access, XXX */
-    default:
-        do_unassigned_access(addr, 0, 0, asi, size);
-        ret = 0;
-        break;
-    }
-    if (sign) {
-        switch (size) {
-        case 1:
-            ret = (int8_t)ret;
-            break;
-        case 2:
-            ret = (int16_t)ret;
-            break;
-        case 4:
-            ret = (int32_t)ret;
-            break;
-        default:
-            break;
+    if(sign) {
+        switch(size) {
+            case 1:
+                ret = (int8_t)ret;
+                break;
+            case 2:
+                ret = (int16_t)ret;
+                break;
+            case 4:
+                ret = (int32_t)ret;
+                break;
+            default:
+                break;
         }
     }
     return ret;
@@ -1078,326 +1071,317 @@ uint64_t helper_ld_asi(target_ulong addr, int asi, int size, int sign)
 void helper_st_asi(target_ulong addr, uint64_t val, int asi, int size)
 {
     helper_check_align(addr, size - 1);
-    switch (asi) {
-    case 2:        /* SuperSparc MXCC registers and Leon3 cache control */
-        switch (addr) {
-        case 0x00: /* Leon3 Cache Control */
-        case 0x08: /* Leon3 Instruction Cache config */
-        case 0x0C: /* Leon3 Date Cache config */
-            if (env->def->features & CPU_FEATURE_CACHE_CTRL) {
-                leon3_cache_control_st(addr, val, size);
-            }
-            break;
+    switch(asi) {
+        case 2: /* SuperSparc MXCC registers and Leon3 cache control */
+            switch(addr) {
+                case 0x00: /* Leon3 Cache Control */
+                case 0x08: /* Leon3 Instruction Cache config */
+                case 0x0C: /* Leon3 Date Cache config */
+                    if(env->def->features & CPU_FEATURE_CACHE_CTRL) {
+                        leon3_cache_control_st(addr, val, size);
+                    }
+                    break;
 
-        case 0x01c00000: /* MXCC stream data register 0 */
-            if (size == 8) {
-                env->mxccdata[0] = val;
+                case 0x01c00000: /* MXCC stream data register 0 */
+                    if(size == 8) {
+                        env->mxccdata[0] = val;
+                    }
+                    break;
+                case 0x01c00008: /* MXCC stream data register 1 */
+                    if(size == 8) {
+                        env->mxccdata[1] = val;
+                    }
+                    break;
+                case 0x01c00010: /* MXCC stream data register 2 */
+                    if(size == 8) {
+                        env->mxccdata[2] = val;
+                    }
+                    break;
+                case 0x01c00018: /* MXCC stream data register 3 */
+                    if(size == 8) {
+                        env->mxccdata[3] = val;
+                    }
+                    break;
+                case 0x01c00100: /* MXCC stream source */
+                    if(size == 8) {
+                        env->mxccregs[0] = val;
+                    }
+                    env->mxccdata[0] = ldq_phys((env->mxccregs[0] & 0xffffffffULL) + 0);
+                    env->mxccdata[1] = ldq_phys((env->mxccregs[0] & 0xffffffffULL) + 8);
+                    env->mxccdata[2] = ldq_phys((env->mxccregs[0] & 0xffffffffULL) + 16);
+                    env->mxccdata[3] = ldq_phys((env->mxccregs[0] & 0xffffffffULL) + 24);
+                    break;
+                case 0x01c00200: /* MXCC stream destination */
+                    if(size == 8) {
+                        env->mxccregs[1] = val;
+                    }
+                    stq_phys((env->mxccregs[1] & 0xffffffffULL) + 0, env->mxccdata[0]);
+                    stq_phys((env->mxccregs[1] & 0xffffffffULL) + 8, env->mxccdata[1]);
+                    stq_phys((env->mxccregs[1] & 0xffffffffULL) + 16, env->mxccdata[2]);
+                    stq_phys((env->mxccregs[1] & 0xffffffffULL) + 24, env->mxccdata[3]);
+                    break;
+                case 0x01c00a00: /* MXCC control register */
+                    if(size == 8) {
+                        env->mxccregs[3] = val;
+                    }
+                    break;
+                case 0x01c00a04: /* MXCC control register */
+                    if(size == 4) {
+                        env->mxccregs[3] = (env->mxccregs[3] & 0xffffffff00000000ULL) | val;
+                    }
+                    break;
+                case 0x01c00e00: /* MXCC error register  */
+                    //  writing a 1 bit clears the error
+                    if(size == 8) {
+                        env->mxccregs[6] &= ~val;
+                    }
+                    break;
+                case 0x01c00f00: /* MBus port address register */
+                    if(size == 8) {
+                        env->mxccregs[7] = val;
+                    }
+                    break;
             }
             break;
-        case 0x01c00008: /* MXCC stream data register 1 */
-            if (size == 8) {
-                env->mxccdata[1] = val;
-            }
-            break;
-        case 0x01c00010: /* MXCC stream data register 2 */
-            if (size == 8) {
-                env->mxccdata[2] = val;
-            }
-            break;
-        case 0x01c00018: /* MXCC stream data register 3 */
-            if (size == 8) {
-                env->mxccdata[3] = val;
-            }
-            break;
-        case 0x01c00100: /* MXCC stream source */
-            if (size == 8) {
-                env->mxccregs[0] = val;
-            }
-            env->mxccdata[0] = ldq_phys((env->mxccregs[0] & 0xffffffffULL) + 0);
-            env->mxccdata[1] = ldq_phys((env->mxccregs[0] & 0xffffffffULL) + 8);
-            env->mxccdata[2] = ldq_phys((env->mxccregs[0] & 0xffffffffULL) + 16);
-            env->mxccdata[3] = ldq_phys((env->mxccregs[0] & 0xffffffffULL) + 24);
-            break;
-        case 0x01c00200: /* MXCC stream destination */
-            if (size == 8) {
-                env->mxccregs[1] = val;
-            }
-            stq_phys((env->mxccregs[1] & 0xffffffffULL) +  0, env->mxccdata[0]);
-            stq_phys((env->mxccregs[1] & 0xffffffffULL) +  8, env->mxccdata[1]);
-            stq_phys((env->mxccregs[1] & 0xffffffffULL) + 16, env->mxccdata[2]);
-            stq_phys((env->mxccregs[1] & 0xffffffffULL) + 24, env->mxccdata[3]);
-            break;
-        case 0x01c00a00: /* MXCC control register */
-            if (size == 8) {
-                env->mxccregs[3] = val;
-            }
-            break;
-        case 0x01c00a04: /* MXCC control register */
-            if (size == 4) {
-                env->mxccregs[3] = (env->mxccregs[3] & 0xffffffff00000000ULL) | val;
-            }
-            break;
-        case 0x01c00e00: /* MXCC error register  */
-            // writing a 1 bit clears the error
-            if (size == 8) {
-                env->mxccregs[6] &= ~val;
-            }
-            break;
-        case 0x01c00f00: /* MBus port address register */
-            if (size == 8) {
-                env->mxccregs[7] = val;
-            }
-            break;
-        }
-        break;
-    case 3:    /* MMU flush */
-    case 0x18: /*LEON3 MMU flush*/
-    {
-        int mmulev;
+        case 3:    /* MMU flush */
+        case 0x18: /*LEON3 MMU flush*/
+        {
+            int mmulev;
 
-        mmulev = (addr >> 8) & 15;
-        switch (mmulev) {
-        case 0:     // flush page
-            tlb_flush_page(env, addr & 0xfffff000, true);
-            break;
-        case 1:     // flush segment (256k)
-        case 2:     // flush region (16M)
-        case 3:     // flush context (4G)
-        case 4:     // flush entire
-            tlb_flush(env, 1, true);
-            break;
-        default:
-            break;
-        }
-    }
-    break;
-    case 4:    /* write MMU regs */
-    case 0x19: /*LEON3 write MMU regs */
-    {
-        int reg = (addr >> 8) & 0x1f;
-        uint32_t oldreg;
+            mmulev = (addr >> 8) & 15;
+            switch(mmulev) {
+                case 0:  //  flush page
+                    tlb_flush_page(env, addr & 0xfffff000, true);
+                    break;
+                case 1:  //  flush segment (256k)
+                case 2:  //  flush region (16M)
+                case 3:  //  flush context (4G)
+                case 4:  //  flush entire
+                    tlb_flush(env, 1, true);
+                    break;
+                default:
+                    break;
+            }
+        } break;
+        case 4:    /* write MMU regs */
+        case 0x19: /*LEON3 write MMU regs */
+        {
+            int reg = (addr >> 8) & 0x1f;
+            uint32_t oldreg;
 
-        oldreg = env->mmuregs[reg];
-        switch (reg) {
-        case 0:     // Control Register
-            env->mmuregs[reg] = (env->mmuregs[reg] & 0xff000000) | (val & 0x00ffffff);
-            // Mappings generated during no-fault mode or MMU
-            // disabled mode are invalid in normal mode
-            if ((oldreg & (MMU_E | MMU_NF | env->def->mmu_bm)) != (env->mmuregs[reg] & (MMU_E | MMU_NF | env->def->mmu_bm))) {
-                tlb_flush(env, 1, true);
+            oldreg = env->mmuregs[reg];
+            switch(reg) {
+                case 0:  //  Control Register
+                    env->mmuregs[reg] = (env->mmuregs[reg] & 0xff000000) | (val & 0x00ffffff);
+                    //  Mappings generated during no-fault mode or MMU
+                    //  disabled mode are invalid in normal mode
+                    if((oldreg & (MMU_E | MMU_NF | env->def->mmu_bm)) !=
+                       (env->mmuregs[reg] & (MMU_E | MMU_NF | env->def->mmu_bm))) {
+                        tlb_flush(env, 1, true);
+                    }
+                    break;
+                case 1:  //  Context Table Pointer Register
+                    env->mmuregs[reg] = val & env->def->mmu_ctpr_mask;
+                    break;
+                case 2:  //  Context Register
+                    env->mmuregs[reg] = val & env->def->mmu_cxr_mask;
+                    if(oldreg != env->mmuregs[reg]) {
+                        /* we flush when the MMU context changes because
+                           QEMU has no MMU context support */
+                        tlb_flush(env, 1, true);
+                    }
+                    break;
+                case 3:  //  Synchronous Fault Status Register with Clear
+                case 4:  //  Synchronous Fault Address Register
+                    break;
+                case 0x10:  //  TLB Replacement Control Register
+                    env->mmuregs[reg] = val & env->def->mmu_trcr_mask;
+                    break;
+                case 0x13:  //  Synchronous Fault Status Register with Read and Clear
+                    env->mmuregs[3] = val & env->def->mmu_sfsr_mask;
+                    break;
+                case 0x14:  //  Synchronous Fault Address Register
+                    env->mmuregs[4] = val;
+                    break;
+                default:
+                    env->mmuregs[reg] = val;
+                    break;
+            }
+            if(oldreg != env->mmuregs[reg]) { }
+        } break;
+        case 5:  //  Turbosparc ITLB Diagnostic
+        case 6:  //  Turbosparc DTLB Diagnostic
+        case 7:  //  Turbosparc IOTLB Diagnostic
+            break;
+        case 0xa: /* User data access */
+            switch(size) {
+                case 1:
+                    stb_user(addr, val);
+                    break;
+                case 2:
+                    stw_user(addr, val);
+                    break;
+                default:
+                case 4:
+                    stl_user(addr, val);
+                    break;
+                case 8:
+                    stq_user(addr, val);
+                    break;
             }
             break;
-        case 1:     // Context Table Pointer Register
-            env->mmuregs[reg] = val & env->def->mmu_ctpr_mask;
-            break;
-        case 2:     // Context Register
-            env->mmuregs[reg] = val & env->def->mmu_cxr_mask;
-            if (oldreg != env->mmuregs[reg]) {
-                /* we flush when the MMU context changes because
-                   QEMU has no MMU context support */
-                tlb_flush(env, 1, true);
+        case 0xb: /* Supervisor data access */
+            switch(size) {
+                case 1:
+                    stb_kernel(addr, val);
+                    break;
+                case 2:
+                    stw_kernel(addr, val);
+                    break;
+                default:
+                case 4:
+                    stl_kernel(addr, val);
+                    break;
+                case 8:
+                    stq_kernel(addr, val);
+                    break;
             }
             break;
-        case 3:     // Synchronous Fault Status Register with Clear
-        case 4:     // Synchronous Fault Address Register
+        case 0xc:  /* I-cache tag */
+        case 0xd:  /* I-cache data */
+        case 0xe:  /* D-cache tag */
+        case 0xf:  /* D-cache data */
+        case 0x10: /* I/D-cache flush page */
+        case 0x11: /* I/D-cache flush segment */
+        case 0x12: /* I/D-cache flush region */
+        case 0x13: /* I/D-cache flush context */
+        case 0x14: /* I/D-cache flush user */
             break;
-        case 0x10:  // TLB Replacement Control Register
-            env->mmuregs[reg] = val & env->def->mmu_trcr_mask;
-            break;
-        case 0x13:  // Synchronous Fault Status Register with Read and Clear
-            env->mmuregs[3] = val & env->def->mmu_sfsr_mask;
-            break;
-        case 0x14:  // Synchronous Fault Address Register
-            env->mmuregs[4] = val;
-            break;
-        default:
-            env->mmuregs[reg] = val;
-            break;
-        }
-        if (oldreg != env->mmuregs[reg]) {
-        }
-    }
-    break;
-    case 5:   // Turbosparc ITLB Diagnostic
-    case 6:   // Turbosparc DTLB Diagnostic
-    case 7:   // Turbosparc IOTLB Diagnostic
-        break;
-    case 0xa: /* User data access */
-        switch (size) {
-        case 1:
-            stb_user(addr, val);
-            break;
-        case 2:
-            stw_user(addr, val);
-            break;
-        default:
-        case 4:
-            stl_user(addr, val);
-            break;
-        case 8:
-            stq_user(addr, val);
-            break;
-        }
-        break;
-    case 0xb: /* Supervisor data access */
-        switch (size) {
-        case 1:
-            stb_kernel(addr, val);
-            break;
-        case 2:
-            stw_kernel(addr, val);
-            break;
-        default:
-        case 4:
-            stl_kernel(addr, val);
-            break;
-        case 8:
-            stq_kernel(addr, val);
-            break;
-        }
-        break;
-    case 0xc:  /* I-cache tag */
-    case 0xd:  /* I-cache data */
-    case 0xe:  /* D-cache tag */
-    case 0xf:  /* D-cache data */
-    case 0x10: /* I/D-cache flush page */
-    case 0x11: /* I/D-cache flush segment */
-    case 0x12: /* I/D-cache flush region */
-    case 0x13: /* I/D-cache flush context */
-    case 0x14: /* I/D-cache flush user */
-        break;
-    case 0x17: /* Block copy, sta access */
-    {
-        // val = src
-        // addr = dst
-        // copy 32 bytes
-        unsigned int i;
-        uint32_t src = val & ~3, dst = addr & ~3, temp;
+        case 0x17: /* Block copy, sta access */
+        {
+            //  val = src
+            //  addr = dst
+            //  copy 32 bytes
+            unsigned int i;
+            uint32_t src = val & ~3, dst = addr & ~3, temp;
 
-        for (i = 0; i < 32; i += 4, src += 4, dst += 4) {
-            temp = ldl_kernel(src);
-            stl_kernel(dst, temp);
-        }
-    }
-    break;
-    case 0x1f: /* Block fill, stda access */
-    {
-        // addr = dst
-        // fill 32 bytes with val
-        unsigned int i;
-        uint32_t dst = addr & 7;
+            for(i = 0; i < 32; i += 4, src += 4, dst += 4) {
+                temp = ldl_kernel(src);
+                stl_kernel(dst, temp);
+            }
+        } break;
+        case 0x1f: /* Block fill, stda access */
+        {
+            //  addr = dst
+            //  fill 32 bytes with val
+            unsigned int i;
+            uint32_t dst = addr & 7;
 
-        for (i = 0; i < 32; i += 8, dst += 8) {
-            stq_kernel(dst, val);
-        }
-    }
-    break;
-    case 0x1:
-    {
-        /* The default case in the switch below just follows the coding
-         * convention in this function meaning that no other values on
-         * size are expected than 1, 2, 4 and 8 */
-        switch (size) {
-        case 1:
-            stb_kernel(addr, val);
+            for(i = 0; i < 32; i += 8, dst += 8) {
+                stq_kernel(dst, val);
+            }
+        } break;
+        case 0x1: {
+            /* The default case in the switch below just follows the coding
+             * convention in this function meaning that no other values on
+             * size are expected than 1, 2, 4 and 8 */
+            switch(size) {
+                case 1:
+                    stb_kernel(addr, val);
+                    break;
+                case 2:
+                    stw_kernel(addr, val);
+                    break;
+                default:
+                case 4:
+                    stl_kernel(addr, val);
+                    break;
+                case 8:
+                    stq_kernel(addr, val);
+                    break;
+            }
+        } break;
+        case 0x20: /* MMU passthrough */
+        case 0x1c: /* LEON3 MMU passthrougth */
+        {
+            switch(size) {
+                case 1:
+                    stb_phys(addr, val);
+                    break;
+                case 2:
+                    stw_phys(addr, val);
+                    break;
+                case 4:
+                default:
+                    stl_phys(addr, val);
+                    break;
+                case 8:
+                    stq_phys(addr, val);
+                    break;
+            }
+        } break;
+        case 0x21 ... 0x2f: /* MMU passthrough, 0x100000000 to 0xfffffffff */
+        {
+            switch(size) {
+                case 1:
+                    stb_phys((target_phys_addr_t)addr | ((target_phys_addr_t)(asi & 0xf) << 32), val);
+                    break;
+                case 2:
+                    stw_phys((target_phys_addr_t)addr | ((target_phys_addr_t)(asi & 0xf) << 32), val);
+                    break;
+                case 4:
+                default:
+                    stl_phys((target_phys_addr_t)addr | ((target_phys_addr_t)(asi & 0xf) << 32), val);
+                    break;
+                case 8:
+                    stq_phys((target_phys_addr_t)addr | ((target_phys_addr_t)(asi & 0xf) << 32), val);
+                    break;
+            }
+        } break;
+        case 0x30:  //  store buffer tags or Turbosparc secondary cache diagnostic
+        case 0x31:  //  store buffer data, Ross RT620 I-cache flush or
+        //  Turbosparc snoop RAM
+        case 0x32:  //  store buffer control or Turbosparc page table
+        //  descriptor diagnostic
+        case 0x36: /* I-cache flash clear */
+        case 0x37: /* D-cache flash clear */
             break;
-        case 2:
-            stw_kernel(addr, val);
-            break;
-        default:
-        case 4:
-            stl_kernel(addr, val);
-            break;
-        case 8:
-            stq_kernel(addr, val);
-            break;
-        }
-    }
-    break;
-    case 0x20: /* MMU passthrough */
-    case 0x1c: /* LEON3 MMU passthrougth */
-    {
-        switch (size) {
-        case 1:
-            stb_phys(addr, val);
-            break;
-        case 2:
-            stw_phys(addr, val);
-            break;
-        case 4:
-        default:
-            stl_phys(addr, val);
-            break;
-        case 8:
-            stq_phys(addr, val);
-            break;
-        }
-    }
-    break;
-    case 0x21 ... 0x2f: /* MMU passthrough, 0x100000000 to 0xfffffffff */
-    {
-        switch (size) {
-        case 1:
-            stb_phys((target_phys_addr_t)addr | ((target_phys_addr_t)(asi & 0xf) << 32), val);
-            break;
-        case 2:
-            stw_phys((target_phys_addr_t)addr | ((target_phys_addr_t)(asi & 0xf) << 32), val);
-            break;
-        case 4:
-        default:
-            stl_phys((target_phys_addr_t)addr | ((target_phys_addr_t)(asi & 0xf) << 32), val);
-            break;
-        case 8:
-            stq_phys((target_phys_addr_t)addr | ((target_phys_addr_t)(asi & 0xf) << 32), val);
-            break;
-        }
-    }
-    break;
-    case 0x30: // store buffer tags or Turbosparc secondary cache diagnostic
-    case 0x31: // store buffer data, Ross RT620 I-cache flush or
-    // Turbosparc snoop RAM
-    case 0x32: // store buffer control or Turbosparc page table
-    // descriptor diagnostic
-    case 0x36: /* I-cache flash clear */
-    case 0x37: /* D-cache flash clear */
-        break;
-    case 0x38: /* SuperSPARC MMU Breakpoint Control Registers*/
-    {
-        int reg = (addr >> 8) & 3;
+        case 0x38: /* SuperSPARC MMU Breakpoint Control Registers*/
+        {
+            int reg = (addr >> 8) & 3;
 
-        switch (reg) {
-        case 0:     /* Breakpoint Value (Addr) */
-            env->mmubpregs[reg] = (val & 0xfffffffffULL);
+            switch(reg) {
+                case 0: /* Breakpoint Value (Addr) */
+                    env->mmubpregs[reg] = (val & 0xfffffffffULL);
+                    break;
+                case 1: /* Breakpoint Mask */
+                    env->mmubpregs[reg] = (val & 0xfffffffffULL);
+                    break;
+                case 2: /* Breakpoint Control */
+                    env->mmubpregs[reg] = (val & 0x7fULL);
+                    break;
+                case 3: /* Breakpoint Status */
+                    env->mmubpregs[reg] = (val & 0xfULL);
+                    break;
+            }
+        } break;
+        case 0x49: /* SuperSPARC MMU Counter Breakpoint Value */
+            env->mmubpctrv = val & 0xffffffff;
             break;
-        case 1:     /* Breakpoint Mask */
-            env->mmubpregs[reg] = (val & 0xfffffffffULL);
+        case 0x4a: /* SuperSPARC MMU Counter Breakpoint Control */
+            env->mmubpctrc = val & 0x3;
             break;
-        case 2:     /* Breakpoint Control */
-            env->mmubpregs[reg] = (val & 0x7fULL);
+        case 0x4b: /* SuperSPARC MMU Counter Breakpoint Status */
+            env->mmubpctrs = val & 0x3;
             break;
-        case 3:     /* Breakpoint Status */
-            env->mmubpregs[reg] = (val & 0xfULL);
+        case 0x4c: /* SuperSPARC MMU Breakpoint Action */
+            env->mmubpaction = val & 0x1fff;
             break;
-        }
-    }
-    break;
-    case 0x49: /* SuperSPARC MMU Counter Breakpoint Value */
-        env->mmubpctrv = val & 0xffffffff;
-        break;
-    case 0x4a: /* SuperSPARC MMU Counter Breakpoint Control */
-        env->mmubpctrc = val & 0x3;
-        break;
-    case 0x4b: /* SuperSPARC MMU Counter Breakpoint Status */
-        env->mmubpctrs = val & 0x3;
-        break;
-    case 0x4c: /* SuperSPARC MMU Breakpoint Action */
-        env->mmubpaction = val & 0x1fff;
-        break;
-    case 8:    /* User code access, XXX */
-    case 9:    /* Supervisor code access, XXX */
-    default:
-        do_unassigned_access(addr, 1, 0, asi, size);
-        break;
+        case 8: /* User code access, XXX */
+        case 9: /* Supervisor code access, XXX */
+        default:
+            do_unassigned_access(addr, 1, 0, asi, size);
+            break;
     }
 }
 
@@ -1408,7 +1392,7 @@ target_ulong helper_cas_asi(target_ulong addr, target_ulong val1, target_ulong v
     val1 &= 0xffffffffUL;
     ret = helper_ld_asi(addr, asi, 4, 0);
     ret &= 0xffffffffUL;
-    if (val1 == ret) {
+    if(val1 == ret) {
         helper_st_asi(addr, val2 & 0xffffffffUL, asi, 4);
     }
     return ret;
@@ -1418,13 +1402,13 @@ void helper_rett(void)
 {
     unsigned int cwp;
 
-    if (env->psret == 1) {
+    if(env->psret == 1) {
         raise_exception(TT_ILL_INSN);
     }
 
     env->psret = 1;
     cwp = cwp_inc(env->cwp + 1);
-    if (env->wim & (1 << cwp)) {
+    if(env->wim & (1 << cwp)) {
         raise_exception(TT_WIN_UNF);
     }
     set_cwp(cwp);
@@ -1440,17 +1424,17 @@ static target_ulong helper_udiv_common(target_ulong a, target_ulong b, int cc)
     x0 = (a & 0xffffffff) | ((int64_t)(env->y) << 32);
     x1 = (b & 0xffffffff);
 
-    if (x1 == 0) {
+    if(x1 == 0) {
         raise_exception(TT_DIV_ZERO);
     }
 
     x0 = x0 / x1;
-    if (x0 > 0xffffffff) {
+    if(x0 > 0xffffffff) {
         x0 = 0xffffffff;
         overflow = 1;
     }
 
-    if (cc) {
+    if(cc) {
         env->cc_dst = x0;
         env->cc_src2 = overflow;
         env->cc_op = CC_OP_DIV;
@@ -1477,17 +1461,17 @@ static target_ulong helper_sdiv_common(target_ulong a, target_ulong b, int cc)
     x0 = (a & 0xffffffff) | ((int64_t)(env->y) << 32);
     x1 = (b & 0xffffffff);
 
-    if (x1 == 0) {
+    if(x1 == 0) {
         raise_exception(TT_DIV_ZERO);
     }
 
     x0 = x0 / x1;
-    if ((int32_t)x0 != x0) {
+    if((int32_t)x0 != x0) {
         x0 = x0 < 0 ? 0x80000000 : 0x7fffffff;
         overflow = 1;
     }
 
-    if (cc) {
+    if(cc) {
         env->cc_dst = x0;
         env->cc_src2 = overflow;
         env->cc_op = CC_OP_DIV;
@@ -1508,66 +1492,66 @@ target_ulong helper_sdiv_cc(target_ulong a, target_ulong b)
 void helper_stdf(target_ulong addr, int mem_idx)
 {
     helper_check_align(addr, 7);
-    switch (mem_idx) {
-    case MMU_USER_IDX:
-        stfq_user(addr, DT0);
-        break;
-    case MMU_KERNEL_IDX:
-        stfq_kernel(addr, DT0);
-        break;
+    switch(mem_idx) {
+        case MMU_USER_IDX:
+            stfq_user(addr, DT0);
+            break;
+        case MMU_KERNEL_IDX:
+            stfq_kernel(addr, DT0);
+            break;
     }
 }
 
 void helper_lddf(target_ulong addr, int mem_idx)
 {
     helper_check_align(addr, 7);
-    switch (mem_idx) {
-    case MMU_USER_IDX:
-        DT0 = ldfq_user(addr);
-        break;
-    case MMU_KERNEL_IDX:
-        DT0 = ldfq_kernel(addr);
-        break;
+    switch(mem_idx) {
+        case MMU_USER_IDX:
+            DT0 = ldfq_user(addr);
+            break;
+        case MMU_KERNEL_IDX:
+            DT0 = ldfq_kernel(addr);
+            break;
     }
 }
 
 void helper_ldqf(target_ulong addr, int mem_idx)
 {
-    // XXX add 128 bit load
+    //  XXX add 128 bit load
     CPU_QuadU u;
 
     helper_check_align(addr, 7);
-    switch (mem_idx) {
-    case MMU_USER_IDX:
-        u.ll.upper = ldq_user(addr);
-        u.ll.lower = ldq_user(addr + 8);
-        QT0 = u.q;
-        break;
-    case MMU_KERNEL_IDX:
-        u.ll.upper = ldq_kernel(addr);
-        u.ll.lower = ldq_kernel(addr + 8);
-        QT0 = u.q;
-        break;
+    switch(mem_idx) {
+        case MMU_USER_IDX:
+            u.ll.upper = ldq_user(addr);
+            u.ll.lower = ldq_user(addr + 8);
+            QT0 = u.q;
+            break;
+        case MMU_KERNEL_IDX:
+            u.ll.upper = ldq_kernel(addr);
+            u.ll.lower = ldq_kernel(addr + 8);
+            QT0 = u.q;
+            break;
     }
 }
 
 void helper_stqf(target_ulong addr, int mem_idx)
 {
-    // XXX add 128 bit store
+    //  XXX add 128 bit store
     CPU_QuadU u;
 
     helper_check_align(addr, 7);
-    switch (mem_idx) {
-    case MMU_USER_IDX:
-        u.q = QT0;
-        stq_user(addr, u.ll.upper);
-        stq_user(addr + 8, u.ll.lower);
-        break;
-    case MMU_KERNEL_IDX:
-        u.q = QT0;
-        stq_kernel(addr, u.ll.upper);
-        stq_kernel(addr + 8, u.ll.lower);
-        break;
+    switch(mem_idx) {
+        case MMU_USER_IDX:
+            u.q = QT0;
+            stq_user(addr, u.ll.upper);
+            stq_user(addr + 8, u.ll.lower);
+            break;
+        case MMU_KERNEL_IDX:
+            u.q = QT0;
+            stq_kernel(addr, u.ll.upper);
+            stq_kernel(addr + 8, u.ll.lower);
+            break;
     }
 }
 
@@ -1575,20 +1559,20 @@ static inline void set_fsr(void)
 {
     int rnd_mode;
 
-    switch (env->fsr & FSR_RD_MASK) {
-    case FSR_RD_NEAREST:
-        rnd_mode = float_round_nearest_even;
-        break;
-    default:
-    case FSR_RD_ZERO:
-        rnd_mode = float_round_to_zero;
-        break;
-    case FSR_RD_POS:
-        rnd_mode = float_round_up;
-        break;
-    case FSR_RD_NEG:
-        rnd_mode = float_round_down;
-        break;
+    switch(env->fsr & FSR_RD_MASK) {
+        case FSR_RD_NEAREST:
+            rnd_mode = float_round_nearest_even;
+            break;
+        default:
+        case FSR_RD_ZERO:
+            rnd_mode = float_round_to_zero;
+            break;
+        case FSR_RD_POS:
+            rnd_mode = float_round_up;
+            break;
+        case FSR_RD_NEG:
+            rnd_mode = float_round_down;
+            break;
     }
     set_float_rounding_mode(rnd_mode, &env->fp_status);
 }
@@ -1612,7 +1596,7 @@ void helper_save(void)
     uint32_t cwp;
 
     cwp = cwp_dec(env->cwp - 1);
-    if (env->wim & (1 << cwp)) {
+    if(env->wim & (1 << cwp)) {
         raise_exception(TT_WIN_OVF);
     }
     set_cwp(cwp);
@@ -1623,7 +1607,7 @@ void helper_restore(void)
     uint32_t cwp;
 
     cwp = cwp_inc(env->cwp + 1);
-    if (env->wim & (1 << cwp)) {
+    if(env->wim & (1 << cwp)) {
         raise_exception(TT_WIN_UNF);
     }
     set_cwp(cwp);
@@ -1631,7 +1615,7 @@ void helper_restore(void)
 
 void helper_wrpsr(target_ulong new_psr)
 {
-    if ((new_psr & PSR_CWP) >= env->nwindows) {
+    if((new_psr & PSR_CWP) >= env->nwindows) {
         raise_exception(TT_ILL_INSN);
     } else {
         cpu_put_psr(env, new_psr);
@@ -1657,7 +1641,7 @@ int tlb_fill(CPUState *env, target_ulong addr, int access_type, int mmu_idx, voi
 {
     int ret;
     ret = cpu_handle_mmu_fault(env, addr, access_type, mmu_idx, 1, no_page_fault);
-    if (ret == TRANSLATE_FAIL && !no_page_fault) {
+    if(ret == TRANSLATE_FAIL && !no_page_fault) {
         cpu_restore_state(env, retaddr);
         cpu_loop_exit(env);
     }
@@ -1672,33 +1656,33 @@ static void do_unassigned_access(target_phys_addr_t addr, int is_write, int is_e
        generated code */
     /* Don't overwrite translation and access faults */
     fault_type = (env->mmuregs[3] & 0x1c) >> 2;
-    if ((fault_type > 4) || (fault_type == 0)) {
+    if((fault_type > 4) || (fault_type == 0)) {
         env->mmuregs[3] = 0; /* Fault status register */
-        if (is_asi) {
+        if(is_asi) {
             env->mmuregs[3] |= 1 << 16;
         }
-        if (env->psrs) {
+        if(env->psrs) {
             env->mmuregs[3] |= 1 << 5;
         }
-        if (is_exec) {
+        if(is_exec) {
             env->mmuregs[3] |= 1 << 6;
         }
-        if (is_write) {
+        if(is_write) {
             env->mmuregs[3] |= 1 << 7;
         }
         env->mmuregs[3] |= (5 << 2) | 2;
         /* SuperSPARC will never place instruction fault addresses in the FAR */
-        if (!is_exec) {
+        if(!is_exec) {
             env->mmuregs[4] = addr; /* Fault address register */
         }
     }
     /* overflow (same type fault was not read before another fault) */
-    if (fault_type == ((env->mmuregs[3] & 0x1c)) >> 2) {
+    if(fault_type == ((env->mmuregs[3] & 0x1c)) >> 2) {
         env->mmuregs[3] |= 1;
     }
 
-    if ((env->mmuregs[0] & MMU_E) && !(env->mmuregs[0] & MMU_NF)) {
-        if (is_exec) {
+    if((env->mmuregs[0] & MMU_E) && !(env->mmuregs[0] & MMU_NF)) {
+        if(is_exec) {
             raise_exception(TT_CODE_ACCESS);
         } else {
             raise_exception(TT_DATA_ACCESS);
@@ -1707,7 +1691,7 @@ static void do_unassigned_access(target_phys_addr_t addr, int is_write, int is_e
 
     /* flush neverland mappings created during no-fault mode,
        so the sequential MMU faults report proper fault types */
-    if (env->mmuregs[0] & MMU_NF) {
+    if(env->mmuregs[0] & MMU_NF) {
         tlb_flush(env, 1, true);
     }
 }

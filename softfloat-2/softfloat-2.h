@@ -57,22 +57,17 @@ typedef signed int int32;
 typedef uint64_t uint64;
 typedef int64_t int64;
 
-#define LIT64(a)      a##LL
-#define INLINE       static inline
+#define LIT64(a) a##LL
+#define INLINE   static inline
 
-#define STATUS_PARAM , float_status *status
+#define STATUS_PARAM  , float_status *status
 #define STATUS(field) status->field
-#define STATUS_VAR   , status
+#define STATUS_VAR    , status
 
 /*----------------------------------------------------------------------------
  | Software IEC/IEEE floating-point ordering relations
  *----------------------------------------------------------------------------*/
-enum {
-    float_relation_less      = -1,
-    float_relation_equal     =  0,
-    float_relation_greater   =  1,
-    float_relation_unordered =  2
-};
+enum { float_relation_less = -1, float_relation_equal = 0, float_relation_greater = 1, float_relation_unordered = 2 };
 
 /*----------------------------------------------------------------------------
  | Software IEC/IEEE floating-point types.
@@ -106,32 +101,29 @@ typedef struct {
 /*----------------------------------------------------------------------------
  | Software IEC/IEEE floating-point underflow tininess-detection mode.
  *----------------------------------------------------------------------------*/
-enum {
-    float_tininess_after_rounding  = 0,
-    float_tininess_before_rounding = 1
-};
+enum { float_tininess_after_rounding = 0, float_tininess_before_rounding = 1 };
 
 /*----------------------------------------------------------------------------
  | Software IEC/IEEE floating-point rounding mode.
  *----------------------------------------------------------------------------*/
 enum {
     float_round_nearest_even = 0,
-    float_round_down         = 1,
-    float_round_up           = 2,
-    float_round_to_zero      = 3,
-    float_round_ties_away    = 4
+    float_round_down = 1,
+    float_round_up = 2,
+    float_round_to_zero = 3,
+    float_round_ties_away = 4
 };
 
 /*----------------------------------------------------------------------------
  | Software IEC/IEEE floating-point exception flags.
  *----------------------------------------------------------------------------*/
 enum {
-    float_flag_invalid         =  1,
-    float_flag_divbyzero       =  4,
-    float_flag_overflow        =  8,
-    float_flag_underflow       = 16,
-    float_flag_inexact         = 32,
-    float_flag_input_denormal  = 64,
+    float_flag_invalid = 1,
+    float_flag_divbyzero = 4,
+    float_flag_overflow = 8,
+    float_flag_underflow = 16,
+    float_flag_inexact = 32,
+    float_flag_input_denormal = 64,
     float_flag_output_denormal = 128
 };
 
@@ -210,10 +202,10 @@ void float_raise(int8 flags STATUS_PARAM);
  | sign bit inverted before it is propagated.
  *----------------------------------------------------------------------------*/
 enum {
-    float_muladd_negate_c       = 1,
+    float_muladd_negate_c = 1,
     float_muladd_negate_product = 2,
-    float_muladd_negate_result  = 3,
-    float_muladd_halve_result   = 4,
+    float_muladd_negate_result = 3,
+    float_muladd_halve_result = 4,
 };
 
 /*----------------------------------------------------------------------------
@@ -376,8 +368,8 @@ uint32 float64_to_uint32(float64 STATUS_PARAM);
 uint32 float64_to_uint32_round_to_zero(float64 STATUS_PARAM);
 int64 float64_to_int64(float64 STATUS_PARAM);
 int64 float64_to_int64_round_to_zero(float64 STATUS_PARAM);
-uint64 float64_to_uint64 (float64 a STATUS_PARAM);
-uint64 float64_to_uint64_round_to_zero (float64 a STATUS_PARAM);
+uint64 float64_to_uint64(float64 a STATUS_PARAM);
+uint64 float64_to_uint64_round_to_zero(float64 a STATUS_PARAM);
 float16 float64_to_float16(float64, flag STATUS_PARAM);
 float32 float64_to_float32(float64 STATUS_PARAM);
 floatx80 float64_to_floatx80(float64 STATUS_PARAM);
@@ -451,15 +443,15 @@ INLINE int float64_is_any_nan(float64 a)
     return ((float64_val(a) & ~(1ULL << 63)) > 0x7ff0000000000000ULL);
 }
 
-#define float64_zero     make_float64(0)
-#define float64_one      make_float64(0x3ff0000000000000LL)
-#define float64_one_point_five      make_float64(0x3FF8000000000000ULL)
-#define float64_two      make_float64(0x4000000000000000ULL)
-#define float64_three    make_float64(0x4008000000000000ULL)
-#define float64_ln2      make_float64(0x3fe62e42fefa39efLL)
-#define float64_pi       make_float64(0x400921fb54442d18LL)
-#define float64_half     make_float64(0x3fe0000000000000LL)
-#define float64_infinity make_float64(0x7ff0000000000000LL)
+#define float64_zero           make_float64(0)
+#define float64_one            make_float64(0x3ff0000000000000LL)
+#define float64_one_point_five make_float64(0x3FF8000000000000ULL)
+#define float64_two            make_float64(0x4000000000000000ULL)
+#define float64_three          make_float64(0x4008000000000000ULL)
+#define float64_ln2            make_float64(0x3fe62e42fefa39efLL)
+#define float64_pi             make_float64(0x400921fb54442d18LL)
+#define float64_half           make_float64(0x3fe0000000000000LL)
+#define float64_infinity       make_float64(0x7ff0000000000000LL)
 
 /*----------------------------------------------------------------------------
  | The pattern for a default generated double-precision NaN.

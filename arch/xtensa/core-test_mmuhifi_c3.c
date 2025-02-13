@@ -34,9 +34,5 @@
 #define xtensa_modules xtensa_modules_test_mmuhifi_c3
 #include "core-test_mmuhifi_c3/xtensa-modules.c.inc"
 
-XtensaConfig test_mmuhifi_c3 __attribute__((unused)) = {
-    .name = "test_mmuhifi_c3",
-    .isa_internal = &xtensa_modules,
-    .clock_freq_khz = 40000,
-    DEFAULT_SECTIONS
-};
+XtensaConfig test_mmuhifi_c3 __attribute__((
+    unused)) = { .name = "test_mmuhifi_c3", .isa_internal = &xtensa_modules, .clock_freq_khz = 40000, DEFAULT_SECTIONS };

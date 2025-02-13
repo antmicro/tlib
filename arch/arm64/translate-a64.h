@@ -25,8 +25,7 @@ TCGv_i64 cpu_reg_sp(DisasContext *s, int reg);
 TCGv_i64 read_cpu_reg(DisasContext *s, int reg, int sf);
 TCGv_i64 read_cpu_reg_sp(DisasContext *s, int reg, int sf);
 void write_fp_dreg(DisasContext *s, int reg, TCGv_i64 v);
-bool logic_imm_decode_wmask(uint64_t *result, unsigned int immn,
-                            unsigned int imms, unsigned int immr);
+bool logic_imm_decode_wmask(uint64_t *result, unsigned int immn, unsigned int imms, unsigned int immr);
 bool sve_access_check(DisasContext *s);
 bool sme_enabled_check(DisasContext *s);
 bool sme_enabled_check_with_svcr(DisasContext *s, unsigned);
@@ -50,10 +49,8 @@ static inline bool sme_smza_enabled_check(DisasContext *s)
 }
 
 TCGv_i64 clean_data_tbi(DisasContext *s, TCGv_i64 addr);
-TCGv_i64 gen_mte_check1(DisasContext *s, TCGv_i64 addr, bool is_write,
-                        bool tag_checked, int log2_size);
-TCGv_i64 gen_mte_checkN(DisasContext *s, TCGv_i64 addr, bool is_write,
-                        bool tag_checked, int size);
+TCGv_i64 gen_mte_check1(DisasContext *s, TCGv_i64 addr, bool is_write, bool tag_checked, int log2_size);
+TCGv_i64 gen_mte_checkN(DisasContext *s, TCGv_i64 addr, bool is_write, bool tag_checked, int size);
 
 /* We should have at some point before trying to access an FP register
  * done the necessary access check, so assert that
@@ -65,9 +62,10 @@ TCGv_i64 gen_mte_checkN(DisasContext *s, TCGv_i64 addr, bool is_write,
 static inline void assert_fp_access_checked(DisasContext *s)
 {
 #ifdef DEBUG
-    if (unlikely(!s->fp_access_checked || s->fp_excp_el)) {
+    if(unlikely(!s->fp_access_checked || s->fp_excp_el)) {
         tlib_abortf("target-arm: FP access check missing for "
-                "instruction 0x%08x\n", s->insn);
+                    "instruction 0x%08x\n",
+                    s->insn);
         tlib_assert_not_reached();
     }
 #endif
@@ -77,8 +75,7 @@ static inline void assert_fp_access_checked(DisasContext *s)
  * size, 'element' places in from the least significant end of
  * the FP/vector register Qn.
  */
-static inline int vec_reg_offset(DisasContext *s, int regno,
-                                 int element, MemOp size)
+static inline int vec_reg_offset(DisasContext *s, int regno, int element, MemOp size)
 {
     int element_size = 1 << size;
     int offs = element * element_size;
@@ -97,7 +94,7 @@ static inline int vec_reg_offset(DisasContext *s, int regno,
      * operations will have to special case loading and storing from
      * the zregs array.
      */
-    if (element_size < 8) {
+    if(element_size < 8) {
         offs ^= 8 - element_size;
     }
 #endif
@@ -165,7 +162,7 @@ static inline int streaming_pred_reg_size(DisasContext *s)
  */
 static inline int size_for_gvec(int size)
 {
-    if (size <= 8) {
+    if(size <= 8) {
         return 8;
     } else {
         return ALIGN_UP(size, 16);
@@ -188,11 +185,9 @@ static inline TCGv_ptr pred_full_reg_ptr(DisasContext *s, int regno)
 bool disas_sve(DisasContext *, uint32_t);
 bool disas_sme(DisasContext *, uint32_t);
 
-void gen_gvec_rax1(unsigned vece, uint32_t rd_ofs, uint32_t rn_ofs,
-                   uint32_t rm_ofs, uint32_t opr_sz, uint32_t max_sz);
-void gen_gvec_xar(unsigned vece, uint32_t rd_ofs, uint32_t rn_ofs,
-                  uint32_t rm_ofs, int64_t shift,
-                  uint32_t opr_sz, uint32_t max_sz);
+void gen_gvec_rax1(unsigned vece, uint32_t rd_ofs, uint32_t rn_ofs, uint32_t rm_ofs, uint32_t opr_sz, uint32_t max_sz);
+void gen_gvec_xar(unsigned vece, uint32_t rd_ofs, uint32_t rn_ofs, uint32_t rm_ofs, int64_t shift, uint32_t opr_sz,
+                  uint32_t max_sz);
 
 void gen_sve_ldr(DisasContext *s, TCGv_ptr, int vofs, int len, int rn, int imm);
 void gen_sve_str(DisasContext *s, TCGv_ptr, int vofs, int len, int rn, int imm);

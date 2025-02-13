@@ -26,14 +26,14 @@
 #ifdef TARGET_ARM64
 uint64_t *get_reg_pointer_64(int reg)
 {
-    switch (reg) {
-    // 64-bit regs:
-    case X_0_64 ... X_31_64:
-        return &(cpu->xregs[reg-X_0_64]);
-    case PC_64:
-        return &(cpu->pc);
-    default:
-        return NULL;
+    switch(reg) {
+        //  64-bit regs:
+        case X_0_64 ... X_31_64:
+            return &(cpu->xregs[reg - X_0_64]);
+        case PC_64:
+            return &(cpu->pc);
+        default:
+            return NULL;
     }
 }
 
@@ -42,42 +42,41 @@ CPU_REGISTER_ACCESSOR(64)
 #if defined(TARGET_ARM32) || defined(TARGET_ARM64)
 uint32_t *get_reg_pointer_32(int reg)
 {
-    switch (reg) {
-    case R_0_32 ... R_15_32:
-        return &(cpu->regs[reg]);
-    case CPSR_32:
-        return &(cpu->uncached_cpsr);
+    switch(reg) {
+        case R_0_32 ... R_15_32:
+            return &(cpu->regs[reg]);
+        case CPSR_32:
+            return &(cpu->uncached_cpsr);
 #if defined(TARGET_ARM32) && defined(TARGET_PROTO_ARM_M)
-    case Control_32:
-        return &(cpu->v7m.control);
-    case BasePri_32:
-        return &(cpu->v7m.basepri);
-    case VecBase_32:
-        return &(cpu->v7m.vecbase);
-    case CurrentSP_32:
-        return &(cpu->v7m.current_sp);
-    case OtherSP_32:
-        return &(cpu->v7m.other_sp);
-    case FPCCR_32:
-        return &(cpu->v7m.fpccr);
-    case FPCAR_32:
-        return &(cpu->v7m.fpcar);
-    case FPDSCR_32:
-        return &(cpu->v7m.fpdscr);
-    case CPACR_32:
-        return &(cpu->v7m.cpacr);
-    case FAULTMASK_32:
-        return &(cpu->v7m.faultmask);
+        case Control_32:
+            return &(cpu->v7m.control);
+        case BasePri_32:
+            return &(cpu->v7m.basepri);
+        case VecBase_32:
+            return &(cpu->v7m.vecbase);
+        case CurrentSP_32:
+            return &(cpu->v7m.current_sp);
+        case OtherSP_32:
+            return &(cpu->v7m.other_sp);
+        case FPCCR_32:
+            return &(cpu->v7m.fpccr);
+        case FPCAR_32:
+            return &(cpu->v7m.fpcar);
+        case FPDSCR_32:
+            return &(cpu->v7m.fpdscr);
+        case CPACR_32:
+            return &(cpu->v7m.cpacr);
+        case FAULTMASK_32:
+            return &(cpu->v7m.faultmask);
 #endif
-    default:
-        return NULL;
+        default:
+            return NULL;
     }
 }
 
 uint32_t tlib_get_register_value_32(int reg_number)
 {
-    if (reg_number == CPSR_32)
-    {
+    if(reg_number == CPSR_32) {
 #if defined(TARGET_ARM32) && defined(TARGET_PROTO_ARM_M)
         return xpsr_read(cpu);
 #else
@@ -85,16 +84,14 @@ uint32_t tlib_get_register_value_32(int reg_number)
 #endif
     }
 #ifdef TARGET_PROTO_ARM_M
-    else if (reg_number == PRIMASK_32)
-    {
-        // PRIMASK: b0: IRQ mask enabled/disabled, b1-b31: reserved.
+    else if(reg_number == PRIMASK_32) {
+        //  PRIMASK: b0: IRQ mask enabled/disabled, b1-b31: reserved.
         return cpu->uncached_cpsr & CPSR_PRIMASK ? 1 : 0;
     }
 #endif
 
-    uint32_t* ptr = get_reg_pointer_32(reg_number);
-    if (ptr == NULL)
-    {
+    uint32_t *ptr = get_reg_pointer_32(reg_number);
+    if(ptr == NULL) {
         tlib_abortf("Read from undefined CPU register number %d detected", reg_number);
     }
 
@@ -105,8 +102,7 @@ EXC_INT_1(uint32_t, tlib_get_register_value_32, int, reg_number)
 
 void tlib_set_register_value_32(int reg_number, uint32_t value)
 {
-    if (reg_number == CPSR_32)
-    {
+    if(reg_number == CPSR_32) {
 #if defined(TARGET_ARM32) && defined(TARGET_PROTO_ARM_M)
         xpsr_write(cpu, value, 0xffffffff);
 #else
@@ -115,12 +111,10 @@ void tlib_set_register_value_32(int reg_number, uint32_t value)
         return;
     }
 #ifdef TARGET_PROTO_ARM_M
-    else if (reg_number == PRIMASK_32)
-    {
+    else if(reg_number == PRIMASK_32) {
         cpu->uncached_cpsr &= !CPSR_PRIMASK;
-        // PRIMASK: b0: IRQ mask enabled/disabled, b1-b31: reserved.
-        if(value == 1)
-        {
+        //  PRIMASK: b0: IRQ mask enabled/disabled, b1-b31: reserved.
+        if(value == 1) {
             cpu->uncached_cpsr |= CPSR_PRIMASK;
             tlib_nvic_find_pending_irq();
         }
@@ -128,9 +122,8 @@ void tlib_set_register_value_32(int reg_number, uint32_t value)
     }
 #endif
 
-    uint32_t* ptr = get_reg_pointer_32(reg_number);
-    if (ptr == NULL)
-    {
+    uint32_t *ptr = get_reg_pointer_32(reg_number);
+    if(ptr == NULL) {
         tlib_abortf("Write to undefined CPU register number %d detected", reg_number);
     }
 

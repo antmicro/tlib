@@ -22,4 +22,3 @@
 DEFAULT_VOID_HANDLER1(void tlib_do_semihosting, void)
 DEFAULT_INT_HANDLER1(uint64_t tlib_get_cpu_time, void)
 DEFAULT_VOID_HANDLER2(void tlib_timer_mod, uint32_t id, uint64_t value)
-

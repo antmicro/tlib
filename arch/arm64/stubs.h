@@ -1,28 +1,30 @@
-// STUB HELPERS
+//  STUB HELPERS
 
-#define FUNC_STUB(name)         \
-static inline int name()        \
-{                               \
-    return stub_abort(#name);   \
-}
+#define FUNC_STUB(name)           \
+    static inline int name()      \
+    {                             \
+        return stub_abort(#name); \
+    }
 
 #define FUNC_STUB_GENERIC(name, type)   \
-static inline type name()               \
-{                                       \
-    return (type)stub_abort(#name);     \
-}
+    static inline type name()           \
+    {                                   \
+        return (type)stub_abort(#name); \
+    }
 
-// Call directly for consts.
+//  Call directly for consts.
 static inline int64_t stub_abort(char *name)
 {
     tlib_abortf("Stub encountered: %s", name);
     return 0;
 }
 
-#define unimplemented(...) tlib_abortf("%s unimplemented", __func__); __builtin_unreachable()
+#define unimplemented(...)                     \
+    tlib_abortf("%s unimplemented", __func__); \
+    __builtin_unreachable()
 
-// STUBS emitting warnings instead of aborting simulation (e.g. used by Linux).
-// TODO: Implement properly.
+//  STUBS emitting warnings instead of aborting simulation (e.g. used by Linux).
+//  TODO: Implement properly.
 
 static inline bool semihosting_enabled(bool arg)
 {
@@ -31,20 +33,20 @@ static inline bool semihosting_enabled(bool arg)
 }
 
 #define DisasContext void
-static inline bool disas_mve(DisasContext *dc, uint32_t insn) {
+static inline bool disas_mve(DisasContext *dc, uint32_t insn)
+{
     tlib_printf(LOG_LEVEL_DEBUG, "Stub encountered: disas_mve(); returning false");
     return false;
 }
 #undef DisasContext
 
-// STUBS
+//  STUBS
 
-// These were declared in 'cpu.h' and used by non-skipped sources but we have no
-// implementations. Remember to reenable their declarations after implementing.
+//  These were declared in 'cpu.h' and used by non-skipped sources but we have no
+//  implementations. Remember to reenable their declarations after implementing.
 FUNC_STUB(write_v7m_exception)
 
-typedef struct MemTxAttrs
-{
+typedef struct MemTxAttrs {
     int secure;
     int target_tlb_bit0;
     int target_tlb_bit1;
@@ -54,15 +56,15 @@ typedef struct MemTxAttrs
 FUNC_STUB(cpu_atomic_cmpxchgo_be_mmu)
 FUNC_STUB(cpu_atomic_cmpxchgo_le_mmu)
 FUNC_STUB(probe_access)
-FUNC_STUB_GENERIC(probe_write, void*)
-FUNC_STUB_GENERIC(tlb_vaddr_to_host, void*)
+FUNC_STUB_GENERIC(probe_write, void *)
+FUNC_STUB_GENERIC(tlb_vaddr_to_host, void *)
 
 #define MO_128 stub_abort("MO_128")
 
-// Couldn't have been ported easily because of a complex softfloat licensing.
-#define float16_one_point_five      stub_abort("float16_one_point_five")
-#define float16_three               stub_abort("float16_three")
-#define float16_two                 stub_abort("float16_two")
+//  Couldn't have been ported easily because of a complex softfloat licensing.
+#define float16_one_point_five stub_abort("float16_one_point_five")
+#define float16_three          stub_abort("float16_three")
+#define float16_two            stub_abort("float16_two")
 FUNC_STUB(float16_abs)
 FUNC_STUB(float16_add)
 FUNC_STUB(float16_chs)
@@ -93,40 +95,36 @@ typedef int AddressSpace;
 typedef int Error;
 typedef int hwaddr;
 
-typedef struct
-{
+typedef struct {
     int addr;
     void *container;
 } MemoryRegion;
 
-typedef struct
-{
+typedef struct {
     MemTxAttrs attrs;
 } CPUIOTLBEntry;
 
-typedef struct
-{
+typedef struct {
     CPUIOTLBEntry *iotlb;
 } env_tlb_d_struct;
 
-typedef struct
-{
+typedef struct {
     env_tlb_d_struct *d;
 } env_tlb_struct;
 
-FUNC_STUB_GENERIC(address_space_translate, void*)
+FUNC_STUB_GENERIC(address_space_translate, void *)
 FUNC_STUB(address_with_allocation_tag)
 FUNC_STUB(allocation_tag_from_addr)
 FUNC_STUB(arm_cpu_do_unaligned_access)
 FUNC_STUB(cpu_check_watchpoint)
-FUNC_STUB_GENERIC(cpu_get_address_space, void*)
+FUNC_STUB_GENERIC(cpu_get_address_space, void *)
 FUNC_STUB(cpu_physical_memory_set_dirty_flag)
-FUNC_STUB_GENERIC(env_tlb, env_tlb_struct*)
+FUNC_STUB_GENERIC(env_tlb, env_tlb_struct *)
 FUNC_STUB(error_free)
 FUNC_STUB(error_get_pretty)
-FUNC_STUB_GENERIC(memory_region_from_host, void*)
+FUNC_STUB_GENERIC(memory_region_from_host, void *)
 FUNC_STUB(memory_region_get_ram_addr)
-FUNC_STUB_GENERIC(memory_region_get_ram_ptr, void*)
+FUNC_STUB_GENERIC(memory_region_get_ram_ptr, void *)
 FUNC_STUB(memory_region_is_ram)
 FUNC_STUB(probe_access_flags)
 FUNC_STUB(qatomic_cmpxchg)
@@ -139,25 +137,22 @@ FUNC_STUB(tcma_check)
 FUNC_STUB(tlb_index)
 FUNC_STUB(useronly_clean_ptr)
 
-#define BP_MEM_READ             stub_abort("BP_MEM_READ")
-#define BP_MEM_WRITE            stub_abort("BP_MEM_WRITE")
-#define DIRTY_MEMORY_MIGRATION  stub_abort("DIRTY_MEMORY_MIGRATION")
-#define LOG2_TAG_GRANULE        stub_abort("LOG2_TAG_GRANULE")
-#define TAG_GRANULE             stub_abort("TAG_GRANULE")
-#define TLB_WATCHPOINT          stub_abort("TLB_WATCHPOINT")
+#define BP_MEM_READ            stub_abort("BP_MEM_READ")
+#define BP_MEM_WRITE           stub_abort("BP_MEM_WRITE")
+#define DIRTY_MEMORY_MIGRATION stub_abort("DIRTY_MEMORY_MIGRATION")
+#define LOG2_TAG_GRANULE       stub_abort("LOG2_TAG_GRANULE")
+#define TAG_GRANULE            stub_abort("TAG_GRANULE")
+#define TLB_WATCHPOINT         stub_abort("TLB_WATCHPOINT")
 
 #define HWADDR_PRIx "d"
 
 /* op_helper.c */
 
-
-typedef struct
-{
+typedef struct {
     int type;
 } ARMMMUFaultInfo;
 
-
-#define  ARMFault_AsyncExternal        stub_abort("ARMFault_AsyncExternal")
+#define ARMFault_AsyncExternal stub_abort("ARMFault_AsyncExternal")
 
 FUNC_STUB(arm_cpreg_in_idspace)
 FUNC_STUB(arm_fi_to_lfsc)
@@ -201,8 +196,8 @@ FUNC_STUB(uint64_to_float16_scalbn)
 
 typedef int bfloat16;
 
-#define  float16_zero            stub_abort("float16_zero")
-#define  float_round_to_odd_inf  stub_abort("float_round_to_odd_inf")
+#define float16_zero           stub_abort("float16_zero")
+#define float_round_to_odd_inf stub_abort("float_round_to_odd_inf")
 
 FUNC_STUB(float16_eq_quiet)
 FUNC_STUB(float16_le)
@@ -215,9 +210,9 @@ FUNC_STUB(uint16_to_float16)
 
 /* sve_helper.c */
 
-#define  float16_infinity   stub_abort("float16_infinity")
-#define  float16_one        stub_abort("float16_one")
-#define  SVE_MTEDESC_SHIFT  stub_abort("SVE_MTEDESC_SHIFT")
+#define float16_infinity  stub_abort("float16_infinity")
+#define float16_one       stub_abort("float16_one")
+#define SVE_MTEDESC_SHIFT stub_abort("SVE_MTEDESC_SHIFT")
 
 FUNC_STUB(cpu_ldl_be_data_ra)
 FUNC_STUB(cpu_ldl_le_data_ra)
@@ -252,8 +247,7 @@ FUNC_STUB(wswap64)
 /* translate-a64.c */
 
 typedef int TCGOp;
-typedef struct
-{
+typedef struct {
     void *init_disas_context;
     void *tb_start;
     void *insn_start;
@@ -262,15 +256,15 @@ typedef struct
     void *disas_log;
 } TranslatorOps;
 
-#define  R_SVCR_SM_MASK                         stub_abort("R_SVCR_SM_MASK")
-#define  R_SVCR_ZA_MASK                         stub_abort("R_SVCR_ZA_MASK")
-#define  SME_ET_AccessTrap                      stub_abort("SME_ET_AccessTrap")
-#define  SME_ET_InactiveZA                      stub_abort("SME_ET_InactiveZA")
-#define  SME_ET_NotStreaming                    stub_abort("SME_ET_NotStreaming")
-#define  SME_ET_Streaming                       stub_abort("SME_ET_Streaming")
+#define R_SVCR_SM_MASK      stub_abort("R_SVCR_SM_MASK")
+#define R_SVCR_ZA_MASK      stub_abort("R_SVCR_ZA_MASK")
+#define SME_ET_AccessTrap   stub_abort("SME_ET_AccessTrap")
+#define SME_ET_InactiveZA   stub_abort("SME_ET_InactiveZA")
+#define SME_ET_NotStreaming stub_abort("SME_ET_NotStreaming")
+#define SME_ET_Streaming    stub_abort("SME_ET_Streaming")
 FUNC_STUB(arm_cpreg_encoding_in_idspace)
 FUNC_STUB(gen_io_start)
-FUNC_STUB_GENERIC(get_arm_cp_reginfo, void*)
+FUNC_STUB_GENERIC(get_arm_cp_reginfo, void *)
 FUNC_STUB(target_disas)
 FUNC_STUB_GENERIC(tcg_last_op, void *)
 FUNC_STUB_GENERIC(tlb_entry, void *)
@@ -313,21 +307,20 @@ FUNC_STUB(disas_m_nocp)
 
 /* translate.c */
 
-#define  EXC_RETURN_MIN_MAGIC         stub_abort("EXC_RETURN_MIN_MAGIC")
-#define  FNC_RETURN_MIN_MAGIC         stub_abort("FNC_RETURN_MIN_MAGIC")
+#define EXC_RETURN_MIN_MAGIC stub_abort("EXC_RETURN_MIN_MAGIC")
+#define FNC_RETURN_MIN_MAGIC stub_abort("FNC_RETURN_MIN_MAGIC")
 
-#define  TCG_TARGET_HAS_add2_i32      0  // TODO: Port add2_i32 from TCG
+#define TCG_TARGET_HAS_add2_i32 0  //  TODO: Port add2_i32 from TCG
 
 FUNC_STUB(regime_is_secure)
-FUNC_STUB(syn_cp14_rrt_trap) // aarch32
-FUNC_STUB(syn_cp14_rt_trap) // aarch32
-FUNC_STUB(syn_cp15_rrt_trap) // aarch32
-FUNC_STUB(syn_cp15_rt_trap) // aarch32
+FUNC_STUB(syn_cp14_rrt_trap)  //  aarch32
+FUNC_STUB(syn_cp14_rt_trap)   //  aarch32
+FUNC_STUB(syn_cp15_rrt_trap)  //  aarch32
+FUNC_STUB(syn_cp15_rt_trap)   //  aarch32
 FUNC_STUB(tcg_remove_ops_after)
 FUNC_STUB(translator_loop)
 
 /* translate.c */
-
 
 FUNC_STUB_GENERIC(gen_helper_mve_sqrshrl48, void)
 FUNC_STUB_GENERIC(gen_helper_mve_sqrshrl, void)
@@ -364,9 +357,9 @@ FUNC_STUB_GENERIC(gen_helper_gvec_fclt0_h, void)
 
 /* translate-sve.c */
 
-#define  float16_half               stub_abort("float16_half")
-#define  float_round_to_odd         stub_abort("float_round_to_odd")
-#define  TCG_TARGET_HAS_bitsel_vec  0  // TODO: Port bitsel_vec from TCG
+#define float16_half              stub_abort("float16_half")
+#define float_round_to_odd        stub_abort("float_round_to_odd")
+#define TCG_TARGET_HAS_bitsel_vec 0  //  TODO: Port bitsel_vec from TCG
 
 FUNC_STUB(pow2ceil)
 FUNC_STUB(tcg_const_local_ptr)
@@ -378,18 +371,18 @@ FUNC_STUB(tcg_temp_local_new_ptr)
 
 /* translate-vfp.c */
 
-#define  ECI_A0A1A2B0             stub_abort("ECI_A0A1A2B0")
-#define  ECI_A0A1A2               stub_abort("ECI_A0A1A2")
-#define  ECI_A0A1                 stub_abort("ECI_A0A1")
-#define  ECI_A0                   stub_abort("ECI_A0")
-#define  ECI_NONE                 stub_abort("ECI_NONE")
-#define  R_V7M_CONTROL_FPCA_MASK  stub_abort("R_V7M_CONTROL_FPCA_MASK")
-#define  R_V7M_CONTROL_SFPA_MASK  stub_abort("R_V7M_CONTROL_SFPA_MASK")
-#define  R_V7M_FPCCR_S_MASK       stub_abort("R_V7M_FPCCR_S_MASK")
+#define ECI_A0A1A2B0            stub_abort("ECI_A0A1A2B0")
+#define ECI_A0A1A2              stub_abort("ECI_A0A1A2")
+#define ECI_A0A1                stub_abort("ECI_A0A1")
+#define ECI_A0                  stub_abort("ECI_A0")
+#define ECI_NONE                stub_abort("ECI_NONE")
+#define R_V7M_CONTROL_FPCA_MASK stub_abort("R_V7M_CONTROL_FPCA_MASK")
+#define R_V7M_CONTROL_SFPA_MASK stub_abort("R_V7M_CONTROL_SFPA_MASK")
+#define R_V7M_FPCCR_S_MASK      stub_abort("R_V7M_FPCCR_S_MASK")
 
 FUNC_STUB(gen_helper_v7m_preserve_fp_state)
 
-// In 'helper.c' there are additional stubs for functions declared but unimplemented.
+//  In 'helper.c' there are additional stubs for functions declared but unimplemented.
 
 /* decode-sve.c.inc included in translate-sve.c */
 
@@ -404,35 +397,30 @@ FUNC_STUB(trans_FMIN_zpzi)
 
 /* mte_helper.c */
 
-
-#define  __REGISTER_MTEDESC_MIDX_START    stub_abort("__REGISTER_MTEDESC_MIDX_START")
-#define  __REGISTER_MTEDESC_MIDX_WIDTH    stub_abort("__REGISTER_MTEDESC_MIDX_WIDTH")
-#define  __REGISTER_MTEDESC_SIZEM1_START  stub_abort("__REGISTER_MTEDESC_SIZEM1_START")
-#define  __REGISTER_MTEDESC_SIZEM1_WIDTH  stub_abort("__REGISTER_MTEDESC_SIZEM1_WIDTH")
-#define  __REGISTER_MTEDESC_WRITE_START   stub_abort("__REGISTER_MTEDESC_WRITE_START")
-#define  __REGISTER_MTEDESC_WRITE_WIDTH   stub_abort("__REGISTER_MTEDESC_WRITE_WIDTH")
-
+#define __REGISTER_MTEDESC_MIDX_START   stub_abort("__REGISTER_MTEDESC_MIDX_START")
+#define __REGISTER_MTEDESC_MIDX_WIDTH   stub_abort("__REGISTER_MTEDESC_MIDX_WIDTH")
+#define __REGISTER_MTEDESC_SIZEM1_START stub_abort("__REGISTER_MTEDESC_SIZEM1_START")
+#define __REGISTER_MTEDESC_SIZEM1_WIDTH stub_abort("__REGISTER_MTEDESC_SIZEM1_WIDTH")
+#define __REGISTER_MTEDESC_WRITE_START  stub_abort("__REGISTER_MTEDESC_WRITE_START")
+#define __REGISTER_MTEDESC_WRITE_WIDTH  stub_abort("__REGISTER_MTEDESC_WRITE_WIDTH")
 
 /* sve_helper.c */
 
-
-#define  __REGISTER_PREDDESC_DATA_START   stub_abort("__REGISTER_PREDDESC_DATA_START")
-#define  __REGISTER_PREDDESC_DATA_WIDTH   stub_abort("__REGISTER_PREDDESC_DATA_WIDTH")
-#define  __REGISTER_PREDDESC_ESZ_START    stub_abort("__REGISTER_PREDDESC_ESZ_START")
-#define  __REGISTER_PREDDESC_ESZ_WIDTH    stub_abort("__REGISTER_PREDDESC_ESZ_WIDTH")
-#define  __REGISTER_PREDDESC_OPRSZ_START  stub_abort("__REGISTER_PREDDESC_OPRSZ_START")
-#define  __REGISTER_PREDDESC_OPRSZ_WIDTH  stub_abort("__REGISTER_PREDDESC_OPRSZ_WIDTH")
-
+#define __REGISTER_PREDDESC_DATA_START  stub_abort("__REGISTER_PREDDESC_DATA_START")
+#define __REGISTER_PREDDESC_DATA_WIDTH  stub_abort("__REGISTER_PREDDESC_DATA_WIDTH")
+#define __REGISTER_PREDDESC_ESZ_START   stub_abort("__REGISTER_PREDDESC_ESZ_START")
+#define __REGISTER_PREDDESC_ESZ_WIDTH   stub_abort("__REGISTER_PREDDESC_ESZ_WIDTH")
+#define __REGISTER_PREDDESC_OPRSZ_START stub_abort("__REGISTER_PREDDESC_OPRSZ_START")
+#define __REGISTER_PREDDESC_OPRSZ_WIDTH stub_abort("__REGISTER_PREDDESC_OPRSZ_WIDTH")
 
 /* translate-a64.c */
 
+#define __REGISTER_MTEDESC_TBI_START  stub_abort("__REGISTER_MTEDESC_TBI_START")
+#define __REGISTER_MTEDESC_TBI_WIDTH  stub_abort("__REGISTER_MTEDESC_TBI_WIDTH")
+#define __REGISTER_MTEDESC_TCMA_START stub_abort("__REGISTER_MTEDESC_TCMA_START")
+#define __REGISTER_MTEDESC_TCMA_WIDTH stub_abort("__REGISTER_MTEDESC_TCMA_WIDTH")
 
-#define  __REGISTER_MTEDESC_TBI_START   stub_abort("__REGISTER_MTEDESC_TBI_START")
-#define  __REGISTER_MTEDESC_TBI_WIDTH   stub_abort("__REGISTER_MTEDESC_TBI_WIDTH")
-#define  __REGISTER_MTEDESC_TCMA_START  stub_abort("__REGISTER_MTEDESC_TCMA_START")
-#define  __REGISTER_MTEDESC_TCMA_WIDTH  stub_abort("__REGISTER_MTEDESC_TCMA_WIDTH")
-
-// Prototyped in translate-a32.h
+//  Prototyped in translate-a32.h
 FUNC_STUB(mve_eci_check)
 FUNC_STUB(mve_update_eci)
 FUNC_STUB(mve_update_and_store_eci)

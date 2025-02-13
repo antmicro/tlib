@@ -21,7 +21,7 @@ void tlib_reset(void);
 int32_t tlib_execute(uint32_t max_insns);
 void tlib_request_translation_block_interrupt(int);
 void tlib_try_interrupt_translation_block(void);
-void  tlib_set_return_request(void);
+void tlib_set_return_request(void);
 void tlib_set_paused(void);
 void tlib_clear_paused(void);
 int32_t tlib_is_wfi(void);
@@ -97,7 +97,7 @@ int tlib_get_window_privileges(uint32_t index);
 
 uint64_t tlib_get_mmu_window_addend(uint32_t index);
 
-// Defined in 'arch/*/cpu_registers.c'.
+//  Defined in 'arch/*/cpu_registers.c'.
 uint32_t tlib_get_register_value_32(int reg_number);
 void tlib_set_register_value_32(int reg_number, uint32_t value);
 

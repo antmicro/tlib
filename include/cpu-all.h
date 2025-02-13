@@ -270,10 +270,10 @@ static inline int lduw_be_p(const void *ptr)
 {
 #if defined(__i386__)
     int val;
-    asm volatile ("movzwl %1, %0\n"
-                  "xchgb %b0, %h0\n"
-                  : "=q" (val)
-                  : "m" (*(uint16_t *)ptr));
+    asm volatile("movzwl %1, %0\n"
+                 "xchgb %b0, %h0\n"
+                 : "=q"(val)
+                 : "m"(*(uint16_t *)ptr));
     return val;
 #else
     const uint8_t *b = ptr;
@@ -285,10 +285,10 @@ static inline int ldsw_be_p(const void *ptr)
 {
 #if defined(__i386__)
     int val;
-    asm volatile ("movzwl %1, %0\n"
-                  "xchgb %b0, %h0\n"
-                  : "=q" (val)
-                  : "m" (*(uint16_t *)ptr));
+    asm volatile("movzwl %1, %0\n"
+                 "xchgb %b0, %h0\n"
+                 : "=q"(val)
+                 : "m"(*(uint16_t *)ptr));
     return (int16_t)val;
 #else
     const uint8_t *b = ptr;
@@ -300,10 +300,10 @@ static inline int ldl_be_p(const void *ptr)
 {
 #if defined(__i386__) || defined(__x86_64__)
     int val;
-    asm volatile ("movl %1, %0\n"
-                  "bswap %0\n"
-                  : "=r" (val)
-                  : "m" (*(uint32_t *)ptr));
+    asm volatile("movl %1, %0\n"
+                 "bswap %0\n"
+                 : "=r"(val)
+                 : "m"(*(uint32_t *)ptr));
     return val;
 #else
     const uint8_t *b = ptr;
@@ -322,10 +322,10 @@ static inline uint64_t ldq_be_p(const void *ptr)
 static inline void stw_be_p(void *ptr, int v)
 {
 #if defined(__i386__)
-    asm volatile ("xchgb %b0, %h0\n"
-                  "movw %w0, %1\n"
-                  : "=q" (v)
-                  : "m" (*(uint16_t *)ptr), "0" (v));
+    asm volatile("xchgb %b0, %h0\n"
+                 "movw %w0, %1\n"
+                 : "=q"(v)
+                 : "m"(*(uint16_t *)ptr), "0"(v));
 #else
     uint8_t *d = (uint8_t *)ptr;
     d[0] = v >> 8;
@@ -336,10 +336,10 @@ static inline void stw_be_p(void *ptr, int v)
 static inline void stl_be_p(void *ptr, int v)
 {
 #if defined(__i386__) || defined(__x86_64__)
-    asm volatile ("bswap %0\n"
-                  "movl %0, %1\n"
-                  : "=r" (v)
-                  : "m" (*(uint32_t *)ptr), "0" (v));
+    asm volatile("bswap %0\n"
+                 "movl %0, %1\n"
+                 : "=r"(v)
+                 : "m"(*(uint32_t *)ptr), "0"(v));
 #else
     uint8_t *d = (uint8_t *)ptr;
     d[0] = v >> 24;
@@ -451,8 +451,8 @@ static inline void stfq_be_p(void *ptr, float64 v)
 
 /* NOTE: we use double casts if pointers and target_ulong have
    different sizes */
-#define saddr(x)       (uint8_t *)(uintptr_t)(x)
-#define laddr(x)       (uint8_t *)(uintptr_t)(x)
+#define saddr(x) (uint8_t *)(uintptr_t)(x)
+#define laddr(x) (uint8_t *)(uintptr_t)(x)
 
 #define ldub_raw(p)    ldub_p(laddr((p)))
 #define ldsb_raw(p)    ldsb_p(laddr((p)))
@@ -468,8 +468,8 @@ static inline void stfq_be_p(void *ptr, float64 v)
 
 /* page related stuff */
 
-#define TARGET_PAGE_SIZE (1ull << TARGET_PAGE_BITS)
-#define TARGET_PAGE_MASK ~(TARGET_PAGE_SIZE - 1)
+#define TARGET_PAGE_SIZE        (1ull << TARGET_PAGE_BITS)
+#define TARGET_PAGE_MASK        ~(TARGET_PAGE_SIZE - 1)
 #define TARGET_PAGE_ALIGN(addr) (((addr) + TARGET_PAGE_SIZE - 1) & TARGET_PAGE_MASK)
 
 /* ??? These should be the larger of unsigned long and target_ulong.  */
@@ -492,22 +492,21 @@ extern uintptr_t tlib_host_page_mask;
 #define HOST_PAGE_ALIGN(addr) (((addr) + tlib_host_page_size - 1) & tlib_host_page_mask)
 
 /* same as PROT_xxx */
-#define PAGE_READ      (1 << ACCESS_DATA_LOAD)
-#define PAGE_WRITE     (1 << ACCESS_DATA_STORE)
-#define PAGE_EXEC      (1 << ACCESS_INST_FETCH)
-#define PAGE_BITS      (PAGE_READ | PAGE_WRITE | PAGE_EXEC)
-#define PAGE_VALID     0x0008
+#define PAGE_READ  (1 << ACCESS_DATA_LOAD)
+#define PAGE_WRITE (1 << ACCESS_DATA_STORE)
+#define PAGE_EXEC  (1 << ACCESS_INST_FETCH)
+#define PAGE_BITS  (PAGE_READ | PAGE_WRITE | PAGE_EXEC)
+#define PAGE_VALID 0x0008
 /* original state of the write flag (used when tracking self-modifying
    code */
 #define PAGE_WRITE_ORG 0x0010
 
-#define CPU_DUMP_CODE  0x00010000
+#define CPU_DUMP_CODE 0x00010000
 
 /* Denotes that the TCGv cpu_pc chould be used in stack change announcement */
-#define PROFILER_TCG_PC ((target_ulong)-1lu)
+#define PROFILER_TCG_PC ((target_ulong) - 1lu)
 
-enum GUEST_PROFILER_ANNOUNCEMENT
-{
+enum GUEST_PROFILER_ANNOUNCEMENT {
     STACK_FRAME_POP = 0,
     STACK_FRAME_ADD = 1,
     STACK_FRAME_NO_CHANGE = 2,
@@ -520,19 +519,19 @@ static inline uint32_t is_page_access_valid(uint32_t page_protection_bits, uint3
 {
     uint32_t access_type_mask;
 
-    switch (access_type) {
-    case ACCESS_DATA_LOAD:
-        access_type_mask = PAGE_READ;
-        break;
-    case ACCESS_DATA_STORE:
-        access_type_mask = PAGE_WRITE;
-        break;
-    case ACCESS_INST_FETCH:
-        access_type_mask = PAGE_EXEC;
-        break;
-    default:
-        tlib_abortf("Incorrect access type %d", access_type);
-        __builtin_unreachable();
+    switch(access_type) {
+        case ACCESS_DATA_LOAD:
+            access_type_mask = PAGE_READ;
+            break;
+        case ACCESS_DATA_STORE:
+            access_type_mask = PAGE_WRITE;
+            break;
+        case ACCESS_INST_FETCH:
+            access_type_mask = PAGE_EXEC;
+            break;
+        default:
+            tlib_abortf("Incorrect access type %d", access_type);
+            __builtin_unreachable();
     }
 
     return page_protection_bits & access_type_mask;
@@ -547,14 +546,14 @@ static inline uint32_t is_page_access_valid(uint32_t page_protection_bits, uint3
 
 /* External hardware interrupt pending.  This is typically used for
    interrupts from devices.  */
-#define CPU_INTERRUPT_HARD      0x0002
+#define CPU_INTERRUPT_HARD 0x0002
 
 /* Exit the current TB.  This is typically used when some system-level device
    makes some change to the memory mapping.  E.g. the a20 line change.  */
-#define CPU_INTERRUPT_EXITTB    0x0004
+#define CPU_INTERRUPT_EXITTB 0x0004
 
 /* Debug event pending.  */
-#define CPU_INTERRUPT_DEBUG     0x0080
+#define CPU_INTERRUPT_DEBUG 0x0080
 
 /* Several target-specific external hardware interrupts.  Each target/cpu.h
    should define proper names based on these defines.  */
@@ -612,24 +611,23 @@ target_phys_addr_t cpu_get_phys_page_debug(CPUState *env, target_ulong addr);
    3 flags.  The ROMD code stores the page ram offset in iotlb entry,
    so only a limited number of ids are avaiable.  */
 
-#define IO_MEM_NB_ENTRIES (1 << (TARGET_PAGE_BITS  - IO_MEM_SHIFT))
+#define IO_MEM_NB_ENTRIES (1 << (TARGET_PAGE_BITS - IO_MEM_SHIFT))
 
 /* Flags stored in the low bits of the TLB virtual address.  These are
    defined so that fast path ram access is all zeros.  */
 /* TLB entry should be recalculated before each use - e.g., it contains protected regions that needs to be checked */
-#define TLB_ONE_SHOT      (1 << 2)
+#define TLB_ONE_SHOT (1 << 2)
 /* Zero if TLB entry is valid.  */
-#define TLB_INVALID_MASK  (1 << 3)
+#define TLB_INVALID_MASK (1 << 3)
 /* Set if TLB entry references a clean RAM page.  The iotlb entry will
    contain the page physical address.  */
-#define TLB_NOTDIRTY      (1 << 4)
+#define TLB_NOTDIRTY (1 << 4)
 /* Set if TLB entry is an IO callback.  */
-#define TLB_MMIO          (1 << 5)
+#define TLB_MMIO (1 << 5)
 
 bool is_interrupt_pending(CPUState *env, int mask);
 void clear_interrupt_pending(CPUState *env, int mask);
 void set_interrupt_pending(CPUState *env, int mask);
-
 
 #if TARGET_LONG_BITS == 64
 uint64_t *get_reg_pointer_64(int reg);
@@ -638,7 +636,8 @@ uint64_t *get_reg_pointer_64(int reg);
 uint32_t *get_reg_pointer_32(int reg);
 #endif
 
-static inline uint64_t instructions_to_cycles(CPUState *env, uint64_t instructions) {
+static inline uint64_t instructions_to_cycles(CPUState *env, uint64_t instructions)
+{
     double cycles_per_instruction = env->millicycles_per_instruction / 1000.0;
     return (uint64_t)(instructions * cycles_per_instruction);
 }

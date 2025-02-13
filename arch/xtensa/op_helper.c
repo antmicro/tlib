@@ -31,15 +31,12 @@
 #include "softmmu_exec.h"
 #include "tb-helper.h"
 
-
 void HELPER(update_ccount)(CPUState *env)
 {
     uint64_t now = tlib_get_cpu_time();
 
     env->ccount_time = now;
-    env->sregs[CCOUNT] = env->ccount_base +
-        (uint32_t)((now - env->time_base) *
-                   env->config->clock_freq_khz / 1000);
+    env->sregs[CCOUNT] = env->ccount_base + (uint32_t)((now - env->time_base) * env->config->clock_freq_khz / 1000);
 }
 
 void HELPER(wsr_ccount)(CPUState *env, uint32_t v)
@@ -48,7 +45,7 @@ void HELPER(wsr_ccount)(CPUState *env, uint32_t v)
 
     HELPER(update_ccount)(env);
     env->ccount_base += v - env->sregs[CCOUNT];
-    for (i = 0; i < env->config->nccompare; ++i) {
+    for(i = 0; i < env->config->nccompare; ++i) {
         HELPER(update_ccompare)(env, i);
     }
 }
@@ -61,7 +58,7 @@ void HELPER(update_ccompare)(CPUState *env, uint32_t i)
     HELPER(update_ccount)(env);
     dcc = (uint64_t)(env->sregs[CCOMPARE + i] - env->sregs[CCOUNT] - 1) + 1;
     tlib_timer_mod(i, /*env->ccompare[i].timer,*/
-              env->ccount_time + (dcc * 1000000) / env->config->clock_freq_khz);
+                   env->ccount_time + (dcc * 1000000) / env->config->clock_freq_khz);
     env->yield_needed = 1;
 }
 
@@ -76,19 +73,17 @@ void HELPER(check_atomctl)(CPUState *env, uint32_t pc, uint32_t vaddr)
     uint32_t paddr, page_size;
     int access;
     uint32_t atomctl = env->sregs[ATOMCTL];
-    int rc = get_physical_address(env, true, vaddr, 1,
-            xtensa_get_cring(env), &paddr, &page_size, &access);
+    int rc = get_physical_address(env, true, vaddr, 1, xtensa_get_cring(env), &paddr, &page_size, &access);
 
     /*
      * s32c1i never causes LOAD_PROHIBITED_CAUSE exceptions,
      * see opcode description in the ISA
      */
-    if (rc == 0 &&
-            (access & (PAGE_READ | PAGE_WRITE)) != (PAGE_READ | PAGE_WRITE)) {
+    if(rc == 0 && (access & (PAGE_READ | PAGE_WRITE)) != (PAGE_READ | PAGE_WRITE)) {
         rc = STORE_PROHIBITED_CAUSE;
     }
 
-    if (rc) {
+    if(rc) {
         HELPER(exception_cause_vaddr)(env, pc, rc, vaddr);
     }
 
@@ -97,96 +92,83 @@ void HELPER(check_atomctl)(CPUState *env, uint32_t pc, uint32_t vaddr)
      * See ISA, 4.3.12.4 The Atomic Operation Control Register (ATOMCTL)
      * under the Conditional Store Option.
      */
-    if (!xtensa_option_enabled(env->config, XTENSA_OPTION_DCACHE)) {
+    if(!xtensa_option_enabled(env->config, XTENSA_OPTION_DCACHE)) {
         access = PAGE_CACHE_BYPASS;
     }
 
-    switch (access & PAGE_CACHE_MASK) {
-    case PAGE_CACHE_WB:
-        atomctl >>= 2;
-        /* fall through */
-    case PAGE_CACHE_WT:
-        atomctl >>= 2;
-        /* fall through */
-    case PAGE_CACHE_BYPASS:
-        if ((atomctl & 0x3) == 0) {
-            HELPER(exception_cause_vaddr)(env, pc,
-                    LOAD_STORE_ERROR_CAUSE, vaddr);
-        }
-        break;
+    switch(access & PAGE_CACHE_MASK) {
+        case PAGE_CACHE_WB:
+            atomctl >>= 2;
+            /* fall through */
+        case PAGE_CACHE_WT:
+            atomctl >>= 2;
+            /* fall through */
+        case PAGE_CACHE_BYPASS:
+            if((atomctl & 0x3) == 0) {
+                HELPER(exception_cause_vaddr)(env, pc, LOAD_STORE_ERROR_CAUSE, vaddr);
+            }
+            break;
 
-    case PAGE_CACHE_ISOLATE:
-        HELPER(exception_cause_vaddr)(env, pc,
-                LOAD_STORE_ERROR_CAUSE, vaddr);
-        break;
+        case PAGE_CACHE_ISOLATE:
+            HELPER(exception_cause_vaddr)(env, pc, LOAD_STORE_ERROR_CAUSE, vaddr);
+            break;
 
-    default:
-        break;
+        default:
+            break;
     }
 }
 
-void HELPER(check_exclusive)(CPUState *env, uint32_t pc, uint32_t vaddr,
-                             uint32_t is_write)
+void HELPER(check_exclusive)(CPUState *env, uint32_t pc, uint32_t vaddr, uint32_t is_write)
 {
     uint32_t paddr, page_size;
     int access;
     uint32_t atomctl = env->sregs[ATOMCTL];
-    int rc = get_physical_address(env, true, vaddr, is_write,
-                                      xtensa_get_cring(env), &paddr,
-                                      &page_size, &access);
+    int rc = get_physical_address(env, true, vaddr, is_write, xtensa_get_cring(env), &paddr, &page_size, &access);
 
-    if (rc) {
+    if(rc) {
         HELPER(exception_cause_vaddr)(env, pc, rc, vaddr);
     }
 
     /* When data cache is not configured use ATOMCTL bypass field. */
-    if (!xtensa_option_enabled(env->config, XTENSA_OPTION_DCACHE)) {
+    if(!xtensa_option_enabled(env->config, XTENSA_OPTION_DCACHE)) {
         access = PAGE_CACHE_BYPASS;
     }
 
-    switch (access & PAGE_CACHE_MASK) {
-    case PAGE_CACHE_WB:
-        atomctl >>= 2;
-        /* fall through */
-    case PAGE_CACHE_WT:
-        atomctl >>= 2;
-        /* fall through */
-    case PAGE_CACHE_BYPASS:
-        if ((atomctl & 0x3) == 0) {
-            HELPER(exception_cause_vaddr)(env, pc,
-                                          EXCLUSIVE_ERROR_CAUSE, vaddr);
-        }
-        break;
+    switch(access & PAGE_CACHE_MASK) {
+        case PAGE_CACHE_WB:
+            atomctl >>= 2;
+            /* fall through */
+        case PAGE_CACHE_WT:
+            atomctl >>= 2;
+            /* fall through */
+        case PAGE_CACHE_BYPASS:
+            if((atomctl & 0x3) == 0) {
+                HELPER(exception_cause_vaddr)(env, pc, EXCLUSIVE_ERROR_CAUSE, vaddr);
+            }
+            break;
 
-    case PAGE_CACHE_ISOLATE:
-        HELPER(exception_cause_vaddr)(env, pc,
-                LOAD_STORE_ERROR_CAUSE, vaddr);
-        break;
+        case PAGE_CACHE_ISOLATE:
+            HELPER(exception_cause_vaddr)(env, pc, LOAD_STORE_ERROR_CAUSE, vaddr);
+            break;
 
-    default:
-        break;
+        default:
+            break;
     }
 }
 
 void HELPER(wsr_memctl)(CPUState *env, uint32_t v)
 {
-    if (xtensa_option_enabled(env->config, XTENSA_OPTION_ICACHE)) {
-        if (extract32(v, MEMCTL_IUSEWAYS_SHIFT, MEMCTL_IUSEWAYS_LEN) >
-            env->config->icache_ways) {
-            deposit32(v, MEMCTL_IUSEWAYS_SHIFT, MEMCTL_IUSEWAYS_LEN,
-                      env->config->icache_ways);
+    if(xtensa_option_enabled(env->config, XTENSA_OPTION_ICACHE)) {
+        if(extract32(v, MEMCTL_IUSEWAYS_SHIFT, MEMCTL_IUSEWAYS_LEN) > env->config->icache_ways) {
+            deposit32(v, MEMCTL_IUSEWAYS_SHIFT, MEMCTL_IUSEWAYS_LEN, env->config->icache_ways);
         }
     }
-    if (xtensa_option_enabled(env->config, XTENSA_OPTION_DCACHE)) {
-        if (extract32(v, MEMCTL_DUSEWAYS_SHIFT, MEMCTL_DUSEWAYS_LEN) >
-            env->config->dcache_ways) {
-            deposit32(v, MEMCTL_DUSEWAYS_SHIFT, MEMCTL_DUSEWAYS_LEN,
-                      env->config->dcache_ways);
+    if(xtensa_option_enabled(env->config, XTENSA_OPTION_DCACHE)) {
+        if(extract32(v, MEMCTL_DUSEWAYS_SHIFT, MEMCTL_DUSEWAYS_LEN) > env->config->dcache_ways) {
+            deposit32(v, MEMCTL_DUSEWAYS_SHIFT, MEMCTL_DUSEWAYS_LEN, env->config->dcache_ways);
         }
-        if (extract32(v, MEMCTL_DALLOCWAYS_SHIFT, MEMCTL_DALLOCWAYS_LEN) >
-            env->config->dcache_ways) {
-            deposit32(v, MEMCTL_DALLOCWAYS_SHIFT, MEMCTL_DALLOCWAYS_LEN,
-                      env->config->dcache_ways);
+        if(extract32(v, MEMCTL_DALLOCWAYS_SHIFT, MEMCTL_DALLOCWAYS_LEN) > env->config->dcache_ways) {
+            deposit32(v, MEMCTL_DALLOCWAYS_SHIFT, MEMCTL_DALLOCWAYS_LEN, env->config->dcache_ways);
         }
     }
     env->sregs[MEMCTL] = v & env->config->memctl_mask;
@@ -194,7 +176,7 @@ void HELPER(wsr_memctl)(CPUState *env, uint32_t v)
 
 uint32_t HELPER(rer)(CPUState *env, uint32_t addr)
 {
-    // I think we should implement it at C# level?
+    //  I think we should implement it at C# level?
     tlib_abortf("reading from external register not yet supported");
     return 0;
     /*
@@ -205,7 +187,7 @@ uint32_t HELPER(rer)(CPUState *env, uint32_t addr)
 
 void HELPER(wer)(CPUState *env, uint32_t data, uint32_t addr)
 {
-    // I think we should implement it at C# level?
+    //  I think we should implement it at C# level?
     tlib_abortf("writing to external register not yet supported");
     /*
     address_space_stl(env->address_space_er, addr, data,

@@ -22,9 +22,9 @@
  * diagnose problems. */
 #define unwind_assert(p) \
     do {                 \
-        if (!(p))        \
+        if(!(p))         \
             abort();     \
-    } while (0)
+    } while(0)
 
 extern __thread struct unwind_state {
     jmp_buf envs[UNWIND_MAX_DEPTH];
@@ -39,16 +39,17 @@ extern __thread struct unwind_state {
     struct unwind_state *local_state = &unwind_state; \
     asm("" : "=r"(local_state) : "0"(local_state))
 
-#define PUSH_ENV() ({                                           \
-    unwind_assert(local_state->env_idx < UNWIND_MAX_DEPTH - 1); \
-    setjmp(local_state->envs[++local_state->env_idx]);          \
-})
+#define PUSH_ENV()                                                  \
+    ({                                                              \
+        unwind_assert(local_state->env_idx < UNWIND_MAX_DEPTH - 1); \
+        setjmp(local_state->envs[++local_state->env_idx]);          \
+    })
 
 #define POP_ENV()                                 \
     do {                                          \
         --local_state->env_idx;                   \
         unwind_assert(local_state->env_idx >= 0); \
-    } while (0)
+    } while(0)
 
 /* value macros */
 #define EXC_VALUE_0(RET, NAME, PLACEHOLDER) \
@@ -56,7 +57,7 @@ extern __thread struct unwind_state {
     {                                       \
         DECLARE_ENV_PTR();                  \
         RET ret = PLACEHOLDER;              \
-        if (PUSH_ENV() == 0) {              \
+        if(PUSH_ENV() == 0) {               \
             ret = NAME();                   \
         }                                   \
         POP_ENV();                          \
@@ -68,7 +69,7 @@ extern __thread struct unwind_state {
     {                                                        \
         DECLARE_ENV_PTR();                                   \
         RET ret = PLACEHOLDER;                               \
-        if (PUSH_ENV() == 0) {                               \
+        if(PUSH_ENV() == 0) {                                \
             ret = NAME(PARAM1);                              \
         }                                                    \
         POP_ENV();                                           \
@@ -80,7 +81,7 @@ extern __thread struct unwind_state {
     {                                                                         \
         DECLARE_ENV_PTR();                                                    \
         RET ret = PLACEHOLDER;                                                \
-        if (PUSH_ENV() == 0) {                                                \
+        if(PUSH_ENV() == 0) {                                                 \
             ret = NAME(PARAM1, PARAM2);                                       \
         }                                                                     \
         POP_ENV();                                                            \
@@ -92,7 +93,7 @@ extern __thread struct unwind_state {
     {                                                                                          \
         DECLARE_ENV_PTR();                                                                     \
         RET ret = PLACEHOLDER;                                                                 \
-        if (PUSH_ENV() == 0) {                                                                 \
+        if(PUSH_ENV() == 0) {                                                                  \
             ret = NAME(PARAM1, PARAM2, PARAM3);                                                \
         }                                                                                      \
         POP_ENV();                                                                             \
@@ -103,27 +104,28 @@ extern __thread struct unwind_state {
 #define EXC_POINTER_0(RET, NAME) EXC_VALUE_0(RET, NAME, NULL)
 
 /* int macros */
-#define EXC_INT_0(RET, NAME) EXC_VALUE_0(RET, NAME, 0)
-#define EXC_INT_1(RET, NAME, PARAMT1, PARAM1) EXC_VALUE_1(RET, NAME, 0, PARAMT1, PARAM1)
+#define EXC_INT_0(RET, NAME)                                   EXC_VALUE_0(RET, NAME, 0)
+#define EXC_INT_1(RET, NAME, PARAMT1, PARAM1)                  EXC_VALUE_1(RET, NAME, 0, PARAMT1, PARAM1)
 #define EXC_INT_2(RET, NAME, PARAMT1, PARAM1, PARAMT2, PARAM2) EXC_VALUE_2(RET, NAME, 0, PARAMT1, PARAM1, PARAMT2, PARAM2)
-#define EXC_INT_3(RET, NAME, PARAMT1, PARAM1, PARAMT2, PARAM2, PARAMT3, PARAM3) EXC_VALUE_3(RET, NAME, 0, PARAMT1, PARAM1, PARAMT2, PARAM2, PARAMT3, PARAM3)
+#define EXC_INT_3(RET, NAME, PARAMT1, PARAM1, PARAMT2, PARAM2, PARAMT3, PARAM3) \
+    EXC_VALUE_3(RET, NAME, 0, PARAMT1, PARAM1, PARAMT2, PARAM2, PARAMT3, PARAM3)
 
 /* void macros */
-#define EXC_VOID_0(NAME)       \
-    void NAME##_ex()           \
-    {                          \
-        DECLARE_ENV_PTR();     \
-        if (PUSH_ENV() == 0) { \
-            NAME();            \
-        }                      \
-        POP_ENV();             \
+#define EXC_VOID_0(NAME)      \
+    void NAME##_ex()          \
+    {                         \
+        DECLARE_ENV_PTR();    \
+        if(PUSH_ENV() == 0) { \
+            NAME();           \
+        }                     \
+        POP_ENV();            \
     }
 
 #define EXC_VOID_1(NAME, PARAMT1, PARAM1) \
     void NAME##_ex(PARAMT1 PARAM1)        \
     {                                     \
         DECLARE_ENV_PTR();                \
-        if (PUSH_ENV() == 0) {            \
+        if(PUSH_ENV() == 0) {             \
             NAME(PARAM1);                 \
         }                                 \
         POP_ENV();                        \
@@ -133,7 +135,7 @@ extern __thread struct unwind_state {
     void NAME##_ex(PARAMT1 PARAM1, PARAMT2 PARAM2)         \
     {                                                      \
         DECLARE_ENV_PTR();                                 \
-        if (PUSH_ENV() == 0) {                             \
+        if(PUSH_ENV() == 0) {                              \
             NAME(PARAM1, PARAM2);                          \
         }                                                  \
         POP_ENV();                                         \
@@ -143,7 +145,7 @@ extern __thread struct unwind_state {
     void NAME##_ex(PARAMT1 PARAM1, PARAMT2 PARAM2, PARAMT3 PARAM3)          \
     {                                                                       \
         DECLARE_ENV_PTR();                                                  \
-        if (PUSH_ENV() == 0) {                                              \
+        if(PUSH_ENV() == 0) {                                               \
             NAME(PARAM1, PARAM2, PARAM3);                                   \
         }                                                                   \
         POP_ENV();                                                          \
@@ -153,7 +155,7 @@ extern __thread struct unwind_state {
     void NAME##_ex(PARAMT1 PARAM1, PARAMT2 PARAM2, PARAMT3 PARAM3, PARAMT4 PARAM4)           \
     {                                                                                        \
         DECLARE_ENV_PTR();                                                                   \
-        if (PUSH_ENV() == 0) {                                                               \
+        if(PUSH_ENV() == 0) {                                                                \
             NAME(PARAM1, PARAM2, PARAM3, PARAM4);                                            \
         }                                                                                    \
         POP_ENV();                                                                           \

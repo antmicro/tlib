@@ -28,11 +28,10 @@
 #include "tcg.h"
 #include "tcg-op.h"
 
-// These are based on TCG's 'nonatomic' functions.
-// tlib global memory locking makes them atomic.
+//  These are based on TCG's 'nonatomic' functions.
+//  tlib global memory locking makes them atomic.
 
-static inline void tcg_gen_atomic_cmpxchg_i32(TCGv_i32 retv, TCGv addr, TCGv_i32 cmpv,
-                                              TCGv_i32 newv, TCGArg idx, TCGMemOp memop)
+static inline void tcg_gen_atomic_cmpxchg_i32(TCGv_i32 retv, TCGv addr, TCGv_i32 cmpv, TCGv_i32 newv, TCGArg idx, TCGMemOp memop)
 {
     memop = tcg_canonicalize_memop(memop, 0, 0);
 
@@ -49,7 +48,7 @@ static inline void tcg_gen_atomic_cmpxchg_i32(TCGv_i32 retv, TCGv addr, TCGv_i32
 
     tcg_temp_free_i32(t2);
 
-    if (memop & MO_SIGN) {
+    if(memop & MO_SIGN) {
         tcg_gen_ext_i32(retv, t1, memop);
     } else {
         tcg_gen_mov_i32(retv, t1);
@@ -57,8 +56,7 @@ static inline void tcg_gen_atomic_cmpxchg_i32(TCGv_i32 retv, TCGv addr, TCGv_i32
     tcg_temp_free_i32(t1);
 }
 
-static inline void tcg_gen_atomic_cmpxchg_i64(TCGv_i64 retv, TCGv addr, TCGv_i64 cmpv,
-                                              TCGv_i64 newv, TCGArg idx, TCGMemOp memop)
+static inline void tcg_gen_atomic_cmpxchg_i64(TCGv_i64 retv, TCGv addr, TCGv_i64 cmpv, TCGv_i64 newv, TCGArg idx, TCGMemOp memop)
 {
     memop = tcg_canonicalize_memop(memop, 1, 0);
 
@@ -75,7 +73,7 @@ static inline void tcg_gen_atomic_cmpxchg_i64(TCGv_i64 retv, TCGv addr, TCGv_i64
 
     tcg_temp_free_i64(t2);
 
-    if (memop & MO_SIGN) {
+    if(memop & MO_SIGN) {
         tcg_gen_ext_i64(retv, t1, memop);
     } else {
         tcg_gen_mov_i64(retv, t1);
@@ -83,9 +81,8 @@ static inline void tcg_gen_atomic_cmpxchg_i64(TCGv_i64 retv, TCGv addr, TCGv_i64
     tcg_temp_free_i64(t1);
 }
 
-// 'new_val' controls whether a value before or after the operation should be returned.
-static void do_atomic_op_i32(TCGv_i32 ret, TCGv addr, TCGv_i32 val,
-                             TCGArg idx, TCGMemOp memop, bool new_val,
+//  'new_val' controls whether a value before or after the operation should be returned.
+static void do_atomic_op_i32(TCGv_i32 ret, TCGv addr, TCGv_i32 val, TCGArg idx, TCGMemOp memop, bool new_val,
                              void (*gen)(TCGv_i32, TCGv_i32, TCGv_i32))
 {
     TCGv_i32 t1 = tcg_temp_new_i32();
@@ -105,9 +102,8 @@ static void do_atomic_op_i32(TCGv_i32 ret, TCGv addr, TCGv_i32 val,
     tcg_temp_free_i32(t2);
 }
 
-// 'new_val' controls whether a value before or after the operation should be returned.
-static void do_atomic_op_i64(TCGv_i64 ret, TCGv addr, TCGv_i64 val,
-                             TCGArg idx, TCGMemOp memop, bool new_val,
+//  'new_val' controls whether a value before or after the operation should be returned.
+static void do_atomic_op_i64(TCGv_i64 ret, TCGv addr, TCGv_i64 val, TCGArg idx, TCGMemOp memop, bool new_val,
                              void (*gen)(TCGv_i64, TCGv_i64, TCGv_i64))
 {
     TCGv_i64 t1 = tcg_temp_new_i64();
@@ -127,17 +123,15 @@ static void do_atomic_op_i64(TCGv_i64 ret, TCGv addr, TCGv_i64 val,
     tcg_temp_free_i64(t2);
 }
 
-#define GEN_ATOMIC_HELPER(NAME, OP, NEW)                                   \
-static inline void tcg_gen_atomic_##NAME##_i32                             \
-    (TCGv_i32 ret, TCGv addr, TCGv_i32 val, TCGArg idx, TCGMemOp memop)    \
-{                                                                          \
-    do_atomic_op_i32(ret, addr, val, idx, memop, NEW, tcg_gen_##OP##_i32); \
-}                                                                          \
-static inline void tcg_gen_atomic_##NAME##_i64                             \
-    (TCGv_i64 ret, TCGv addr, TCGv_i64 val, TCGArg idx, TCGMemOp memop)    \
-{                                                                          \
-    do_atomic_op_i64(ret, addr, val, idx, memop, NEW, tcg_gen_##OP##_i64); \
-}
+#define GEN_ATOMIC_HELPER(NAME, OP, NEW)                                                                              \
+    static inline void tcg_gen_atomic_##NAME##_i32(TCGv_i32 ret, TCGv addr, TCGv_i32 val, TCGArg idx, TCGMemOp memop) \
+    {                                                                                                                 \
+        do_atomic_op_i32(ret, addr, val, idx, memop, NEW, tcg_gen_##OP##_i32);                                        \
+    }                                                                                                                 \
+    static inline void tcg_gen_atomic_##NAME##_i64(TCGv_i64 ret, TCGv addr, TCGv_i64 val, TCGArg idx, TCGMemOp memop) \
+    {                                                                                                                 \
+        do_atomic_op_i64(ret, addr, val, idx, memop, NEW, tcg_gen_##OP##_i64);                                        \
+    }
 
 GEN_ATOMIC_HELPER(fetch_add, add, 0)
 GEN_ATOMIC_HELPER(fetch_and, and, 0)

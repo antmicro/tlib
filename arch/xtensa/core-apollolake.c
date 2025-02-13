@@ -33,9 +33,5 @@
 
 #include "core-apollolake/xtensa-modules.c.inc"
 
-XtensaConfig apollolake __attribute__((unused)) = {
-    .name = "apollolake",
-    .isa_internal = &xtensa_modules,
-    .clock_freq_khz = 5000,
-    DEFAULT_SECTIONS
-};
+XtensaConfig apollolake
+    __attribute__((unused)) = { .name = "apollolake", .isa_internal = &xtensa_modules, .clock_freq_khz = 5000, DEFAULT_SECTIONS };

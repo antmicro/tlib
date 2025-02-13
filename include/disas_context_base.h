@@ -8,4 +8,3 @@ typedef struct DisasContextBase {
     int guest_profile;
     bool generate_block_exit_check;
 } DisasContextBase;
-

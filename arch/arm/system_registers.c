@@ -19,25 +19,25 @@ inline const char *sysreg_patch_lookup_name(const char *name)
     return name;
 }
 
-void HELPER(set_cp_reg)(CPUState * env, void *rip, uint32_t value)
+void HELPER(set_cp_reg)(CPUState *env, void *rip, uint32_t value)
 {
     const ARMCPRegInfo *ri = rip;
 
-    if (ri->type & ARM_CP_IO) {
-        // Use mutex if executed in parallel.
+    if(ri->type & ARM_CP_IO) {
+        //  Use mutex if executed in parallel.
         ri->writefn(env, ri, value);
     } else {
         ri->writefn(env, ri, value);
     }
 }
 
-uint32_t HELPER(get_cp_reg)(CPUState * env, void *rip)
+uint32_t HELPER(get_cp_reg)(CPUState *env, void *rip)
 {
     const ARMCPRegInfo *ri = rip;
     uint32_t res;
 
-    if (ri->type & ARM_CP_IO) {
-        // Use mutex if executed in parallel.
+    if(ri->type & ARM_CP_IO) {
+        //  Use mutex if executed in parallel.
         res = ri->readfn(env, ri);
     } else {
         res = ri->readfn(env, ri);
@@ -46,25 +46,25 @@ uint32_t HELPER(get_cp_reg)(CPUState * env, void *rip)
     return res;
 }
 
-void HELPER(set_cp_reg64)(CPUState * env, void *rip, uint64_t value)
+void HELPER(set_cp_reg64)(CPUState *env, void *rip, uint64_t value)
 {
     const ARMCPRegInfo *ri = rip;
 
-    if (ri->type & ARM_CP_IO) {
-        // Use mutex if executed in parallel.
+    if(ri->type & ARM_CP_IO) {
+        //  Use mutex if executed in parallel.
         ri->writefn(env, ri, value);
     } else {
         ri->writefn(env, ri, value);
     }
 }
 
-uint64_t HELPER(get_cp_reg64)(CPUState * env, void *rip)
+uint64_t HELPER(get_cp_reg64)(CPUState *env, void *rip)
 {
     const ARMCPRegInfo *ri = rip;
     uint64_t res;
 
-    if (ri->type & ARM_CP_IO) {
-        // Use mutex if executed in parallel.
+    if(ri->type & ARM_CP_IO) {
+        //  Use mutex if executed in parallel.
         res = ri->readfn(env, ri);
     } else {
         res = ri->readfn(env, ri);
@@ -79,7 +79,7 @@ static inline uint32_t get_mpidr(CPUState *env)
     /* We don't support setting cluster ID ([8..11])
      * so these bits always RAZ.
      */
-    if (arm_feature(env, ARM_FEATURE_V7MP)) {
+    if(arm_feature(env, ARM_FEATURE_V7MP)) {
         mpidr |= (1 << 31);
         /* Cores which are uniprocessor (non-coherent)
          * but still implement the MP extensions set
@@ -93,7 +93,7 @@ READ_FUNCTION(64, c0_mpidr, get_mpidr(env))
 
 static inline void set_ttbcr(CPUState *env, uint64_t val)
 {
-    if (arm_feature(env, ARM_FEATURE_LPAE)) {
+    if(arm_feature(env, ARM_FEATURE_LPAE)) {
         env->cp15.c2_ttbcr_eae = (val >> 31) & 1;
     }
     val &= 7;
@@ -105,36 +105,37 @@ RW_FUNCTIONS(64, c2_ttbcr, env->cp15.c2_control, set_ttbcr(env, value))
 
 static inline uint32_t get_ccsidr(CPUState *env)
 {
-    if (!arm_feature(env, ARM_FEATURE_V7)) {
+    if(!arm_feature(env, ARM_FEATURE_V7)) {
         return 0;
     }
 
     uint32_t csselr = env->cp15.c0_cssel;
     uint32_t cache_level = (csselr >> 1) + 1;
-    tlib_assert(cache_level <= 7);  // Setting CSSELR to value over 15 shouldn't be possible.
+    tlib_assert(cache_level <= 7);  //  Setting CSSELR to value over 15 shouldn't be possible.
 
-    // Bits 0-2 for L1, 3-5 for L2...
+    //  Bits 0-2 for L1, 3-5 for L2...
     uint32_t cache_type = extract32(env->cp15.c0_clid, 3 * (cache_level - 1), 3);
 
     enum {
-        NO_CACHE        = 0,
-        ONLY_ICACHE     = 1,
-        ONLY_DCACHE     = 2,
-        SEPARATE_CACHES = 3,  // Both caches are implemented.
-        UNIFIED_CACHE   = 4,
+        NO_CACHE = 0,
+        ONLY_ICACHE = 1,
+        ONLY_DCACHE = 2,
+        SEPARATE_CACHES = 3,  //  Both caches are implemented.
+        UNIFIED_CACHE = 4,
     };
-    tlib_assert(cache_type <= UNIFIED_CACHE);  // CLIDR is RO so we set it to invalid value if this fails.
+    tlib_assert(cache_type <= UNIFIED_CACHE);  //  CLIDR is RO so we set it to invalid value if this fails.
 
-    bool icache_accessed = csselr & 1u;  // Data or unified cache is being accessed otherwise.
-    bool cache_implemented = (icache_accessed ? cache_type == ONLY_ICACHE : (cache_type == ONLY_DCACHE || cache_type == UNIFIED_CACHE))
-        || cache_type == SEPARATE_CACHES;
+    bool icache_accessed = csselr & 1u;  //  Data or unified cache is being accessed otherwise.
+    bool cache_implemented =
+        (icache_accessed ? cache_type == ONLY_ICACHE : (cache_type == ONLY_DCACHE || cache_type == UNIFIED_CACHE)) ||
+        cache_type == SEPARATE_CACHES;
 
-    if (cache_implemented) {
+    if(cache_implemented) {
         return env->cp15.c0_ccsid[env->cp15.c0_cssel];
     } else {
         tlib_printf(LOG_LEVEL_WARNING,
-            "Tried to access CCSIDR with invalid CSSELR value: %u; L%u %s cache isn't implemented, returning 0",
-            csselr, cache_level, icache_accessed ? "instruction" : "data or unified");
+                    "Tried to access CCSIDR with invalid CSSELR value: %u; L%u %s cache isn't implemented, returning 0", csselr,
+                    cache_level, icache_accessed ? "instruction" : "data or unified");
         return 0x0;
     }
 }
@@ -142,7 +143,7 @@ READ_FUNCTION(64, c0_ccsidr, get_ccsidr(env))
 
 static inline uint32_t get_clidr(CPUState *env)
 {
-    if (!arm_feature(env, ARM_FEATURE_V7)) {
+    if(!arm_feature(env, ARM_FEATURE_V7)) {
         return 0;
     }
 
@@ -154,7 +155,7 @@ READ_FUNCTION(64, c0_clidr, get_clidr(env))
 /* Invalidate all.  */
 WRITE_FUNCTION(64, invalidate_all, tlb_flush(env, 0, true));
 /* Invalidate single TLB entry.  */
-WRITE_FUNCTION(64, invalidate_single, tlb_flush_page(env, value & TARGET_PAGE_MASK, true));
+WRITE_FUNCTION(64, invalidate_single, tlb_flush_page(env, value &TARGET_PAGE_MASK, true));
 /* Invalidate on ASID.  */
 WRITE_FUNCTION(64, invalidate_on_asid, tlb_flush(env, value == 0, true));
 /* Invalidate single entry on MVA.  */
@@ -168,23 +169,23 @@ static inline void set_c3(CPUState *env, uint64_t val)
 }
 RW_FUNCTIONS(64, c3, env->cp15.c3, set_c3(env, value))
 
-// From helper.c
+//  From helper.c
 uint32_t simple_mpu_ap_bits(uint32_t val);
 uint32_t extended_mpu_ap_bits(uint32_t val);
 
 static inline uint32_t get_c5_data(CPUState *env)
 {
-    if (arm_feature(env, ARM_FEATURE_PMSA)) { // DFSR
+    if(arm_feature(env, ARM_FEATURE_PMSA)) {  //  DFSR
         return (env->cp15.c5_data & (MPU_FAULT_STATUS_BITS_FIELD_MASK | MPU_FAULT_STATUS_WRITE_FIELD_MASK));
     }
-    if (arm_feature(env, ARM_FEATURE_MPU)) {
+    if(arm_feature(env, ARM_FEATURE_MPU)) {
         return simple_mpu_ap_bits(env->cp15.c5_data);
     }
     return env->cp15.c5_data;
 }
 static inline void set_c5_data(CPUState *env, uint64_t val)
 {
-    if (arm_feature(env, ARM_FEATURE_MPU)) {
+    if(arm_feature(env, ARM_FEATURE_MPU)) {
         val = extended_mpu_ap_bits(val);
     }
     env->cp15.c5_data = val;
@@ -193,17 +194,17 @@ RW_FUNCTIONS(64, c5_data, get_c5_data(env), set_c5_data(env, value))
 
 static inline uint32_t get_c5_insn(CPUState *env)
 {
-    if (arm_feature(env, ARM_FEATURE_PMSA)) { // IFSR
+    if(arm_feature(env, ARM_FEATURE_PMSA)) {  //  IFSR
         return (env->cp15.c5_insn & MPU_FAULT_STATUS_BITS_FIELD_MASK);
     }
-    if (arm_feature(env, ARM_FEATURE_MPU)) {
+    if(arm_feature(env, ARM_FEATURE_MPU)) {
         return simple_mpu_ap_bits(env->cp15.c5_data);
     }
     return env->cp15.c5_insn;
 }
 static inline void set_c5_insn(CPUState *env, uint64_t val)
 {
-    if (arm_feature(env, ARM_FEATURE_MPU)) {
+    if(arm_feature(env, ARM_FEATURE_MPU)) {
         val = extended_mpu_ap_bits(val);
     }
     env->cp15.c5_insn = val;
@@ -213,7 +214,7 @@ RW_FUNCTIONS(64, c5_insn, get_c5_insn(env), set_c5_insn(env, value))
 static inline void set_c13_context(CPUState *env, uint64_t val)
 {
     /* This changes the ASID, so do a TLB flush.  */
-    if (env->cp15.c13_context != val && !arm_feature(env, ARM_FEATURE_MPU)) {
+    if(env->cp15.c13_context != val && !arm_feature(env, ARM_FEATURE_MPU)) {
         tlb_flush(env, 0, true);
     }
     env->cp15.c13_context = (uint32_t)val;
@@ -237,8 +238,9 @@ static inline void set_c5_csselr(CPUState *env, uint64_t val)
 {
     env->cp15.c0_cssel = val & 0xf;
 
-    if (unlikely(env->cp15.c0_cssel != val)) {
-        tlib_printf(LOG_LEVEL_WARNING, "Tried to set reserved bits by writing value to CSSELR: %" PRIu64 ", only bits 0-3 were set", val);
+    if(unlikely(env->cp15.c0_cssel != val)) {
+        tlib_printf(LOG_LEVEL_WARNING,
+                    "Tried to set reserved bits by writing value to CSSELR: %" PRIu64 ", only bits 0-3 were set", val);
     }
 }
 RW_FUNCTIONS(64, c0_csselr, env->cp15.c0_cssel, set_c5_csselr(env, value))
@@ -252,7 +254,7 @@ static inline void set_c13_fcse(CPUState *env, uint64_t val)
     /* Unlike real hardware the qemu TLB uses virtual addresses,
         not modified virtual addresses, so this causes a TLB flush.
      */
-    if (env->cp15.c13_fcse != val) {
+    if(env->cp15.c13_fcse != val) {
         tlb_flush(env, 1, true);
     }
     env->cp15.c13_fcse = val;
@@ -261,8 +263,8 @@ RW_FUNCTIONS(64, c13_fcse, get_c13_fcse(env), set_c13_fcse(env, value))
 
 static inline void set_c7_par(CPUState *env, uint64_t val)
 {
-    if (arm_feature(env, ARM_FEATURE_VAPA)) {
-        if (arm_feature(env, ARM_FEATURE_V7)) {
+    if(arm_feature(env, ARM_FEATURE_VAPA)) {
+        if(arm_feature(env, ARM_FEATURE_V7)) {
             env->cp15.c7_par = val & 0xfffff6ff;
         } else {
             env->cp15.c7_par = val & 0xfffff1ff;
@@ -283,9 +285,9 @@ static inline void ats1_helper(CPUState *env, uint64_t val, int is_user, int acc
     int prot;
 
     int ret = get_phys_addr(env, val, access_type, is_user, &phys_addr, &prot, &page_size, 0);
-    if (ret == 0) {
+    if(ret == 0) {
         /* We do not set any attribute bits in the PAR */
-        if (page_size == (1 << 24) && arm_feature(env, ARM_FEATURE_V7)) {
+        if(page_size == (1 << 24) && arm_feature(env, ARM_FEATURE_V7)) {
             env->cp15.c7_par = (phys_addr & 0xff000000) | 1 << 1;
         } else {
             env->cp15.c7_par = phys_addr & 0xfffff000;
@@ -297,7 +299,7 @@ static inline void ats1_helper(CPUState *env, uint64_t val, int is_user, int acc
 
 static inline void set_c7_ats1cpr(CPUState *env, uint64_t val)
 {
-    if (arm_feature(env, ARM_FEATURE_VAPA)) {
+    if(arm_feature(env, ARM_FEATURE_VAPA)) {
         ats1_helper(env, val, 0, 0);
     }
 }
@@ -305,7 +307,7 @@ WRITE_FUNCTION(64, c7_ats1cpr, set_c7_ats1cpr(env, value))
 
 static inline void set_c7_ats1cpw(CPUState *env, uint64_t val)
 {
-    if (arm_feature(env, ARM_FEATURE_VAPA)) {
+    if(arm_feature(env, ARM_FEATURE_VAPA)) {
         ats1_helper(env, val, 0, 1);
     }
 }
@@ -313,7 +315,7 @@ WRITE_FUNCTION(64, c7_ats1cpw, set_c7_ats1cpw(env, value))
 
 static inline void set_c7_ats1cur(CPUState *env, uint64_t val)
 {
-    if (arm_feature(env, ARM_FEATURE_VAPA)) {
+    if(arm_feature(env, ARM_FEATURE_VAPA)) {
         ats1_helper(env, val, 1, 0);
     }
 }
@@ -321,13 +323,13 @@ WRITE_FUNCTION(64, c7_ats1cur, set_c7_ats1cur(env, value))
 
 static inline void set_c7_ats1cuw(CPUState *env, uint64_t val)
 {
-    if (arm_feature(env, ARM_FEATURE_VAPA)) {
+    if(arm_feature(env, ARM_FEATURE_VAPA)) {
         ats1_helper(env, val, 1, 1);
     }
 }
 WRITE_FUNCTION(64, c7_ats1cuw, set_c7_ats1cuw(env, value))
 
-// Declarations of PMU (Performance Monitoring Unit)-related functions. Their impl. is in "pmu.c"
+//  Declarations of PMU (Performance Monitoring Unit)-related functions. Their impl. is in "pmu.c"
 RW_FUNCTIONS(64, c9_pmcntenset, env->cp15.c9_pmcnten, set_c9_pmcntenset(env, value))
 RW_FUNCTIONS(64, c9_pmcntenclr, env->cp15.c9_pmcnten, set_c9_pmcntenclr(env, value))
 RW_FUNCTIONS(64, c9_pmcr, env->cp15.c9_pmcr, set_c9_pmcr(env, value))
@@ -352,7 +354,7 @@ RW_FUNCTIONS(64, c1_sctlr, env->cp15.c1_sys, set_c1_sctlr(env, value))
 
 static inline void set_c1_cpacr(CPUState *env, uint64_t val)
 {
-    if (env->cp15.c1_coproc != val) {
+    if(env->cp15.c1_coproc != val) {
         env->cp15.c1_coproc = val;
         /* ??? Is this safe when called from within a TB?  */
         tb_flush(env);
@@ -362,7 +364,7 @@ RW_FUNCTIONS(64, c1_cpacr, env->cp15.c1_coproc, set_c1_cpacr(env, value))
 
 static inline void set_c6_rgnr(CPUState *env, uint64_t val)
 {
-    if (val >= env->number_of_mpu_regions) {
+    if(val >= env->number_of_mpu_regions) {
         tlib_abortf("Region number %u doesn't point to a valid region", val);
     }
     env->cp15.c6_region_number = val;
@@ -375,8 +377,8 @@ static inline uint64_t get_c6_drbar(CPUState *env)
 }
 static inline void set_c6_drbar(CPUState *env, uint64_t val)
 {
-    if (val & 0b11111) {
-        // ISA requires address to be divisible by 4, but due to current MPU implementation it also has to be divisible by 32
+    if(val & 0b11111) {
+        //  ISA requires address to be divisible by 4, but due to current MPU implementation it also has to be divisible by 32
         tlib_abortf("Region size smaller than 32 bytes is not supported. Region base address must be divisible by 32");
     }
     env->cp15.c6_base_address[env->cp15.c6_region_number] = val;
@@ -413,31 +415,31 @@ RW_FUNCTIONS(64, c6_dracr, get_c6_dracr(env), set_c6_dracr(env, value))
 
 static inline uint64_t get_c1_actlr(CPUState *env, const ARMCPRegInfo *info)
 {
-    switch (ARM_CPUID(env) & ARM_ARCHITECTURE_MASK) {
-    case ARM_CPUID_ARM1026 & ARM_ARCHITECTURE_MASK:
-        return 1;
-    case ARM_CPUID_ARM1136 & ARM_ARCHITECTURE_MASK:
-    case ARM_CPUID_ARM1176 & ARM_ARCHITECTURE_MASK:
-        return 7;
-    case ARM_CPUID_ARM11MPCORE & ARM_ARCHITECTURE_MASK:
-        return 1;
-    case ARM_CPUID_CORTEXA5 & ARM_ARCHITECTURE_MASK:
-        return 0;
-    case ARM_CPUID_CORTEXA8 & ARM_ARCHITECTURE_MASK:
-        return 2;
-    case ARM_CPUID_CORTEXA9 & ARM_ARCHITECTURE_MASK:
-        return 0;
-    case ARM_CPUID_CORTEXA15 & ARM_ARCHITECTURE_MASK:
-        return 0;
-    default:
-        return tlib_read_cp15_32(encode_as_aarch32_32bit_register(info));
+    switch(ARM_CPUID(env) & ARM_ARCHITECTURE_MASK) {
+        case ARM_CPUID_ARM1026 &ARM_ARCHITECTURE_MASK:
+            return 1;
+        case ARM_CPUID_ARM1136 &ARM_ARCHITECTURE_MASK:
+        case ARM_CPUID_ARM1176 &ARM_ARCHITECTURE_MASK:
+            return 7;
+        case ARM_CPUID_ARM11MPCORE &ARM_ARCHITECTURE_MASK:
+            return 1;
+        case ARM_CPUID_CORTEXA5 &ARM_ARCHITECTURE_MASK:
+            return 0;
+        case ARM_CPUID_CORTEXA8 &ARM_ARCHITECTURE_MASK:
+            return 2;
+        case ARM_CPUID_CORTEXA9 &ARM_ARCHITECTURE_MASK:
+            return 0;
+        case ARM_CPUID_CORTEXA15 &ARM_ARCHITECTURE_MASK:
+            return 0;
+        default:
+            return tlib_read_cp15_32(encode_as_aarch32_32bit_register(info));
     }
 }
 RW_FUNCTIONS(64, c1_actlr, get_c1_actlr(env, info), tlib_write_cp15_32(encode_as_aarch32_32bit_register(info), value))
 
 RW_FUNCTIONS(64, c10_tlb_lockdown, 0, tlib_write_cp15_32(encode_as_aarch32_32bit_register(info), value))
 
-RW_FUNCTIONS(64, read_cp15_write_ignore, tlib_read_cp15_32(encode_as_aarch32_32bit_register(info)), return )
+RW_FUNCTIONS(64, read_cp15_write_ignore, tlib_read_cp15_32(encode_as_aarch32_32bit_register(info)), return)
 WRITE_FUNCTION(64, write_cp15, tlib_write_cp15_32(encode_as_aarch32_32bit_register(info), value))
 RW_FUNCTIONS(64, read_write_cp15, tlib_read_cp15_32(encode_as_aarch32_32bit_register(info)),
              tlib_write_cp15_32(encode_as_aarch32_32bit_register(info), value))
@@ -445,20 +447,20 @@ RW_FUNCTIONS(64, read_write_cp15, tlib_read_cp15_32(encode_as_aarch32_32bit_regi
 static inline uint64_t get_c9_l2auxcctrl(CPUState *env)
 {
     /* L2 cache auxiliary control (A8) or control (A15) */
-    if (ARM_CPUID(env) == ARM_CPUID_CORTEXA15) {
-        /* Linux wants the number of processors from here.
-         * Might as well set the interrupt-controller bit too.
-         */
-        #define smp_cpus 1 // TODO: should return correct number of cpus
-        return ((smp_cpus  - 1) << 24) | (1 << 23);
+    if(ARM_CPUID(env) == ARM_CPUID_CORTEXA15) {
+/* Linux wants the number of processors from here.
+ * Might as well set the interrupt-controller bit too.
+ */
+#define smp_cpus 1  //  TODO: should return correct number of cpus
+        return ((smp_cpus - 1) << 24) | (1 << 23);
     }
     return 0;
 }
-RW_FUNCTIONS(64, c9_l2auxcctrl, get_c9_l2auxcctrl(env), return )
+RW_FUNCTIONS(64, c9_l2auxcctrl, get_c9_l2auxcctrl(env), return)
 
 static inline void set_c15_cpar(CPUState *env, uint64_t val)
 {
-    if (env->cp15.c15_cpar != (val & 0x3fff)) {
+    if(env->cp15.c15_cpar != (val & 0x3fff)) {
         /* Changes cp0 to cp13 behavior, so needs a TB flush.  */
         tb_flush(env);
         env->cp15.c15_cpar = val & 0x3fff;
@@ -472,7 +474,8 @@ static inline void set_c15_ticonfig(CPUState *env, uint64_t val)
 {
     env->cp15.c15_ticonfig = val & 0xe7;
     env->cp15.c0_cpuid = (val & (1 << 5)) ? /* OS_TYPE bit */
-                         ARM_CPUID_TI915T : ARM_CPUID_TI925T;
+                             ARM_CPUID_TI915T
+                                          : ARM_CPUID_TI925T;
 }
 RW_FUNCTIONS(64, c15_ticonfig, env->cp15.c15_ticonfig, set_c15_ticonfig(env, value))
 
@@ -484,10 +487,10 @@ static inline void set_c9_tcmregion(CPUState *env, int op2, uint64_t val)
 {
     uint32_t tcm_region_index = env->cp15.c9_tcmsel;
     uint32_t tcm_region_value = env->cp15.c9_tcmregion[op2][tcm_region_index];
-    if (val != tcm_region_value) {
-        tlib_abortf(
-            "Attempted to change TCM region #%u for interface #%u from 0x%08x to 0x%08x, reconfiguration at runtime is currently not supported", tcm_region_index, op2, tcm_region_value,
-            val);
+    if(val != tcm_region_value) {
+        tlib_abortf("Attempted to change TCM region #%u for interface #%u from 0x%08x to 0x%08x, reconfiguration at runtime is "
+                    "currently not supported",
+                    tcm_region_index, op2, tcm_region_value, val);
     }
 }
 RW_FUNCTIONS(64, c9_tcmregion_0, get_c9_tcmregion(env, 0), set_c9_tcmregion(env, 0, value))
@@ -495,7 +498,7 @@ RW_FUNCTIONS(64, c9_tcmregion_1, get_c9_tcmregion(env, 1), set_c9_tcmregion(env,
 
 static inline void set_c9_tcmsel(CPUState *env, uint64_t val)
 {
-    if (val >= MAX_TCM_REGIONS) {
+    if(val >= MAX_TCM_REGIONS) {
         tlib_abortf("Attempted access to TCM region #%u, maximal supported value is %u", val, MAX_TCM_REGIONS);
     }
     env->cp15.c9_tcmsel = val;
@@ -511,13 +514,13 @@ RW_FUNCTIONS(64, cp14_c6_teecr, env->teecr, set_cp14_c6_teecr(env, value))
 RW_FUNCTIONS(64, c12_vbar, env->cp15.c12_vbar, env->cp15.c12_vbar = value & ~0xF)
 
 #define CREATE_FEATURE_REG(name, op2) \
-    ARM32_CP_REG_DEFINE(name,          15,   0,   0,   1,   op2,   1,  RW, FIELD(cp15.c0_c1[op2])) // Processor Feature Register [op2]
+    ARM32_CP_REG_DEFINE(name, 15, 0, 0, 1, op2, 1, RW, FIELD(cp15.c0_c1[op2]))  //  Processor Feature Register [op2]
 
 #define CREATE_ISAR_FEATURE_REG(name, op2) \
-    ARM32_CP_REG_DEFINE(name,          15,   0,   0,   2,   op2,   1,  RW, FIELD(cp15.c0_c2[op2])) // ISA Feature Register [op2]
+    ARM32_CP_REG_DEFINE(name, 15, 0, 0, 2, op2, 1, RW, FIELD(cp15.c0_c2[op2]))  //  ISA Feature Register [op2]
 
 #define READ_AS_ZERO(cp, op1, crn, crm, op2, el) \
-    ARM32_CP_REG_DEFINE(ZERO,          cp, op1, crn, crm,   op2,  el,  RO | CONST(0))              // Marked as Read-As-Zero in docs
+    ARM32_CP_REG_DEFINE(ZERO, cp, op1, crn, crm, op2, el, RO | CONST(0))  //  Marked as Read-As-Zero in docs
 
 // clang-format off
 static ARMCPRegInfo general_coprocessor_registers[] = {
@@ -948,23 +951,23 @@ static ARMCPRegInfo feature_cbar_ro[] = {
 };
 // clang-format on
 
-// The keys are dynamically allocated so let's make TTable free them when removing the entry.
+//  The keys are dynamically allocated so let's make TTable free them when removing the entry.
 static void entry_remove_callback(TTable_entry *entry)
 {
     tlib_free(entry->key);
-    if (((ARMCPRegInfo *)entry->value)->dynamic) {
+    if(((ARMCPRegInfo *)entry->value)->dynamic) {
         tlib_free(entry->value);
     }
 }
 
 void cp_reg_add(CPUState *env, ARMCPRegInfo *reg_info)
 {
-    const bool ns = true; // TODO: Handle secure state banking in a correct way, when we add Secure Mode to this lib
+    const bool ns = true;  //  TODO: Handle secure state banking in a correct way, when we add Secure Mode to this lib
     const bool is64 = reg_info->type & ARM_CP_64BIT;
 
     assert(reg_info->crn != ANY);
 
-    // Replicate the same register across many coproc addresses
+    //  Replicate the same register across many coproc addresses
     const int op1_start = reg_info->op1 < ANY ? reg_info->op1 : 0;
     const int op1_end = reg_info->op1 < ANY ? reg_info->op1 : 0x7;
 
@@ -974,14 +977,14 @@ void cp_reg_add(CPUState *env, ARMCPRegInfo *reg_info)
     const int crm_start = reg_info->crm < ANY ? reg_info->crm : 0;
     const int crm_end = reg_info->crm < ANY ? reg_info->crm : 0xF;
 
-    for (int op1 = op1_start; op1 <= op1_end; ++op1) {
-        for (int op2 = op2_start; op2 <= op2_end; ++op2) {
-            for (int crm = crm_start; crm <= crm_end; ++crm) {
+    for(int op1 = op1_start; op1 <= op1_end; ++op1) {
+        for(int op2 = op2_start; op2 <= op2_end; ++op2) {
+            for(int crm = crm_start; crm <= crm_end; ++crm) {
 
                 uint32_t *key = tlib_malloc(sizeof(uint32_t));
                 *key = ENCODE_CP_REG(reg_info->cp, is64, ns, reg_info->crn, crm, op1, op2);
 
-                if (reg_info->op1 == ANY || reg_info->op2 == ANY || reg_info->crm == ANY) {
+                if(reg_info->op1 == ANY || reg_info->op2 == ANY || reg_info->crm == ANY) {
                     ARMCPRegInfo *val = tlib_malloc(sizeof(*reg_info));
                     memcpy(val, reg_info, sizeof(*reg_info));
 
@@ -1005,13 +1008,13 @@ void system_instructions_and_registers_reset(CPUState *env)
     TTable *cp_regs = env->cp_regs;
 
     int i;
-    for (i = 0; i < cp_regs->count; i++) {
+    for(i = 0; i < cp_regs->count; i++) {
         ARMCPRegInfo *ri = cp_regs->entries[i].value;
 
-        // Nothing to be done for these because:
-        // * all the backing fields except the 'arm_core_config' ones are always reset to zero,
-        // * CONSTs have no backing fields and 'resetvalue' is always used when they're read.
-        if ((ri->resetvalue == 0) || (ri->type & ARM_CP_CONST)) {
+        //  Nothing to be done for these because:
+        //  * all the backing fields except the 'arm_core_config' ones are always reset to zero,
+        //  * CONSTs have no backing fields and 'resetvalue' is always used when they're read.
+        if((ri->resetvalue == 0) || (ri->type & ARM_CP_CONST)) {
             continue;
         }
 
@@ -1019,12 +1022,12 @@ void system_instructions_and_registers_reset(CPUState *env)
         uint64_t value = width == 64 ? ri->resetvalue : ri->resetvalue & UINT32_MAX;
 
         tlib_printf(LOG_LEVEL_NOISY, "Resetting value for '%s': 0x%" PRIx64, ri->name, value);
-        if (ri->fieldoffset) {
+        if(ri->fieldoffset) {
             memcpy((void *)env + ri->fieldoffset, &value, (size_t)(width / 8));
-        } else if (ri->writefn) {
+        } else if(ri->writefn) {
             ri->writefn(env, ri, value);
         } else {
-            // Shouldn't happen so let's make sure it doesn't.
+            //  Shouldn't happen so let's make sure it doesn't.
             tlib_assert_not_reached();
         }
     }
@@ -1033,7 +1036,7 @@ void system_instructions_and_registers_reset(CPUState *env)
 static int count_cp_array(const ARMCPRegInfo *array, const int items)
 {
     int i = items, num = 0;
-    while (i--) {
+    while(i--) {
         int many = 1;
         many *= array[i].crm == ANY ? 16 : 1;
         many *= array[i].op1 == ANY ? 8 : 1;
@@ -1045,33 +1048,32 @@ static int count_cp_array(const ARMCPRegInfo *array, const int items)
     return num;
 }
 
-#define ARM_CP_ARRAY_COUNT_ANY(array) \
-    count_cp_array(array, ARM_CP_ARRAY_COUNT(array))
+#define ARM_CP_ARRAY_COUNT_ANY(array) count_cp_array(array, ARM_CP_ARRAY_COUNT(array))
 
-// Calculate ttable size
+//  Calculate ttable size
 inline static int count_extra_registers(const CPUState *env)
 {
-    // c13 registers replaced by dummy counterparts
+    //  c13 registers replaced by dummy counterparts
     assert(ARM_CP_ARRAY_COUNT_ANY(has_cp15_c13_dummy_registers) == ARM_CP_ARRAY_COUNT_ANY(has_cp15_c13_registers));
 
     int extra_regs = 0;
-    if (arm_feature(env, ARM_FEATURE_OMAPCP)) {
-        // Seed dummy r/w NOP register on c0
+    if(arm_feature(env, ARM_FEATURE_OMAPCP)) {
+        //  Seed dummy r/w NOP register on c0
         extra_regs += ARM_CP_ARRAY_COUNT_ANY(omap_registers);
     }
-    if (arm_feature(env, ARM_FEATURE_XSCALE)) {
+    if(arm_feature(env, ARM_FEATURE_XSCALE)) {
         extra_regs += ARM_CP_ARRAY_COUNT_ANY(xscale_registers);
 
-        // XSCALE-specific handling of sctlr
+        //  XSCALE-specific handling of sctlr
         sctlr_register[0].type &= ~ARM_CP_SUPPRESS_TB_END;
         sctlr_register[0].crm = ANY;
     }
-    if (arm_feature(env, ARM_FEATURE_STRONGARM)) {
-        // Seed dummy r/w NOP register on c0
+    if(arm_feature(env, ARM_FEATURE_STRONGARM)) {
+        //  Seed dummy r/w NOP register on c0
         extra_regs += ARM_CP_ARRAY_COUNT_ANY(strongarm_registers);
     }
 
-    if (arm_feature(env, ARM_FEATURE_V7) || ARM_CPUID(env) == ARM_CPUID_ARM11MPCORE) {
+    if(arm_feature(env, ARM_FEATURE_V7) || ARM_CPUID(env) == ARM_CPUID_ARM11MPCORE) {
         /* The MPIDR was standardised in v7; prior to
          * this it was implemented only in the 11MPCore.
          * For all other pre-v7 cores it does not exist.
@@ -1079,65 +1081,65 @@ inline static int count_extra_registers(const CPUState *env)
         extra_regs += ARM_CP_ARRAY_COUNT_ANY(mpidr_register);
     }
 
-    if (!arm_feature(env, ARM_FEATURE_V6)) {
+    if(!arm_feature(env, ARM_FEATURE_V6)) {
         extra_regs += ARM_CP_ARRAY_COUNT_ANY(feature_pre_v6_registers);
     }
-    if (arm_feature(env, ARM_FEATURE_V6)) {
+    if(arm_feature(env, ARM_FEATURE_V6)) {
         extra_regs += ARM_CP_ARRAY_COUNT_ANY(feature_v6_registers);
     }
-    if (!arm_feature(env, ARM_FEATURE_V7)) {
+    if(!arm_feature(env, ARM_FEATURE_V7)) {
         extra_regs += ARM_CP_ARRAY_COUNT_ANY(feature_pre_v7_registers);
     }
-    if (arm_feature(env, ARM_FEATURE_V7)) {
+    if(arm_feature(env, ARM_FEATURE_V7)) {
         extra_regs += ARM_CP_ARRAY_COUNT_ANY(feature_v7_registers);
     }
 
-    if (arm_feature(env, ARM_FEATURE_MPU)) {
+    if(arm_feature(env, ARM_FEATURE_MPU)) {
         extra_regs += ARM_CP_ARRAY_COUNT_ANY(feature_mpu_registers);
     } else {
         extra_regs += ARM_CP_ARRAY_COUNT_ANY(has_mmu_registers);
     }
 
-    if (arm_feature(env, ARM_FEATURE_PMSA)) {
+    if(arm_feature(env, ARM_FEATURE_PMSA)) {
         extra_regs += ARM_CP_ARRAY_COUNT_ANY(feature_pmsa_registers);
     }
 
-    if (!arm_feature(env, ARM_FEATURE_XSCALE)) {
+    if(!arm_feature(env, ARM_FEATURE_XSCALE)) {
         extra_regs += ARM_CP_ARRAY_COUNT_ANY(cpacr_register);
     }
 
-    if (arm_feature(env, ARM_FEATURE_AUXCR)) {
+    if(arm_feature(env, ARM_FEATURE_AUXCR)) {
         extra_regs += ARM_CP_ARRAY_COUNT_ANY(feature_auxcr_registers);
     }
 
-    if (arm_feature(env, ARM_FEATURE_MPU) && !arm_feature(env, ARM_FEATURE_PMSA)) {
+    if(arm_feature(env, ARM_FEATURE_MPU) && !arm_feature(env, ARM_FEATURE_PMSA)) {
         extra_regs += ARM_CP_ARRAY_COUNT_ANY(has_mpu_fault_addr_register);
     }
 
-    if (arm_feature(env, ARM_FEATURE_GENERIC_TIMER)) {
+    if(arm_feature(env, ARM_FEATURE_GENERIC_TIMER)) {
         extra_regs += ARM_CP_ARRAY_COUNT_ANY(feature_generic_timer_registers);
     }
 
-    if (arm_feature(env, ARM_FEATURE_THUMB2EE)) {
+    if(arm_feature(env, ARM_FEATURE_THUMB2EE)) {
         extra_regs += ARM_CP_ARRAY_COUNT_ANY(feature_thumb2ee_registers);
     }
 
-    if (arm_feature(env, ARM_FEATURE_V7MP)) {
-        if (!arm_feature(env, ARM_FEATURE_MPU)) {
+    if(arm_feature(env, ARM_FEATURE_V7MP)) {
+        if(!arm_feature(env, ARM_FEATURE_MPU)) {
             extra_regs += ARM_CP_ARRAY_COUNT_ANY(feature_v7mp_mmu_registers);
         }
         extra_regs += ARM_CP_ARRAY_COUNT_ANY(feature_v7mp_registers);
     }
 
-    if (arm_feature(env, ARM_FEATURE_V7SEC)) {
+    if(arm_feature(env, ARM_FEATURE_V7SEC)) {
         extra_regs += ARM_CP_ARRAY_COUNT_ANY(feature_v7sec_registers);
     }
 
-    if (arm_feature(env, ARM_FEATURE_CBAR_RO)) {
+    if(arm_feature(env, ARM_FEATURE_CBAR_RO)) {
         extra_regs += ARM_CP_ARRAY_COUNT_ANY(feature_cbar_ro);
     }
 
-    switch (env->cp15.c0_cpuid) {
+    switch(env->cp15.c0_cpuid) {
         case ARM_CPUID_CORTEXR5:
         case ARM_CPUID_CORTEXR5F:
             extra_regs += ARM_CP_ARRAY_COUNT_ANY(cortex_r5_registers);
@@ -1153,89 +1155,88 @@ inline static int count_extra_registers(const CPUState *env)
     return extra_regs;
 }
 
-#define regs_array_add(env, regs) \
-    cp_regs_add(env, regs, ARM_CP_ARRAY_COUNT(regs));
+#define regs_array_add(env, regs) cp_regs_add(env, regs, ARM_CP_ARRAY_COUNT(regs));
 
-// Seed ttable with registers
+//  Seed ttable with registers
 inline static void populate_ttable(CPUState *env)
 {
-    // Generate dummy registers
-    if (arm_feature(env, ARM_FEATURE_OMAPCP)) {
-        // Seed dummy r/w NOP register on c0
+    //  Generate dummy registers
+    if(arm_feature(env, ARM_FEATURE_OMAPCP)) {
+        //  Seed dummy r/w NOP register on c0
         regs_array_add(env, omap_registers);
     }
-    if (arm_feature(env, ARM_FEATURE_XSCALE)) {
+    if(arm_feature(env, ARM_FEATURE_XSCALE)) {
         regs_array_add(env, xscale_registers);
     }
-    if (arm_feature(env, ARM_FEATURE_STRONGARM)) {
+    if(arm_feature(env, ARM_FEATURE_STRONGARM)) {
         regs_array_add(env, strongarm_registers);
     }
 
     regs_array_add(env, general_coprocessor_registers);
 
-    if (arm_feature(env, ARM_FEATURE_V7) || ARM_CPUID(env) == ARM_CPUID_ARM11MPCORE) {
+    if(arm_feature(env, ARM_FEATURE_V7) || ARM_CPUID(env) == ARM_CPUID_ARM11MPCORE) {
         regs_array_add(env, mpidr_register);
     }
 
-    if (!arm_feature(env, ARM_FEATURE_V6)) {
+    if(!arm_feature(env, ARM_FEATURE_V6)) {
         regs_array_add(env, feature_pre_v6_registers);
     }
-    if (arm_feature(env, ARM_FEATURE_V6)) {
+    if(arm_feature(env, ARM_FEATURE_V6)) {
         regs_array_add(env, feature_v6_registers);
     }
-    if (!arm_feature(env, ARM_FEATURE_V7)) {
+    if(!arm_feature(env, ARM_FEATURE_V7)) {
         regs_array_add(env, feature_pre_v7_registers);
     }
-    if (arm_feature(env, ARM_FEATURE_V7)) {
+    if(arm_feature(env, ARM_FEATURE_V7)) {
         regs_array_add(env, feature_v7_registers);
     }
 
-    if (arm_feature(env, ARM_FEATURE_MPU)) {
+    if(arm_feature(env, ARM_FEATURE_MPU)) {
         regs_array_add(env, feature_mpu_registers);
     } else {
         regs_array_add(env, has_mmu_registers);
     }
 
-    if (arm_feature(env, ARM_FEATURE_PMSA)) {
+    if(arm_feature(env, ARM_FEATURE_PMSA)) {
         regs_array_add(env, feature_pmsa_registers);
     }
 
-    if (!arm_feature(env, ARM_FEATURE_XSCALE)) {
+    if(!arm_feature(env, ARM_FEATURE_XSCALE)) {
         regs_array_add(env, cpacr_register);
     }
 
-    if (arm_feature(env, ARM_FEATURE_AUXCR)) {
+    if(arm_feature(env, ARM_FEATURE_AUXCR)) {
         regs_array_add(env, feature_auxcr_registers);
     }
 
-    if (arm_feature(env, ARM_FEATURE_MPU) && !arm_feature(env, ARM_FEATURE_PMSA)) {
+    if(arm_feature(env, ARM_FEATURE_MPU) && !arm_feature(env, ARM_FEATURE_PMSA)) {
         regs_array_add(env, has_mpu_fault_addr_register);
     }
 
-    if (arm_feature(env, ARM_FEATURE_GENERIC_TIMER)) {
+    if(arm_feature(env, ARM_FEATURE_GENERIC_TIMER)) {
         regs_array_add(env, feature_generic_timer_registers);
     }
 
-    if (arm_feature(env, ARM_FEATURE_THUMB2EE)) {
+    if(arm_feature(env, ARM_FEATURE_THUMB2EE)) {
         regs_array_add(env, feature_thumb2ee_registers);
     }
 
-    if (arm_feature(env, ARM_FEATURE_V7MP)) {
-        if (!arm_feature(env, ARM_FEATURE_MPU)) {
+    if(arm_feature(env, ARM_FEATURE_V7MP)) {
+        if(!arm_feature(env, ARM_FEATURE_MPU)) {
             regs_array_add(env, feature_v7mp_mmu_registers);
         }
         regs_array_add(env, feature_v7mp_registers);
     }
 
-    if (arm_feature(env, ARM_FEATURE_V7SEC)) {
+    if(arm_feature(env, ARM_FEATURE_V7SEC)) {
         regs_array_add(env, feature_v7sec_registers);
     }
 
-    if (arm_feature(env, ARM_FEATURE_CBAR_RO)) {
+    if(arm_feature(env, ARM_FEATURE_CBAR_RO)) {
         regs_array_add(env, feature_cbar_ro);
     }
 
-    switch (env->cp15.c0_cpuid) {
+    switch(env->cp15.c0_cpuid) {
         case ARM_CPUID_CORTEXR5:
         case ARM_CPUID_CORTEXR5F:
             regs_array_add(env, cortex_r5_registers);
@@ -1245,8 +1246,8 @@ inline static void populate_ttable(CPUState *env)
             break;
     }
 
-    // c13 are always present, but without ARM_FEATURE_V6K should be read as 0
-    if (arm_feature(env, ARM_FEATURE_V6K) || arm_feature(env, ARM_FEATURE_V7)) {
+    //  c13 are always present, but without ARM_FEATURE_V6K should be read as 0
+    if(arm_feature(env, ARM_FEATURE_V6K) || arm_feature(env, ARM_FEATURE_V7)) {
         regs_array_add(env, has_cp15_c13_registers);
     } else {
         regs_array_add(env, has_cp15_c13_dummy_registers);
@@ -1256,14 +1257,14 @@ inline static void populate_ttable(CPUState *env)
 
 void system_instructions_and_registers_init(CPUState *env)
 {
-    // This would break logic handling ACTLR (Auxiliary Control Register) - we assume that these are mutually exclusive
+    //  This would break logic handling ACTLR (Auxiliary Control Register) - we assume that these are mutually exclusive
     assert(!(arm_feature(env, ARM_FEATURE_XSCALE) && arm_feature(env, ARM_FEATURE_AUXCR)));
-    // In v7, Security Extensions should not be enabled when PMSA is enabled
+    //  In v7, Security Extensions should not be enabled when PMSA is enabled
     assert(!(arm_feature(env, ARM_FEATURE_V7SEC) && arm_feature(env, ARM_FEATURE_PMSA)));
 
     int extra_regs = count_extra_registers(env);
 
-    // Create ttable
+    //  Create ttable
     uint32_t ttable_size = ARM_CP_ARRAY_COUNT_ANY(general_coprocessor_registers) + extra_regs;
     env->cp_regs = ttable_create(ttable_size, entry_remove_callback, ttable_compare_key_uint32);
 

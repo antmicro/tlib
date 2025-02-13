@@ -38,92 +38,49 @@
  *  }
  */
 const uint64_t expand_pred_b_data[256] = {
-    0x0000000000000000, 0x00000000000000ff, 0x000000000000ff00,
-    0x000000000000ffff, 0x0000000000ff0000, 0x0000000000ff00ff,
-    0x0000000000ffff00, 0x0000000000ffffff, 0x00000000ff000000,
-    0x00000000ff0000ff, 0x00000000ff00ff00, 0x00000000ff00ffff,
-    0x00000000ffff0000, 0x00000000ffff00ff, 0x00000000ffffff00,
-    0x00000000ffffffff, 0x000000ff00000000, 0x000000ff000000ff,
-    0x000000ff0000ff00, 0x000000ff0000ffff, 0x000000ff00ff0000,
-    0x000000ff00ff00ff, 0x000000ff00ffff00, 0x000000ff00ffffff,
-    0x000000ffff000000, 0x000000ffff0000ff, 0x000000ffff00ff00,
-    0x000000ffff00ffff, 0x000000ffffff0000, 0x000000ffffff00ff,
-    0x000000ffffffff00, 0x000000ffffffffff, 0x0000ff0000000000,
-    0x0000ff00000000ff, 0x0000ff000000ff00, 0x0000ff000000ffff,
-    0x0000ff0000ff0000, 0x0000ff0000ff00ff, 0x0000ff0000ffff00,
-    0x0000ff0000ffffff, 0x0000ff00ff000000, 0x0000ff00ff0000ff,
-    0x0000ff00ff00ff00, 0x0000ff00ff00ffff, 0x0000ff00ffff0000,
-    0x0000ff00ffff00ff, 0x0000ff00ffffff00, 0x0000ff00ffffffff,
-    0x0000ffff00000000, 0x0000ffff000000ff, 0x0000ffff0000ff00,
-    0x0000ffff0000ffff, 0x0000ffff00ff0000, 0x0000ffff00ff00ff,
-    0x0000ffff00ffff00, 0x0000ffff00ffffff, 0x0000ffffff000000,
-    0x0000ffffff0000ff, 0x0000ffffff00ff00, 0x0000ffffff00ffff,
-    0x0000ffffffff0000, 0x0000ffffffff00ff, 0x0000ffffffffff00,
-    0x0000ffffffffffff, 0x00ff000000000000, 0x00ff0000000000ff,
-    0x00ff00000000ff00, 0x00ff00000000ffff, 0x00ff000000ff0000,
-    0x00ff000000ff00ff, 0x00ff000000ffff00, 0x00ff000000ffffff,
-    0x00ff0000ff000000, 0x00ff0000ff0000ff, 0x00ff0000ff00ff00,
-    0x00ff0000ff00ffff, 0x00ff0000ffff0000, 0x00ff0000ffff00ff,
-    0x00ff0000ffffff00, 0x00ff0000ffffffff, 0x00ff00ff00000000,
-    0x00ff00ff000000ff, 0x00ff00ff0000ff00, 0x00ff00ff0000ffff,
-    0x00ff00ff00ff0000, 0x00ff00ff00ff00ff, 0x00ff00ff00ffff00,
-    0x00ff00ff00ffffff, 0x00ff00ffff000000, 0x00ff00ffff0000ff,
-    0x00ff00ffff00ff00, 0x00ff00ffff00ffff, 0x00ff00ffffff0000,
-    0x00ff00ffffff00ff, 0x00ff00ffffffff00, 0x00ff00ffffffffff,
-    0x00ffff0000000000, 0x00ffff00000000ff, 0x00ffff000000ff00,
-    0x00ffff000000ffff, 0x00ffff0000ff0000, 0x00ffff0000ff00ff,
-    0x00ffff0000ffff00, 0x00ffff0000ffffff, 0x00ffff00ff000000,
-    0x00ffff00ff0000ff, 0x00ffff00ff00ff00, 0x00ffff00ff00ffff,
-    0x00ffff00ffff0000, 0x00ffff00ffff00ff, 0x00ffff00ffffff00,
-    0x00ffff00ffffffff, 0x00ffffff00000000, 0x00ffffff000000ff,
-    0x00ffffff0000ff00, 0x00ffffff0000ffff, 0x00ffffff00ff0000,
-    0x00ffffff00ff00ff, 0x00ffffff00ffff00, 0x00ffffff00ffffff,
-    0x00ffffffff000000, 0x00ffffffff0000ff, 0x00ffffffff00ff00,
-    0x00ffffffff00ffff, 0x00ffffffffff0000, 0x00ffffffffff00ff,
-    0x00ffffffffffff00, 0x00ffffffffffffff, 0xff00000000000000,
-    0xff000000000000ff, 0xff0000000000ff00, 0xff0000000000ffff,
-    0xff00000000ff0000, 0xff00000000ff00ff, 0xff00000000ffff00,
-    0xff00000000ffffff, 0xff000000ff000000, 0xff000000ff0000ff,
-    0xff000000ff00ff00, 0xff000000ff00ffff, 0xff000000ffff0000,
-    0xff000000ffff00ff, 0xff000000ffffff00, 0xff000000ffffffff,
-    0xff0000ff00000000, 0xff0000ff000000ff, 0xff0000ff0000ff00,
-    0xff0000ff0000ffff, 0xff0000ff00ff0000, 0xff0000ff00ff00ff,
-    0xff0000ff00ffff00, 0xff0000ff00ffffff, 0xff0000ffff000000,
-    0xff0000ffff0000ff, 0xff0000ffff00ff00, 0xff0000ffff00ffff,
-    0xff0000ffffff0000, 0xff0000ffffff00ff, 0xff0000ffffffff00,
-    0xff0000ffffffffff, 0xff00ff0000000000, 0xff00ff00000000ff,
-    0xff00ff000000ff00, 0xff00ff000000ffff, 0xff00ff0000ff0000,
-    0xff00ff0000ff00ff, 0xff00ff0000ffff00, 0xff00ff0000ffffff,
-    0xff00ff00ff000000, 0xff00ff00ff0000ff, 0xff00ff00ff00ff00,
-    0xff00ff00ff00ffff, 0xff00ff00ffff0000, 0xff00ff00ffff00ff,
-    0xff00ff00ffffff00, 0xff00ff00ffffffff, 0xff00ffff00000000,
-    0xff00ffff000000ff, 0xff00ffff0000ff00, 0xff00ffff0000ffff,
-    0xff00ffff00ff0000, 0xff00ffff00ff00ff, 0xff00ffff00ffff00,
-    0xff00ffff00ffffff, 0xff00ffffff000000, 0xff00ffffff0000ff,
-    0xff00ffffff00ff00, 0xff00ffffff00ffff, 0xff00ffffffff0000,
-    0xff00ffffffff00ff, 0xff00ffffffffff00, 0xff00ffffffffffff,
-    0xffff000000000000, 0xffff0000000000ff, 0xffff00000000ff00,
-    0xffff00000000ffff, 0xffff000000ff0000, 0xffff000000ff00ff,
-    0xffff000000ffff00, 0xffff000000ffffff, 0xffff0000ff000000,
-    0xffff0000ff0000ff, 0xffff0000ff00ff00, 0xffff0000ff00ffff,
-    0xffff0000ffff0000, 0xffff0000ffff00ff, 0xffff0000ffffff00,
-    0xffff0000ffffffff, 0xffff00ff00000000, 0xffff00ff000000ff,
-    0xffff00ff0000ff00, 0xffff00ff0000ffff, 0xffff00ff00ff0000,
-    0xffff00ff00ff00ff, 0xffff00ff00ffff00, 0xffff00ff00ffffff,
-    0xffff00ffff000000, 0xffff00ffff0000ff, 0xffff00ffff00ff00,
-    0xffff00ffff00ffff, 0xffff00ffffff0000, 0xffff00ffffff00ff,
-    0xffff00ffffffff00, 0xffff00ffffffffff, 0xffffff0000000000,
-    0xffffff00000000ff, 0xffffff000000ff00, 0xffffff000000ffff,
-    0xffffff0000ff0000, 0xffffff0000ff00ff, 0xffffff0000ffff00,
-    0xffffff0000ffffff, 0xffffff00ff000000, 0xffffff00ff0000ff,
-    0xffffff00ff00ff00, 0xffffff00ff00ffff, 0xffffff00ffff0000,
-    0xffffff00ffff00ff, 0xffffff00ffffff00, 0xffffff00ffffffff,
-    0xffffffff00000000, 0xffffffff000000ff, 0xffffffff0000ff00,
-    0xffffffff0000ffff, 0xffffffff00ff0000, 0xffffffff00ff00ff,
-    0xffffffff00ffff00, 0xffffffff00ffffff, 0xffffffffff000000,
-    0xffffffffff0000ff, 0xffffffffff00ff00, 0xffffffffff00ffff,
-    0xffffffffffff0000, 0xffffffffffff00ff, 0xffffffffffffff00,
-    0xffffffffffffffff,
+    0x0000000000000000, 0x00000000000000ff, 0x000000000000ff00, 0x000000000000ffff, 0x0000000000ff0000, 0x0000000000ff00ff,
+    0x0000000000ffff00, 0x0000000000ffffff, 0x00000000ff000000, 0x00000000ff0000ff, 0x00000000ff00ff00, 0x00000000ff00ffff,
+    0x00000000ffff0000, 0x00000000ffff00ff, 0x00000000ffffff00, 0x00000000ffffffff, 0x000000ff00000000, 0x000000ff000000ff,
+    0x000000ff0000ff00, 0x000000ff0000ffff, 0x000000ff00ff0000, 0x000000ff00ff00ff, 0x000000ff00ffff00, 0x000000ff00ffffff,
+    0x000000ffff000000, 0x000000ffff0000ff, 0x000000ffff00ff00, 0x000000ffff00ffff, 0x000000ffffff0000, 0x000000ffffff00ff,
+    0x000000ffffffff00, 0x000000ffffffffff, 0x0000ff0000000000, 0x0000ff00000000ff, 0x0000ff000000ff00, 0x0000ff000000ffff,
+    0x0000ff0000ff0000, 0x0000ff0000ff00ff, 0x0000ff0000ffff00, 0x0000ff0000ffffff, 0x0000ff00ff000000, 0x0000ff00ff0000ff,
+    0x0000ff00ff00ff00, 0x0000ff00ff00ffff, 0x0000ff00ffff0000, 0x0000ff00ffff00ff, 0x0000ff00ffffff00, 0x0000ff00ffffffff,
+    0x0000ffff00000000, 0x0000ffff000000ff, 0x0000ffff0000ff00, 0x0000ffff0000ffff, 0x0000ffff00ff0000, 0x0000ffff00ff00ff,
+    0x0000ffff00ffff00, 0x0000ffff00ffffff, 0x0000ffffff000000, 0x0000ffffff0000ff, 0x0000ffffff00ff00, 0x0000ffffff00ffff,
+    0x0000ffffffff0000, 0x0000ffffffff00ff, 0x0000ffffffffff00, 0x0000ffffffffffff, 0x00ff000000000000, 0x00ff0000000000ff,
+    0x00ff00000000ff00, 0x00ff00000000ffff, 0x00ff000000ff0000, 0x00ff000000ff00ff, 0x00ff000000ffff00, 0x00ff000000ffffff,
+    0x00ff0000ff000000, 0x00ff0000ff0000ff, 0x00ff0000ff00ff00, 0x00ff0000ff00ffff, 0x00ff0000ffff0000, 0x00ff0000ffff00ff,
+    0x00ff0000ffffff00, 0x00ff0000ffffffff, 0x00ff00ff00000000, 0x00ff00ff000000ff, 0x00ff00ff0000ff00, 0x00ff00ff0000ffff,
+    0x00ff00ff00ff0000, 0x00ff00ff00ff00ff, 0x00ff00ff00ffff00, 0x00ff00ff00ffffff, 0x00ff00ffff000000, 0x00ff00ffff0000ff,
+    0x00ff00ffff00ff00, 0x00ff00ffff00ffff, 0x00ff00ffffff0000, 0x00ff00ffffff00ff, 0x00ff00ffffffff00, 0x00ff00ffffffffff,
+    0x00ffff0000000000, 0x00ffff00000000ff, 0x00ffff000000ff00, 0x00ffff000000ffff, 0x00ffff0000ff0000, 0x00ffff0000ff00ff,
+    0x00ffff0000ffff00, 0x00ffff0000ffffff, 0x00ffff00ff000000, 0x00ffff00ff0000ff, 0x00ffff00ff00ff00, 0x00ffff00ff00ffff,
+    0x00ffff00ffff0000, 0x00ffff00ffff00ff, 0x00ffff00ffffff00, 0x00ffff00ffffffff, 0x00ffffff00000000, 0x00ffffff000000ff,
+    0x00ffffff0000ff00, 0x00ffffff0000ffff, 0x00ffffff00ff0000, 0x00ffffff00ff00ff, 0x00ffffff00ffff00, 0x00ffffff00ffffff,
+    0x00ffffffff000000, 0x00ffffffff0000ff, 0x00ffffffff00ff00, 0x00ffffffff00ffff, 0x00ffffffffff0000, 0x00ffffffffff00ff,
+    0x00ffffffffffff00, 0x00ffffffffffffff, 0xff00000000000000, 0xff000000000000ff, 0xff0000000000ff00, 0xff0000000000ffff,
+    0xff00000000ff0000, 0xff00000000ff00ff, 0xff00000000ffff00, 0xff00000000ffffff, 0xff000000ff000000, 0xff000000ff0000ff,
+    0xff000000ff00ff00, 0xff000000ff00ffff, 0xff000000ffff0000, 0xff000000ffff00ff, 0xff000000ffffff00, 0xff000000ffffffff,
+    0xff0000ff00000000, 0xff0000ff000000ff, 0xff0000ff0000ff00, 0xff0000ff0000ffff, 0xff0000ff00ff0000, 0xff0000ff00ff00ff,
+    0xff0000ff00ffff00, 0xff0000ff00ffffff, 0xff0000ffff000000, 0xff0000ffff0000ff, 0xff0000ffff00ff00, 0xff0000ffff00ffff,
+    0xff0000ffffff0000, 0xff0000ffffff00ff, 0xff0000ffffffff00, 0xff0000ffffffffff, 0xff00ff0000000000, 0xff00ff00000000ff,
+    0xff00ff000000ff00, 0xff00ff000000ffff, 0xff00ff0000ff0000, 0xff00ff0000ff00ff, 0xff00ff0000ffff00, 0xff00ff0000ffffff,
+    0xff00ff00ff000000, 0xff00ff00ff0000ff, 0xff00ff00ff00ff00, 0xff00ff00ff00ffff, 0xff00ff00ffff0000, 0xff00ff00ffff00ff,
+    0xff00ff00ffffff00, 0xff00ff00ffffffff, 0xff00ffff00000000, 0xff00ffff000000ff, 0xff00ffff0000ff00, 0xff00ffff0000ffff,
+    0xff00ffff00ff0000, 0xff00ffff00ff00ff, 0xff00ffff00ffff00, 0xff00ffff00ffffff, 0xff00ffffff000000, 0xff00ffffff0000ff,
+    0xff00ffffff00ff00, 0xff00ffffff00ffff, 0xff00ffffffff0000, 0xff00ffffffff00ff, 0xff00ffffffffff00, 0xff00ffffffffffff,
+    0xffff000000000000, 0xffff0000000000ff, 0xffff00000000ff00, 0xffff00000000ffff, 0xffff000000ff0000, 0xffff000000ff00ff,
+    0xffff000000ffff00, 0xffff000000ffffff, 0xffff0000ff000000, 0xffff0000ff0000ff, 0xffff0000ff00ff00, 0xffff0000ff00ffff,
+    0xffff0000ffff0000, 0xffff0000ffff00ff, 0xffff0000ffffff00, 0xffff0000ffffffff, 0xffff00ff00000000, 0xffff00ff000000ff,
+    0xffff00ff0000ff00, 0xffff00ff0000ffff, 0xffff00ff00ff0000, 0xffff00ff00ff00ff, 0xffff00ff00ffff00, 0xffff00ff00ffffff,
+    0xffff00ffff000000, 0xffff00ffff0000ff, 0xffff00ffff00ff00, 0xffff00ffff00ffff, 0xffff00ffffff0000, 0xffff00ffffff00ff,
+    0xffff00ffffffff00, 0xffff00ffffffffff, 0xffffff0000000000, 0xffffff00000000ff, 0xffffff000000ff00, 0xffffff000000ffff,
+    0xffffff0000ff0000, 0xffffff0000ff00ff, 0xffffff0000ffff00, 0xffffff0000ffffff, 0xffffff00ff000000, 0xffffff00ff0000ff,
+    0xffffff00ff00ff00, 0xffffff00ff00ffff, 0xffffff00ffff0000, 0xffffff00ffff00ff, 0xffffff00ffffff00, 0xffffff00ffffffff,
+    0xffffffff00000000, 0xffffffff000000ff, 0xffffffff0000ff00, 0xffffffff0000ffff, 0xffffffff00ff0000, 0xffffffff00ff00ff,
+    0xffffffff00ffff00, 0xffffffff00ffffff, 0xffffffffff000000, 0xffffffffff0000ff, 0xffffffffff00ff00, 0xffffffffff00ffff,
+    0xffffffffffff0000, 0xffffffffffff00ff, 0xffffffffffffff00, 0xffffffffffffffff,
 };
 
 /*
@@ -142,19 +99,14 @@ const uint64_t expand_pred_b_data[256] = {
  *  }
  */
 const uint64_t expand_pred_h_data[0x55 + 1] = {
-    [0x01] = 0x000000000000ffff, [0x04] = 0x00000000ffff0000,
-    [0x05] = 0x00000000ffffffff, [0x10] = 0x0000ffff00000000,
-    [0x11] = 0x0000ffff0000ffff, [0x14] = 0x0000ffffffff0000,
-    [0x15] = 0x0000ffffffffffff, [0x40] = 0xffff000000000000,
-    [0x41] = 0xffff00000000ffff, [0x44] = 0xffff0000ffff0000,
-    [0x45] = 0xffff0000ffffffff, [0x50] = 0xffffffff00000000,
-    [0x51] = 0xffffffff0000ffff, [0x54] = 0xffffffffffff0000,
-    [0x55] = 0xffffffffffffffff,
+    [0x01] = 0x000000000000ffff, [0x04] = 0x00000000ffff0000, [0x05] = 0x00000000ffffffff, [0x10] = 0x0000ffff00000000,
+    [0x11] = 0x0000ffff0000ffff, [0x14] = 0x0000ffffffff0000, [0x15] = 0x0000ffffffffffff, [0x40] = 0xffff000000000000,
+    [0x41] = 0xffff00000000ffff, [0x44] = 0xffff0000ffff0000, [0x45] = 0xffff0000ffffffff, [0x50] = 0xffffffff00000000,
+    [0x51] = 0xffffffff0000ffff, [0x54] = 0xffffffffffff0000, [0x55] = 0xffffffffffffffff,
 };
 
 /* Signed saturating rounding doubling multiply-accumulate high half, 8-bit */
-int8_t do_sqrdmlah_b(int8_t src1, int8_t src2, int8_t src3,
-                     bool neg, bool round)
+int8_t do_sqrdmlah_b(int8_t src1, int8_t src2, int8_t src3, bool neg, bool round)
 {
     /*
      * Simplify:
@@ -162,36 +114,34 @@ int8_t do_sqrdmlah_b(int8_t src1, int8_t src2, int8_t src3,
      * = ((a3 << 7) + (e1 * e2) + (round << 6)) >> 7
      */
     int32_t ret = (int32_t)src1 * src2;
-    if (neg) {
+    if(neg) {
         ret = -ret;
     }
     ret += ((int32_t)src3 << 7) + (round << 6);
     ret >>= 7;
 
-    if (ret != (int8_t)ret) {
+    if(ret != (int8_t)ret) {
         ret = (ret < 0 ? INT8_MIN : INT8_MAX);
     }
     return ret;
 }
 
-void HELPER(sve2_sqrdmlah_b)(void *vd, void *vn, void *vm,
-                             void *va, uint32_t desc)
+void HELPER(sve2_sqrdmlah_b)(void *vd, void *vn, void *vm, void *va, uint32_t desc)
 {
     intptr_t i, opr_sz = simd_oprsz(desc);
     int8_t *d = vd, *n = vn, *m = vm, *a = va;
 
-    for (i = 0; i < opr_sz; ++i) {
+    for(i = 0; i < opr_sz; ++i) {
         d[i] = do_sqrdmlah_b(n[i], m[i], a[i], false, true);
     }
 }
 
-void HELPER(sve2_sqrdmlsh_b)(void *vd, void *vn, void *vm,
-                             void *va, uint32_t desc)
+void HELPER(sve2_sqrdmlsh_b)(void *vd, void *vn, void *vm, void *va, uint32_t desc)
 {
     intptr_t i, opr_sz = simd_oprsz(desc);
     int8_t *d = vd, *n = vn, *m = vm, *a = va;
 
-    for (i = 0; i < opr_sz; ++i) {
+    for(i = 0; i < opr_sz; ++i) {
         d[i] = do_sqrdmlah_b(n[i], m[i], a[i], true, true);
     }
 }
@@ -201,7 +151,7 @@ void HELPER(sve2_sqdmulh_b)(void *vd, void *vn, void *vm, uint32_t desc)
     intptr_t i, opr_sz = simd_oprsz(desc);
     int8_t *d = vd, *n = vn, *m = vm;
 
-    for (i = 0; i < opr_sz; ++i) {
+    for(i = 0; i < opr_sz; ++i) {
         d[i] = do_sqrdmlah_b(n[i], m[i], 0, false, false);
     }
 }
@@ -211,42 +161,38 @@ void HELPER(sve2_sqrdmulh_b)(void *vd, void *vn, void *vm, uint32_t desc)
     intptr_t i, opr_sz = simd_oprsz(desc);
     int8_t *d = vd, *n = vn, *m = vm;
 
-    for (i = 0; i < opr_sz; ++i) {
+    for(i = 0; i < opr_sz; ++i) {
         d[i] = do_sqrdmlah_b(n[i], m[i], 0, false, true);
     }
 }
 
 /* Signed saturating rounding doubling multiply-accumulate high half, 16-bit */
-int16_t do_sqrdmlah_h(int16_t src1, int16_t src2, int16_t src3,
-                      bool neg, bool round, uint32_t *sat)
+int16_t do_sqrdmlah_h(int16_t src1, int16_t src2, int16_t src3, bool neg, bool round, uint32_t *sat)
 {
     /* Simplify similarly to do_sqrdmlah_b above.  */
     int32_t ret = (int32_t)src1 * src2;
-    if (neg) {
+    if(neg) {
         ret = -ret;
     }
     ret += ((int32_t)src3 << 15) + (round << 14);
     ret >>= 15;
 
-    if (ret != (int16_t)ret) {
+    if(ret != (int16_t)ret) {
         *sat = 1;
         ret = (ret < 0 ? INT16_MIN : INT16_MAX);
     }
     return ret;
 }
 
-uint32_t HELPER(neon_qrdmlah_s16)(CPUARMState *env, uint32_t src1,
-                                  uint32_t src2, uint32_t src3)
+uint32_t HELPER(neon_qrdmlah_s16)(CPUARMState *env, uint32_t src1, uint32_t src2, uint32_t src3)
 {
     uint32_t *sat = &env->vfp.qc[0];
     uint16_t e1 = do_sqrdmlah_h(src1, src2, src3, false, true, sat);
-    uint16_t e2 = do_sqrdmlah_h(src1 >> 16, src2 >> 16, src3 >> 16,
-                                false, true, sat);
+    uint16_t e2 = do_sqrdmlah_h(src1 >> 16, src2 >> 16, src3 >> 16, false, true, sat);
     return deposit32(e1, 16, 16, e2);
 }
 
-void HELPER(gvec_qrdmlah_s16)(void *vd, void *vn, void *vm,
-                              void *vq, uint32_t desc)
+void HELPER(gvec_qrdmlah_s16)(void *vd, void *vn, void *vm, void *vq, uint32_t desc)
 {
     uintptr_t opr_sz = simd_oprsz(desc);
     int16_t *d = vd;
@@ -254,24 +200,21 @@ void HELPER(gvec_qrdmlah_s16)(void *vd, void *vn, void *vm,
     int16_t *m = vm;
     uintptr_t i;
 
-    for (i = 0; i < opr_sz / 2; ++i) {
+    for(i = 0; i < opr_sz / 2; ++i) {
         d[i] = do_sqrdmlah_h(n[i], m[i], d[i], false, true, vq);
     }
     clear_tail(d, opr_sz, simd_maxsz(desc));
 }
 
-uint32_t HELPER(neon_qrdmlsh_s16)(CPUARMState *env, uint32_t src1,
-                                  uint32_t src2, uint32_t src3)
+uint32_t HELPER(neon_qrdmlsh_s16)(CPUARMState *env, uint32_t src1, uint32_t src2, uint32_t src3)
 {
     uint32_t *sat = &env->vfp.qc[0];
     uint16_t e1 = do_sqrdmlah_h(src1, src2, src3, true, true, sat);
-    uint16_t e2 = do_sqrdmlah_h(src1 >> 16, src2 >> 16, src3 >> 16,
-                                true, true, sat);
+    uint16_t e2 = do_sqrdmlah_h(src1 >> 16, src2 >> 16, src3 >> 16, true, true, sat);
     return deposit32(e1, 16, 16, e2);
 }
 
-void HELPER(gvec_qrdmlsh_s16)(void *vd, void *vn, void *vm,
-                              void *vq, uint32_t desc)
+void HELPER(gvec_qrdmlsh_s16)(void *vd, void *vn, void *vm, void *vq, uint32_t desc)
 {
     uintptr_t opr_sz = simd_oprsz(desc);
     int16_t *d = vd;
@@ -279,56 +222,52 @@ void HELPER(gvec_qrdmlsh_s16)(void *vd, void *vn, void *vm,
     int16_t *m = vm;
     uintptr_t i;
 
-    for (i = 0; i < opr_sz / 2; ++i) {
+    for(i = 0; i < opr_sz / 2; ++i) {
         d[i] = do_sqrdmlah_h(n[i], m[i], d[i], true, true, vq);
     }
     clear_tail(d, opr_sz, simd_maxsz(desc));
 }
 
-void HELPER(neon_sqdmulh_h)(void *vd, void *vn, void *vm,
-                            void *vq, uint32_t desc)
+void HELPER(neon_sqdmulh_h)(void *vd, void *vn, void *vm, void *vq, uint32_t desc)
 {
     intptr_t i, opr_sz = simd_oprsz(desc);
     int16_t *d = vd, *n = vn, *m = vm;
 
-    for (i = 0; i < opr_sz / 2; ++i) {
+    for(i = 0; i < opr_sz / 2; ++i) {
         d[i] = do_sqrdmlah_h(n[i], m[i], 0, false, false, vq);
     }
     clear_tail(d, opr_sz, simd_maxsz(desc));
 }
 
-void HELPER(neon_sqrdmulh_h)(void *vd, void *vn, void *vm,
-                             void *vq, uint32_t desc)
+void HELPER(neon_sqrdmulh_h)(void *vd, void *vn, void *vm, void *vq, uint32_t desc)
 {
     intptr_t i, opr_sz = simd_oprsz(desc);
     int16_t *d = vd, *n = vn, *m = vm;
 
-    for (i = 0; i < opr_sz / 2; ++i) {
+    for(i = 0; i < opr_sz / 2; ++i) {
         d[i] = do_sqrdmlah_h(n[i], m[i], 0, false, true, vq);
     }
     clear_tail(d, opr_sz, simd_maxsz(desc));
 }
 
-void HELPER(sve2_sqrdmlah_h)(void *vd, void *vn, void *vm,
-                             void *va, uint32_t desc)
+void HELPER(sve2_sqrdmlah_h)(void *vd, void *vn, void *vm, void *va, uint32_t desc)
 {
     intptr_t i, opr_sz = simd_oprsz(desc);
     int16_t *d = vd, *n = vn, *m = vm, *a = va;
     uint32_t discard;
 
-    for (i = 0; i < opr_sz / 2; ++i) {
+    for(i = 0; i < opr_sz / 2; ++i) {
         d[i] = do_sqrdmlah_h(n[i], m[i], a[i], false, true, &discard);
     }
 }
 
-void HELPER(sve2_sqrdmlsh_h)(void *vd, void *vn, void *vm,
-                             void *va, uint32_t desc)
+void HELPER(sve2_sqrdmlsh_h)(void *vd, void *vn, void *vm, void *va, uint32_t desc)
 {
     intptr_t i, opr_sz = simd_oprsz(desc);
     int16_t *d = vd, *n = vn, *m = vm, *a = va;
     uint32_t discard;
 
-    for (i = 0; i < opr_sz / 2; ++i) {
+    for(i = 0; i < opr_sz / 2; ++i) {
         d[i] = do_sqrdmlah_h(n[i], m[i], a[i], true, true, &discard);
     }
 }
@@ -339,7 +278,7 @@ void HELPER(sve2_sqdmulh_h)(void *vd, void *vn, void *vm, uint32_t desc)
     int16_t *d = vd, *n = vn, *m = vm;
     uint32_t discard;
 
-    for (i = 0; i < opr_sz / 2; ++i) {
+    for(i = 0; i < opr_sz / 2; ++i) {
         d[i] = do_sqrdmlah_h(n[i], m[i], 0, false, false, &discard);
     }
 }
@@ -350,7 +289,7 @@ void HELPER(sve2_sqrdmulh_h)(void *vd, void *vn, void *vm, uint32_t desc)
     int16_t *d = vd, *n = vn, *m = vm;
     uint32_t discard;
 
-    for (i = 0; i < opr_sz / 2; ++i) {
+    for(i = 0; i < opr_sz / 2; ++i) {
         d[i] = do_sqrdmlah_h(n[i], m[i], 0, false, true, &discard);
     }
 }
@@ -362,9 +301,9 @@ void HELPER(sve2_sqdmulh_idx_h)(void *vd, void *vn, void *vm, uint32_t desc)
     int16_t *d = vd, *n = vn, *m = (int16_t *)vm + H2(idx);
     uint32_t discard;
 
-    for (i = 0; i < opr_sz / 2; i += 16 / 2) {
+    for(i = 0; i < opr_sz / 2; i += 16 / 2) {
         int16_t mm = m[i];
-        for (j = 0; j < 16 / 2; ++j) {
+        for(j = 0; j < 16 / 2; ++j) {
             d[i + j] = do_sqrdmlah_h(n[i + j], mm, 0, false, false, &discard);
         }
     }
@@ -377,42 +316,39 @@ void HELPER(sve2_sqrdmulh_idx_h)(void *vd, void *vn, void *vm, uint32_t desc)
     int16_t *d = vd, *n = vn, *m = (int16_t *)vm + H2(idx);
     uint32_t discard;
 
-    for (i = 0; i < opr_sz / 2; i += 16 / 2) {
+    for(i = 0; i < opr_sz / 2; i += 16 / 2) {
         int16_t mm = m[i];
-        for (j = 0; j < 16 / 2; ++j) {
+        for(j = 0; j < 16 / 2; ++j) {
             d[i + j] = do_sqrdmlah_h(n[i + j], mm, 0, false, true, &discard);
         }
     }
 }
 
 /* Signed saturating rounding doubling multiply-accumulate high half, 32-bit */
-int32_t do_sqrdmlah_s(int32_t src1, int32_t src2, int32_t src3,
-                      bool neg, bool round, uint32_t *sat)
+int32_t do_sqrdmlah_s(int32_t src1, int32_t src2, int32_t src3, bool neg, bool round, uint32_t *sat)
 {
     /* Simplify similarly to do_sqrdmlah_b above.  */
     int64_t ret = (int64_t)src1 * src2;
-    if (neg) {
+    if(neg) {
         ret = -ret;
     }
     ret += ((int64_t)src3 << 31) + (round << 30);
     ret >>= 31;
 
-    if (ret != (int32_t)ret) {
+    if(ret != (int32_t)ret) {
         *sat = 1;
         ret = (ret < 0 ? INT32_MIN : INT32_MAX);
     }
     return ret;
 }
 
-uint32_t HELPER(neon_qrdmlah_s32)(CPUARMState *env, int32_t src1,
-                                  int32_t src2, int32_t src3)
+uint32_t HELPER(neon_qrdmlah_s32)(CPUARMState *env, int32_t src1, int32_t src2, int32_t src3)
 {
     uint32_t *sat = &env->vfp.qc[0];
     return do_sqrdmlah_s(src1, src2, src3, false, true, sat);
 }
 
-void HELPER(gvec_qrdmlah_s32)(void *vd, void *vn, void *vm,
-                              void *vq, uint32_t desc)
+void HELPER(gvec_qrdmlah_s32)(void *vd, void *vn, void *vm, void *vq, uint32_t desc)
 {
     uintptr_t opr_sz = simd_oprsz(desc);
     int32_t *d = vd;
@@ -420,21 +356,19 @@ void HELPER(gvec_qrdmlah_s32)(void *vd, void *vn, void *vm,
     int32_t *m = vm;
     uintptr_t i;
 
-    for (i = 0; i < opr_sz / 4; ++i) {
+    for(i = 0; i < opr_sz / 4; ++i) {
         d[i] = do_sqrdmlah_s(n[i], m[i], d[i], false, true, vq);
     }
     clear_tail(d, opr_sz, simd_maxsz(desc));
 }
 
-uint32_t HELPER(neon_qrdmlsh_s32)(CPUARMState *env, int32_t src1,
-                                  int32_t src2, int32_t src3)
+uint32_t HELPER(neon_qrdmlsh_s32)(CPUARMState *env, int32_t src1, int32_t src2, int32_t src3)
 {
     uint32_t *sat = &env->vfp.qc[0];
     return do_sqrdmlah_s(src1, src2, src3, true, true, sat);
 }
 
-void HELPER(gvec_qrdmlsh_s32)(void *vd, void *vn, void *vm,
-                              void *vq, uint32_t desc)
+void HELPER(gvec_qrdmlsh_s32)(void *vd, void *vn, void *vm, void *vq, uint32_t desc)
 {
     uintptr_t opr_sz = simd_oprsz(desc);
     int32_t *d = vd;
@@ -442,56 +376,52 @@ void HELPER(gvec_qrdmlsh_s32)(void *vd, void *vn, void *vm,
     int32_t *m = vm;
     uintptr_t i;
 
-    for (i = 0; i < opr_sz / 4; ++i) {
+    for(i = 0; i < opr_sz / 4; ++i) {
         d[i] = do_sqrdmlah_s(n[i], m[i], d[i], true, true, vq);
     }
     clear_tail(d, opr_sz, simd_maxsz(desc));
 }
 
-void HELPER(neon_sqdmulh_s)(void *vd, void *vn, void *vm,
-                            void *vq, uint32_t desc)
+void HELPER(neon_sqdmulh_s)(void *vd, void *vn, void *vm, void *vq, uint32_t desc)
 {
     intptr_t i, opr_sz = simd_oprsz(desc);
     int32_t *d = vd, *n = vn, *m = vm;
 
-    for (i = 0; i < opr_sz / 4; ++i) {
+    for(i = 0; i < opr_sz / 4; ++i) {
         d[i] = do_sqrdmlah_s(n[i], m[i], 0, false, false, vq);
     }
     clear_tail(d, opr_sz, simd_maxsz(desc));
 }
 
-void HELPER(neon_sqrdmulh_s)(void *vd, void *vn, void *vm,
-                             void *vq, uint32_t desc)
+void HELPER(neon_sqrdmulh_s)(void *vd, void *vn, void *vm, void *vq, uint32_t desc)
 {
     intptr_t i, opr_sz = simd_oprsz(desc);
     int32_t *d = vd, *n = vn, *m = vm;
 
-    for (i = 0; i < opr_sz / 4; ++i) {
+    for(i = 0; i < opr_sz / 4; ++i) {
         d[i] = do_sqrdmlah_s(n[i], m[i], 0, false, true, vq);
     }
     clear_tail(d, opr_sz, simd_maxsz(desc));
 }
 
-void HELPER(sve2_sqrdmlah_s)(void *vd, void *vn, void *vm,
-                             void *va, uint32_t desc)
+void HELPER(sve2_sqrdmlah_s)(void *vd, void *vn, void *vm, void *va, uint32_t desc)
 {
     intptr_t i, opr_sz = simd_oprsz(desc);
     int32_t *d = vd, *n = vn, *m = vm, *a = va;
     uint32_t discard;
 
-    for (i = 0; i < opr_sz / 4; ++i) {
+    for(i = 0; i < opr_sz / 4; ++i) {
         d[i] = do_sqrdmlah_s(n[i], m[i], a[i], false, true, &discard);
     }
 }
 
-void HELPER(sve2_sqrdmlsh_s)(void *vd, void *vn, void *vm,
-                             void *va, uint32_t desc)
+void HELPER(sve2_sqrdmlsh_s)(void *vd, void *vn, void *vm, void *va, uint32_t desc)
 {
     intptr_t i, opr_sz = simd_oprsz(desc);
     int32_t *d = vd, *n = vn, *m = vm, *a = va;
     uint32_t discard;
 
-    for (i = 0; i < opr_sz / 4; ++i) {
+    for(i = 0; i < opr_sz / 4; ++i) {
         d[i] = do_sqrdmlah_s(n[i], m[i], a[i], true, true, &discard);
     }
 }
@@ -502,7 +432,7 @@ void HELPER(sve2_sqdmulh_s)(void *vd, void *vn, void *vm, uint32_t desc)
     int32_t *d = vd, *n = vn, *m = vm;
     uint32_t discard;
 
-    for (i = 0; i < opr_sz / 4; ++i) {
+    for(i = 0; i < opr_sz / 4; ++i) {
         d[i] = do_sqrdmlah_s(n[i], m[i], 0, false, false, &discard);
     }
 }
@@ -513,7 +443,7 @@ void HELPER(sve2_sqrdmulh_s)(void *vd, void *vn, void *vm, uint32_t desc)
     int32_t *d = vd, *n = vn, *m = vm;
     uint32_t discard;
 
-    for (i = 0; i < opr_sz / 4; ++i) {
+    for(i = 0; i < opr_sz / 4; ++i) {
         d[i] = do_sqrdmlah_s(n[i], m[i], 0, false, true, &discard);
     }
 }
@@ -525,9 +455,9 @@ void HELPER(sve2_sqdmulh_idx_s)(void *vd, void *vn, void *vm, uint32_t desc)
     int32_t *d = vd, *n = vn, *m = (int32_t *)vm + H4(idx);
     uint32_t discard;
 
-    for (i = 0; i < opr_sz / 4; i += 16 / 4) {
+    for(i = 0; i < opr_sz / 4; i += 16 / 4) {
         int32_t mm = m[i];
-        for (j = 0; j < 16 / 4; ++j) {
+        for(j = 0; j < 16 / 4; ++j) {
             d[i + j] = do_sqrdmlah_s(n[i + j], mm, 0, false, false, &discard);
         }
     }
@@ -540,9 +470,9 @@ void HELPER(sve2_sqrdmulh_idx_s)(void *vd, void *vn, void *vm, uint32_t desc)
     int32_t *d = vd, *n = vn, *m = (int32_t *)vm + H4(idx);
     uint32_t discard;
 
-    for (i = 0; i < opr_sz / 4; i += 16 / 4) {
+    for(i = 0; i < opr_sz / 4; i += 16 / 4) {
         int32_t mm = m[i];
-        for (j = 0; j < 16 / 4; ++j) {
+        for(j = 0; j < 16 / 4; ++j) {
             d[i + j] = do_sqrdmlah_s(n[i + j], mm, 0, false, true, &discard);
         }
     }
@@ -554,7 +484,7 @@ static int64_t do_sat128_d(__int128_t r)
     int64_t ls = int128_getlo(r);
     int64_t hs = int128_gethi(r);
 
-    if (unlikely(hs != (ls >> 63))) {
+    if(unlikely(hs != (ls >> 63))) {
         return hs < 0 ? INT64_MIN : INT64_MAX;
     }
     return ls;
@@ -568,15 +498,15 @@ int64_t do_sqrdmlah_d(int64_t n, int64_t m, int64_t a, bool neg, bool round)
     /* As in do_sqrdmlah_b, but with 128-bit arithmetic. */
     muls64(&l, &h, m, n);
     r = int128_make128(l, h);
-    if (neg) {
+    if(neg) {
         r = int128_neg(r);
     }
-    if (a) {
+    if(a) {
         t = int128_exts64(a);
         t = int128_lshift(t, 63);
         r = int128_add(r, t);
     }
-    if (round) {
+    if(round) {
         t = int128_exts64(1ll << 62);
         r = int128_add(r, t);
     }
@@ -585,24 +515,22 @@ int64_t do_sqrdmlah_d(int64_t n, int64_t m, int64_t a, bool neg, bool round)
     return do_sat128_d(r);
 }
 
-void HELPER(sve2_sqrdmlah_d)(void *vd, void *vn, void *vm,
-                             void *va, uint32_t desc)
+void HELPER(sve2_sqrdmlah_d)(void *vd, void *vn, void *vm, void *va, uint32_t desc)
 {
     intptr_t i, opr_sz = simd_oprsz(desc);
     int64_t *d = vd, *n = vn, *m = vm, *a = va;
 
-    for (i = 0; i < opr_sz / 8; ++i) {
+    for(i = 0; i < opr_sz / 8; ++i) {
         d[i] = do_sqrdmlah_d(n[i], m[i], a[i], false, true);
     }
 }
 
-void HELPER(sve2_sqrdmlsh_d)(void *vd, void *vn, void *vm,
-                             void *va, uint32_t desc)
+void HELPER(sve2_sqrdmlsh_d)(void *vd, void *vn, void *vm, void *va, uint32_t desc)
 {
     intptr_t i, opr_sz = simd_oprsz(desc);
     int64_t *d = vd, *n = vn, *m = vm, *a = va;
 
-    for (i = 0; i < opr_sz / 8; ++i) {
+    for(i = 0; i < opr_sz / 8; ++i) {
         d[i] = do_sqrdmlah_d(n[i], m[i], a[i], true, true);
     }
 }
@@ -612,7 +540,7 @@ void HELPER(sve2_sqdmulh_d)(void *vd, void *vn, void *vm, uint32_t desc)
     intptr_t i, opr_sz = simd_oprsz(desc);
     int64_t *d = vd, *n = vn, *m = vm;
 
-    for (i = 0; i < opr_sz / 8; ++i) {
+    for(i = 0; i < opr_sz / 8; ++i) {
         d[i] = do_sqrdmlah_d(n[i], m[i], 0, false, false);
     }
 }
@@ -622,7 +550,7 @@ void HELPER(sve2_sqrdmulh_d)(void *vd, void *vn, void *vm, uint32_t desc)
     intptr_t i, opr_sz = simd_oprsz(desc);
     int64_t *d = vd, *n = vn, *m = vm;
 
-    for (i = 0; i < opr_sz / 8; ++i) {
+    for(i = 0; i < opr_sz / 8; ++i) {
         d[i] = do_sqrdmlah_d(n[i], m[i], 0, false, true);
     }
 }
@@ -633,9 +561,9 @@ void HELPER(sve2_sqdmulh_idx_d)(void *vd, void *vn, void *vm, uint32_t desc)
     int idx = simd_data(desc);
     int64_t *d = vd, *n = vn, *m = (int64_t *)vm + idx;
 
-    for (i = 0; i < opr_sz / 8; i += 16 / 8) {
+    for(i = 0; i < opr_sz / 8; i += 16 / 8) {
         int64_t mm = m[i];
-        for (j = 0; j < 16 / 8; ++j) {
+        for(j = 0; j < 16 / 8; ++j) {
             d[i + j] = do_sqrdmlah_d(n[i + j], mm, 0, false, false);
         }
     }
@@ -647,9 +575,9 @@ void HELPER(sve2_sqrdmulh_idx_d)(void *vd, void *vn, void *vm, uint32_t desc)
     int idx = simd_data(desc);
     int64_t *d = vd, *n = vn, *m = (int64_t *)vm + idx;
 
-    for (i = 0; i < opr_sz / 8; i += 16 / 8) {
+    for(i = 0; i < opr_sz / 8; i += 16 / 8) {
         int64_t mm = m[i];
-        for (j = 0; j < 16 / 8; ++j) {
+        for(j = 0; j < 16 / 8; ++j) {
             d[i + j] = do_sqrdmlah_d(n[i + j], mm, 0, false, true);
         }
     }
@@ -662,22 +590,19 @@ void HELPER(sve2_sqrdmulh_idx_d)(void *vd, void *vn, void *vm, uint32_t desc)
  * All elements are treated equally, no matter where they are.
  */
 
-#define DO_DOT(NAME, TYPED, TYPEN, TYPEM) \
-void HELPER(NAME)(void *vd, void *vn, void *vm, void *va, uint32_t desc)  \
-{                                                                         \
-    intptr_t i, opr_sz = simd_oprsz(desc);                                \
-    TYPED *d = vd, *a = va;                                               \
-    TYPEN *n = vn;                                                        \
-    TYPEM *m = vm;                                                        \
-    for (i = 0; i < opr_sz / sizeof(TYPED); ++i) {                        \
-        d[i] = (a[i] +                                                    \
-                (TYPED)n[i * 4 + 0] * m[i * 4 + 0] +                      \
-                (TYPED)n[i * 4 + 1] * m[i * 4 + 1] +                      \
-                (TYPED)n[i * 4 + 2] * m[i * 4 + 2] +                      \
-                (TYPED)n[i * 4 + 3] * m[i * 4 + 3]);                      \
-    }                                                                     \
-    clear_tail(d, opr_sz, simd_maxsz(desc));                              \
-}
+#define DO_DOT(NAME, TYPED, TYPEN, TYPEM)                                                            \
+    void HELPER(NAME)(void *vd, void *vn, void *vm, void *va, uint32_t desc)                         \
+    {                                                                                                \
+        intptr_t i, opr_sz = simd_oprsz(desc);                                                       \
+        TYPED *d = vd, *a = va;                                                                      \
+        TYPEN *n = vn;                                                                               \
+        TYPEM *m = vm;                                                                               \
+        for(i = 0; i < opr_sz / sizeof(TYPED); ++i) {                                                \
+            d[i] = (a[i] + (TYPED)n[i * 4 + 0] * m[i * 4 + 0] + (TYPED)n[i * 4 + 1] * m[i * 4 + 1] + \
+                    (TYPED)n[i * 4 + 2] * m[i * 4 + 2] + (TYPED)n[i * 4 + 3] * m[i * 4 + 3]);        \
+        }                                                                                            \
+        clear_tail(d, opr_sz, simd_maxsz(desc));                                                     \
+    }
 
 DO_DOT(gvec_sdot_b, int32_t, int8_t, int8_t)
 DO_DOT(gvec_udot_b, uint32_t, uint8_t, uint8_t)
@@ -685,32 +610,28 @@ DO_DOT(gvec_usdot_b, uint32_t, uint8_t, int8_t)
 DO_DOT(gvec_sdot_h, int64_t, int16_t, int16_t)
 DO_DOT(gvec_udot_h, uint64_t, uint16_t, uint16_t)
 
-#define DO_DOT_IDX(NAME, TYPED, TYPEN, TYPEM, HD) \
-void HELPER(NAME)(void *vd, void *vn, void *vm, void *va, uint32_t desc)  \
-{                                                                         \
-    intptr_t i = 0, opr_sz = simd_oprsz(desc);                            \
-    intptr_t opr_sz_n = opr_sz / sizeof(TYPED);                           \
-    intptr_t segend = MIN(16 / sizeof(TYPED), opr_sz_n);                  \
-    intptr_t index = simd_data(desc);                                     \
-    TYPED *d = vd, *a = va;                                               \
-    TYPEN *n = vn;                                                        \
-    TYPEM *m_indexed = (TYPEM *)vm + HD(index) * 4;                       \
-    do {                                                                  \
-        TYPED m0 = m_indexed[i * 4 + 0];                                  \
-        TYPED m1 = m_indexed[i * 4 + 1];                                  \
-        TYPED m2 = m_indexed[i * 4 + 2];                                  \
-        TYPED m3 = m_indexed[i * 4 + 3];                                  \
-        do {                                                              \
-            d[i] = (a[i] +                                                \
-                    n[i * 4 + 0] * m0 +                                   \
-                    n[i * 4 + 1] * m1 +                                   \
-                    n[i * 4 + 2] * m2 +                                   \
-                    n[i * 4 + 3] * m3);                                   \
-        } while (++i < segend);                                           \
-        segend = i + 4;                                                   \
-    } while (i < opr_sz_n);                                               \
-    clear_tail(d, opr_sz, simd_maxsz(desc));                              \
-}
+#define DO_DOT_IDX(NAME, TYPED, TYPEN, TYPEM, HD)                                                              \
+    void HELPER(NAME)(void *vd, void *vn, void *vm, void *va, uint32_t desc)                                   \
+    {                                                                                                          \
+        intptr_t i = 0, opr_sz = simd_oprsz(desc);                                                             \
+        intptr_t opr_sz_n = opr_sz / sizeof(TYPED);                                                            \
+        intptr_t segend = MIN(16 / sizeof(TYPED), opr_sz_n);                                                   \
+        intptr_t index = simd_data(desc);                                                                      \
+        TYPED *d = vd, *a = va;                                                                                \
+        TYPEN *n = vn;                                                                                         \
+        TYPEM *m_indexed = (TYPEM *)vm + HD(index) * 4;                                                        \
+        do {                                                                                                   \
+            TYPED m0 = m_indexed[i * 4 + 0];                                                                   \
+            TYPED m1 = m_indexed[i * 4 + 1];                                                                   \
+            TYPED m2 = m_indexed[i * 4 + 2];                                                                   \
+            TYPED m3 = m_indexed[i * 4 + 3];                                                                   \
+            do {                                                                                               \
+                d[i] = (a[i] + n[i * 4 + 0] * m0 + n[i * 4 + 1] * m1 + n[i * 4 + 2] * m2 + n[i * 4 + 3] * m3); \
+            } while(++i < segend);                                                                             \
+            segend = i + 4;                                                                                    \
+        } while(i < opr_sz_n);                                                                                 \
+        clear_tail(d, opr_sz, simd_maxsz(desc));                                                               \
+    }
 
 DO_DOT_IDX(gvec_sdot_idx_b, int32_t, int8_t, int8_t, H4)
 DO_DOT_IDX(gvec_udot_idx_b, uint32_t, uint8_t, uint8_t, H4)
@@ -719,8 +640,7 @@ DO_DOT_IDX(gvec_usdot_idx_b, int32_t, uint8_t, int8_t, H4)
 DO_DOT_IDX(gvec_sdot_idx_h, int64_t, int16_t, int16_t, H8)
 DO_DOT_IDX(gvec_udot_idx_h, uint64_t, uint16_t, uint16_t, H8)
 
-void HELPER(gvec_fcaddh)(void *vd, void *vn, void *vm,
-                         void *vfpst, uint32_t desc)
+void HELPER(gvec_fcaddh)(void *vd, void *vn, void *vm, void *vfpst, uint32_t desc)
 {
     uintptr_t opr_sz = simd_oprsz(desc);
     float16 *d = vd;
@@ -735,7 +655,7 @@ void HELPER(gvec_fcaddh)(void *vd, void *vn, void *vm,
     neg_real <<= 15;
     neg_imag <<= 15;
 
-    for (i = 0; i < opr_sz / 2; i += 2) {
+    for(i = 0; i < opr_sz / 2; i += 2) {
         float16 e0 = n[H2(i)];
         float16 e1 = m[H2(i + 1)] ^ neg_imag;
         float16 e2 = n[H2(i + 1)];
@@ -747,8 +667,7 @@ void HELPER(gvec_fcaddh)(void *vd, void *vn, void *vm,
     clear_tail(d, opr_sz, simd_maxsz(desc));
 }
 
-void HELPER(gvec_fcadds)(void *vd, void *vn, void *vm,
-                         void *vfpst, uint32_t desc)
+void HELPER(gvec_fcadds)(void *vd, void *vn, void *vm, void *vfpst, uint32_t desc)
 {
     uintptr_t opr_sz = simd_oprsz(desc);
     float32 *d = vd;
@@ -763,7 +682,7 @@ void HELPER(gvec_fcadds)(void *vd, void *vn, void *vm,
     neg_real <<= 31;
     neg_imag <<= 31;
 
-    for (i = 0; i < opr_sz / 4; i += 2) {
+    for(i = 0; i < opr_sz / 4; i += 2) {
         float32 e0 = n[H4(i)];
         float32 e1 = m[H4(i + 1)] ^ neg_imag;
         float32 e2 = n[H4(i + 1)];
@@ -775,8 +694,7 @@ void HELPER(gvec_fcadds)(void *vd, void *vn, void *vm,
     clear_tail(d, opr_sz, simd_maxsz(desc));
 }
 
-void HELPER(gvec_fcaddd)(void *vd, void *vn, void *vm,
-                         void *vfpst, uint32_t desc)
+void HELPER(gvec_fcaddd)(void *vd, void *vn, void *vm, void *vfpst, uint32_t desc)
 {
     uintptr_t opr_sz = simd_oprsz(desc);
     float64 *d = vd;
@@ -791,7 +709,7 @@ void HELPER(gvec_fcaddd)(void *vd, void *vn, void *vm,
     neg_real <<= 63;
     neg_imag <<= 63;
 
-    for (i = 0; i < opr_sz / 8; i += 2) {
+    for(i = 0; i < opr_sz / 8; i += 2) {
         float64 e0 = n[i];
         float64 e1 = m[i + 1] ^ neg_imag;
         float64 e2 = n[i + 1];
@@ -803,8 +721,7 @@ void HELPER(gvec_fcaddd)(void *vd, void *vn, void *vm,
     clear_tail(d, opr_sz, simd_maxsz(desc));
 }
 
-void HELPER(gvec_fcmlah)(void *vd, void *vn, void *vm, void *va,
-                         void *vfpst, uint32_t desc)
+void HELPER(gvec_fcmlah)(void *vd, void *vn, void *vm, void *va, void *vfpst, uint32_t desc)
 {
     uintptr_t opr_sz = simd_oprsz(desc);
     float16 *d = vd, *n = vn, *m = vm, *a = va;
@@ -818,7 +735,7 @@ void HELPER(gvec_fcmlah)(void *vd, void *vn, void *vm, void *va,
     neg_real <<= 15;
     neg_imag <<= 15;
 
-    for (i = 0; i < opr_sz / 2; i += 2) {
+    for(i = 0; i < opr_sz / 2; i += 2) {
         float16 e2 = n[H2(i + flip)];
         float16 e1 = m[H2(i + flip)] ^ neg_real;
         float16 e4 = e2;
@@ -830,8 +747,7 @@ void HELPER(gvec_fcmlah)(void *vd, void *vn, void *vm, void *va,
     clear_tail(d, opr_sz, simd_maxsz(desc));
 }
 
-void HELPER(gvec_fcmlah_idx)(void *vd, void *vn, void *vm, void *va,
-                             void *vfpst, uint32_t desc)
+void HELPER(gvec_fcmlah_idx)(void *vd, void *vn, void *vm, void *va, void *vfpst, uint32_t desc)
 {
     uintptr_t opr_sz = simd_oprsz(desc);
     float16 *d = vd, *n = vn, *m = vm, *a = va;
@@ -848,13 +764,13 @@ void HELPER(gvec_fcmlah_idx)(void *vd, void *vn, void *vm, void *va,
     neg_real <<= 15;
     neg_imag <<= 15;
 
-    for (i = 0; i < elements; i += eltspersegment) {
+    for(i = 0; i < elements; i += eltspersegment) {
         float16 mr = m[H2(i + 2 * index + 0)];
         float16 mi = m[H2(i + 2 * index + 1)];
         float16 e1 = neg_real ^ (flip ? mi : mr);
         float16 e3 = neg_imag ^ (flip ? mr : mi);
 
-        for (j = i; j < i + eltspersegment; j += 2) {
+        for(j = i; j < i + eltspersegment; j += 2) {
             float16 e2 = n[H2(j + flip)];
             float16 e4 = e2;
 
@@ -865,8 +781,7 @@ void HELPER(gvec_fcmlah_idx)(void *vd, void *vn, void *vm, void *va,
     clear_tail(d, opr_sz, simd_maxsz(desc));
 }
 
-void HELPER(gvec_fcmlas)(void *vd, void *vn, void *vm, void *va,
-                         void *vfpst, uint32_t desc)
+void HELPER(gvec_fcmlas)(void *vd, void *vn, void *vm, void *va, void *vfpst, uint32_t desc)
 {
     uintptr_t opr_sz = simd_oprsz(desc);
     float32 *d = vd, *n = vn, *m = vm, *a = va;
@@ -880,7 +795,7 @@ void HELPER(gvec_fcmlas)(void *vd, void *vn, void *vm, void *va,
     neg_real <<= 31;
     neg_imag <<= 31;
 
-    for (i = 0; i < opr_sz / 4; i += 2) {
+    for(i = 0; i < opr_sz / 4; i += 2) {
         float32 e2 = n[H4(i + flip)];
         float32 e1 = m[H4(i + flip)] ^ neg_real;
         float32 e4 = e2;
@@ -892,8 +807,7 @@ void HELPER(gvec_fcmlas)(void *vd, void *vn, void *vm, void *va,
     clear_tail(d, opr_sz, simd_maxsz(desc));
 }
 
-void HELPER(gvec_fcmlas_idx)(void *vd, void *vn, void *vm, void *va,
-                             void *vfpst, uint32_t desc)
+void HELPER(gvec_fcmlas_idx)(void *vd, void *vn, void *vm, void *va, void *vfpst, uint32_t desc)
 {
     uintptr_t opr_sz = simd_oprsz(desc);
     float32 *d = vd, *n = vn, *m = vm, *a = va;
@@ -910,13 +824,13 @@ void HELPER(gvec_fcmlas_idx)(void *vd, void *vn, void *vm, void *va,
     neg_real <<= 31;
     neg_imag <<= 31;
 
-    for (i = 0; i < elements; i += eltspersegment) {
+    for(i = 0; i < elements; i += eltspersegment) {
         float32 mr = m[H4(i + 2 * index + 0)];
         float32 mi = m[H4(i + 2 * index + 1)];
         float32 e1 = neg_real ^ (flip ? mi : mr);
         float32 e3 = neg_imag ^ (flip ? mr : mi);
 
-        for (j = i; j < i + eltspersegment; j += 2) {
+        for(j = i; j < i + eltspersegment; j += 2) {
             float32 e2 = n[H4(j + flip)];
             float32 e4 = e2;
 
@@ -927,8 +841,7 @@ void HELPER(gvec_fcmlas_idx)(void *vd, void *vn, void *vm, void *va,
     clear_tail(d, opr_sz, simd_maxsz(desc));
 }
 
-void HELPER(gvec_fcmlad)(void *vd, void *vn, void *vm, void *va,
-                         void *vfpst, uint32_t desc)
+void HELPER(gvec_fcmlad)(void *vd, void *vn, void *vm, void *va, void *vfpst, uint32_t desc)
 {
     uintptr_t opr_sz = simd_oprsz(desc);
     float64 *d = vd, *n = vn, *m = vm, *a = va;
@@ -942,7 +855,7 @@ void HELPER(gvec_fcmlad)(void *vd, void *vn, void *vm, void *va,
     neg_real <<= 63;
     neg_imag <<= 63;
 
-    for (i = 0; i < opr_sz / 8; i += 2) {
+    for(i = 0; i < opr_sz / 8; i += 2) {
         float64 e2 = n[i + flip];
         float64 e1 = m[i + flip] ^ neg_real;
         float64 e4 = e2;
@@ -1012,7 +925,7 @@ static uint32_t float32_acgt(float32 op1, float32 op2, float_status *stat)
 static int16_t vfp_tosszh(float16 x, void *fpstp)
 {
     float_status *fpst = fpstp;
-    if (float16_is_any_nan(x)) {
+    if(float16_is_any_nan(x)) {
         float_raise(float_flag_invalid, fpst);
         return 0;
     }
@@ -1022,23 +935,23 @@ static int16_t vfp_tosszh(float16 x, void *fpstp)
 static uint16_t vfp_touszh(float16 x, void *fpstp)
 {
     float_status *fpst = fpstp;
-    if (float16_is_any_nan(x)) {
+    if(float16_is_any_nan(x)) {
         float_raise(float_flag_invalid, fpst);
         return 0;
     }
     return float16_to_uint16_round_to_zero(x, fpst);
 }
 
-#define DO_2OP(NAME, FUNC, TYPE) \
-void HELPER(NAME)(void *vd, void *vn, void *stat, uint32_t desc)  \
-{                                                                 \
-    intptr_t i, oprsz = simd_oprsz(desc);                         \
-    TYPE *d = vd, *n = vn;                                        \
-    for (i = 0; i < oprsz / sizeof(TYPE); i++) {                  \
-        d[i] = FUNC(n[i], stat);                                  \
-    }                                                             \
-    clear_tail(d, oprsz, simd_maxsz(desc));                       \
-}
+#define DO_2OP(NAME, FUNC, TYPE)                                     \
+    void HELPER(NAME)(void *vd, void *vn, void *stat, uint32_t desc) \
+    {                                                                \
+        intptr_t i, oprsz = simd_oprsz(desc);                        \
+        TYPE *d = vd, *n = vn;                                       \
+        for(i = 0; i < oprsz / sizeof(TYPE); i++) {                  \
+            d[i] = FUNC(n[i], stat);                                 \
+        }                                                            \
+        clear_tail(d, oprsz, simd_maxsz(desc));                      \
+    }
 
 DO_2OP(gvec_frecpe_h, helper_recpe_f16, float16)
 DO_2OP(gvec_frecpe_s, helper_recpe_f32, float32)
@@ -1060,23 +973,21 @@ DO_2OP(gvec_ustoh, uint16_to_float16, uint16_t)
 DO_2OP(gvec_tosszh, vfp_tosszh, float16)
 DO_2OP(gvec_touszh, vfp_touszh, float16)
 
-#define WRAP_CMP0_FWD(FN, CMPOP, TYPE)                          \
-    static TYPE TYPE##_##FN##0(TYPE op, float_status *stat)     \
-    {                                                           \
-        return TYPE##_##CMPOP(op, TYPE##_zero, stat);           \
+#define WRAP_CMP0_FWD(FN, CMPOP, TYPE)                       \
+    static TYPE TYPE##_##FN##0(TYPE op, float_status * stat) \
+    {                                                        \
+        return TYPE##_##CMPOP(op, TYPE##_zero, stat);        \
     }
 
-#define WRAP_CMP0_REV(FN, CMPOP, TYPE)                          \
-    static TYPE TYPE##_##FN##0(TYPE op, float_status *stat)    \
-    {                                                           \
-        return TYPE##_##CMPOP(TYPE##_zero, op, stat);           \
+#define WRAP_CMP0_REV(FN, CMPOP, TYPE)                       \
+    static TYPE TYPE##_##FN##0(TYPE op, float_status * stat) \
+    {                                                        \
+        return TYPE##_##CMPOP(TYPE##_zero, op, stat);        \
     }
 
-#define DO_2OP_CMP0(FN, CMPOP, DIRN)                    \
-    WRAP_CMP0_##DIRN(FN, CMPOP, float16)                \
-    WRAP_CMP0_##DIRN(FN, CMPOP, float32)                \
-    DO_2OP(gvec_f##FN##0_h, float16_##FN##0, float16)   \
-    DO_2OP(gvec_f##FN##0_s, float32_##FN##0, float32)
+#define DO_2OP_CMP0(FN, CMPOP, DIRN)                                                                                            \
+    WRAP_CMP0_##DIRN(FN, CMPOP, float16) WRAP_CMP0_##DIRN(FN, CMPOP, float32) DO_2OP(gvec_f##FN##0_h, float16_##FN##0, float16) \
+        DO_2OP(gvec_f##FN##0_s, float32_##FN##0, float32)
 
 DO_2OP_CMP0(cgt, cgt, FWD)
 DO_2OP_CMP0(cge, cge, FWD)
@@ -1093,7 +1004,7 @@ DO_2OP_CMP0(cle, cge, REV)
 static float16 float16_ftsmul(float16 op1, uint16_t op2, float_status *stat)
 {
     float16 result = float16_mul(op1, op1, stat);
-    if (!float16_is_any_nan(result)) {
+    if(!float16_is_any_nan(result)) {
         result = float16_set_sign(result, op2 & 1);
     }
     return result;
@@ -1102,7 +1013,7 @@ static float16 float16_ftsmul(float16 op1, uint16_t op2, float_status *stat)
 static float32 float32_ftsmul(float32 op1, uint32_t op2, float_status *stat)
 {
     float32 result = float32_mul(op1, op1, stat);
-    if (!float32_is_any_nan(result)) {
+    if(!float32_is_any_nan(result)) {
         result = float32_set_sign(result, op2 & 1);
     }
     return result;
@@ -1111,7 +1022,7 @@ static float32 float32_ftsmul(float32 op1, uint32_t op2, float_status *stat)
 static float64 float64_ftsmul(float64 op1, uint64_t op2, float_status *stat)
 {
     float64 result = float64_mul(op1, op1, stat);
-    if (!float64_is_any_nan(result)) {
+    if(!float64_is_any_nan(result)) {
         result = float64_set_sign(result, op2 & 1);
     }
     return result;
@@ -1136,8 +1047,7 @@ static float16 float16_recps_nf(float16 op1, float16 op2, float_status *stat)
     op1 = float16_squash_input_denormal(op1, stat);
     op2 = float16_squash_input_denormal(op2, stat);
 
-    if ((float16_is_infinity(op1) && float16_is_zero(op2)) ||
-        (float16_is_infinity(op2) && float16_is_zero(op1))) {
+    if((float16_is_infinity(op1) && float16_is_zero(op2)) || (float16_is_infinity(op2) && float16_is_zero(op1))) {
         return float16_two;
     }
     return float16_sub(float16_two, float16_mul(op1, op2, stat), stat);
@@ -1148,8 +1058,7 @@ static float32 float32_recps_nf(float32 op1, float32 op2, float_status *stat)
     op1 = float32_squash_input_denormal(op1, stat);
     op2 = float32_squash_input_denormal(op2, stat);
 
-    if ((float32_is_infinity(op1) && float32_is_zero(op2)) ||
-        (float32_is_infinity(op2) && float32_is_zero(op1))) {
+    if((float32_is_infinity(op1) && float32_is_zero(op2)) || (float32_is_infinity(op2) && float32_is_zero(op1))) {
         return float32_two;
     }
     return float32_sub(float32_two, float32_mul(op1, op2, stat), stat);
@@ -1161,8 +1070,7 @@ static float16 float16_rsqrts_nf(float16 op1, float16 op2, float_status *stat)
     op1 = float16_squash_input_denormal(op1, stat);
     op2 = float16_squash_input_denormal(op2, stat);
 
-    if ((float16_is_infinity(op1) && float16_is_zero(op2)) ||
-        (float16_is_infinity(op2) && float16_is_zero(op1))) {
+    if((float16_is_infinity(op1) && float16_is_zero(op2)) || (float16_is_infinity(op2) && float16_is_zero(op1))) {
         return float16_one_point_five;
     }
     op1 = float16_sub(float16_three, float16_mul(op1, op2, stat), stat);
@@ -1174,24 +1082,23 @@ static float32 float32_rsqrts_nf(float32 op1, float32 op2, float_status *stat)
     op1 = float32_squash_input_denormal(op1, stat);
     op2 = float32_squash_input_denormal(op2, stat);
 
-    if ((float32_is_infinity(op1) && float32_is_zero(op2)) ||
-        (float32_is_infinity(op2) && float32_is_zero(op1))) {
+    if((float32_is_infinity(op1) && float32_is_zero(op2)) || (float32_is_infinity(op2) && float32_is_zero(op1))) {
         return float32_one_point_five;
     }
     op1 = float32_sub(float32_three, float32_mul(op1, op2, stat), stat);
     return float32_div(op1, float32_two, stat);
 }
 
-#define DO_3OP(NAME, FUNC, TYPE) \
-void HELPER(NAME)(void *vd, void *vn, void *vm, void *stat, uint32_t desc) \
-{                                                                          \
-    intptr_t i, oprsz = simd_oprsz(desc);                                  \
-    TYPE *d = vd, *n = vn, *m = vm;                                        \
-    for (i = 0; i < oprsz / sizeof(TYPE); i++) {                           \
-        d[i] = FUNC(n[i], m[i], stat);                                     \
-    }                                                                      \
-    clear_tail(d, oprsz, simd_maxsz(desc));                                \
-}
+#define DO_3OP(NAME, FUNC, TYPE)                                               \
+    void HELPER(NAME)(void *vd, void *vn, void *vm, void *stat, uint32_t desc) \
+    {                                                                          \
+        intptr_t i, oprsz = simd_oprsz(desc);                                  \
+        TYPE *d = vd, *n = vn, *m = vm;                                        \
+        for(i = 0; i < oprsz / sizeof(TYPE); i++) {                            \
+            d[i] = FUNC(n[i], m[i], stat);                                     \
+        }                                                                      \
+        clear_tail(d, oprsz, simd_maxsz(desc));                                \
+    }
 
 DO_3OP(gvec_fadd_h, float16_add, float16)
 DO_3OP(gvec_fadd_s, float32_add, float32)
@@ -1259,65 +1166,57 @@ DO_3OP(gvec_rsqrts_d, helper_rsqrtsf_f64, float64)
 #undef DO_3OP
 
 /* Non-fused multiply-add (unlike float16_muladd etc, which are fused) */
-static float16 float16_muladd_nf(float16 dest, float16 op1, float16 op2,
-                                 float_status *stat)
+static float16 float16_muladd_nf(float16 dest, float16 op1, float16 op2, float_status *stat)
 {
     return float16_add(dest, float16_mul(op1, op2, stat), stat);
 }
 
-static float32 float32_muladd_nf(float32 dest, float32 op1, float32 op2,
-                                 float_status *stat)
+static float32 float32_muladd_nf(float32 dest, float32 op1, float32 op2, float_status *stat)
 {
     return float32_add(dest, float32_mul(op1, op2, stat), stat);
 }
 
-static float16 float16_mulsub_nf(float16 dest, float16 op1, float16 op2,
-                                 float_status *stat)
+static float16 float16_mulsub_nf(float16 dest, float16 op1, float16 op2, float_status *stat)
 {
     return float16_sub(dest, float16_mul(op1, op2, stat), stat);
 }
 
-static float32 float32_mulsub_nf(float32 dest, float32 op1, float32 op2,
-                                 float_status *stat)
+static float32 float32_mulsub_nf(float32 dest, float32 op1, float32 op2, float_status *stat)
 {
     return float32_sub(dest, float32_mul(op1, op2, stat), stat);
 }
 
 /* Fused versions; these have the semantics Neon VFMA/VFMS want */
-static float16 float16_muladd_f(float16 dest, float16 op1, float16 op2,
-                                float_status *stat)
+static float16 float16_muladd_f(float16 dest, float16 op1, float16 op2, float_status *stat)
 {
     return float16_muladd(op1, op2, dest, 0, stat);
 }
 
-static float32 float32_muladd_f(float32 dest, float32 op1, float32 op2,
-                                 float_status *stat)
+static float32 float32_muladd_f(float32 dest, float32 op1, float32 op2, float_status *stat)
 {
     return float32_muladd(op1, op2, dest, 0, stat);
 }
 
-static float16 float16_mulsub_f(float16 dest, float16 op1, float16 op2,
-                                 float_status *stat)
+static float16 float16_mulsub_f(float16 dest, float16 op1, float16 op2, float_status *stat)
 {
     return float16_muladd(float16_chs(op1), op2, dest, 0, stat);
 }
 
-static float32 float32_mulsub_f(float32 dest, float32 op1, float32 op2,
-                                 float_status *stat)
+static float32 float32_mulsub_f(float32 dest, float32 op1, float32 op2, float_status *stat)
 {
     return float32_muladd(float32_chs(op1), op2, dest, 0, stat);
 }
 
-#define DO_MULADD(NAME, FUNC, TYPE)                                     \
-void HELPER(NAME)(void *vd, void *vn, void *vm, void *stat, uint32_t desc) \
-{                                                                          \
-    intptr_t i, oprsz = simd_oprsz(desc);                                  \
-    TYPE *d = vd, *n = vn, *m = vm;                                        \
-    for (i = 0; i < oprsz / sizeof(TYPE); i++) {                           \
-        d[i] = FUNC(d[i], n[i], m[i], stat);                               \
-    }                                                                      \
-    clear_tail(d, oprsz, simd_maxsz(desc));                                \
-}
+#define DO_MULADD(NAME, FUNC, TYPE)                                            \
+    void HELPER(NAME)(void *vd, void *vn, void *vm, void *stat, uint32_t desc) \
+    {                                                                          \
+        intptr_t i, oprsz = simd_oprsz(desc);                                  \
+        TYPE *d = vd, *n = vn, *m = vm;                                        \
+        for(i = 0; i < oprsz / sizeof(TYPE); i++) {                            \
+            d[i] = FUNC(d[i], n[i], m[i], stat);                               \
+        }                                                                      \
+        clear_tail(d, oprsz, simd_maxsz(desc));                                \
+    }
 
 DO_MULADD(gvec_fmla_h, float16_muladd_nf, float16)
 DO_MULADD(gvec_fmla_s, float32_muladd_nf, float32)
@@ -1335,21 +1234,21 @@ DO_MULADD(gvec_vfms_s, float32_mulsub_f, float32)
  * For AdvSIMD, there is of course only one such vector segment.
  */
 
-#define DO_MUL_IDX(NAME, TYPE, H) \
-void HELPER(NAME)(void *vd, void *vn, void *vm, uint32_t desc) \
-{                                                                          \
-    intptr_t i, j, oprsz = simd_oprsz(desc);                               \
-    intptr_t segment = MIN(16, oprsz) / sizeof(TYPE);                      \
-    intptr_t idx = simd_data(desc);                                        \
-    TYPE *d = vd, *n = vn, *m = vm;                                        \
-    for (i = 0; i < oprsz / sizeof(TYPE); i += segment) {                  \
-        TYPE mm = m[H(i + idx)];                                           \
-        for (j = 0; j < segment; j++) {                                    \
-            d[i + j] = n[i + j] * mm;                                      \
-        }                                                                  \
-    }                                                                      \
-    clear_tail(d, oprsz, simd_maxsz(desc));                                \
-}
+#define DO_MUL_IDX(NAME, TYPE, H)                                  \
+    void HELPER(NAME)(void *vd, void *vn, void *vm, uint32_t desc) \
+    {                                                              \
+        intptr_t i, j, oprsz = simd_oprsz(desc);                   \
+        intptr_t segment = MIN(16, oprsz) / sizeof(TYPE);          \
+        intptr_t idx = simd_data(desc);                            \
+        TYPE *d = vd, *n = vn, *m = vm;                            \
+        for(i = 0; i < oprsz / sizeof(TYPE); i += segment) {       \
+            TYPE mm = m[H(i + idx)];                               \
+            for(j = 0; j < segment; j++) {                         \
+                d[i + j] = n[i + j] * mm;                          \
+            }                                                      \
+        }                                                          \
+        clear_tail(d, oprsz, simd_maxsz(desc));                    \
+    }
 
 DO_MUL_IDX(gvec_mul_idx_h, uint16_t, H2)
 DO_MUL_IDX(gvec_mul_idx_s, uint32_t, H4)
@@ -1357,21 +1256,21 @@ DO_MUL_IDX(gvec_mul_idx_d, uint64_t, H8)
 
 #undef DO_MUL_IDX
 
-#define DO_MLA_IDX(NAME, TYPE, OP, H) \
-void HELPER(NAME)(void *vd, void *vn, void *vm, void *va, uint32_t desc)   \
-{                                                                          \
-    intptr_t i, j, oprsz = simd_oprsz(desc);                               \
-    intptr_t segment = MIN(16, oprsz) / sizeof(TYPE);                      \
-    intptr_t idx = simd_data(desc);                                        \
-    TYPE *d = vd, *n = vn, *m = vm, *a = va;                               \
-    for (i = 0; i < oprsz / sizeof(TYPE); i += segment) {                  \
-        TYPE mm = m[H(i + idx)];                                           \
-        for (j = 0; j < segment; j++) {                                    \
-            d[i + j] = a[i + j] OP n[i + j] * mm;                          \
-        }                                                                  \
-    }                                                                      \
-    clear_tail(d, oprsz, simd_maxsz(desc));                                \
-}
+#define DO_MLA_IDX(NAME, TYPE, OP, H)                                        \
+    void HELPER(NAME)(void *vd, void *vn, void *vm, void *va, uint32_t desc) \
+    {                                                                        \
+        intptr_t i, j, oprsz = simd_oprsz(desc);                             \
+        intptr_t segment = MIN(16, oprsz) / sizeof(TYPE);                    \
+        intptr_t idx = simd_data(desc);                                      \
+        TYPE *d = vd, *n = vn, *m = vm, *a = va;                             \
+        for(i = 0; i < oprsz / sizeof(TYPE); i += segment) {                 \
+            TYPE mm = m[H(i + idx)];                                         \
+            for(j = 0; j < segment; j++) {                                   \
+                d[i + j] = a[i + j] OP n[i + j] * mm;                        \
+            }                                                                \
+        }                                                                    \
+        clear_tail(d, oprsz, simd_maxsz(desc));                              \
+    }
 
 DO_MLA_IDX(gvec_mla_idx_h, uint16_t, +, H2)
 DO_MLA_IDX(gvec_mla_idx_s, uint32_t, +, H4)
@@ -1383,22 +1282,21 @@ DO_MLA_IDX(gvec_mls_idx_d, uint64_t, -, H8)
 
 #undef DO_MLA_IDX
 
-#define DO_FMUL_IDX(NAME, ADD, TYPE, H)                                    \
-void HELPER(NAME)(void *vd, void *vn, void *vm, void *stat, uint32_t desc) \
-{                                                                          \
-    intptr_t i, j, oprsz = simd_oprsz(desc);                               \
-    intptr_t segment = MIN(16, oprsz) / sizeof(TYPE);                      \
-    intptr_t idx = simd_data(desc);                                        \
-    TYPE *d = vd, *n = vn, *m = vm;                                        \
-    for (i = 0; i < oprsz / sizeof(TYPE); i += segment) {                  \
-        TYPE mm = m[H(i + idx)];                                           \
-        for (j = 0; j < segment; j++) {                                    \
-            d[i + j] = TYPE##_##ADD(d[i + j],                              \
-                                    TYPE##_mul(n[i + j], mm, stat), stat); \
-        }                                                                  \
-    }                                                                      \
-    clear_tail(d, oprsz, simd_maxsz(desc));                                \
-}
+#define DO_FMUL_IDX(NAME, ADD, TYPE, H)                                                  \
+    void HELPER(NAME)(void *vd, void *vn, void *vm, void *stat, uint32_t desc)           \
+    {                                                                                    \
+        intptr_t i, j, oprsz = simd_oprsz(desc);                                         \
+        intptr_t segment = MIN(16, oprsz) / sizeof(TYPE);                                \
+        intptr_t idx = simd_data(desc);                                                  \
+        TYPE *d = vd, *n = vn, *m = vm;                                                  \
+        for(i = 0; i < oprsz / sizeof(TYPE); i += segment) {                             \
+            TYPE mm = m[H(i + idx)];                                                     \
+            for(j = 0; j < segment; j++) {                                               \
+                d[i + j] = TYPE##_##ADD(d[i + j], TYPE##_mul(n[i + j], mm, stat), stat); \
+            }                                                                            \
+        }                                                                                \
+        clear_tail(d, oprsz, simd_maxsz(desc));                                          \
+    }
 
 #define float16_nop(N, M, S) (M)
 #define float32_nop(N, M, S) (M)
@@ -1422,25 +1320,23 @@ DO_FMUL_IDX(gvec_fmls_nf_idx_s, sub, float32, H4)
 #undef float64_nop
 #undef DO_FMUL_IDX
 
-#define DO_FMLA_IDX(NAME, TYPE, H)                                         \
-void HELPER(NAME)(void *vd, void *vn, void *vm, void *va,                  \
-                  void *stat, uint32_t desc)                               \
-{                                                                          \
-    intptr_t i, j, oprsz = simd_oprsz(desc);                               \
-    intptr_t segment = MIN(16, oprsz) / sizeof(TYPE);                      \
-    TYPE op1_neg = extract32(desc, SIMD_DATA_SHIFT, 1);                    \
-    intptr_t idx = desc >> (SIMD_DATA_SHIFT + 1);                          \
-    TYPE *d = vd, *n = vn, *m = vm, *a = va;                               \
-    op1_neg <<= (8 * sizeof(TYPE) - 1);                                    \
-    for (i = 0; i < oprsz / sizeof(TYPE); i += segment) {                  \
-        TYPE mm = m[H(i + idx)];                                           \
-        for (j = 0; j < segment; j++) {                                    \
-            d[i + j] = TYPE##_muladd(n[i + j] ^ op1_neg,                   \
-                                     mm, a[i + j], 0, stat);               \
-        }                                                                  \
-    }                                                                      \
-    clear_tail(d, oprsz, simd_maxsz(desc));                                \
-}
+#define DO_FMLA_IDX(NAME, TYPE, H)                                                       \
+    void HELPER(NAME)(void *vd, void *vn, void *vm, void *va, void *stat, uint32_t desc) \
+    {                                                                                    \
+        intptr_t i, j, oprsz = simd_oprsz(desc);                                         \
+        intptr_t segment = MIN(16, oprsz) / sizeof(TYPE);                                \
+        TYPE op1_neg = extract32(desc, SIMD_DATA_SHIFT, 1);                              \
+        intptr_t idx = desc >> (SIMD_DATA_SHIFT + 1);                                    \
+        TYPE *d = vd, *n = vn, *m = vm, *a = va;                                         \
+        op1_neg <<= (8 * sizeof(TYPE) - 1);                                              \
+        for(i = 0; i < oprsz / sizeof(TYPE); i += segment) {                             \
+            TYPE mm = m[H(i + idx)];                                                     \
+            for(j = 0; j < segment; j++) {                                               \
+                d[i + j] = TYPE##_muladd(n[i + j] ^ op1_neg, mm, a[i + j], 0, stat);     \
+            }                                                                            \
+        }                                                                                \
+        clear_tail(d, oprsz, simd_maxsz(desc));                                          \
+    }
 
 DO_FMLA_IDX(gvec_fmla_idx_h, float16, H2)
 DO_FMLA_IDX(gvec_fmla_idx_s, float32, H4)
@@ -1448,29 +1344,30 @@ DO_FMLA_IDX(gvec_fmla_idx_d, float64, H8)
 
 #undef DO_FMLA_IDX
 
-#define DO_SAT(NAME, WTYPE, TYPEN, TYPEM, OP, MIN, MAX) \
-void HELPER(NAME)(void *vd, void *vq, void *vn, void *vm, uint32_t desc)   \
-{                                                                          \
-    intptr_t i, oprsz = simd_oprsz(desc);                                  \
-    TYPEN *d = vd, *n = vn; TYPEM *m = vm;                                 \
-    bool q = false;                                                        \
-    for (i = 0; i < oprsz / sizeof(TYPEN); i++) {                          \
-        WTYPE dd = (WTYPE)n[i] OP m[i];                                    \
-        if (dd < MIN) {                                                    \
-            dd = MIN;                                                      \
-            q = true;                                                      \
-        } else if (dd > MAX) {                                             \
-            dd = MAX;                                                      \
-            q = true;                                                      \
-        }                                                                  \
-        d[i] = dd;                                                         \
-    }                                                                      \
-    if (q) {                                                               \
-        uint32_t *qc = vq;                                                 \
-        qc[0] = 1;                                                         \
-    }                                                                      \
-    clear_tail(d, oprsz, simd_maxsz(desc));                                \
-}
+#define DO_SAT(NAME, WTYPE, TYPEN, TYPEM, OP, MIN, MAX)                      \
+    void HELPER(NAME)(void *vd, void *vq, void *vn, void *vm, uint32_t desc) \
+    {                                                                        \
+        intptr_t i, oprsz = simd_oprsz(desc);                                \
+        TYPEN *d = vd, *n = vn;                                              \
+        TYPEM *m = vm;                                                       \
+        bool q = false;                                                      \
+        for(i = 0; i < oprsz / sizeof(TYPEN); i++) {                         \
+            WTYPE dd = (WTYPE)n[i] OP m[i];                                  \
+            if(dd < MIN) {                                                   \
+                dd = MIN;                                                    \
+                q = true;                                                    \
+            } else if(dd > MAX) {                                            \
+                dd = MAX;                                                    \
+                q = true;                                                    \
+            }                                                                \
+            d[i] = dd;                                                       \
+        }                                                                    \
+        if(q) {                                                              \
+            uint32_t *qc = vq;                                               \
+            qc[0] = 1;                                                       \
+        }                                                                    \
+        clear_tail(d, oprsz, simd_maxsz(desc));                              \
+    }
 
 DO_SAT(gvec_uqadd_b, int, uint8_t, uint8_t, +, 0, UINT8_MAX)
 DO_SAT(gvec_uqadd_h, int, uint16_t, uint16_t, +, 0, UINT16_MAX)
@@ -1490,106 +1387,101 @@ DO_SAT(gvec_sqsub_s, int64_t, int32_t, int32_t, -, INT32_MIN, INT32_MAX)
 
 #undef DO_SAT
 
-void HELPER(gvec_uqadd_d)(void *vd, void *vq, void *vn,
-                          void *vm, uint32_t desc)
+void HELPER(gvec_uqadd_d)(void *vd, void *vq, void *vn, void *vm, uint32_t desc)
 {
     intptr_t i, oprsz = simd_oprsz(desc);
     uint64_t *d = vd, *n = vn, *m = vm;
     bool q = false;
 
-    for (i = 0; i < oprsz / 8; i++) {
+    for(i = 0; i < oprsz / 8; i++) {
         uint64_t nn = n[i], mm = m[i], dd = nn + mm;
-        if (dd < nn) {
+        if(dd < nn) {
             dd = UINT64_MAX;
             q = true;
         }
         d[i] = dd;
     }
-    if (q) {
+    if(q) {
         uint32_t *qc = vq;
         qc[0] = 1;
     }
     clear_tail(d, oprsz, simd_maxsz(desc));
 }
 
-void HELPER(gvec_uqsub_d)(void *vd, void *vq, void *vn,
-                          void *vm, uint32_t desc)
+void HELPER(gvec_uqsub_d)(void *vd, void *vq, void *vn, void *vm, uint32_t desc)
 {
     intptr_t i, oprsz = simd_oprsz(desc);
     uint64_t *d = vd, *n = vn, *m = vm;
     bool q = false;
 
-    for (i = 0; i < oprsz / 8; i++) {
+    for(i = 0; i < oprsz / 8; i++) {
         uint64_t nn = n[i], mm = m[i], dd = nn - mm;
-        if (nn < mm) {
+        if(nn < mm) {
             dd = 0;
             q = true;
         }
         d[i] = dd;
     }
-    if (q) {
+    if(q) {
         uint32_t *qc = vq;
         qc[0] = 1;
     }
     clear_tail(d, oprsz, simd_maxsz(desc));
 }
 
-void HELPER(gvec_sqadd_d)(void *vd, void *vq, void *vn,
-                          void *vm, uint32_t desc)
+void HELPER(gvec_sqadd_d)(void *vd, void *vq, void *vn, void *vm, uint32_t desc)
 {
     intptr_t i, oprsz = simd_oprsz(desc);
     int64_t *d = vd, *n = vn, *m = vm;
     bool q = false;
 
-    for (i = 0; i < oprsz / 8; i++) {
+    for(i = 0; i < oprsz / 8; i++) {
         int64_t nn = n[i], mm = m[i], dd = nn + mm;
-        if (((dd ^ nn) & ~(nn ^ mm)) & INT64_MIN) {
+        if(((dd ^ nn) & ~(nn ^ mm)) & INT64_MIN) {
             dd = (nn >> 63) ^ ~INT64_MIN;
             q = true;
         }
         d[i] = dd;
     }
-    if (q) {
+    if(q) {
         uint32_t *qc = vq;
         qc[0] = 1;
     }
     clear_tail(d, oprsz, simd_maxsz(desc));
 }
 
-void HELPER(gvec_sqsub_d)(void *vd, void *vq, void *vn,
-                          void *vm, uint32_t desc)
+void HELPER(gvec_sqsub_d)(void *vd, void *vq, void *vn, void *vm, uint32_t desc)
 {
     intptr_t i, oprsz = simd_oprsz(desc);
     int64_t *d = vd, *n = vn, *m = vm;
     bool q = false;
 
-    for (i = 0; i < oprsz / 8; i++) {
+    for(i = 0; i < oprsz / 8; i++) {
         int64_t nn = n[i], mm = m[i], dd = nn - mm;
-        if (((dd ^ nn) & (nn ^ mm)) & INT64_MIN) {
+        if(((dd ^ nn) & (nn ^ mm)) & INT64_MIN) {
             dd = (nn >> 63) ^ ~INT64_MIN;
             q = true;
         }
         d[i] = dd;
     }
-    if (q) {
+    if(q) {
         uint32_t *qc = vq;
         qc[0] = 1;
     }
     clear_tail(d, oprsz, simd_maxsz(desc));
 }
 
-
-#define DO_SRA(NAME, TYPE)                              \
-void HELPER(NAME)(void *vd, void *vn, uint32_t desc)    \
-{                                                       \
-    intptr_t i, oprsz = simd_oprsz(desc);               \
-    int shift = simd_data(desc);                        \
-    TYPE *d = vd, *n = vn;                              \
-    for (i = 0; i < oprsz / sizeof(TYPE); i++) {        \
-        d[i] += n[i] >> shift;                          \
-    }                                                   \
-    clear_tail(d, oprsz, simd_maxsz(desc));             \
-}
+#define DO_SRA(NAME, TYPE)                               \
+    void HELPER(NAME)(void *vd, void *vn, uint32_t desc) \
+    {                                                    \
+        intptr_t i, oprsz = simd_oprsz(desc);            \
+        int shift = simd_data(desc);                     \
+        TYPE *d = vd, *n = vn;                           \
+        for(i = 0; i < oprsz / sizeof(TYPE); i++) {      \
+            d[i] += n[i] >> shift;                       \
+        }                                                \
+        clear_tail(d, oprsz, simd_maxsz(desc));          \
+    }
 
 DO_SRA(gvec_ssra_b, int8_t)
 DO_SRA(gvec_ssra_h, int16_t)
@@ -1603,18 +1495,18 @@ DO_SRA(gvec_usra_d, uint64_t)
 
 #undef DO_SRA
 
-#define DO_RSHR(NAME, TYPE)                             \
-void HELPER(NAME)(void *vd, void *vn, uint32_t desc)    \
-{                                                       \
-    intptr_t i, oprsz = simd_oprsz(desc);               \
-    int shift = simd_data(desc);                        \
-    TYPE *d = vd, *n = vn;                              \
-    for (i = 0; i < oprsz / sizeof(TYPE); i++) {        \
-        TYPE tmp = n[i] >> (shift - 1);                 \
-        d[i] = (tmp >> 1) + (tmp & 1);                  \
-    }                                                   \
-    clear_tail(d, oprsz, simd_maxsz(desc));             \
-}
+#define DO_RSHR(NAME, TYPE)                              \
+    void HELPER(NAME)(void *vd, void *vn, uint32_t desc) \
+    {                                                    \
+        intptr_t i, oprsz = simd_oprsz(desc);            \
+        int shift = simd_data(desc);                     \
+        TYPE *d = vd, *n = vn;                           \
+        for(i = 0; i < oprsz / sizeof(TYPE); i++) {      \
+            TYPE tmp = n[i] >> (shift - 1);              \
+            d[i] = (tmp >> 1) + (tmp & 1);               \
+        }                                                \
+        clear_tail(d, oprsz, simd_maxsz(desc));          \
+    }
 
 DO_RSHR(gvec_srshr_b, int8_t)
 DO_RSHR(gvec_srshr_h, int16_t)
@@ -1628,18 +1520,18 @@ DO_RSHR(gvec_urshr_d, uint64_t)
 
 #undef DO_RSHR
 
-#define DO_RSRA(NAME, TYPE)                             \
-void HELPER(NAME)(void *vd, void *vn, uint32_t desc)    \
-{                                                       \
-    intptr_t i, oprsz = simd_oprsz(desc);               \
-    int shift = simd_data(desc);                        \
-    TYPE *d = vd, *n = vn;                              \
-    for (i = 0; i < oprsz / sizeof(TYPE); i++) {        \
-        TYPE tmp = n[i] >> (shift - 1);                 \
-        d[i] += (tmp >> 1) + (tmp & 1);                 \
-    }                                                   \
-    clear_tail(d, oprsz, simd_maxsz(desc));             \
-}
+#define DO_RSRA(NAME, TYPE)                              \
+    void HELPER(NAME)(void *vd, void *vn, uint32_t desc) \
+    {                                                    \
+        intptr_t i, oprsz = simd_oprsz(desc);            \
+        int shift = simd_data(desc);                     \
+        TYPE *d = vd, *n = vn;                           \
+        for(i = 0; i < oprsz / sizeof(TYPE); i++) {      \
+            TYPE tmp = n[i] >> (shift - 1);              \
+            d[i] += (tmp >> 1) + (tmp & 1);              \
+        }                                                \
+        clear_tail(d, oprsz, simd_maxsz(desc));          \
+    }
 
 DO_RSRA(gvec_srsra_b, int8_t)
 DO_RSRA(gvec_srsra_h, int16_t)
@@ -1653,17 +1545,17 @@ DO_RSRA(gvec_ursra_d, uint64_t)
 
 #undef DO_RSRA
 
-#define DO_SRI(NAME, TYPE)                              \
-void HELPER(NAME)(void *vd, void *vn, uint32_t desc)    \
-{                                                       \
-    intptr_t i, oprsz = simd_oprsz(desc);               \
-    int shift = simd_data(desc);                        \
-    TYPE *d = vd, *n = vn;                              \
-    for (i = 0; i < oprsz / sizeof(TYPE); i++) {        \
-        d[i] = deposit64(d[i], 0, sizeof(TYPE) * 8 - shift, n[i] >> shift); \
-    }                                                   \
-    clear_tail(d, oprsz, simd_maxsz(desc));             \
-}
+#define DO_SRI(NAME, TYPE)                                                      \
+    void HELPER(NAME)(void *vd, void *vn, uint32_t desc)                        \
+    {                                                                           \
+        intptr_t i, oprsz = simd_oprsz(desc);                                   \
+        int shift = simd_data(desc);                                            \
+        TYPE *d = vd, *n = vn;                                                  \
+        for(i = 0; i < oprsz / sizeof(TYPE); i++) {                             \
+            d[i] = deposit64(d[i], 0, sizeof(TYPE) * 8 - shift, n[i] >> shift); \
+        }                                                                       \
+        clear_tail(d, oprsz, simd_maxsz(desc));                                 \
+    }
 
 DO_SRI(gvec_sri_b, uint8_t)
 DO_SRI(gvec_sri_h, uint16_t)
@@ -1672,17 +1564,17 @@ DO_SRI(gvec_sri_d, uint64_t)
 
 #undef DO_SRI
 
-#define DO_SLI(NAME, TYPE)                              \
-void HELPER(NAME)(void *vd, void *vn, uint32_t desc)    \
-{                                                       \
-    intptr_t i, oprsz = simd_oprsz(desc);               \
-    int shift = simd_data(desc);                        \
-    TYPE *d = vd, *n = vn;                              \
-    for (i = 0; i < oprsz / sizeof(TYPE); i++) {        \
-        d[i] = deposit64(d[i], shift, sizeof(TYPE) * 8 - shift, n[i]); \
-    }                                                   \
-    clear_tail(d, oprsz, simd_maxsz(desc));             \
-}
+#define DO_SLI(NAME, TYPE)                                                 \
+    void HELPER(NAME)(void *vd, void *vn, uint32_t desc)                   \
+    {                                                                      \
+        intptr_t i, oprsz = simd_oprsz(desc);                              \
+        int shift = simd_data(desc);                                       \
+        TYPE *d = vd, *n = vn;                                             \
+        for(i = 0; i < oprsz / sizeof(TYPE); i++) {                        \
+            d[i] = deposit64(d[i], shift, sizeof(TYPE) * 8 - shift, n[i]); \
+        }                                                                  \
+        clear_tail(d, oprsz, simd_maxsz(desc));                            \
+    }
 
 DO_SLI(gvec_sli_b, uint8_t)
 DO_SLI(gvec_sli_h, uint16_t)
@@ -1704,13 +1596,13 @@ static float32 float16_to_float32_by_bits(uint32_t f16, bool fz16)
     uint32_t exp = extract32(f16, 10, 5);
     uint32_t frac = extract32(f16, 0, 10);
 
-    if (exp == 0x1f) {
+    if(exp == 0x1f) {
         /* Inf or NaN */
         exp = 0xff;
-    } else if (exp == 0) {
+    } else if(exp == 0) {
         /* Zero or denormal.  */
-        if (frac != 0) {
-            if (fz16) {
+        if(frac != 0) {
+            if(fz16) {
                 frac = 0;
             } else {
                 /*
@@ -1753,8 +1645,7 @@ static uint64_t load4_f16(uint64_t *ptr, int is_q, int is_2)
  * as there is not yet SVE versions that might use blocking.
  */
 
-static void do_fmlal(float32 *d, void *vn, void *vm, float_status *fpst,
-                     uint32_t desc, bool fz16)
+static void do_fmlal(float32 *d, void *vn, void *vm, float_status *fpst, uint32_t desc, bool fz16)
 {
     intptr_t i, oprsz = simd_oprsz(desc);
     int is_s = extract32(desc, SIMD_DATA_SHIFT, 1);
@@ -1767,11 +1658,11 @@ static void do_fmlal(float32 *d, void *vn, void *vm, float_status *fpst,
     m_4 = load4_f16(vm, is_q, is_2);
 
     /* Negate all inputs for FMLSL at once.  */
-    if (is_s) {
+    if(is_s) {
         n_4 ^= 0x8000800080008000ull;
     }
 
-    for (i = 0; i < oprsz / 4; i++) {
+    for(i = 0; i < oprsz / 4; i++) {
         float32 n_1 = float16_to_float32_by_bits(n_4 >> (i * 16), fz16);
         float32 m_1 = float16_to_float32_by_bits(m_4 >> (i * 16), fz16);
         d[H4(i)] = float32_muladd(n_1, m_1, d[H4(i)], 0, fpst);
@@ -1779,24 +1670,19 @@ static void do_fmlal(float32 *d, void *vn, void *vm, float_status *fpst,
     clear_tail(d, oprsz, simd_maxsz(desc));
 }
 
-void HELPER(gvec_fmlal_a32)(void *vd, void *vn, void *vm,
-                            void *venv, uint32_t desc)
+void HELPER(gvec_fmlal_a32)(void *vd, void *vn, void *vm, void *venv, uint32_t desc)
 {
     CPUARMState *env = venv;
-    do_fmlal(vd, vn, vm, &env->vfp.standard_fp_status, desc,
-             get_flush_inputs_to_zero(&env->vfp.fp_status_f16));
+    do_fmlal(vd, vn, vm, &env->vfp.standard_fp_status, desc, get_flush_inputs_to_zero(&env->vfp.fp_status_f16));
 }
 
-void HELPER(gvec_fmlal_a64)(void *vd, void *vn, void *vm,
-                            void *venv, uint32_t desc)
+void HELPER(gvec_fmlal_a64)(void *vd, void *vn, void *vm, void *venv, uint32_t desc)
 {
     CPUARMState *env = venv;
-    do_fmlal(vd, vn, vm, &env->vfp.fp_status, desc,
-             get_flush_inputs_to_zero(&env->vfp.fp_status_f16));
+    do_fmlal(vd, vn, vm, &env->vfp.fp_status, desc, get_flush_inputs_to_zero(&env->vfp.fp_status_f16));
 }
 
-void HELPER(sve2_fmlal_zzzw_s)(void *vd, void *vn, void *vm, void *va,
-                               void *venv, uint32_t desc)
+void HELPER(sve2_fmlal_zzzw_s)(void *vd, void *vn, void *vm, void *va, void *venv, uint32_t desc)
 {
     intptr_t i, oprsz = simd_oprsz(desc);
     uint16_t negn = extract32(desc, SIMD_DATA_SHIFT, 1) << 15;
@@ -1805,7 +1691,7 @@ void HELPER(sve2_fmlal_zzzw_s)(void *vd, void *vn, void *vm, void *va,
     float_status *status = &env->vfp.fp_status;
     bool fz16 = get_flush_inputs_to_zero(&env->vfp.fp_status_f16);
 
-    for (i = 0; i < oprsz; i += sizeof(float32)) {
+    for(i = 0; i < oprsz; i += sizeof(float32)) {
         float16 nn_16 = *(float16 *)(vn + H1_2(i + sel)) ^ negn;
         float16 mm_16 = *(float16 *)(vm + H1_2(i + sel));
         float32 nn = float16_to_float32_by_bits(nn_16, fz16);
@@ -1816,8 +1702,7 @@ void HELPER(sve2_fmlal_zzzw_s)(void *vd, void *vn, void *vm, void *va,
     }
 }
 
-static void do_fmlal_idx(float32 *d, void *vn, void *vm, float_status *fpst,
-                         uint32_t desc, bool fz16)
+static void do_fmlal_idx(float32 *d, void *vn, void *vm, float_status *fpst, uint32_t desc, bool fz16)
 {
     intptr_t i, oprsz = simd_oprsz(desc);
     int is_s = extract32(desc, SIMD_DATA_SHIFT, 1);
@@ -1831,37 +1716,32 @@ static void do_fmlal_idx(float32 *d, void *vn, void *vm, float_status *fpst,
     n_4 = load4_f16(vn, is_q, is_2);
 
     /* Negate all inputs for FMLSL at once.  */
-    if (is_s) {
+    if(is_s) {
         n_4 ^= 0x8000800080008000ull;
     }
 
     m_1 = float16_to_float32_by_bits(((float16 *)vm)[H2(index)], fz16);
 
-    for (i = 0; i < oprsz / 4; i++) {
+    for(i = 0; i < oprsz / 4; i++) {
         float32 n_1 = float16_to_float32_by_bits(n_4 >> (i * 16), fz16);
         d[H4(i)] = float32_muladd(n_1, m_1, d[H4(i)], 0, fpst);
     }
     clear_tail(d, oprsz, simd_maxsz(desc));
 }
 
-void HELPER(gvec_fmlal_idx_a32)(void *vd, void *vn, void *vm,
-                                void *venv, uint32_t desc)
+void HELPER(gvec_fmlal_idx_a32)(void *vd, void *vn, void *vm, void *venv, uint32_t desc)
 {
     CPUARMState *env = venv;
-    do_fmlal_idx(vd, vn, vm, &env->vfp.standard_fp_status, desc,
-                 get_flush_inputs_to_zero(&env->vfp.fp_status_f16));
+    do_fmlal_idx(vd, vn, vm, &env->vfp.standard_fp_status, desc, get_flush_inputs_to_zero(&env->vfp.fp_status_f16));
 }
 
-void HELPER(gvec_fmlal_idx_a64)(void *vd, void *vn, void *vm,
-                                void *venv, uint32_t desc)
+void HELPER(gvec_fmlal_idx_a64)(void *vd, void *vn, void *vm, void *venv, uint32_t desc)
 {
     CPUARMState *env = venv;
-    do_fmlal_idx(vd, vn, vm, &env->vfp.fp_status, desc,
-                 get_flush_inputs_to_zero(&env->vfp.fp_status_f16));
+    do_fmlal_idx(vd, vn, vm, &env->vfp.fp_status, desc, get_flush_inputs_to_zero(&env->vfp.fp_status_f16));
 }
 
-void HELPER(sve2_fmlal_zzxw_s)(void *vd, void *vn, void *vm, void *va,
-                               void *venv, uint32_t desc)
+void HELPER(sve2_fmlal_zzxw_s)(void *vd, void *vn, void *vm, void *va, void *venv, uint32_t desc)
 {
     intptr_t i, j, oprsz = simd_oprsz(desc);
     uint16_t negn = extract32(desc, SIMD_DATA_SHIFT, 1) << 15;
@@ -1871,17 +1751,16 @@ void HELPER(sve2_fmlal_zzxw_s)(void *vd, void *vn, void *vm, void *va,
     float_status *status = &env->vfp.fp_status;
     bool fz16 = get_flush_inputs_to_zero(&env->vfp.fp_status_f16);
 
-    for (i = 0; i < oprsz; i += 16) {
+    for(i = 0; i < oprsz; i += 16) {
         float16 mm_16 = *(float16 *)(vm + i + idx);
         float32 mm = float16_to_float32_by_bits(mm_16, fz16);
 
-        for (j = 0; j < 16; j += sizeof(float32)) {
+        for(j = 0; j < 16; j += sizeof(float32)) {
             float16 nn_16 = *(float16 *)(vn + H1_2(i + j + sel)) ^ negn;
             float32 nn = float16_to_float32_by_bits(nn_16, fz16);
             float32 aa = *(float32 *)(va + H1_4(i + j));
 
-            *(float32 *)(vd + H1_4(i + j)) =
-                float32_muladd(nn, mm, aa, 0, status);
+            *(float32 *)(vd + H1_4(i + j)) = float32_muladd(nn, mm, aa, 0, status);
         }
     }
 }
@@ -1891,12 +1770,12 @@ void HELPER(gvec_sshl_b)(void *vd, void *vn, void *vm, uint32_t desc)
     intptr_t i, opr_sz = simd_oprsz(desc);
     int8_t *d = vd, *n = vn, *m = vm;
 
-    for (i = 0; i < opr_sz; ++i) {
+    for(i = 0; i < opr_sz; ++i) {
         int8_t mm = m[i];
         int8_t nn = n[i];
         int8_t res = 0;
-        if (mm >= 0) {
-            if (mm < 8) {
+        if(mm >= 0) {
+            if(mm < 8) {
                 res = nn << mm;
             }
         } else {
@@ -1912,12 +1791,12 @@ void HELPER(gvec_sshl_h)(void *vd, void *vn, void *vm, uint32_t desc)
     intptr_t i, opr_sz = simd_oprsz(desc);
     int16_t *d = vd, *n = vn, *m = vm;
 
-    for (i = 0; i < opr_sz / 2; ++i) {
-        int8_t mm = m[i];   /* only 8 bits of shift are significant */
+    for(i = 0; i < opr_sz / 2; ++i) {
+        int8_t mm = m[i]; /* only 8 bits of shift are significant */
         int16_t nn = n[i];
         int16_t res = 0;
-        if (mm >= 0) {
-            if (mm < 16) {
+        if(mm >= 0) {
+            if(mm < 16) {
                 res = nn << mm;
             }
         } else {
@@ -1933,16 +1812,16 @@ void HELPER(gvec_ushl_b)(void *vd, void *vn, void *vm, uint32_t desc)
     intptr_t i, opr_sz = simd_oprsz(desc);
     uint8_t *d = vd, *n = vn, *m = vm;
 
-    for (i = 0; i < opr_sz; ++i) {
+    for(i = 0; i < opr_sz; ++i) {
         int8_t mm = m[i];
         uint8_t nn = n[i];
         uint8_t res = 0;
-        if (mm >= 0) {
-            if (mm < 8) {
+        if(mm >= 0) {
+            if(mm < 8) {
                 res = nn << mm;
             }
         } else {
-            if (mm > -8) {
+            if(mm > -8) {
                 res = nn >> -mm;
             }
         }
@@ -1956,16 +1835,16 @@ void HELPER(gvec_ushl_h)(void *vd, void *vn, void *vm, uint32_t desc)
     intptr_t i, opr_sz = simd_oprsz(desc);
     uint16_t *d = vd, *n = vn, *m = vm;
 
-    for (i = 0; i < opr_sz / 2; ++i) {
-        int8_t mm = m[i];   /* only 8 bits of shift are significant */
+    for(i = 0; i < opr_sz / 2; ++i) {
+        int8_t mm = m[i]; /* only 8 bits of shift are significant */
         uint16_t nn = n[i];
         uint16_t res = 0;
-        if (mm >= 0) {
-            if (mm < 16) {
+        if(mm >= 0) {
+            if(mm < 16) {
                 res = nn << mm;
             }
         } else {
-            if (mm > -16) {
+            if(mm > -16) {
                 res = nn >> -mm;
             }
         }
@@ -1988,12 +1867,12 @@ void HELPER(gvec_pmul_b)(void *vd, void *vn, void *vm, uint32_t desc)
     intptr_t i, j, opr_sz = simd_oprsz(desc);
     uint64_t *d = vd, *n = vn, *m = vm;
 
-    for (i = 0; i < opr_sz / 8; ++i) {
+    for(i = 0; i < opr_sz / 8; ++i) {
         uint64_t nn = n[i];
         uint64_t mm = m[i];
         uint64_t rr = 0;
 
-        for (j = 0; j < 8; ++j) {
+        for(j = 0; j < 8; ++j) {
             uint64_t mask = (nn & 0x0101010101010101ull) * 0xff;
             rr ^= mm & mask;
             mm = (mm << 1) & 0xfefefefefefefefeull;
@@ -2015,18 +1894,18 @@ void HELPER(gvec_pmull_q)(void *vd, void *vn, void *vm, uint32_t desc)
     intptr_t hi = simd_data(desc);
     uint64_t *d = vd, *n = vn, *m = vm;
 
-    for (i = 0; i < opr_sz / 8; i += 2) {
+    for(i = 0; i < opr_sz / 8; i += 2) {
         uint64_t nn = n[i + hi];
         uint64_t mm = m[i + hi];
         uint64_t rhi = 0;
         uint64_t rlo = 0;
 
         /* Bit 0 can only influence the low 64-bit result.  */
-        if (nn & 1) {
+        if(nn & 1) {
             rlo = mm;
         }
 
-        for (j = 1; j < 64; ++j) {
+        for(j = 1; j < 64; ++j) {
             uint64_t mask = -((nn >> j) & 1);
             rlo ^= (mm << j) & mask;
             rhi ^= (mm >> (64 - j)) & mask;
@@ -2047,17 +1926,14 @@ void HELPER(gvec_pmull_q)(void *vd, void *vn, void *vm, uint32_t desc)
 
 static uint64_t expand_byte_to_half(uint64_t x)
 {
-    return  (x & 0x000000ff)
-         | ((x & 0x0000ff00) << 8)
-         | ((x & 0x00ff0000) << 16)
-         | ((x & 0xff000000) << 24);
+    return (x & 0x000000ff) | ((x & 0x0000ff00) << 8) | ((x & 0x00ff0000) << 16) | ((x & 0xff000000) << 24);
 }
 
 uint64_t pmull_w(uint64_t op1, uint64_t op2)
 {
     uint64_t result = 0;
     int i;
-    for (i = 0; i < 16; ++i) {
+    for(i = 0; i < 16; ++i) {
         uint64_t mask = (op1 & 0x0000000100000001ull) * 0xffffffff;
         result ^= op2 & mask;
         op1 >>= 1;
@@ -2070,7 +1946,7 @@ uint64_t pmull_h(uint64_t op1, uint64_t op2)
 {
     uint64_t result = 0;
     int i;
-    for (i = 0; i < 8; ++i) {
+    for(i = 0; i < 8; ++i) {
         uint64_t mask = (op1 & 0x0001000100010001ull) * 0xffff;
         result ^= op2 & mask;
         op1 >>= 1;
@@ -2100,7 +1976,7 @@ void HELPER(sve2_pmull_h)(void *vd, void *vn, void *vm, uint32_t desc)
     intptr_t i, opr_sz = simd_oprsz(desc);
     uint64_t *d = vd, *n = vn, *m = vm;
 
-    for (i = 0; i < opr_sz / 8; ++i) {
+    for(i = 0; i < opr_sz / 8; ++i) {
         uint64_t nn = (n[i] >> shift) & 0x00ff00ff00ff00ffull;
         uint64_t mm = (m[i] >> shift) & 0x00ff00ff00ff00ffull;
 
@@ -2113,7 +1989,7 @@ static uint64_t pmull_d(uint64_t op1, uint64_t op2)
     uint64_t result = 0;
     int i;
 
-    for (i = 0; i < 32; ++i) {
+    for(i = 0; i < 32; ++i) {
         uint64_t mask = -((op1 >> i) & 1);
         result ^= (op2 << i) & mask;
     }
@@ -2127,22 +2003,22 @@ void HELPER(sve2_pmull_d)(void *vd, void *vn, void *vm, uint32_t desc)
     uint32_t *n = vn, *m = vm;
     uint64_t *d = vd;
 
-    for (i = 0; i < opr_sz / 8; ++i) {
+    for(i = 0; i < opr_sz / 8; ++i) {
         d[i] = pmull_d(n[2 * i + sel], m[2 * i + sel]);
     }
 }
 #endif
 
-#define DO_CMP0(NAME, TYPE, OP)                         \
-void HELPER(NAME)(void *vd, void *vn, uint32_t desc)    \
-{                                                       \
-    intptr_t i, opr_sz = simd_oprsz(desc);              \
-    for (i = 0; i < opr_sz; i += sizeof(TYPE)) {        \
-        TYPE nn = *(TYPE *)(vn + i);                    \
-        *(TYPE *)(vd + i) = -(nn OP 0);                 \
-    }                                                   \
-    clear_tail(vd, opr_sz, simd_maxsz(desc));           \
-}
+#define DO_CMP0(NAME, TYPE, OP)                          \
+    void HELPER(NAME)(void *vd, void *vn, uint32_t desc) \
+    {                                                    \
+        intptr_t i, opr_sz = simd_oprsz(desc);           \
+        for(i = 0; i < opr_sz; i += sizeof(TYPE)) {      \
+            TYPE nn = *(TYPE *)(vn + i);                 \
+            *(TYPE *)(vd + i) = -(nn OP 0);              \
+        }                                                \
+        clear_tail(vd, opr_sz, simd_maxsz(desc));        \
+    }
 
 DO_CMP0(gvec_ceq0_b, int8_t, ==)
 DO_CMP0(gvec_clt0_b, int8_t, <)
@@ -2158,17 +2034,17 @@ DO_CMP0(gvec_cge0_h, int16_t, >=)
 
 #undef DO_CMP0
 
-#define DO_ABD(NAME, TYPE)                                      \
-void HELPER(NAME)(void *vd, void *vn, void *vm, uint32_t desc)  \
-{                                                               \
-    intptr_t i, opr_sz = simd_oprsz(desc);                      \
-    TYPE *d = vd, *n = vn, *m = vm;                             \
-                                                                \
-    for (i = 0; i < opr_sz / sizeof(TYPE); ++i) {               \
-        d[i] = n[i] < m[i] ? m[i] - n[i] : n[i] - m[i];         \
-    }                                                           \
-    clear_tail(d, opr_sz, simd_maxsz(desc));                    \
-}
+#define DO_ABD(NAME, TYPE)                                         \
+    void HELPER(NAME)(void *vd, void *vn, void *vm, uint32_t desc) \
+    {                                                              \
+        intptr_t i, opr_sz = simd_oprsz(desc);                     \
+        TYPE *d = vd, *n = vn, *m = vm;                            \
+                                                                   \
+        for(i = 0; i < opr_sz / sizeof(TYPE); ++i) {               \
+            d[i] = n[i] < m[i] ? m[i] - n[i] : n[i] - m[i];        \
+        }                                                          \
+        clear_tail(d, opr_sz, simd_maxsz(desc));                   \
+    }
 
 DO_ABD(gvec_sabd_b, int8_t)
 DO_ABD(gvec_sabd_h, int16_t)
@@ -2182,17 +2058,17 @@ DO_ABD(gvec_uabd_d, uint64_t)
 
 #undef DO_ABD
 
-#define DO_ABA(NAME, TYPE)                                      \
-void HELPER(NAME)(void *vd, void *vn, void *vm, uint32_t desc)  \
-{                                                               \
-    intptr_t i, opr_sz = simd_oprsz(desc);                      \
-    TYPE *d = vd, *n = vn, *m = vm;                             \
-                                                                \
-    for (i = 0; i < opr_sz / sizeof(TYPE); ++i) {               \
-        d[i] += n[i] < m[i] ? m[i] - n[i] : n[i] - m[i];        \
-    }                                                           \
-    clear_tail(d, opr_sz, simd_maxsz(desc));                    \
-}
+#define DO_ABA(NAME, TYPE)                                         \
+    void HELPER(NAME)(void *vd, void *vn, void *vm, uint32_t desc) \
+    {                                                              \
+        intptr_t i, opr_sz = simd_oprsz(desc);                     \
+        TYPE *d = vd, *n = vn, *m = vm;                            \
+                                                                   \
+        for(i = 0; i < opr_sz / sizeof(TYPE); ++i) {               \
+            d[i] += n[i] < m[i] ? m[i] - n[i] : n[i] - m[i];       \
+        }                                                          \
+        clear_tail(d, opr_sz, simd_maxsz(desc));                   \
+    }
 
 DO_ABA(gvec_saba_b, int8_t)
 DO_ABA(gvec_saba_h, int16_t)
@@ -2206,43 +2082,41 @@ DO_ABA(gvec_uaba_d, uint64_t)
 
 #undef DO_ABA
 
-#define DO_NEON_PAIRWISE(NAME, OP)                                      \
-    void HELPER(NAME##s)(void *vd, void *vn, void *vm,                  \
-                         void *stat, uint32_t oprsz)                    \
-    {                                                                   \
-        float_status *fpst = stat;                                      \
-        float32 *d = vd;                                                \
-        float32 *n = vn;                                                \
-        float32 *m = vm;                                                \
-        float32 r0, r1;                                                 \
-                                                                        \
-        /* Read all inputs before writing outputs in case vm == vd */   \
-        r0 = float32_##OP(n[H4(0)], n[H4(1)], fpst);                    \
-        r1 = float32_##OP(m[H4(0)], m[H4(1)], fpst);                    \
-                                                                        \
-        d[H4(0)] = r0;                                                  \
-        d[H4(1)] = r1;                                                  \
-    }                                                                   \
-                                                                        \
-    void HELPER(NAME##h)(void *vd, void *vn, void *vm,                  \
-                         void *stat, uint32_t oprsz)                    \
-    {                                                                   \
-        float_status *fpst = stat;                                      \
-        float16 *d = vd;                                                \
-        float16 *n = vn;                                                \
-        float16 *m = vm;                                                \
-        float16 r0, r1, r2, r3;                                         \
-                                                                        \
-        /* Read all inputs before writing outputs in case vm == vd */   \
-        r0 = float16_##OP(n[H2(0)], n[H2(1)], fpst);                    \
-        r1 = float16_##OP(n[H2(2)], n[H2(3)], fpst);                    \
-        r2 = float16_##OP(m[H2(0)], m[H2(1)], fpst);                    \
-        r3 = float16_##OP(m[H2(2)], m[H2(3)], fpst);                    \
-                                                                        \
-        d[H2(0)] = r0;                                                  \
-        d[H2(1)] = r1;                                                  \
-        d[H2(2)] = r2;                                                  \
-        d[H2(3)] = r3;                                                  \
+#define DO_NEON_PAIRWISE(NAME, OP)                                                 \
+    void HELPER(NAME##s)(void *vd, void *vn, void *vm, void *stat, uint32_t oprsz) \
+    {                                                                              \
+        float_status *fpst = stat;                                                 \
+        float32 *d = vd;                                                           \
+        float32 *n = vn;                                                           \
+        float32 *m = vm;                                                           \
+        float32 r0, r1;                                                            \
+                                                                                   \
+        /* Read all inputs before writing outputs in case vm == vd */              \
+        r0 = float32_##OP(n[H4(0)], n[H4(1)], fpst);                               \
+        r1 = float32_##OP(m[H4(0)], m[H4(1)], fpst);                               \
+                                                                                   \
+        d[H4(0)] = r0;                                                             \
+        d[H4(1)] = r1;                                                             \
+    }                                                                              \
+                                                                                   \
+    void HELPER(NAME##h)(void *vd, void *vn, void *vm, void *stat, uint32_t oprsz) \
+    {                                                                              \
+        float_status *fpst = stat;                                                 \
+        float16 *d = vd;                                                           \
+        float16 *n = vn;                                                           \
+        float16 *m = vm;                                                           \
+        float16 r0, r1, r2, r3;                                                    \
+                                                                                   \
+        /* Read all inputs before writing outputs in case vm == vd */              \
+        r0 = float16_##OP(n[H2(0)], n[H2(1)], fpst);                               \
+        r1 = float16_##OP(n[H2(2)], n[H2(3)], fpst);                               \
+        r2 = float16_##OP(m[H2(0)], m[H2(1)], fpst);                               \
+        r3 = float16_##OP(m[H2(2)], m[H2(3)], fpst);                               \
+                                                                                   \
+        d[H2(0)] = r0;                                                             \
+        d[H2(1)] = r1;                                                             \
+        d[H2(2)] = r2;                                                             \
+        d[H2(3)] = r3;                                                             \
     }
 
 DO_NEON_PAIRWISE(neon_padd, add)
@@ -2251,17 +2125,17 @@ DO_NEON_PAIRWISE(neon_pmin, min)
 
 #undef DO_NEON_PAIRWISE
 
-#define DO_VCVT_FIXED(NAME, FUNC, TYPE)                                 \
-    void HELPER(NAME)(void *vd, void *vn, void *stat, uint32_t desc)    \
-    {                                                                   \
-        intptr_t i, oprsz = simd_oprsz(desc);                           \
-        int shift = simd_data(desc);                                    \
-        TYPE *d = vd, *n = vn;                                          \
-        float_status *fpst = stat;                                      \
-        for (i = 0; i < oprsz / sizeof(TYPE); i++) {                    \
-            d[i] = FUNC(n[i], shift, fpst);                             \
-        }                                                               \
-        clear_tail(d, oprsz, simd_maxsz(desc));                         \
+#define DO_VCVT_FIXED(NAME, FUNC, TYPE)                              \
+    void HELPER(NAME)(void *vd, void *vn, void *stat, uint32_t desc) \
+    {                                                                \
+        intptr_t i, oprsz = simd_oprsz(desc);                        \
+        int shift = simd_data(desc);                                 \
+        TYPE *d = vd, *n = vn;                                       \
+        float_status *fpst = stat;                                   \
+        for(i = 0; i < oprsz / sizeof(TYPE); i++) {                  \
+            d[i] = FUNC(n[i], shift, fpst);                          \
+        }                                                            \
+        clear_tail(d, oprsz, simd_maxsz(desc));                      \
     }
 
 DO_VCVT_FIXED(gvec_vcvt_sf, helper_vfp_sltos, uint32_t)
@@ -2275,20 +2149,20 @@ DO_VCVT_FIXED(gvec_vcvt_hu, helper_vfp_touhh_round_to_zero, uint16_t)
 
 #undef DO_VCVT_FIXED
 
-#define DO_VCVT_RMODE(NAME, FUNC, TYPE)                                 \
-    void HELPER(NAME)(void *vd, void *vn, void *stat, uint32_t desc)    \
-    {                                                                   \
-        float_status *fpst = stat;                                      \
-        intptr_t i, oprsz = simd_oprsz(desc);                           \
-        uint32_t rmode = simd_data(desc);                               \
-        uint32_t prev_rmode = get_float_rounding_mode(fpst);            \
-        TYPE *d = vd, *n = vn;                                          \
-        set_float_rounding_mode(rmode, fpst);                           \
-        for (i = 0; i < oprsz / sizeof(TYPE); i++) {                    \
-            d[i] = FUNC(n[i], 0, fpst);                                 \
-        }                                                               \
-        set_float_rounding_mode(prev_rmode, fpst);                      \
-        clear_tail(d, oprsz, simd_maxsz(desc));                         \
+#define DO_VCVT_RMODE(NAME, FUNC, TYPE)                              \
+    void HELPER(NAME)(void *vd, void *vn, void *stat, uint32_t desc) \
+    {                                                                \
+        float_status *fpst = stat;                                   \
+        intptr_t i, oprsz = simd_oprsz(desc);                        \
+        uint32_t rmode = simd_data(desc);                            \
+        uint32_t prev_rmode = get_float_rounding_mode(fpst);         \
+        TYPE *d = vd, *n = vn;                                       \
+        set_float_rounding_mode(rmode, fpst);                        \
+        for(i = 0; i < oprsz / sizeof(TYPE); i++) {                  \
+            d[i] = FUNC(n[i], 0, fpst);                              \
+        }                                                            \
+        set_float_rounding_mode(prev_rmode, fpst);                   \
+        clear_tail(d, oprsz, simd_maxsz(desc));                      \
     }
 
 DO_VCVT_RMODE(gvec_vcvt_rm_ss, helper_vfp_tosls, uint32_t)
@@ -2298,20 +2172,20 @@ DO_VCVT_RMODE(gvec_vcvt_rm_uh, helper_vfp_touhh, uint16_t)
 
 #undef DO_VCVT_RMODE
 
-#define DO_VRINT_RMODE(NAME, FUNC, TYPE)                                \
-    void HELPER(NAME)(void *vd, void *vn, void *stat, uint32_t desc)    \
-    {                                                                   \
-        float_status *fpst = stat;                                      \
-        intptr_t i, oprsz = simd_oprsz(desc);                           \
-        uint32_t rmode = simd_data(desc);                               \
-        uint32_t prev_rmode = get_float_rounding_mode(fpst);            \
-        TYPE *d = vd, *n = vn;                                          \
-        set_float_rounding_mode(rmode, fpst);                           \
-        for (i = 0; i < oprsz / sizeof(TYPE); i++) {                    \
-            d[i] = FUNC(n[i], fpst);                                    \
-        }                                                               \
-        set_float_rounding_mode(prev_rmode, fpst);                      \
-        clear_tail(d, oprsz, simd_maxsz(desc));                         \
+#define DO_VRINT_RMODE(NAME, FUNC, TYPE)                             \
+    void HELPER(NAME)(void *vd, void *vn, void *stat, uint32_t desc) \
+    {                                                                \
+        float_status *fpst = stat;                                   \
+        intptr_t i, oprsz = simd_oprsz(desc);                        \
+        uint32_t rmode = simd_data(desc);                            \
+        uint32_t prev_rmode = get_float_rounding_mode(fpst);         \
+        TYPE *d = vd, *n = vn;                                       \
+        set_float_rounding_mode(rmode, fpst);                        \
+        for(i = 0; i < oprsz / sizeof(TYPE); i++) {                  \
+            d[i] = FUNC(n[i], fpst);                                 \
+        }                                                            \
+        set_float_rounding_mode(prev_rmode, fpst);                   \
+        clear_tail(d, oprsz, simd_maxsz(desc));                      \
     }
 
 DO_VRINT_RMODE(gvec_vrint_rm_h, helper_rinth, uint16_t)
@@ -2340,24 +2214,23 @@ void HELPER(simd_tblx)(void *vd, void *vm, void *venv, uint32_t desc)
      * copy 16 bytes here to avoid an extra branch; clearing the high
      * bits of the register for oprsz == 8 is handled below.
      */
-    if (is_tbx) {
+    if(is_tbx) {
         memcpy(&result, vd, 16);
     } else {
         memset(&result, 0, 16);
     }
 
-    for (size_t i = 0; i < oprsz; ++i) {
+    for(size_t i = 0; i < oprsz; ++i) {
         uint32_t index = indices[H1(i)];
 
-        if (index < table_len) {
+        if(index < table_len) {
             /*
              * Convert index (a byte offset into the virtual table
              * which is a series of 128-bit vectors concatenated)
              * into the correct register element, bearing in mind
              * that the table can wrap around from V31 to V0.
              */
-            const uint8_t *table = (const uint8_t *)
-                aa64_vfp_qreg(env, (rn + (index >> 4)) % 32);
+            const uint8_t *table = (const uint8_t *)aa64_vfp_qreg(env, (rn + (index >> 4)) % 32);
             result.b[H1(i)] = table[H1(index % 16)];
         }
     }
@@ -2378,7 +2251,7 @@ void HELPER(gvec_smulh_b)(void *vd, void *vn, void *vm, uint32_t desc)
     intptr_t i, opr_sz = simd_oprsz(desc);
     int8_t *d = vd, *n = vn, *m = vm;
 
-    for (i = 0; i < opr_sz; ++i) {
+    for(i = 0; i < opr_sz; ++i) {
         d[i] = ((int32_t)n[i] * m[i]) >> 8;
     }
     clear_tail(d, opr_sz, simd_maxsz(desc));
@@ -2389,7 +2262,7 @@ void HELPER(gvec_smulh_h)(void *vd, void *vn, void *vm, uint32_t desc)
     intptr_t i, opr_sz = simd_oprsz(desc);
     int16_t *d = vd, *n = vn, *m = vm;
 
-    for (i = 0; i < opr_sz / 2; ++i) {
+    for(i = 0; i < opr_sz / 2; ++i) {
         d[i] = ((int32_t)n[i] * m[i]) >> 16;
     }
     clear_tail(d, opr_sz, simd_maxsz(desc));
@@ -2400,7 +2273,7 @@ void HELPER(gvec_smulh_s)(void *vd, void *vn, void *vm, uint32_t desc)
     intptr_t i, opr_sz = simd_oprsz(desc);
     int32_t *d = vd, *n = vn, *m = vm;
 
-    for (i = 0; i < opr_sz / 4; ++i) {
+    for(i = 0; i < opr_sz / 4; ++i) {
         d[i] = ((int64_t)n[i] * m[i]) >> 32;
     }
     clear_tail(d, opr_sz, simd_maxsz(desc));
@@ -2412,7 +2285,7 @@ void HELPER(gvec_smulh_d)(void *vd, void *vn, void *vm, uint32_t desc)
     uint64_t *d = vd, *n = vn, *m = vm;
     uint64_t discard;
 
-    for (i = 0; i < opr_sz / 8; ++i) {
+    for(i = 0; i < opr_sz / 8; ++i) {
         muls64(&discard, &d[i], n[i], m[i]);
     }
     clear_tail(d, opr_sz, simd_maxsz(desc));
@@ -2423,7 +2296,7 @@ void HELPER(gvec_umulh_b)(void *vd, void *vn, void *vm, uint32_t desc)
     intptr_t i, opr_sz = simd_oprsz(desc);
     uint8_t *d = vd, *n = vn, *m = vm;
 
-    for (i = 0; i < opr_sz; ++i) {
+    for(i = 0; i < opr_sz; ++i) {
         d[i] = ((uint32_t)n[i] * m[i]) >> 8;
     }
     clear_tail(d, opr_sz, simd_maxsz(desc));
@@ -2434,7 +2307,7 @@ void HELPER(gvec_umulh_h)(void *vd, void *vn, void *vm, uint32_t desc)
     intptr_t i, opr_sz = simd_oprsz(desc);
     uint16_t *d = vd, *n = vn, *m = vm;
 
-    for (i = 0; i < opr_sz / 2; ++i) {
+    for(i = 0; i < opr_sz / 2; ++i) {
         d[i] = ((uint32_t)n[i] * m[i]) >> 16;
     }
     clear_tail(d, opr_sz, simd_maxsz(desc));
@@ -2445,7 +2318,7 @@ void HELPER(gvec_umulh_s)(void *vd, void *vn, void *vm, uint32_t desc)
     intptr_t i, opr_sz = simd_oprsz(desc);
     uint32_t *d = vd, *n = vn, *m = vm;
 
-    for (i = 0; i < opr_sz / 4; ++i) {
+    for(i = 0; i < opr_sz / 4; ++i) {
         d[i] = ((uint64_t)n[i] * m[i]) >> 32;
     }
     clear_tail(d, opr_sz, simd_maxsz(desc));
@@ -2457,7 +2330,7 @@ void HELPER(gvec_umulh_d)(void *vd, void *vn, void *vm, uint32_t desc)
     uint64_t *d = vd, *n = vn, *m = vm;
     uint64_t discard;
 
-    for (i = 0; i < opr_sz / 8; ++i) {
+    for(i = 0; i < opr_sz / 8; ++i) {
         mulu64(&discard, &d[i], n[i], m[i]);
     }
     clear_tail(d, opr_sz, simd_maxsz(desc));
@@ -2469,7 +2342,7 @@ void HELPER(gvec_xar_d)(void *vd, void *vn, void *vm, uint32_t desc)
     int shr = simd_data(desc);
     uint64_t *d = vd, *n = vn, *m = vm;
 
-    for (i = 0; i < opr_sz; ++i) {
+    for(i = 0; i < opr_sz; ++i) {
         d[i] = ror64(n[i] ^ m[i], shr);
     }
     clear_tail(d, opr_sz * 8, simd_maxsz(desc));
@@ -2483,7 +2356,7 @@ static uint32_t do_smmla_b(uint32_t sum, void *vn, void *vm)
 {
     int8_t *n = vn, *m = vm;
 
-    for (intptr_t k = 0; k < 8; ++k) {
+    for(intptr_t k = 0; k < 8; ++k) {
         sum += n[H1(k)] * m[H1(k)];
     }
     return sum;
@@ -2493,7 +2366,7 @@ static uint32_t do_ummla_b(uint32_t sum, void *vn, void *vm)
 {
     uint8_t *n = vn, *m = vm;
 
-    for (intptr_t k = 0; k < 8; ++k) {
+    for(intptr_t k = 0; k < 8; ++k) {
         sum += n[H1(k)] * m[H1(k)];
     }
     return sum;
@@ -2504,18 +2377,17 @@ static uint32_t do_usmmla_b(uint32_t sum, void *vn, void *vm)
     uint8_t *n = vn;
     int8_t *m = vm;
 
-    for (intptr_t k = 0; k < 8; ++k) {
+    for(intptr_t k = 0; k < 8; ++k) {
         sum += n[H1(k)] * m[H1(k)];
     }
     return sum;
 }
 
-static void do_mmla_b(void *vd, void *vn, void *vm, void *va, uint32_t desc,
-                      uint32_t (*inner_loop)(uint32_t, void *, void *))
+static void do_mmla_b(void *vd, void *vn, void *vm, void *va, uint32_t desc, uint32_t (*inner_loop)(uint32_t, void *, void *))
 {
     intptr_t seg, opr_sz = simd_oprsz(desc);
 
-    for (seg = 0; seg < opr_sz; seg += 16) {
+    for(seg = 0; seg < opr_sz; seg += 16) {
         uint32_t *d = vd + seg;
         uint32_t *a = va + seg;
         uint32_t sum0, sum1, sum2, sum3;
@@ -2544,9 +2416,11 @@ static void do_mmla_b(void *vd, void *vn, void *vm, void *va, uint32_t desc,
     clear_tail(vd, opr_sz, simd_maxsz(desc));
 }
 
-#define DO_MMLA_B(NAME, INNER) \
+#define DO_MMLA_B(NAME, INNER)                                               \
     void HELPER(NAME)(void *vd, void *vn, void *vm, void *va, uint32_t desc) \
-    { do_mmla_b(vd, vn, vm, va, desc, INNER); }
+    {                                                                        \
+        do_mmla_b(vd, vn, vm, va, desc, INNER);                              \
+    }
 
 DO_MMLA_B(gvec_smmla_b, do_smmla_b)
 DO_MMLA_B(gvec_ummla_b, do_ummla_b)
@@ -2586,14 +2460,13 @@ void HELPER(gvec_bfdot)(void *vd, void *vn, void *vm, void *va, uint32_t desc)
     float32 *d = vd, *a = va;
     uint32_t *n = vn, *m = vm;
 
-    for (i = 0; i < opr_sz / 4; ++i) {
+    for(i = 0; i < opr_sz / 4; ++i) {
         d[i] = bfdotadd(a[i], n[i], m[i]);
     }
     clear_tail(d, opr_sz, simd_maxsz(desc));
 }
 
-void HELPER(gvec_bfdot_idx)(void *vd, void *vn, void *vm,
-                            void *va, uint32_t desc)
+void HELPER(gvec_bfdot_idx)(void *vd, void *vn, void *vm, void *va, uint32_t desc)
 {
     intptr_t i, j, opr_sz = simd_oprsz(desc);
     intptr_t index = simd_data(desc);
@@ -2602,10 +2475,10 @@ void HELPER(gvec_bfdot_idx)(void *vd, void *vn, void *vm,
     float32 *d = vd, *a = va;
     uint32_t *n = vn, *m = vm;
 
-    for (i = 0; i < elements; i += eltspersegment) {
+    for(i = 0; i < elements; i += eltspersegment) {
         uint32_t m_idx = m[i + H4(index)];
 
-        for (j = i; j < i + eltspersegment; j++) {
+        for(j = i; j < i + eltspersegment; j++) {
             d[j] = bfdotadd(a[j], n[j], m_idx);
         }
     }
@@ -2618,7 +2491,7 @@ void HELPER(gvec_bfmmla)(void *vd, void *vn, void *vm, void *va, uint32_t desc)
     float32 *d = vd, *a = va;
     uint32_t *n = vn, *m = vm;
 
-    for (s = 0; s < opr_sz / 4; s += 4) {
+    for(s = 0; s < opr_sz / 4; s += 4) {
         float32 sum00, sum01, sum10, sum11;
 
         /*
@@ -2652,15 +2525,14 @@ void HELPER(gvec_bfmmla)(void *vd, void *vn, void *vm, void *va, uint32_t desc)
     clear_tail(d, opr_sz, simd_maxsz(desc));
 }
 
-void HELPER(gvec_bfmlal)(void *vd, void *vn, void *vm, void *va,
-                         void *stat, uint32_t desc)
+void HELPER(gvec_bfmlal)(void *vd, void *vn, void *vm, void *va, void *stat, uint32_t desc)
 {
     intptr_t i, opr_sz = simd_oprsz(desc);
     intptr_t sel = simd_data(desc);
     float32 *d = vd, *a = va;
     bfloat16 *n = vn, *m = vm;
 
-    for (i = 0; i < opr_sz / 4; ++i) {
+    for(i = 0; i < opr_sz / 4; ++i) {
         float32 nn = n[H2(i * 2 + sel)] << 16;
         float32 mm = m[H2(i * 2 + sel)] << 16;
         d[H4(i)] = float32_muladd(nn, mm, a[H4(i)], 0, stat);
@@ -2668,8 +2540,7 @@ void HELPER(gvec_bfmlal)(void *vd, void *vn, void *vm, void *va,
     clear_tail(d, opr_sz, simd_maxsz(desc));
 }
 
-void HELPER(gvec_bfmlal_idx)(void *vd, void *vn, void *vm,
-                             void *va, void *stat, uint32_t desc)
+void HELPER(gvec_bfmlal_idx)(void *vd, void *vn, void *vm, void *va, void *stat, uint32_t desc)
 {
     intptr_t i, j, opr_sz = simd_oprsz(desc);
     intptr_t sel = extract32(desc, SIMD_DATA_SHIFT, 1);
@@ -2679,10 +2550,10 @@ void HELPER(gvec_bfmlal_idx)(void *vd, void *vn, void *vm,
     float32 *d = vd, *a = va;
     bfloat16 *n = vn, *m = vm;
 
-    for (i = 0; i < elements; i += eltspersegment) {
+    for(i = 0; i < elements; i += eltspersegment) {
         float32 m_idx = m[H2(2 * i + index)] << 16;
 
-        for (j = i; j < i + eltspersegment; j++) {
+        for(j = i; j < i + eltspersegment; j++) {
             float32 n_j = n[H2(2 * j + sel)] << 16;
             d[H4(j)] = float32_muladd(n_j, m_idx, a[H4(j)], 0, stat);
         }
@@ -2690,19 +2561,19 @@ void HELPER(gvec_bfmlal_idx)(void *vd, void *vn, void *vm,
     clear_tail(d, opr_sz, simd_maxsz(desc));
 }
 
-#define DO_CLAMP(NAME, TYPE) \
-void HELPER(NAME)(void *d, void *n, void *m, void *a, uint32_t desc)    \
-{                                                                       \
-    intptr_t i, opr_sz = simd_oprsz(desc);                              \
-    for (i = 0; i < opr_sz; i += sizeof(TYPE)) {                        \
-        TYPE aa = *(TYPE *)(a + i);                                     \
-        TYPE nn = *(TYPE *)(n + i);                                     \
-        TYPE mm = *(TYPE *)(m + i);                                     \
-        TYPE dd = MIN(MAX(aa, nn), mm);                                 \
-        *(TYPE *)(d + i) = dd;                                          \
-    }                                                                   \
-    clear_tail(d, opr_sz, simd_maxsz(desc));                            \
-}
+#define DO_CLAMP(NAME, TYPE)                                             \
+    void HELPER(NAME)(void *d, void *n, void *m, void *a, uint32_t desc) \
+    {                                                                    \
+        intptr_t i, opr_sz = simd_oprsz(desc);                           \
+        for(i = 0; i < opr_sz; i += sizeof(TYPE)) {                      \
+            TYPE aa = *(TYPE *)(a + i);                                  \
+            TYPE nn = *(TYPE *)(n + i);                                  \
+            TYPE mm = *(TYPE *)(m + i);                                  \
+            TYPE dd = MIN(MAX(aa, nn), mm);                              \
+            *(TYPE *)(d + i) = dd;                                       \
+        }                                                                \
+        clear_tail(d, opr_sz, simd_maxsz(desc));                         \
+    }
 
 DO_CLAMP(gvec_sclamp_b, int8_t)
 DO_CLAMP(gvec_sclamp_h, int16_t)

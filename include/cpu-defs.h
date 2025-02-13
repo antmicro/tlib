@@ -33,9 +33,9 @@
 #if defined(__arm__)
 /* Thumb return addresses have the low bit set, so we need to subtract two.
    This is still safe in ARM mode because instructions are 4 bytes.  */
-# define GETPC() ((void *)((uintptr_t)__builtin_return_address(0) - 2))
+#define GETPC() ((void *)((uintptr_t)__builtin_return_address(0) - 2))
 #else
-# define GETPC() ((void *)((uintptr_t)__builtin_return_address(0) - 1))
+#define GETPC() ((void *)((uintptr_t)__builtin_return_address(0) - 1))
 #endif
 
 #ifndef TARGET_LONG_BITS
@@ -44,7 +44,7 @@
 
 #define TARGET_LONG_SIZE (TARGET_LONG_BITS / 8)
 
-typedef int16_t target_short __attribute__ ((aligned(TARGET_SHORT_ALIGNMENT)));
+typedef int16_t target_short __attribute__((aligned(TARGET_SHORT_ALIGNMENT)));
 typedef uint16_t target_ushort __attribute__((aligned(TARGET_SHORT_ALIGNMENT)));
 typedef int32_t target_int __attribute__((aligned(TARGET_INT_ALIGNMENT)));
 typedef uint32_t target_uint __attribute__((aligned(TARGET_INT_ALIGNMENT)));
@@ -71,7 +71,7 @@ typedef uint64_t target_ulong __attribute__((aligned(TARGET_LONG_ALIGNMENT)));
 
 #include "disas_context_base.h"
 
-#define HOST_LONG_SIZE      (HOST_LONG_BITS / 8)
+#define HOST_LONG_SIZE (HOST_LONG_BITS / 8)
 
 #define EXCP_INTERRUPT      0x10000 /* async interruption */
 #define EXCP_WFI            0x10001 /* hlt instruction reached */
@@ -80,21 +80,21 @@ typedef uint64_t target_ulong __attribute__((aligned(TARGET_LONG_ALIGNMENT)));
 #define EXCP_RETURN_REQUEST 0x10005
 #define MMU_EXTERNAL_FAULT  0x10006 /* cpu should exit to process the external mmu handler */
 
-#define TB_JMP_CACHE_BITS  12
-#define TB_JMP_CACHE_SIZE  (1 << TB_JMP_CACHE_BITS)
+#define TB_JMP_CACHE_BITS 12
+#define TB_JMP_CACHE_SIZE (1 << TB_JMP_CACHE_BITS)
 
-#define MAX_EXTERNAL_MMU_RANGES  256
+#define MAX_EXTERNAL_MMU_RANGES 256
 
 /* Only the bottom TB_JMP_PAGE_BITS of the jump cache hash bits vary for
    addresses on the same page.  The top bits are the same.  This allows
    TLB invalidation to quickly clear a subset of the hash table.  */
-#define TB_JMP_PAGE_BITS   (TB_JMP_CACHE_BITS / 2)
-#define TB_JMP_PAGE_SIZE   (1 << TB_JMP_PAGE_BITS)
-#define TB_JMP_ADDR_MASK   (TB_JMP_PAGE_SIZE - 1)
-#define TB_JMP_PAGE_MASK   (TB_JMP_CACHE_SIZE - TB_JMP_PAGE_SIZE)
+#define TB_JMP_PAGE_BITS (TB_JMP_CACHE_BITS / 2)
+#define TB_JMP_PAGE_SIZE (1 << TB_JMP_PAGE_BITS)
+#define TB_JMP_ADDR_MASK (TB_JMP_PAGE_SIZE - 1)
+#define TB_JMP_PAGE_MASK (TB_JMP_CACHE_SIZE - TB_JMP_PAGE_SIZE)
 
-#define CPU_TLB_BITS       8
-#define CPU_TLB_SIZE       (1 << CPU_TLB_BITS)
+#define CPU_TLB_BITS 8
+#define CPU_TLB_SIZE (1 << CPU_TLB_BITS)
 
 #if HOST_LONG_BITS == 32 && TARGET_LONG_BITS == 32
 #define CPU_TLB_ENTRY_BITS 4
@@ -122,11 +122,11 @@ typedef struct CPUTLBEntry {
 
 extern int CPUTLBEntry_wrong_size[sizeof(CPUTLBEntry) == (1 << CPU_TLB_ENTRY_BITS) ? 1 : -1];
 
-#define CPU_COMMON_TLB \
-    /* The meaning of the MMU modes is defined in the target code. */   \
-    CPUTLBEntry tlb_table[NB_MMU_MODES][CPU_TLB_SIZE];                  \
-    target_phys_addr_t iotlb[NB_MMU_MODES][CPU_TLB_SIZE];               \
-    target_ulong tlb_flush_addr;                                        \
+#define CPU_COMMON_TLB                                                \
+    /* The meaning of the MMU modes is defined in the target code. */ \
+    CPUTLBEntry tlb_table[NB_MMU_MODES][CPU_TLB_SIZE];                \
+    target_phys_addr_t iotlb[NB_MMU_MODES][CPU_TLB_SIZE];             \
+    target_ulong tlb_flush_addr;                                      \
     target_ulong tlb_flush_mask;
 
 typedef struct CPUBreakpoint {
@@ -143,15 +143,13 @@ typedef struct CachedRegiserDescriptor {
 } CachedRegiserDescriptor;
 
 #define MAX_OPCODE_COUNTERS 2048
-typedef struct opcode_counter_descriptor
-{
+typedef struct opcode_counter_descriptor {
     uint64_t opcode;
     uint64_t mask;
     uint64_t counter;
 } opcode_counter_descriptor;
 
-typedef struct ExtMmuRange
-{
+typedef struct ExtMmuRange {
     target_ulong range_start;
     target_ulong range_end;
     target_ulong addend;
@@ -169,13 +167,13 @@ enum block_interrupt_cause {
 
 #define MAX_IO_ACCESS_REGIONS_COUNT 1024
 
-#define CPU_TEMP_BUF_NLONGS 128
+#define CPU_TEMP_BUF_NLONGS    128
 #define cpu_common_first_field instructions_count_limit
 #define CPU_COMMON                                                            \
     /* --------------------------------------- */                             \
     /* warning: cleared by CPU reset           */                             \
     /* --------------------------------------- */                             \
-    /* instruction counting is used to execute callback after given \
+    /* instruction counting is used to execute callback after given           \
        number of instructions */                                              \
     /* the types of instructions_count_* need to match the TCG-generated      \
        accesses in `gen_update_instructions_count` in translate-all.c */      \
@@ -184,12 +182,12 @@ enum block_interrupt_cause {
     uint32_t instructions_count_declaration;                                  \
     uint64_t instructions_count_total_value;                                  \
     /* soft mmu support */                                                    \
-    /* in order to avoid passing too many arguments to the MMIO \
-       helpers, we store some rarely used information in the CPU \
+    /* in order to avoid passing too many arguments to the MMIO               \
+       helpers, we store some rarely used information in the CPU              \
        context) */                                                            \
-    uintptr_t mem_io_pc;       /* host pc at which the memory was \
+    uintptr_t mem_io_pc;       /* host pc at which the memory was             \
                                       accessed */                             \
-    target_ulong mem_io_vaddr; /* target virtual addr at which the \
+    target_ulong mem_io_vaddr; /* target virtual addr at which the            \
                                      memory was accessed */                   \
     uint32_t wfi;              /* Nonzero if the CPU is in suspend state */   \
     uint32_t interrupt_request;                                               \
@@ -242,7 +240,7 @@ enum block_interrupt_cause {
     /* A unique, sequential id representing CPU for atomic (atomic.c)         \
        operations. It doesn't correspond to Infrastructure's cpuId */         \
     uint32_t atomic_id;                                                       \
-    atomic_memory_state_t* atomic_memory_state;                               \
+    atomic_memory_state_t *atomic_memory_state;                               \
     /* STARTING FROM HERE FIELDS ARE NOT SERIALIZED */                        \
     struct TranslationBlock *current_tb; /* currently executing TB  */        \
     CPU_COMMON_TLB                                                            \
@@ -262,35 +260,32 @@ enum block_interrupt_cause {
 
 #define RESET_OFFSET offsetof(CPUState, jmp_env)
 
-#define CPU_REGISTER_GETTER(width)                                                           \
-    uint##width##_t tlib_get_register_value_##width(int reg_number)                          \
-    {                                                                                        \
-        uint##width##_t* ptr = get_reg_pointer_##width(reg_number);                          \
-        if(ptr == NULL)                                                                      \
-        {                                                                                    \
-            tlib_abortf("Read from undefined CPU register number %d detected", reg_number);  \
-        }                                                                                    \
-                                                                                             \
-        return *ptr;                                                                         \
-    }                                                                                        \
-                                                                                             \
-    EXC_INT_1(uint##width##_t, tlib_get_register_value_##width, int, reg_number)             \
+#define CPU_REGISTER_GETTER(width)                                                          \
+    uint##width##_t tlib_get_register_value_##width(int reg_number)                         \
+    {                                                                                       \
+        uint##width##_t *ptr = get_reg_pointer_##width(reg_number);                         \
+        if(ptr == NULL) {                                                                   \
+            tlib_abortf("Read from undefined CPU register number %d detected", reg_number); \
+        }                                                                                   \
+                                                                                            \
+        return *ptr;                                                                        \
+    }                                                                                       \
+                                                                                            \
+    EXC_INT_1(uint##width##_t, tlib_get_register_value_##width, int, reg_number)
 
-#define CPU_REGISTER_SETTER(width)                                                           \
-    void tlib_set_register_value_##width(int reg_number, uint##width##_t value)              \
-    {                                                                                        \
-        uint##width##_t* ptr = get_reg_pointer_##width(reg_number);                          \
-        if(ptr == NULL)                                                                      \
-        {                                                                                    \
-            tlib_abortf("Write to undefined CPU register number %d detected", reg_number);   \
-        }                                                                                    \
-                                                                                             \
-        *ptr = value;                                                                        \
-    }                                                                                        \
-                                                                                             \
-    EXC_VOID_2(tlib_set_register_value_##width, int, reg_number, uint##width##_t, value)     \
-
+#define CPU_REGISTER_SETTER(width)                                                         \
+    void tlib_set_register_value_##width(int reg_number, uint##width##_t value)            \
+    {                                                                                      \
+        uint##width##_t *ptr = get_reg_pointer_##width(reg_number);                        \
+        if(ptr == NULL) {                                                                  \
+            tlib_abortf("Write to undefined CPU register number %d detected", reg_number); \
+        }                                                                                  \
+                                                                                           \
+        *ptr = value;                                                                      \
+    }                                                                                      \
+                                                                                           \
+    EXC_VOID_2(tlib_set_register_value_##width, int, reg_number, uint##width##_t, value)
 
 #define CPU_REGISTER_ACCESSOR(width) \
-        CPU_REGISTER_GETTER(width)   \
-        CPU_REGISTER_SETTER(width)
+    CPU_REGISTER_GETTER(width)       \
+    CPU_REGISTER_SETTER(width)

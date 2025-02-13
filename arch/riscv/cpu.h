@@ -8,7 +8,7 @@
 
 #define SUPPORTS_GUEST_PROFILING
 
-#define TARGET_PAGE_BITS            12/* 4 KiB Pages */
+#define TARGET_PAGE_BITS 12 /* 4 KiB Pages */
 #if TARGET_LONG_BITS == 64
 #define TARGET_RISCV64
 #define TARGET_PHYS_ADDR_SPACE_BITS 50
@@ -26,23 +26,29 @@
 
 #define RV(x) ((target_ulong)1 << (x - 'A'))
 
-#define NB_MMU_MODES      4
+#define NB_MMU_MODES 4
 
-#define MAX_RISCV_PMPS    (64)
+#define MAX_RISCV_PMPS (64)
 
 #if MAX_RISCV_PMPS != 16 && MAX_RISCV_PMPS != 64
 #error "Invalid maximum PMP region count. Supported values are 16 and 64"
 #endif
 
-// In MISA register the extensions are encoded on bits [25:0] (see: https://five-embeddev.com/riscv-isa-manual/latest/machine.html),
-// but because these additional features are not there RISCV_ADDITIONAL_FEATURE_OFFSET allows to show that they are unrelated to MISA.
-#define RISCV_ADDITIONAL_FEATURE_OFFSET     26
+//  In MISA register the extensions are encoded on bits [25:0] (see:
+//  https://five-embeddev.com/riscv-isa-manual/latest/machine.html), but because these additional features are not there
+//  RISCV_ADDITIONAL_FEATURE_OFFSET allows to show that they are unrelated to MISA.
+#define RISCV_ADDITIONAL_FEATURE_OFFSET 26
 
 #define get_field(reg, mask) (((reg) & (target_ulong)(mask)) / ((mask) & ~((mask) << 1)))
 #define set_field(reg, mask, val) \
-                             (((reg) & ~(target_ulong)(mask)) | (((target_ulong)(val) * ((mask) & ~((mask) << 1))) & (target_ulong)(mask)))
+    (((reg) & ~(target_ulong)(mask)) | (((target_ulong)(val) * ((mask) & ~((mask) << 1))) & (target_ulong)(mask)))
 
-#define assert(x)            {if (!(x)) tlib_abortf("Assert not met in %s:%d: %s", __FILE__, __LINE__, #x);}while(0)
+#define assert(x)                                                               \
+    {                                                                           \
+        if(!(x))                                                                \
+            tlib_abortf("Assert not met in %s:%d: %s", __FILE__, __LINE__, #x); \
+    }                                                                           \
+    while(0)
 
 typedef struct custom_instruction_descriptor_t {
     uint64_t id;
@@ -52,16 +58,15 @@ typedef struct custom_instruction_descriptor_t {
 } custom_instruction_descriptor_t;
 #define CPU_CUSTOM_INSTRUCTIONS_LIMIT 256
 
-typedef struct opcode_hook_mask_t 
-{
+typedef struct opcode_hook_mask_t {
     target_ulong mask;
     target_ulong value;
 } opcode_hook_mask_t;
 #define CPU_HOOKS_MASKS_LIMIT 256
 
-#define MAX_CSR_ID 0xFFF
+#define MAX_CSR_ID    0xFFF
 #define CSRS_PER_SLOT 64
-#define CSRS_SLOTS (MAX_CSR_ID + 1) / CSRS_PER_SLOT
+#define CSRS_SLOTS    (MAX_CSR_ID + 1) / CSRS_PER_SLOT
 
 #define VLEN_MAX (1 << 16)
 
@@ -78,11 +83,11 @@ typedef struct CPUState CPUState;
 #include "cpu-common.h"
 #include "pmp.h"
 
-// +---------------------------------------+
-// | ALL FIELDS WHICH STATE MUST BE STORED |
-// | DURING SERIALIZATION SHOULD BE PLACED |
-// | BEFORE >CPU_COMMON< SECTION.          |
-// +---------------------------------------+
+//  +---------------------------------------+
+//  | ALL FIELDS WHICH STATE MUST BE STORED |
+//  | DURING SERIALIZATION SHOULD BE PLACED |
+//  | BEFORE >CPU_COMMON< SECTION.          |
+//  +---------------------------------------+
 struct CPUState {
     target_ulong gpr[32];
     uint64_t fpr[32]; /* assume both F and D extensions */
@@ -108,7 +113,7 @@ struct CPUState {
     target_ulong mie;
     target_ulong mideleg;
 
-    target_ulong sptbr;  /* until: priv-1.9.1;  replaced by satp */
+    target_ulong sptbr; /* until: priv-1.9.1;  replaced by satp */
     target_ulong medeleg;
 
     target_ulong stvec;
@@ -116,8 +121,8 @@ struct CPUState {
     target_ulong sintthresh; /* unratified as of 2024-06; ssclic extension */
     target_ulong sepc;
     target_ulong scause;
-    target_ulong stval;  /* renamed from sbadaddr since: priv-1.10.0 */
-    target_ulong satp;   /* since: priv-1.10.0 */
+    target_ulong stval; /* renamed from sbadaddr since: priv-1.10.0 */
+    target_ulong satp;  /* since: priv-1.10.0 */
     target_ulong sedeleg;
     target_ulong sideleg;
 
@@ -126,7 +131,7 @@ struct CPUState {
     target_ulong mintthresh; /* unratified as of 2024-06; smclic extension */
     target_ulong mepc;
     target_ulong mcause;
-    target_ulong mtval;      /*  renamed from mbadaddr since: priv-1.10.0 */
+    target_ulong mtval; /*  renamed from mbadaddr since: priv-1.10.0 */
 
     uint32_t mucounteren;    /* until 1.10.0 */
     uint32_t mscounteren;    /* until 1.10.0 */
@@ -190,7 +195,7 @@ struct CPUState {
     int32_t custom_instructions_count;
     custom_instruction_descriptor_t custom_instructions[CPU_CUSTOM_INSTRUCTIONS_LIMIT];
 
-    // bitmap keeping information about CSRs that have custom external implementation
+    //  bitmap keeping information about CSRs that have custom external implementation
     uint64_t custom_csrs[CSRS_SLOTS];
 
     /*
@@ -218,9 +223,9 @@ struct CPUState {
     int32_t pmp_napot_grain;
 
     /* Supported modes:
-         * 0 (INTERRUPT_MODE_AUTO) - check mtvec's LSB to detect mode: 0->direct, 1->vectored, 3->clic
-         * 1 (INTERRUPT_MODE_DIRECT) - all exceptions set pc to mtvec's BASE
-         * 2 (INTERRUPT_MODE_VECTORED) - asynchronous interrupts set pc to mtvec's BASE + 4 * cause
+     * 0 (INTERRUPT_MODE_AUTO) - check mtvec's LSB to detect mode: 0->direct, 1->vectored, 3->clic
+     * 1 (INTERRUPT_MODE_DIRECT) - all exceptions set pc to mtvec's BASE
+     * 2 (INTERRUPT_MODE_VECTORED) - asynchronous interrupts set pc to mtvec's BASE + 4 * cause
      */
     int32_t interrupt_mode;
 
@@ -260,13 +265,13 @@ static inline void cpu_get_tb_cpu_state(CPUState *env, target_ulong *pc, target_
 {
     *pc = env->pc;
     *cs_base = 0;
-    *flags = 0; // necessary to avoid compiler warning
+    *flags = 0;  //  necessary to avoid compiler warning
 }
 
 static inline bool cpu_has_work(CPUState *env)
 {
-    // clear WFI if waking up condition is met
-    // this CLIC interrupt check is a bit overly eager, but it's faster than checking all the conditions
+    //  clear WFI if waking up condition is met
+    //  this CLIC interrupt check is a bit overly eager, but it's faster than checking all the conditions
     env->wfi &= !((cpu->mip & cpu->mie) || cpu->clic_interrupt_pending != EXCP_NONE);
     return !env->wfi;
 }
@@ -281,8 +286,9 @@ static inline void raise_exception(CPUState *env, uint32_t exception)
     env->exception_index = exception;
 }
 
-// It must be always inlined, because GETPC() macro must be called in the context of function that is directly invoked by generated code.
-static inline void __attribute__ ((always_inline,__noreturn__)) raise_exception_and_sync_pc(CPUState *env, uint32_t exception)
+//  It must be always inlined, because GETPC() macro must be called in the context of function that is directly invoked by
+//  generated code.
+static inline void __attribute__((always_inline, __noreturn__)) raise_exception_and_sync_pc(CPUState *env, uint32_t exception)
 {
     uintptr_t pc = (uintptr_t)GETPC();
     raise_exception(env, exception);
@@ -325,12 +331,12 @@ enum riscv_additional_feature {
     RISCV_FEATURE_ZFH = 6,
     RISCV_FEATURE_ZVFH = 7,
     RISCV_FEATURE_SMEPMP = 8,
-    RISCV_FEATURE_ZVE32X =  9,
+    RISCV_FEATURE_ZVE32X = 9,
     RISCV_FEATURE_ZVE32F = 10,
     RISCV_FEATURE_ZVE64X = 11,
     RISCV_FEATURE_ZVE64F = 12,
     RISCV_FEATURE_ZVE64D = 13,
-    // Please update the highest additional when adding a new member!
+    //  Please update the highest additional when adding a new member!
     RISCV_FEATURE_HIGHEST_ADDITIONAL = RISCV_FEATURE_ZVE64D
 };
 
@@ -339,14 +345,14 @@ enum privilege_architecture {
     RISCV_PRIV1_10,
     RISCV_PRIV1_11,
     RISCV_PRIV1_12,
-    // For features that are not yet part of ratified privileged architecture,
-    // use RISCV_PRIV_UNRATIFIED.
-    // Replace with an actual version once it becomes a part of ratified spec.
-    // KEEP LAST
+    //  For features that are not yet part of ratified privileged architecture,
+    //  use RISCV_PRIV_UNRATIFIED.
+    //  Replace with an actual version once it becomes a part of ratified spec.
+    //  KEEP LAST
     RISCV_PRIV_UNRATIFIED
 };
 
-// The enum encodes the fmt field of opcode
+//  The enum encodes the fmt field of opcode
 enum riscv_floating_point_precision {
     RISCV_SINGLE_PRECISION = 0b00,
     RISCV_DOUBLE_PRECISION = 0b01,
@@ -371,87 +377,95 @@ static inline int riscv_silent_ext(CPUState *env, target_ulong ext)
 
 static inline int riscv_features_to_string(uint32_t features, char *buffer, int size)
 {
-    // features are encoded on the first 26 bits
-    // bit #0: 'A', bit #1: 'B', ..., bit #25: 'Z'
+    //  features are encoded on the first 26 bits
+    //  bit #0: 'A', bit #1: 'B', ..., bit #25: 'Z'
     int i, pos = 0;
-    for (i = 0; i < 26 && pos < size; i++) {
-        if (features & (1 << i)) {
+    for(i = 0; i < 26 && pos < size; i++) {
+        if(features & (1 << i)) {
             buffer[pos++] = 'A' + i;
         }
     }
     return pos;
 }
 
-static void __attribute__ ((__noreturn__)) log_disabled_extension_and_raise_exception(CPUState *env, uintptr_t host_pc, enum riscv_feature ext, const char *message)
+static void __attribute__((__noreturn__)) log_disabled_extension_and_raise_exception(CPUState *env, uintptr_t host_pc,
+                                                                                     enum riscv_feature ext, const char *message)
 {
     cpu_restore_state(env, (void *)host_pc);
-    if (!riscv_silent_ext(cpu, ext)) {
+    if(!riscv_silent_ext(cpu, ext)) {
         target_ulong guest_pc = env->pc;
         char letter = 0;
         riscv_features_to_string(ext, &letter, 1);
-        if (message == NULL) {
-            tlib_printf(LOG_LEVEL_ERROR, "PC: 0x%llx, RISC-V '%c' instruction set is not enabled for this CPU! ",
-                        guest_pc, letter);
+        if(message == NULL) {
+            tlib_printf(LOG_LEVEL_ERROR, "PC: 0x%llx, RISC-V '%c' instruction set is not enabled for this CPU! ", guest_pc,
+                        letter);
         } else {
-            tlib_printf(LOG_LEVEL_ERROR, "PC: 0x%llx, RISC-V '%c' instruction set is not enabled for this CPU! %s",
-                        guest_pc, letter, message);
+            tlib_printf(LOG_LEVEL_ERROR, "PC: 0x%llx, RISC-V '%c' instruction set is not enabled for this CPU! %s", guest_pc,
+                        letter, message);
         }
     }
     raise_exception(env, RISCV_EXCP_ILLEGAL_INST);
     cpu_loop_exit(env);
 }
 
-static inline void __attribute__ ((always_inline)) ensure_vector_embedded_extension_or_raise_exception(CPUState *env)
+static inline void __attribute__((always_inline)) ensure_vector_embedded_extension_or_raise_exception(CPUState *env)
 {
-    // Check if the most basic extension is supported.
-    if (riscv_has_additional_ext(env, RISCV_FEATURE_ZVE32X)) {
+    //  Check if the most basic extension is supported.
+    if(riscv_has_additional_ext(env, RISCV_FEATURE_ZVE32X)) {
         return;
     }
 
     log_disabled_extension_and_raise_exception(env, (uintptr_t)GETPC(), RISCV_FEATURE_RVV, NULL);
 }
 
-static inline void __attribute__ ((always_inline)) ensure_vector_embedded_extension_for_eew_or_raise_exception(CPUState *env, target_ulong eew)
+static inline void __attribute__((always_inline)) ensure_vector_embedded_extension_for_eew_or_raise_exception(CPUState *env,
+                                                                                                              target_ulong eew)
 {
-    // Assume there is no EEW larger than 64.
-    if (riscv_has_additional_ext(env, RISCV_FEATURE_ZVE64X)) {
+    //  Assume there is no EEW larger than 64.
+    if(riscv_has_additional_ext(env, RISCV_FEATURE_ZVE64X)) {
         return;
     }
 
-    if (riscv_has_additional_ext(env, RISCV_FEATURE_ZVE32X)) {
-        if (eew < 64) {
+    if(riscv_has_additional_ext(env, RISCV_FEATURE_ZVE32X)) {
+        if(eew < 64) {
             return;
         }
-        log_disabled_extension_and_raise_exception(env, (uintptr_t)GETPC(), RISCV_FEATURE_RVV, "EEW is too large for the Zve32x extension");
-    }
-    else {
+        log_disabled_extension_and_raise_exception(env, (uintptr_t)GETPC(), RISCV_FEATURE_RVV,
+                                                   "EEW is too large for the Zve32x extension");
+    } else {
         log_disabled_extension_and_raise_exception(env, (uintptr_t)GETPC(), RISCV_FEATURE_RVV, NULL);
     }
 }
 
-static inline void __attribute__ ((always_inline)) ensure_vector_float_embedded_extension_or_raise_exception(CPUState *env, target_ulong eew)
+static inline void __attribute__((always_inline)) ensure_vector_float_embedded_extension_or_raise_exception(CPUState *env,
+                                                                                                            target_ulong eew)
 {
-    if (eew == 32) {
-        if (riscv_has_additional_ext(env, RISCV_FEATURE_ZVE64F) || riscv_has_additional_ext(env, RISCV_FEATURE_ZVE32F)) {
+    if(eew == 32) {
+        if(riscv_has_additional_ext(env, RISCV_FEATURE_ZVE64F) || riscv_has_additional_ext(env, RISCV_FEATURE_ZVE32F)) {
             return;
         }
-        log_disabled_extension_and_raise_exception(env, (uintptr_t)GETPC(), RISCV_FEATURE_RVV, "Zve64f or Zve32f is required for single precision floating point vector operations");
+        log_disabled_extension_and_raise_exception(
+            env, (uintptr_t)GETPC(), RISCV_FEATURE_RVV,
+            "Zve64f or Zve32f is required for single precision floating point vector operations");
     }
-    if (eew == 16) {
+    if(eew == 16) {
         if(riscv_has_additional_ext(env, RISCV_FEATURE_ZVFH)) {
             return;
         }
-        log_disabled_extension_and_raise_exception(env, (uintptr_t)GETPC(), RISCV_FEATURE_RVV, "Zvfh is required for half precision floating point vector operations");
+        log_disabled_extension_and_raise_exception(env, (uintptr_t)GETPC(), RISCV_FEATURE_RVV,
+                                                   "Zvfh is required for half precision floating point vector operations");
     }
-    if (eew == 64) {
-        if (riscv_has_additional_ext(env, RISCV_FEATURE_ZVE64D)) {
+    if(eew == 64) {
+        if(riscv_has_additional_ext(env, RISCV_FEATURE_ZVE64D)) {
             return;
         }
-        log_disabled_extension_and_raise_exception(env, (uintptr_t)GETPC(), RISCV_FEATURE_RVV, "Zve64d is required for double precision floating point vector operations");
+        log_disabled_extension_and_raise_exception(env, (uintptr_t)GETPC(), RISCV_FEATURE_RVV,
+                                                   "Zve64d is required for double precision floating point vector operations");
     }
 
     char eww_unsupported_message[64];
-    if (snprintf(eww_unsupported_message, 63, "EEW (%d) isn't supported for vector floating point extensions", (unsigned int)eew) < 0) {
+    if(snprintf(eww_unsupported_message, 63, "EEW (%d) isn't supported for vector floating point extensions", (unsigned int)eew) <
+       0) {
         tlib_abort("Unable to print log about unsupported EEW!");
     }
     log_disabled_extension_and_raise_exception(env, (uintptr_t)GETPC(), RISCV_FEATURE_RVV, eww_unsupported_message);
@@ -469,13 +483,13 @@ static inline bool cpu_in_clic_mode(CPUState *env)
 
 static inline void set_default_mstatus()
 {
-    if (riscv_has_ext(env, RISCV_FEATURE_RVD) || riscv_has_ext(env, RISCV_FEATURE_RVF)) {
+    if(riscv_has_ext(env, RISCV_FEATURE_RVD) || riscv_has_ext(env, RISCV_FEATURE_RVF)) {
         env->mstatus = (MSTATUS_FS_INITIAL | MSTATUS_XS_INITIAL);
     } else {
         env->mstatus = 0;
     }
     env->mstatus = set_field(env->mstatus, MSTATUS_MPP, PRV_M);
-    if (cpu_in_clic_mode(env)) {
+    if(cpu_in_clic_mode(env)) {
         /* MPP and MPIE are mirrored */
         env->mcause = set_field(env->mcause, MCAUSE_MPP, PRV_M);
     }
@@ -486,62 +500,62 @@ static inline int supported_fpu_extensions_count(CPUState *env)
     return !!riscv_has_ext(env, RISCV_FEATURE_RVF) + !!riscv_has_ext(env, RISCV_FEATURE_RVD);
 }
 
-static inline bool is_unboxing_needed(enum riscv_floating_point_precision float_precision, CPUState* env)
+static inline bool is_unboxing_needed(enum riscv_floating_point_precision float_precision, CPUState *env)
 {
     return float_precision != RISCV_DOUBLE_PRECISION && supported_fpu_extensions_count(env) != 1;
 }
 
 static inline uint64_t get_float_mask(enum riscv_floating_point_precision float_precision)
 {
-    switch (float_precision) {
-    case RISCV_DOUBLE_PRECISION:
-        return UINT64_MAX;
-    case RISCV_SINGLE_PRECISION:
-        return UINT32_MAX;
-    case RISCV_HALF_PRECISION:
-        return UINT16_MAX;
-    default:
-        // Should never happen.
-        tlib_abortf("Unsupported floating point precision: %d. Can't provide a mask for it.", float_precision);
-        return 0;
+    switch(float_precision) {
+        case RISCV_DOUBLE_PRECISION:
+            return UINT64_MAX;
+        case RISCV_SINGLE_PRECISION:
+            return UINT32_MAX;
+        case RISCV_HALF_PRECISION:
+            return UINT16_MAX;
+        default:
+            //  Should never happen.
+            tlib_abortf("Unsupported floating point precision: %d. Can't provide a mask for it.", float_precision);
+            return 0;
     }
 }
 
 static inline float64 get_float_default_nan(enum riscv_floating_point_precision float_precision)
 {
-    switch (float_precision) {
-    case RISCV_DOUBLE_PRECISION:
-        return float64_default_nan;
-    case RISCV_SINGLE_PRECISION:
-        return float32_default_nan;
-    case RISCV_HALF_PRECISION:
-        return float16_default_nan;
-    default:
-        // Should never happen.
-        tlib_abortf("Unsupported floating point precision: %d. Can't provide a default NaN for it.", float_precision);
-        return 0;
+    switch(float_precision) {
+        case RISCV_DOUBLE_PRECISION:
+            return float64_default_nan;
+        case RISCV_SINGLE_PRECISION:
+            return float32_default_nan;
+        case RISCV_HALF_PRECISION:
+            return float16_default_nan;
+        default:
+            //  Should never happen.
+            tlib_abortf("Unsupported floating point precision: %d. Can't provide a default NaN for it.", float_precision);
+            return 0;
     }
 }
 
 static inline int64_t get_float_sign_mask(enum riscv_floating_point_precision float_precision)
 {
-    switch (float_precision) {
-    case RISCV_DOUBLE_PRECISION:
-        return INT64_MIN;
-    case RISCV_SINGLE_PRECISION:
-        return INT32_MIN;
-    case RISCV_HALF_PRECISION:
-        return INT16_MIN;
-    default:
-        // Should never happen.
-        tlib_abortf("Unsupported floating point precision: %d. Can't provide a default NaN for it.", float_precision);
-        return 0;
+    switch(float_precision) {
+        case RISCV_DOUBLE_PRECISION:
+            return INT64_MIN;
+        case RISCV_SINGLE_PRECISION:
+            return INT32_MIN;
+        case RISCV_HALF_PRECISION:
+            return INT16_MIN;
+        default:
+            //  Should never happen.
+            tlib_abortf("Unsupported floating point precision: %d. Can't provide a default NaN for it.", float_precision);
+            return 0;
     }
 }
 
-static inline float64 unbox_float(enum riscv_floating_point_precision float_precision, CPUState* env, float64 value)
+static inline float64 unbox_float(enum riscv_floating_point_precision float_precision, CPUState *env, float64 value)
 {
-    if (!is_unboxing_needed(float_precision, env)) {
+    if(!is_unboxing_needed(float_precision, env)) {
         return value;
     }
 
@@ -554,12 +568,13 @@ static inline float64 box_float(enum riscv_floating_point_precision float_precis
     return value | ~get_float_mask(float_precision);
 }
 
-static inline void gen_unbox_float(enum riscv_floating_point_precision float_precision, CPUState* env, TCGv_i64 destination, TCGv_i64 source)
+static inline void gen_unbox_float(enum riscv_floating_point_precision float_precision, CPUState *env, TCGv_i64 destination,
+                                   TCGv_i64 source)
 {
-    // The function consists of more than one basic block, because there is a branch inside it.
-    // The destination variable must be at least local temporary.
+    //  The function consists of more than one basic block, because there is a branch inside it.
+    //  The destination variable must be at least local temporary.
     tcg_gen_mov_i64(destination, source);
-    if (!is_unboxing_needed(float_precision, env)) {
+    if(!is_unboxing_needed(float_precision, env)) {
         return;
     }
 
@@ -577,24 +592,25 @@ static inline void gen_box_float(enum riscv_floating_point_precision float_preci
     tcg_gen_ori_i64(value, value, ~get_float_mask(float_precision));
 }
 
-#define GET_VTYPE_VLMUL(inst)    extract32(inst, 0, 3)
-#define GET_VTYPE_VSEW(inst)     extract32(inst, 3, 3)
-#define GET_VTYPE_VTA(inst)      extract32(inst, 6, 1)
-#define GET_VTYPE_VMA(inst)      extract32(inst, 7, 1)
+#define GET_VTYPE_VLMUL(inst) extract32(inst, 0, 3)
+#define GET_VTYPE_VSEW(inst)  extract32(inst, 3, 3)
+#define GET_VTYPE_VTA(inst)   extract32(inst, 6, 1)
+#define GET_VTYPE_VMA(inst)   extract32(inst, 7, 1)
 
-// Vector registers are defined as contiguous segments of vlenb bytes.
-#define V(x) (env->vr + (x) * env->vlenb)
+//  Vector registers are defined as contiguous segments of vlenb bytes.
+#define V(x)  (env->vr + (x) * env->vlenb)
 #define SEW() GET_VTYPE_VSEW(env->vtype)
-/* This returns the emul for the destination endcoded just as the vlmul field, the eew (for the destination) must be encoded just like the SEW field.
+/* This returns the emul for the destination endcoded just as the vlmul field, the eew (for the destination) must be encoded just
+like the SEW field.
 // Effectively this just adjusts the emul to the resulting element width change in case of narrowing/widening instructions
 // and should not be used in other cases */
 #define EMUL(eew) (((int8_t)(env->vlmul & 0x4 ? env->vlmul | 0xf8 : env->vlmul) + (eew) - SEW()) & 0x7)
 
 #define RESERVED_EMUL 0x4
 
-// if EMUL >= 1 then n has to be divisible by EMUL 
-// The emul value here is encoded the same way the vlmul field is
+//  if EMUL >= 1 then n has to be divisible by EMUL
+//  The emul value here is encoded the same way the vlmul field is
 #define V_IDX_INVALID_EMUL(n, emul) ((emul) < 0x4 && ((n) & ((1 << (emul)) - 1)) != 0)
-#define V_IDX_INVALID_EEW(n, eew) V_IDX_INVALID_EMUL(n, EMUL(eew))
-#define V_IDX_INVALID(n) V_IDX_INVALID_EMUL(n, env->vlmul)
-#define V_INVALID_NF(vd, nf, emul) (((emul) & 0x4) != 0 && (((nf) << (emul)) >= 8 || ((vd) + ((nf) << (emul))) >= 32))
+#define V_IDX_INVALID_EEW(n, eew)   V_IDX_INVALID_EMUL(n, EMUL(eew))
+#define V_IDX_INVALID(n)            V_IDX_INVALID_EMUL(n, env->vlmul)
+#define V_INVALID_NF(vd, nf, emul)  (((emul) & 0x4) != 0 && (((nf) << (emul)) >= 8 || ((vd) + ((nf) << (emul))) >= 32))

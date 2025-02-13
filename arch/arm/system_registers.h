@@ -15,9 +15,8 @@
 #define CP_REG_NS_SHIFT 29
 #define CP_REG_NS_MASK  (1 << CP_REG_NS_SHIFT)
 
-#define ENCODE_CP_REG(cp, is64, ns, crn, crm, opc1, opc2)   \
-    ((ns) << CP_REG_NS_SHIFT | ((cp) << 16) | ((is64) << 15) |   \
-     ((crn) << 11) | ((crm) << 7) | ((opc1) << 3) | (opc2))
+#define ENCODE_CP_REG(cp, is64, ns, crn, crm, opc1, opc2) \
+    ((ns) << CP_REG_NS_SHIFT | ((cp) << 16) | ((is64) << 15) | ((crn) << 11) | ((crm) << 7) | ((opc1) << 3) | (opc2))
 
-// Cover the entire register width, when used on an instruction address field (crm, opc1, opc2)
+//  Cover the entire register width, when used on an instruction address field (crm, opc1, opc2)
 #define ANY 0xFF

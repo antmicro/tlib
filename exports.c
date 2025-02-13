@@ -32,7 +32,8 @@ __thread struct unwind_state unwind_state;
 
 static tcg_t stcg;
 
-void gen_helpers(void) {
+void gen_helpers(void)
+{
 #define GEN_HELPER 2
 #include "helper.h"
 }
@@ -50,9 +51,8 @@ static void init_tcg()
     tcg_attach(&stcg);
     set_temp_buf_offset(offsetof(CPUState, temp_buf));
     int i;
-    for (i = 0; i < NB_MMU_MODES + 1; i++) {
-        set_tlb_table_n_0_rwa(i, offsetof(CPUState, tlb_table[i][0].addr_read), offsetof(CPUState,
-                                                                                         tlb_table[i][0].addr_write),
+    for(i = 0; i < NB_MMU_MODES + 1; i++) {
+        set_tlb_table_n_0_rwa(i, offsetof(CPUState, tlb_table[i][0].addr_read), offsetof(CPUState, tlb_table[i][0].addr_write),
                               offsetof(CPUState, tlb_table[i][0].addend));
         set_tlb_table_n_0(i, offsetof(CPUState, tlb_table[i][0]));
     }
@@ -65,18 +65,17 @@ static void init_tcg()
     tcg_perf_init_labeling();
 }
 
-// This function is unsafe if called with a C# frame above tlib_execute on the stack.
+//  This function is unsafe if called with a C# frame above tlib_execute on the stack.
 void tlib_try_interrupt_translation_block(void)
 {
-    if (likely(cpu) && unlikely(cpu->tb_interrupt_request_from_callback)) {
+    if(likely(cpu) && unlikely(cpu->tb_interrupt_request_from_callback)) {
         int request_type = cpu->tb_interrupt_request_from_callback;
         cpu->tb_interrupt_request_from_callback = TB_INTERRUPT_NONE;
 
-        switch(request_type)
-        {
+        switch(request_type) {
             case TB_INTERRUPT_INCLUDE_LAST_INSTRUCTION:
-                // If last instruction is to be included then we only store the exception and it will
-                // actually be triggered at the end of the currently executing instruction
+                //  If last instruction is to be included then we only store the exception and it will
+                //  actually be triggered at the end of the currently executing instruction
                 cpu->exception_index = MMU_EXTERNAL_FAULT;
                 break;
             case TB_INTERRUPT_EXCLUDE_LAST_INSTRUCTION:
@@ -89,80 +88,80 @@ void tlib_try_interrupt_translation_block(void)
     }
 }
 
-// tlib_get_arch_string return an arch string that is
-// *on purpose* generated compile time so that e.g.
-// strings libtlib.so | grep tlib\,arch=[a-z0-9-]*\,host=[a-z0-9-]*
-// can return the string.
+//  tlib_get_arch_string return an arch string that is
+//  *on purpose* generated compile time so that e.g.
+//  strings libtlib.so | grep tlib\,arch=[a-z0-9-]*\,host=[a-z0-9-]*
+//  can return the string.
 char *tlib_get_arch_string()
 {
     return "tlib,arch="
-    #if defined(TARGET_ARM) || defined(TARGET_ARM64)
-    "arm"
-    #elif defined(TARGET_RISCV)
-    "riscv"
-    #elif defined(TARGET_PPC)
-    "ppc"
-    #elif defined(TARGET_XTENSA)
-    "xtensa"
-    #elif defined(TARGET_I386)
-    "i386"
-    #else
-    "unknown"
-    #endif
-    "-"
-    #if TARGET_LONG_BITS == 32
-    "32"
-    #elif TARGET_LONG_BITS == 64
-    "64"
-    #else
-    "unknown"
-    #endif
-    "-"
-    #ifdef TARGET_WORDS_BIGENDIAN
-    "big"
-    #else
-    "little"
-    #endif
-    ",host="
-    #ifdef HOST_I386
-    "i386"
-    #elif HOST_ARM
-    "arm"
-    #else
-    "unknown"
-    #endif
-    "-"
-    #if HOST_LONG_BITS == 32
-    "32"
-    #elif HOST_LONG_BITS == 64
-    "64"
-    #else
-    "unknown"
-    #endif
-    ;
+#if defined(TARGET_ARM) || defined(TARGET_ARM64)
+           "arm"
+#elif defined(TARGET_RISCV)
+           "riscv"
+#elif defined(TARGET_PPC)
+           "ppc"
+#elif defined(TARGET_XTENSA)
+           "xtensa"
+#elif defined(TARGET_I386)
+           "i386"
+#else
+           "unknown"
+#endif
+           "-"
+#if TARGET_LONG_BITS == 32
+           "32"
+#elif TARGET_LONG_BITS == 64
+           "64"
+#else
+           "unknown"
+#endif
+           "-"
+#ifdef TARGET_WORDS_BIGENDIAN
+           "big"
+#else
+           "little"
+#endif
+           ",host="
+#ifdef HOST_I386
+           "i386"
+#elif HOST_ARM
+           "arm"
+#else
+           "unknown"
+#endif
+           "-"
+#if HOST_LONG_BITS == 32
+           "32"
+#elif HOST_LONG_BITS == 64
+           "64"
+#else
+           "unknown"
+#endif
+        ;
 }
 
 char *tlib_get_arch()
 {
-   #if defined(TARGET_RISCV32)
-   return "rv32";
-   #elif defined(TARGET_RISCV64)
-   return "rv64";
-   #elif defined(TARGET_ARM)
-   return "arm";
-   #elif defined(TARGET_ARM64)
-   return "arm64";
-   #elif defined(TARGET_I386)
-   return "i386";
-   #elif defined(TARGET_PPC32)
-   return "ppc";
-   #elif defined(TARGET_PPC64)
-   return "ppc64";
-   #elif defined(TARGET_XTENSA)
-   return "xtensa";
-   #else
-   return "unknown";
-   #endif
+#if defined(TARGET_RISCV32)
+    return "rv32";
+#elif defined(TARGET_RISCV64)
+    return "rv64";
+#elif defined(TARGET_ARM)
+    return "arm";
+#elif defined(TARGET_ARM64)
+    return "arm64";
+#elif defined(TARGET_I386)
+    return "i386";
+#elif defined(TARGET_PPC32)
+    return "ppc";
+#elif defined(TARGET_PPC64)
+    return "ppc64";
+#elif defined(TARGET_XTENSA)
+    return "xtensa";
+#else
+    return "unknown";
+#endif
 }
 
 EXC_POINTER_0(char *, tlib_get_arch)
@@ -171,10 +170,8 @@ uint32_t maximum_block_size;
 
 uint32_t tlib_set_maximum_block_size(uint32_t size)
 {
-    if(size > TCG_MAX_INSNS)
-    {
-        tlib_printf(LOG_LEVEL_WARNING,
-            "Limiting maximum block size to %d (%" PRIu32 " requested)\n", TCG_MAX_INSNS, size);
+    if(size > TCG_MAX_INSNS) {
+        tlib_printf(LOG_LEVEL_WARNING, "Limiting maximum block size to %d (%" PRIu32 " requested)\n", TCG_MAX_INSNS, size);
         size = TCG_MAX_INSNS;
     }
 
@@ -200,21 +197,19 @@ uint32_t tlib_get_maximum_block_size()
 
 EXC_INT_0(uint32_t, tlib_get_maximum_block_size)
 
-__attribute__((weak))
-void cpu_before_cycles_per_instruction_change(CPUState *env)
+__attribute__((weak)) void cpu_before_cycles_per_instruction_change(CPUState *env)
 {
-    // Empty function for architectures which don't have the function implemented.
+    //  Empty function for architectures which don't have the function implemented.
 }
 
-__attribute__((weak))
-void cpu_after_cycles_per_instruction_change(CPUState *env)
+__attribute__((weak)) void cpu_after_cycles_per_instruction_change(CPUState *env)
 {
-    // Empty function for architectures which don't have the function implemented.
+    //  Empty function for architectures which don't have the function implemented.
 }
 
 void tlib_set_millicycles_per_instruction(uint32_t count)
 {
-    if (env->millicycles_per_instruction == count) {
+    if(env->millicycles_per_instruction == count) {
         return;
     }
 
@@ -240,15 +235,15 @@ int32_t tlib_init(char *cpu_name)
     cpu_exec_init_all();
     gen_helpers();
     translate_init();
-    if (cpu_init(cpu_name) != 0) {
+    if(cpu_init(cpu_name) != 0) {
         tlib_free(env);
         return -1;
     }
     tlb_flush(env, 1, true);
     tlib_set_maximum_block_size(TCG_MAX_INSNS);
 #if defined(__aarch64__)
-    // Chaining is currently unreliable on the aarch64 backend so 
-    // default to not using it for now
+    //  Chaining is currently unreliable on the aarch64 backend so
+    //  default to not using it for now
     tlib_set_chaining_enabled(false);
 #endif
     env->atomic_memory_state = NULL;
@@ -257,8 +252,8 @@ int32_t tlib_init(char *cpu_name)
 
 EXC_INT_1(int32_t, tlib_init, char *, cpu_name)
 
-// atomic_id should normally be '-1' - then a next free id will be returned
-// passing an id explicitly only makes sense when restoring state after deserialization
+//  atomic_id should normally be '-1' - then a next free id will be returned
+//  passing an id explicitly only makes sense when restoring state after deserialization
 int32_t tlib_atomic_memory_state_init(uintptr_t atomic_memory_state_ptr, int32_t atomic_id)
 {
     cpu->atomic_memory_state = (atomic_memory_state_t *)atomic_memory_state_ptr;
@@ -274,8 +269,8 @@ void tlib_dispose()
     tlib_arch_dispose();
     code_gen_free();
     free_all_page_descriptors();
-    // `tlib_free` is an EXTERNAL_AS, as such we need to clear `cpu` before calling it
-    // to avoid a use-after-free in its wrapper
+    //  `tlib_free` is an EXTERNAL_AS, as such we need to clear `cpu` before calling it
+    //  to avoid a use-after-free in its wrapper
     CPUState *cpu_copy = cpu;
     cpu = NULL;
     tlib_free(cpu_copy);
@@ -284,8 +279,8 @@ void tlib_dispose()
 
 EXC_VOID_0(tlib_dispose)
 
-// this function returns number of instructions executed since the previous call
-// there is `cpu->instructions_count_total_value` that contains the cumulative value
+//  this function returns number of instructions executed since the previous call
+//  there is `cpu->instructions_count_total_value` that contains the cumulative value
 uint64_t tlib_get_executed_instructions()
 {
     uint64_t result = cpu->instructions_count_value;
@@ -307,11 +302,11 @@ void tlib_reset()
 {
     tb_flush(cpu);
     tlb_flush(cpu, 1, false);
-    if (unlikely(cpu->cpu_wfi_state_change_hook_present)) {
-        if (cpu->was_not_working) {
-            // CPU left WFI on reset
-            // Clean flag, to prevent an edge case, where the CPU is Reset from WFI hook
-            // resulting in infinite recursion
+    if(unlikely(cpu->cpu_wfi_state_change_hook_present)) {
+        if(cpu->was_not_working) {
+            //  CPU left WFI on reset
+            //  Clean flag, to prevent an edge case, where the CPU is Reset from WFI hook
+            //  resulting in infinite recursion
             cpu->was_not_working = false;
             tlib_on_wfi_state_change(false);
         }
@@ -326,10 +321,9 @@ void tlib_unwind()
     longjmp(unwind_state.envs[unwind_state.env_idx], 1);
 }
 
-__attribute__((weak))
-void cpu_on_leaving_reset_state(CPUState *env)
+__attribute__((weak)) void cpu_on_leaving_reset_state(CPUState *env)
 {
-    // Empty function for architectures which don't have the function implemented.
+    //  Empty function for architectures which don't have the function implemented.
 }
 
 void tlib_on_leaving_reset_state()
@@ -341,14 +335,14 @@ EXC_VOID_0(tlib_on_leaving_reset_state)
 
 int32_t tlib_execute(uint32_t max_insns)
 {
-    if (cpu->instructions_count_value != 0) {
+    if(cpu->instructions_count_value != 0) {
         tlib_abortf("Tried to execute cpu without reading executed instructions count first.");
     }
     cpu->instructions_count_limit = max_insns;
 
     uint32_t local_counter = 0;
     int32_t result = EXCP_INTERRUPT;
-    while ((result == EXCP_INTERRUPT) && (cpu->instructions_count_limit > 0)) {
+    while((result == EXCP_INTERRUPT) && (cpu->instructions_count_limit > 0)) {
         result = cpu_exec(cpu);
 
         cpu_sync_instructions_count(cpu);
@@ -356,16 +350,15 @@ int32_t tlib_execute(uint32_t max_insns)
         cpu->instructions_count_limit -= cpu->instructions_count_value;
         cpu->instructions_count_value = 0;
 
-        if(cpu->exit_request)
-        {
+        if(cpu->exit_request) {
             cpu->exit_request = 0;
             break;
         }
     }
 
-    // we need to reset the instructions count value
-    // as this is might be accessed after calling `tlib_execute`
-    // to read the progress
+    //  we need to reset the instructions count value
+    //  as this is might be accessed after calling `tlib_execute`
+    //  to read the progress
     cpu->instructions_count_value = local_counter;
 
     return result;
@@ -377,11 +370,12 @@ int tlib_restore_context(void);
 
 extern void *global_retaddr;
 
-// This function should only be called from at most one level of C -> C# calls, otherwise
-// when the outermost C# method returns the frames of the inner ones will be longjmped over.
+//  This function should only be called from at most one level of C -> C# calls, otherwise
+//  when the outermost C# method returns the frames of the inner ones will be longjmped over.
 void tlib_request_translation_block_interrupt(int shouldSubstractInstruction)
 {
-    env->tb_interrupt_request_from_callback = shouldSubstractInstruction ? TB_INTERRUPT_EXCLUDE_LAST_INSTRUCTION : TB_INTERRUPT_INCLUDE_LAST_INSTRUCTION;
+    env->tb_interrupt_request_from_callback = shouldSubstractInstruction ? TB_INTERRUPT_EXCLUDE_LAST_INSTRUCTION
+                                                                         : TB_INTERRUPT_INCLUDE_LAST_INSTRUCTION;
 }
 
 EXC_VOID_1(tlib_request_translation_block_interrupt, int, shouldSubstractInstruction)
@@ -420,10 +414,10 @@ void tlib_unmap_range(uint64_t start, uint64_t end)
 {
     uint64_t new_start;
 
-    while (start <= end) {
+    while(start <= end) {
         unmap_page(start);
         new_start = start + TARGET_PAGE_SIZE;
-        if (new_start < start) {
+        if(new_start < start) {
             return;
         }
         start = new_start;
@@ -438,24 +432,25 @@ void tlib_register_access_flags_for_range(uint64_t start_address, uint64_t lengt
         .executable_io_mem = is_executable_io_mem ? true : false,
     };
 
-    // If needed split ranges
+    //  If needed split ranges
     uint64_t addr = start_address;
-    while (addr < (start_address + length)) {
+    while(addr < (start_address + length)) {
         phys_page_alloc(addr >> TARGET_PAGE_BITS, flags);
         addr += TARGET_PAGE_SIZE;
     }
-    tlib_printf(LOG_LEVEL_DEBUG, "Registering range flags; start_address: 0x%x, length: 0x%x, flags: 0x%x", start_address, length, flags);
+    tlib_printf(LOG_LEVEL_DEBUG, "Registering range flags; start_address: 0x%x, length: 0x%x, flags: 0x%x", start_address, length,
+                flags);
 }
-EXC_VOID_3(tlib_register_access_flags_for_range, uint64_t, startAddress, uint64_t, length,  uint32_t, is_executable_io_mem)
+EXC_VOID_3(tlib_register_access_flags_for_range, uint64_t, startAddress, uint64_t, length, uint32_t, is_executable_io_mem)
 
 uint32_t tlib_is_range_mapped(uint64_t start, uint64_t end)
 {
     PhysPageDesc *pd;
 
-    while (start < end) {
+    while(start < end) {
         pd = phys_page_find((target_phys_addr_t)start >> TARGET_PAGE_BITS);
-        if (pd != NULL && pd->phys_offset != IO_MEM_UNASSIGNED) {
-            return 1; // at least one page of this region is mapped
+        if(pd != NULL && pd->phys_offset != IO_MEM_UNASSIGNED) {
+            return 1;  //  at least one page of this region is mapped
         }
         start += TARGET_PAGE_SIZE;
     }
@@ -474,7 +469,7 @@ EXC_VOID_2(tlib_invalidate_translation_blocks, uintptr_t, start, uintptr_t, end)
 uint64_t tlib_translate_to_physical_address(uint64_t address, uint32_t access_type)
 {
     uint64_t ret = virt_to_phys(address, access_type, 1);
-    if (ret == TARGET_ULONG_MAX) {
+    if(ret == TARGET_ULONG_MAX) {
         ret = (uint64_t)-1;
     }
     return ret;
@@ -484,7 +479,7 @@ EXC_INT_2(uint64_t, tlib_translate_to_physical_address, uint64_t, address, uint3
 
 void tlib_set_irq(int32_t interrupt, int32_t state)
 {
-    if (state) {
+    if(state) {
         cpu_interrupt(cpu, interrupt);
     } else {
         cpu_reset_interrupt(cpu, interrupt);
@@ -519,28 +514,34 @@ uint64_t translation_cache_size_max = MAX_CODE_GEN_BUFFER_SIZE;
 
 void tlib_set_translation_cache_configuration(uint64_t min_size, uint64_t max_size)
 {
-    if (min_size < MIN_CODE_GEN_BUFFER_SIZE) {
-        tlib_printf(LOG_LEVEL_WARNING, "Translation cache size %" PRIu64 " is smaller than minimum allowed %" PRIu64 ". It will be clamped to minimum", min_size, MIN_CODE_GEN_BUFFER_SIZE);
+    if(min_size < MIN_CODE_GEN_BUFFER_SIZE) {
+        tlib_printf(LOG_LEVEL_WARNING,
+                    "Translation cache size %" PRIu64 " is smaller than minimum allowed %" PRIu64
+                    ". It will be clamped to minimum",
+                    min_size, MIN_CODE_GEN_BUFFER_SIZE);
         min_size = MIN_CODE_GEN_BUFFER_SIZE;
     }
     translation_cache_size_min = min_size;
-    if (max_size > MAX_CODE_GEN_BUFFER_SIZE) {
-        tlib_printf(LOG_LEVEL_WARNING, "Translation cache size %" PRIu64 " is larger than maximum allowed %" PRIu64 ". It will be clamped to maximum", max_size, MAX_CODE_GEN_BUFFER_SIZE);
+    if(max_size > MAX_CODE_GEN_BUFFER_SIZE) {
+        tlib_printf(LOG_LEVEL_WARNING,
+                    "Translation cache size %" PRIu64 " is larger than maximum allowed %" PRIu64
+                    ". It will be clamped to maximum",
+                    max_size, MAX_CODE_GEN_BUFFER_SIZE);
         max_size = MAX_CODE_GEN_BUFFER_SIZE;
     }
     translation_cache_size_max = max_size;
 
-    if (translation_cache_size_min > translation_cache_size_max) {
-        tlib_abortf("Translation cache minimum size %" PRIu64 " is larger than maximum %" PRIu64, translation_cache_size_min, translation_cache_size_max);
+    if(translation_cache_size_min > translation_cache_size_max) {
+        tlib_abortf("Translation cache minimum size %" PRIu64 " is larger than maximum %" PRIu64, translation_cache_size_min,
+                    translation_cache_size_max);
     }
-
 }
 
 EXC_VOID_2(tlib_set_translation_cache_configuration, uint64_t, size, int, min_max)
 
 void tlib_invalidate_translation_cache()
 {
-    if (cpu) {
+    if(cpu) {
         tb_flush(cpu);
     }
 }
@@ -554,8 +555,8 @@ int tlib_restore_context()
 
     pc = (uintptr_t)global_retaddr;
     tb = tb_find_pc(pc);
-    if (tb == 0) {
-        // this happens when PC is outside RAM or ROM
+    if(tb == 0) {
+        //  this happens when PC is outside RAM or ROM
         return -1;
     }
     return cpu_restore_state_from_tb(cpu, tb, pc);
@@ -572,15 +573,15 @@ EXC_POINTER_0(void *, tlib_export_state)
 
 int32_t tlib_get_state_size()
 {
-    // Cpu state size is reported as
-    // an offset of `current_tb` field
-    // provided by CPU_COMMON definition.
-    // It is a convention that all
-    // architecture-specific, non-pointer
-    // fields should be located in this
-    // range. As a result this size can
-    // be interpreted as an amount of bytes
-    // to store during serialization.
+    //  Cpu state size is reported as
+    //  an offset of `current_tb` field
+    //  provided by CPU_COMMON definition.
+    //  It is a convention that all
+    //  architecture-specific, non-pointer
+    //  fields should be located in this
+    //  range. As a result this size can
+    //  be interpreted as an amount of bytes
+    //  to store during serialization.
     return (ssize_t)(&((CPUState *)0)->current_tb);
 }
 
@@ -661,11 +662,11 @@ EXC_VOID_1(tlib_flush_page, uint64_t, address)
 #define DEFINE_DEFAULT_REGISTER_ACCESSORS(WIDTH)                 \
     uint64_t tlib_get_register_value(int reg_number)             \
     {                                                            \
-        return tlib_get_register_value_ ## WIDTH(reg_number);    \
+        return tlib_get_register_value_##WIDTH(reg_number);      \
     }                                                            \
     void tlib_set_register_value(int reg_number, uint64_t value) \
     {                                                            \
-        tlib_set_register_value_ ## WIDTH(reg_number, value);    \
+        tlib_set_register_value_##WIDTH(reg_number, value);      \
     }
 
 #if TARGET_LONG_BITS == 32
@@ -688,7 +689,7 @@ EXC_VOID_1(tlib_set_interrupt_begin_hook_present, uint32_t, val)
 
 void tlib_set_interrupt_end_hook_present(uint32_t val)
 {
-    // Supported in RISC-V architecture only
+    //  Supported in RISC-V architecture only
     cpu->interrupt_end_callback_enabled = !!val;
 }
 
@@ -697,7 +698,7 @@ EXC_VOID_1(tlib_set_interrupt_end_hook_present, uint32_t, val)
 void tlib_on_memory_access_event_enabled(int32_t value)
 {
     cpu->tlib_is_on_memory_access_enabled = !!value;
-    // In order to get all of the memory accesses we need to prevent tcg from using the tlb
+    //  In order to get all of the memory accesses we need to prevent tcg from using the tlb
     tcg_context_use_tlb(!value);
 }
 
@@ -705,7 +706,7 @@ EXC_VOID_1(tlib_on_memory_access_event_enabled, int32_t, value)
 
 void tlib_clean_wfi_proc_state(void)
 {
-    // Invalidates "Wait for interrupt" state, and makes the core ready to resume execution
+    //  Invalidates "Wait for interrupt" state, and makes the core ready to resume execution
     cpu->exception_index &= ~EXCP_WFI;
     cpu->wfi = 0;
 }
@@ -728,8 +729,7 @@ EXC_INT_1(uint32_t, tlib_get_opcode_counter, uint32_t, opcode_id)
 
 void tlib_reset_opcode_counters()
 {
-    for(int i = 0; i < cpu->opcode_counters_size; i++)
-    {
+    for(int i = 0; i < cpu->opcode_counters_size; i++) {
         cpu->opcode_counters[i].counter = 0;
     }
 }
@@ -738,11 +738,10 @@ EXC_VOID_0(tlib_reset_opcode_counters)
 
 uint32_t tlib_install_opcode_counter(uint32_t opcode, uint32_t mask)
 {
-    if(cpu->opcode_counters_size == MAX_OPCODE_COUNTERS)
-    {
-        // value 0 should be interpreted as an error;
-        // code calling `tlib_install_opcode_counter` should
-        // handle this properly (and e.g., log an error message)
+    if(cpu->opcode_counters_size == MAX_OPCODE_COUNTERS) {
+        //  value 0 should be interpreted as an error;
+        //  code calling `tlib_install_opcode_counter` should
+        //  handle this properly (and e.g., log an error message)
         return 0;
     }
 
@@ -757,17 +756,16 @@ EXC_INT_2(uint32_t, tlib_install_opcode_counter, uint32_t, opcode, uint32_t, mas
 
 void tlib_enable_guest_profiler(int value)
 {
-    if(cpu->guest_profiler_enabled == value)
-    {
+    if(cpu->guest_profiler_enabled == value) {
         return;
     }
 
-    // When the state of the guest profiler is changed we have to
-    // invalidate the cache for two reasons:
-    // When the profiler is enabled: to ensure that no block that don't
-    // signal stack changes will be used (function calls will not be detected)
-    // When the profiler is disabled: to ensure that no blocks that 
-    // signal stack changes will be used (events will be sent to a null object)
+    //  When the state of the guest profiler is changed we have to
+    //  invalidate the cache for two reasons:
+    //  When the profiler is enabled: to ensure that no block that don't
+    //  signal stack changes will be used (function calls will not be detected)
+    //  When the profiler is disabled: to ensure that no blocks that
+    //  signal stack changes will be used (events will be sent to a null object)
     tlib_invalidate_translation_cache();
     cpu->guest_profiler_enabled = !!value;
 }
@@ -775,7 +773,7 @@ EXC_VOID_1(tlib_enable_guest_profiler, int32_t, value)
 
 uint32_t tlib_get_current_tb_disas_flags()
 {
-    if (cpu->current_tb == NULL) {
+    if(cpu->current_tb == NULL) {
         return 0xFFFFFFFF;
     }
 
@@ -786,31 +784,26 @@ EXC_INT_0(uint32_t, tlib_get_current_tb_disas_flags)
 
 void tlib_set_page_io_accessed(uint64_t address)
 {
-    if(env->io_access_regions_count == MAX_IO_ACCESS_REGIONS_COUNT)
-    {
+    if(env->io_access_regions_count == MAX_IO_ACCESS_REGIONS_COUNT) {
         tlib_abortf("Couldn't register an IO accessible page 0x%x", address);
     }
 
     target_ulong page_address = address & ~(TARGET_PAGE_SIZE - 1);
 
     int i, j;
-    for(i = 0; i < env->io_access_regions_count; i++)
-    {
-        if(env->io_access_regions[i] == page_address)
-        {
-            // it's already here, just break
+    for(i = 0; i < env->io_access_regions_count; i++) {
+        if(env->io_access_regions[i] == page_address) {
+            //  it's already here, just break
             return;
         }
 
-        // since regions are sorted ascending, this is the right place to put the new entry
-        if(env->io_access_regions[i] > page_address)
-        {
+        //  since regions are sorted ascending, this is the right place to put the new entry
+        if(env->io_access_regions[i] > page_address) {
             break;
         }
     }
 
-    for(j = env->io_access_regions_count; j > i; j--)
-    {
+    for(j = env->io_access_regions_count; j > i; j--) {
         env->io_access_regions[j] = env->io_access_regions[j - 1];
     }
 
@@ -827,22 +820,18 @@ void tlib_clear_page_io_accessed(uint64_t address)
     target_ulong page_address = address & ~(TARGET_PAGE_SIZE - 1);
 
     int i, j;
-    for(i = 0; i < env->io_access_regions_count; i++)
-    {
-        if(env->io_access_regions[i] == page_address)
-        {
+    for(i = 0; i < env->io_access_regions_count; i++) {
+        if(env->io_access_regions[i] == page_address) {
             break;
         }
     }
 
-    if(i == env->io_access_regions_count)
-    {
-        // it was not marked as IO
+    if(i == env->io_access_regions_count) {
+        //  it was not marked as IO
         return;
     }
 
-    for(j = i; j < env->io_access_regions_count - 1; j++)
-    {
+    for(j = i; j < env->io_access_regions_count - 1; j++) {
         env->io_access_regions[j] = env->io_access_regions[j + 1];
     }
     env->io_access_regions[j] = 0;
@@ -853,42 +842,39 @@ void tlib_clear_page_io_accessed(uint64_t address)
 
 EXC_VOID_1(tlib_clear_page_io_accessed, uint64_t, address)
 
-#define ASSERT_EXTERNAL_MMU_ENABLED                                                                                \
-if(!cpu->external_mmu_enabled)                                                                                     \
-{                                                                                                                  \
-    tlib_abort("Setting the external MMU parameters, when it is not enabled. Enable it first");                    \
-}
+#define ASSERT_EXTERNAL_MMU_ENABLED                                                                 \
+    if(!cpu->external_mmu_enabled) {                                                                \
+        tlib_abort("Setting the external MMU parameters, when it is not enabled. Enable it first"); \
+    }
 
-#define ASSERT_WINDOW_ACTIVE(index)                                                                                \
-if(!cpu->external_mmu_window[index].active)                                                                        \
-{                                                                                                                  \
-    tlib_printf(LOG_LEVEL_ERROR, "Trying to configure an inactive window. Window needs to be activated first");    \
-}
+#define ASSERT_WINDOW_ACTIVE(index)                                                                                 \
+    if(!cpu->external_mmu_window[index].active) {                                                                   \
+        tlib_printf(LOG_LEVEL_ERROR, "Trying to configure an inactive window. Window needs to be activated first"); \
+    }
 
-#define ASSERT_WINDOW_IN_RANGE(index)                                                                              \
-if(index > MAX_EXTERNAL_MMU_RANGES)                                                                                \
-{                                                                                                                  \
-    tlib_abort("Trying to access an unexisting MMU window. Index too high");                                       \
-}
+#define ASSERT_WINDOW_IN_RANGE(index)                                            \
+    if(index > MAX_EXTERNAL_MMU_RANGES) {                                        \
+        tlib_abort("Trying to access an unexisting MMU window. Index too high"); \
+    }
 
-#define ASSERT_ALIGNED_TO_PAGE_SIZE(addr) \
-if(((target_ulong)addr) & (~TARGET_PAGE_MASK)) tlib_abortf("MMU ranges must be aligned to the page size (0x%lx), the address 0x%lx is not.", TARGET_PAGE_SIZE, addr);
+#define ASSERT_ALIGNED_TO_PAGE_SIZE(addr)          \
+    if(((target_ulong)addr) & (~TARGET_PAGE_MASK)) \
+        tlib_abortf("MMU ranges must be aligned to the page size (0x%lx), the address 0x%lx is not.", TARGET_PAGE_SIZE, addr);
 
-#define ASSERT_NO_OVERLAP(value, window_type)                                                                                                                \
-for(int window_index = 0; window_index < MAX_EXTERNAL_MMU_RANGES; window_index++)                                                                            \
-{                                                                                                                                                            \
-    ExtMmuRange* current_window = &cpu->external_mmu_window[window_index];                                                                                   \
-    if(!current_window->active)                                                                                                                              \
-    {                                                                                                                                                        \
-        break;                                                                                                                                               \
-    }                                                                                                                                                        \
-    if(value >= current_window->range_start && value < current_window->range_end && current_window->type & window_type)                                      \
-    {                                                                                                                                                        \
-        tlib_printf(LOG_LEVEL_DEBUG, "The addr 0x%lx is already a part of the MMU window of the same type with index %d. Resulting range will overlap!",     \
-                    value, window_index);                                                                                                                    \
-        break;                                                                                                                                               \
-    }                                                                                                                                                        \
-}                                                                                                                                                            \
+#define ASSERT_NO_OVERLAP(value, window_type)                                                                                 \
+    for(int window_index = 0; window_index < MAX_EXTERNAL_MMU_RANGES; window_index++) {                                       \
+        ExtMmuRange *current_window = &cpu->external_mmu_window[window_index];                                                \
+        if(!current_window->active) {                                                                                         \
+            break;                                                                                                            \
+        }                                                                                                                     \
+        if(value >= current_window->range_start && value < current_window->range_end && current_window->type & window_type) { \
+            tlib_printf(LOG_LEVEL_DEBUG,                                                                                      \
+                        "The addr 0x%lx is already a part of the MMU window of the same type with index %d. Resulting range " \
+                        "will overlap!",                                                                                      \
+                        value, window_index);                                                                                 \
+            break;                                                                                                            \
+        }                                                                                                                     \
+    }
 
 uint32_t tlib_get_mmu_windows_count(void)
 {
@@ -901,7 +887,7 @@ void tlib_enable_external_window_mmu(uint32_t value)
 #ifndef TARGET_RISCV
     tlib_printf(LOG_LEVEL_WARNING, "Enabled the external MMU. Please note that this feature is experimental on this platform");
 #endif
-    cpu->external_mmu_enabled = !! value;
+    cpu->external_mmu_enabled = !!value;
 }
 EXC_VOID_1(tlib_enable_external_window_mmu, uint32_t, value)
 
@@ -916,14 +902,14 @@ EXC_VOID_1(tlib_reset_mmu_window, uint32_t, index)
 int32_t tlib_acquire_mmu_window(uint32_t type)
 {
     ASSERT_EXTERNAL_MMU_ENABLED
-    for (int window_index = 0; window_index < MAX_EXTERNAL_MMU_RANGES; window_index++) {
-        if (!cpu->external_mmu_window[window_index].active) {
+    for(int window_index = 0; window_index < MAX_EXTERNAL_MMU_RANGES; window_index++) {
+        if(!cpu->external_mmu_window[window_index].active) {
             cpu->external_mmu_window[window_index].active = true;
             cpu->external_mmu_window[window_index].type = (uint8_t)type;
             return window_index;
         }
     }
-    // Failed
+    //  Failed
     return -1;
 }
 EXC_INT_1(int32_t, tlib_acquire_mmu_window, uint32_t, type)
@@ -948,8 +934,8 @@ void tlib_set_mmu_window_end(uint32_t index, uint64_t addr_end, uint32_t range_e
 #ifdef DEBUG
     ASSERT_NO_OVERLAP(addr_end, cpu->external_mmu_window[index].type)
 #endif
-    /* This is not necessary for the MMU to function properly, but it makes it easier to debug when we are using the same convention where possible.
-     Only the window that contains the last page of address space will be inclusive at all times */
+    /* This is not necessary for the MMU to function properly, but it makes it easier to debug when we are using the same
+     convention where possible. Only the window that contains the last page of address space will be inclusive at all times */
     if(addr_end != TARGET_ULONG_MAX && range_end_inclusive) {
         addr_end += 1;
         range_end_inclusive = 0;
@@ -1005,10 +991,10 @@ EXC_INT_1(uint64_t, tlib_get_mmu_window_addend, uint32_t, index)
 
 void tlib_raise_exception(uint32_t exception)
 {
-    // note: this function does interrupt
-    // the execution of the block, so
-    // externally raised exceptions might
-    // not be handled precisely
+    //  note: this function does interrupt
+    //  the execution of the block, so
+    //  externally raised exceptions might
+    //  not be handled precisely
     env->exception_index = exception;
     env->exit_request = 1;
 }
@@ -1037,16 +1023,14 @@ void tlib_set_cpu_wfi_state_change_hook_present(uint32_t val)
 }
 EXC_VOID_1(tlib_set_cpu_wfi_state_change_hook_present, uint32_t, val);
 
-__attribute__((weak))
-void cpu_before_save(CPUState *env)
+__attribute__((weak)) void cpu_before_save(CPUState *env)
 {
-    // Empty function for architectures which don't have the function implemented.
+    //  Empty function for architectures which don't have the function implemented.
 }
 
-__attribute__((weak))
-void cpu_after_load(CPUState *env)
+__attribute__((weak)) void cpu_after_load(CPUState *env)
 {
-    // Empty function for architectures which don't have the function implemented.
+    //  Empty function for architectures which don't have the function implemented.
 }
 
 void tlib_before_save(void *env)

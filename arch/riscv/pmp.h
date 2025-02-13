@@ -27,12 +27,7 @@
 
 #pragma once
 
-typedef enum {
-    PMP_READ  = 1 << 0,
-    PMP_WRITE = 1 << 1,
-    PMP_EXEC  = 1 << 2,
-    PMP_LOCK  = 1 << 7
-} pmp_priv_t;
+typedef enum { PMP_READ = 1 << 0, PMP_WRITE = 1 << 1, PMP_EXEC = 1 << 2, PMP_LOCK = 1 << 7 } pmp_priv_t;
 
 typedef enum {
     PMP_AMATCH_OFF,  /* Null (off)                            */
@@ -63,4 +58,4 @@ void pmpaddr_csr_write(CPUState *env, uint32_t addr_index, target_ulong val);
 target_ulong pmpaddr_csr_read(CPUState *env, uint32_t addr_index);
 int pmp_get_access(CPUState *env, target_ulong addr, target_ulong size, int access_type);
 int pmp_find_overlapping(CPUState *env, target_ulong addr, target_ulong size, int starting_index);
-bool pmp_is_any_region_locked(CPUState* env);
+bool pmp_is_any_region_locked(CPUState *env);

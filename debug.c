@@ -36,15 +36,15 @@ char *msgs[MAX_MSG_COUNT];
 static uint32_t log_set_msg(char *msg)
 {
     int id = 0;
-    while (msgs[id] != NULL) {
-        if ((strcmp(msgs[id], msg)) == 0) {
+    while(msgs[id] != NULL) {
+        if((strcmp(msgs[id], msg)) == 0) {
             return id;
         }
         id++;
     }
-    if (id >= MAX_MSG_COUNT) {
+    if(id >= MAX_MSG_COUNT) {
         msgs[0] = tlib_strdup("MSG_COUNT_OVERFLOW");
-        return 0; // overflow
+        return 0;  //  overflow
     }
     msgs[id] = tlib_strdup(msg);
     return id;
@@ -82,7 +82,7 @@ void mark_as_locked(struct TranslationBlock *tb, char *filename, int line_number
 void check_locked(struct TranslationBlock *tb)
 {
 #if DEBUG
-    if (tb->lock_active) {
+    if(tb->lock_active) {
         tlib_abortf("Translation after locking the TB detected @ %s:%d", tb->lock_file, tb->lock_line);
     }
 #endif

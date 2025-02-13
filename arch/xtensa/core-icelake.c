@@ -32,9 +32,5 @@
 #include "overlay_tool.h"
 #include "core-icelake/xtensa-modules.c.inc"
 
-XtensaConfig icelake __attribute__((unused)) = {
-    .name = "icelake",
-    .isa_internal = &xtensa_modules,
-    .clock_freq_khz = 5000,
-    DEFAULT_SECTIONS
-};
+XtensaConfig icelake
+    __attribute__((unused)) = { .name = "icelake", .isa_internal = &xtensa_modules, .clock_freq_khz = 5000, DEFAULT_SECTIONS };

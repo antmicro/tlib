@@ -50,7 +50,7 @@ void cpu_set_ferr(void *s)
     tlib_printf(LOG_LEVEL_WARNING, "%s(...)", __FUNCTION__);
 }
 
-//task priority register
+//  task priority register
 void cpu_set_apic_tpr(void *s, uint8_t val)
 {
     tlib_printf(LOG_LEVEL_WARNING, "%s(%X)", __FUNCTION__, val);
@@ -66,7 +66,7 @@ int cpu_get_pic_interrupt(void *env)
     return tlib_get_pending_interrupt();
 }
 
-//task priority register
+//  task priority register
 uint8_t cpu_get_apic_tpr(void *d)
 {
     tlib_printf(LOG_LEVEL_WARNING, "%s(...)", __FUNCTION__);

@@ -68,13 +68,13 @@ void TCG_pstrcpy(char *buf, int buf_size, const char *str)
     int c;
     char *q = buf;
 
-    if (buf_size <= 0) {
+    if(buf_size <= 0) {
         return;
     }
 
-    for (;;) {
+    for(;;) {
         c = *str++;
-        if (c == 0 || q >= buf + buf_size - 1) {
+        if(c == 0 || q >= buf + buf_size - 1) {
             break;
         }
         *q++ = c;
@@ -86,7 +86,7 @@ char *TCG_pstrcat(char *buf, int buf_size, const char *s)
 {
     int len;
     len = strlen(buf);
-    if (len < buf_size) {
+    if(len < buf_size) {
         TCG_pstrcpy(buf + len, buf_size - len, s);
     }
     return buf;
@@ -142,12 +142,11 @@ void set_tlb_table_n_0_rwa(int i, unsigned int read, unsigned int write, unsigne
 #include <unistd.h>
 #include "../include/infrastructure.h"
 
-// not thread safe - it relies on the property of Renode, that it disposes of machines sequentially
+//  not thread safe - it relies on the property of Renode, that it disposes of machines sequentially
 static FILE *perf_map_handle;
 
 struct TranslationBlock;
-typedef struct tcg_perf_map_symbol
-{
+typedef struct tcg_perf_map_symbol {
     void *ptr;
     int size;
     char *label;
@@ -158,7 +157,7 @@ typedef struct tcg_perf_map_symbol
     int height;
 } tcg_perf_map_symbol;
 
-// self balancing (AVL) tree
+//  self balancing (AVL) tree
 static tcg_perf_map_symbol *symbols = NULL;
 
 /* Left/Right Rotation
@@ -182,10 +181,10 @@ static inline int tcg_perf_tree_height(tcg_perf_map_symbol *s)
 
 static tcg_perf_map_symbol *tcg_perf_tree_left_rotate(tcg_perf_map_symbol *s)
 {
-    if (s == NULL) {
+    if(s == NULL) {
         return NULL;
     }
-    if (unlikely(s->right == NULL)) {
+    if(unlikely(s->right == NULL)) {
         return s;
     }
 
@@ -203,10 +202,10 @@ static tcg_perf_map_symbol *tcg_perf_tree_left_rotate(tcg_perf_map_symbol *s)
 
 static tcg_perf_map_symbol *tcg_perf_tree_right_rotate(tcg_perf_map_symbol *m)
 {
-    if (m == NULL) {
+    if(m == NULL) {
         return NULL;
     }
-    if (unlikely(m->left == NULL)) {
+    if(unlikely(m->left == NULL)) {
         return m;
     }
 
@@ -217,15 +216,14 @@ static tcg_perf_map_symbol *tcg_perf_tree_right_rotate(tcg_perf_map_symbol *m)
     s->right = m;
 
     m->height = max(tcg_perf_tree_height(mr), tcg_perf_tree_height(m->left)) + 1;
-    s->height = max(tcg_perf_tree_height(m),  tcg_perf_tree_height(s->left)) + 1;
+    s->height = max(tcg_perf_tree_height(m), tcg_perf_tree_height(s->left)) + 1;
 
     return s;
 }
 
-#define RETURN_EMPTY_PERF_HANDLE \
-    if(unlikely(perf_map_handle == NULL)) \
-    {   \
-        return; \
+#define RETURN_EMPTY_PERF_HANDLE            \
+    if(unlikely(perf_map_handle == NULL)) { \
+        return;                             \
     }
 
 void tcg_perf_init_labeling()
@@ -235,14 +233,14 @@ void tcg_perf_init_labeling()
     snprintf(target, sizeof(target), "/tmp/perf-%d.map", getpid());
     perf_map_handle = fopen(target, "a");
 
-    if (unlikely(perf_map_handle == NULL)) {
+    if(unlikely(perf_map_handle == NULL)) {
         tlib_printf(LOG_LEVEL_WARNING, "Cannot generate perf.map.");
     }
 }
 
 static void tcg_perf_symbol_tree_recurse_helper(tcg_perf_map_symbol *s, void (*callback)(tcg_perf_map_symbol *))
 {
-    if (s == NULL) {
+    if(s == NULL) {
         return;
     }
 
@@ -253,13 +251,13 @@ static void tcg_perf_symbol_tree_recurse_helper(tcg_perf_map_symbol *s, void (*c
 
 static inline void tcg_perf_flush_symbol(tcg_perf_map_symbol *s)
 {
-    if (s->label) {
+    if(s->label) {
         fprintf(perf_map_handle, "%p %x %stcg_jit_code:%p:%s", s->ptr, s->size, s->reused ? "[REUSED]" : "", s->ptr, s->label);
     } else {
         fprintf(perf_map_handle, "%p %x %stcg_jit_code:%p", s->ptr, s->size, s->reused ? "[REUSED]" : "", s->ptr);
     }
 
-    if (s->tb) {
+    if(s->tb) {
         char *buffer = TCG_malloc(sizeof(char) * 100);
         tcg_perf_tb_info_to_string(s->tb, buffer, 100);
         fprintf(perf_map_handle, "%s", buffer);
@@ -271,7 +269,7 @@ static inline void tcg_perf_flush_symbol(tcg_perf_map_symbol *s)
 
 static inline void tcg_perf_free_symbol(tcg_perf_map_symbol *s)
 {
-    if (s->label) {
+    if(s->label) {
         TCG_free(s->label);
     }
     TCG_free(s);
@@ -285,10 +283,9 @@ void tcg_perf_flush_map()
     symbols = NULL;
 }
 
-
 void tcg_perf_fini_labeling()
 {
-    if (likely(perf_map_handle != NULL)) {
+    if(likely(perf_map_handle != NULL)) {
         tcg_perf_flush_map();
         fclose(perf_map_handle);
     }
@@ -296,7 +293,7 @@ void tcg_perf_fini_labeling()
 
 static int tcg_perf_tree_get_balance_factor(tcg_perf_map_symbol *node)
 {
-    if (node == NULL) {
+    if(node == NULL) {
         return 0;
     }
     int leftH = node->left == NULL ? 0 : tcg_perf_tree_height(node->left);
@@ -304,8 +301,7 @@ static int tcg_perf_tree_get_balance_factor(tcg_perf_map_symbol *node)
     return rightH - leftH;
 }
 
-typedef struct tree_walk_trace
-{
+typedef struct tree_walk_trace {
     tcg_perf_map_symbol **node;
     struct tree_walk_trace *next;
 } tree_walk_trace;
@@ -322,13 +318,13 @@ void tcg_perf_append_symbol(tcg_perf_map_symbol *s)
     tcg_perf_map_symbol **next = &symbols;
     tree_walk_trace *head = NULL;
 
-    while (*next != NULL) {
+    while(*next != NULL) {
         tree_walk_trace *tmp = TCG_malloc(sizeof(tree_walk_trace));
         tmp->node = next;
         tmp->next = head;
         head = tmp;
 
-        if (s->ptr == (*next)->ptr) {
+        if(s->ptr == (*next)->ptr) {
             s->reused = true;
             s->left = (*next)->left;
             s->right = (*next)->right;
@@ -336,13 +332,13 @@ void tcg_perf_append_symbol(tcg_perf_map_symbol *s)
             s->tb = (*next)->tb;
             tcg_perf_free_symbol(*next);
 
-            // Dispose of trace
-            while (head != NULL) {
+            //  Dispose of trace
+            while(head != NULL) {
                 head = trace_step(head);
             }
 
             break;
-        } else if (s->ptr < (*next)->ptr) {
+        } else if(s->ptr < (*next)->ptr) {
             next = &(*next)->left;
         } else {
             next = &(*next)->right;
@@ -350,36 +346,36 @@ void tcg_perf_append_symbol(tcg_perf_map_symbol *s)
     }
 
     *next = s;
-    if (head == NULL) {
+    if(head == NULL) {
         return;
     }
 
-    // Step one up
+    //  Step one up
     head = trace_step(head);
 
-    // Rebalance tree and cleanup trace
-    while (head != NULL) {
+    //  Rebalance tree and cleanup trace
+    while(head != NULL) {
         tcg_perf_map_symbol *current = *(head->node);
 
         current->height = max(tcg_perf_tree_height(current->left), tcg_perf_tree_height(current->right)) + 1;
         int balance_factor = tcg_perf_tree_get_balance_factor(current);
 
-        if (balance_factor < -1) { // Left-heavy
-            if (tcg_perf_tree_get_balance_factor(current->left) >= 1) {
-                // Left Right
+        if(balance_factor < -1) {  //  Left-heavy
+            if(tcg_perf_tree_get_balance_factor(current->left) >= 1) {
+                //  Left Right
                 current->left = tcg_perf_tree_left_rotate(current->left);
                 current = tcg_perf_tree_right_rotate(current);
             } else {
-                // Left Left
+                //  Left Left
                 current = tcg_perf_tree_right_rotate(current);
             }
-        } else if (balance_factor > 1) {    // Right-heavy
-            if (tcg_perf_tree_get_balance_factor(current->right) <= -1) {
-                // Right Left
+        } else if(balance_factor > 1) {  //  Right-heavy
+            if(tcg_perf_tree_get_balance_factor(current->right) <= -1) {
+                //  Right Left
                 current->right = tcg_perf_tree_right_rotate(current->right);
                 current = tcg_perf_tree_left_rotate(current);
             } else {
-                // Right Right
+                //  Right Right
                 current = tcg_perf_tree_left_rotate(current);
             }
         }
@@ -394,16 +390,21 @@ void tcg_perf_out_symbol_s(void *s, int size, const char *label, struct Translat
     RETURN_EMPTY_PERF_HANDLE;
     char *_label = NULL;
 
-    if (label) {
+    if(label) {
         size_t len = strlen(label) + 1;
         _label = TCG_malloc(sizeof(char) * len);
         strncpy(_label, label, len);
     }
 
     tcg_perf_map_symbol *symbol = TCG_malloc(sizeof(tcg_perf_map_symbol));
-    *symbol =
-        (tcg_perf_map_symbol) { .ptr = s, .size = size, .label = _label, .reused = false, .tb = tb, .left = NULL, .right = NULL,
-                                .height = 1};
+    *symbol = (tcg_perf_map_symbol) { .ptr = s,
+                                      .size = size,
+                                      .label = _label,
+                                      .reused = false,
+                                      .tb = tb,
+                                      .left = NULL,
+                                      .right = NULL,
+                                      .height = 1 };
     tcg_perf_append_symbol(symbol);
 }
 
@@ -426,25 +427,13 @@ void tcg_perf_out_symbol_i(void *s, int size, int label, struct TranslationBlock
 #undef RETURN_EMPTY_PERF_HANDLE
 
 #else
-inline void tcg_perf_init_labeling()
-{
-}
+inline void tcg_perf_init_labeling() { }
 
-inline void tcg_perf_fini_labeling()
-{
-}
-void tcg_perf_flush_map()
-{
-}
-inline void tcg_perf_out_symbol(void *s, int size, struct TranslationBlock *tb)
-{
-}
+inline void tcg_perf_fini_labeling() { }
+void tcg_perf_flush_map() { }
+inline void tcg_perf_out_symbol(void *s, int size, struct TranslationBlock *tb) { }
 
-inline void tcg_perf_out_symbol_s(void *s, int size, const char *label, struct TranslationBlock *tb)
-{
-}
+inline void tcg_perf_out_symbol_s(void *s, int size, const char *label, struct TranslationBlock *tb) { }
 
-inline void tcg_perf_out_symbol_i(void *s, int size, int label, struct TranslationBlock *tb)
-{
-}
+inline void tcg_perf_out_symbol_i(void *s, int size, int label, struct TranslationBlock *tb) { }
 #endif

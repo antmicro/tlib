@@ -34,9 +34,5 @@
 #define xtensa_modules xtensa_modules_dc233c
 #include "core-dc233c/xtensa-modules.c.inc"
 
-XtensaConfig dc233c __attribute__((unused)) = {
-    .name = "dc233c",
-    .isa_internal = &xtensa_modules,
-    .clock_freq_khz = 10000,
-    DEFAULT_SECTIONS
-};
+XtensaConfig dc233c
+    __attribute__((unused)) = { .name = "dc233c", .isa_internal = &xtensa_modules, .clock_freq_khz = 10000, DEFAULT_SECTIONS };

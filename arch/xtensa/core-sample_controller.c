@@ -34,9 +34,5 @@
 #define xtensa_modules xtensa_modules_sample_controller
 #include "core-sample_controller/xtensa-modules.c.inc"
 
-XtensaConfig sample_controller __attribute__((unused)) = {
-    .name = "sample_controller",
-    .isa_internal = &xtensa_modules,
-    .clock_freq_khz = 10000,
-    DEFAULT_SECTIONS
-};
+XtensaConfig sample_controller __attribute__((
+    unused)) = { .name = "sample_controller", .isa_internal = &xtensa_modules, .clock_freq_khz = 10000, DEFAULT_SECTIONS };

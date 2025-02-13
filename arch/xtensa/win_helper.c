@@ -29,35 +29,27 @@
 #include "osdep.h"
 #include "tb-helper.h"
 
-static void copy_window_from_phys(CPUState *env,
-                                  uint32_t window, uint32_t phys, uint32_t n)
+static void copy_window_from_phys(CPUState *env, uint32_t window, uint32_t phys, uint32_t n)
 {
     assert(phys < env->config->nareg);
-    if (phys + n <= env->config->nareg) {
-        memcpy(env->regs + window, env->phys_regs + phys,
-               n * sizeof(uint32_t));
+    if(phys + n <= env->config->nareg) {
+        memcpy(env->regs + window, env->phys_regs + phys, n * sizeof(uint32_t));
     } else {
         uint32_t n1 = env->config->nareg - phys;
-        memcpy(env->regs + window, env->phys_regs + phys,
-               n1 * sizeof(uint32_t));
-        memcpy(env->regs + window + n1, env->phys_regs,
-               (n - n1) * sizeof(uint32_t));
+        memcpy(env->regs + window, env->phys_regs + phys, n1 * sizeof(uint32_t));
+        memcpy(env->regs + window + n1, env->phys_regs, (n - n1) * sizeof(uint32_t));
     }
 }
 
-static void copy_phys_from_window(CPUState *env,
-                                  uint32_t phys, uint32_t window, uint32_t n)
+static void copy_phys_from_window(CPUState *env, uint32_t phys, uint32_t window, uint32_t n)
 {
     assert(phys < env->config->nareg);
-    if (phys + n <= env->config->nareg) {
-        memcpy(env->phys_regs + phys, env->regs + window,
-               n * sizeof(uint32_t));
+    if(phys + n <= env->config->nareg) {
+        memcpy(env->phys_regs + phys, env->regs + window, n * sizeof(uint32_t));
     } else {
         uint32_t n1 = env->config->nareg - phys;
-        memcpy(env->phys_regs + phys, env->regs + window,
-               n1 * sizeof(uint32_t));
-        memcpy(env->phys_regs, env->regs + window + n1,
-               (n - n1) * sizeof(uint32_t));
+        memcpy(env->phys_regs + phys, env->regs + window, n1 * sizeof(uint32_t));
+        memcpy(env->phys_regs, env->regs + window + n1, (n - n1) * sizeof(uint32_t));
     }
 }
 
@@ -110,27 +102,25 @@ void HELPER(entry)(CPUState *env, uint32_t pc, uint32_t s, uint32_t imm)
 void HELPER(window_check)(CPUState *env, uint32_t pc, uint32_t w)
 {
     uint32_t windowbase = windowbase_bound(env->sregs[WINDOW_BASE], env);
-    uint32_t windowstart = xtensa_replicate_windowstart(env) >>
-        (env->sregs[WINDOW_BASE] + 1);
+    uint32_t windowstart = xtensa_replicate_windowstart(env) >> (env->sregs[WINDOW_BASE] + 1);
     uint32_t n = ctz32(windowstart) + 1;
 
     assert(n <= w);
 
     xtensa_rotate_window(env, n);
-    env->sregs[PS] = (env->sregs[PS] & ~PS_OWB) |
-        (windowbase << PS_OWB_SHIFT) | PS_EXCM;
+    env->sregs[PS] = (env->sregs[PS] & ~PS_OWB) | (windowbase << PS_OWB_SHIFT) | PS_EXCM;
     env->sregs[EPC1] = env->pc = pc;
 
-    switch (ctz32(windowstart >> n)) {
-    case 0:
-        HELPER(exception)(env, EXC_WINDOW_OVERFLOW4);
-        break;
-    case 1:
-        HELPER(exception)(env, EXC_WINDOW_OVERFLOW8);
-        break;
-    default:
-        HELPER(exception)(env, EXC_WINDOW_OVERFLOW12);
-        break;
+    switch(ctz32(windowstart >> n)) {
+        case 0:
+            HELPER(exception)(env, EXC_WINDOW_OVERFLOW4);
+            break;
+        case 1:
+            HELPER(exception)(env, EXC_WINDOW_OVERFLOW8);
+            break;
+        default:
+            HELPER(exception)(env, EXC_WINDOW_OVERFLOW12);
+            break;
     }
 }
 
@@ -141,18 +131,19 @@ void HELPER(test_ill_retw)(CPUState *env, uint32_t pc)
     uint32_t windowbase = windowbase_bound(env->sregs[WINDOW_BASE], env);
     uint32_t windowstart = env->sregs[WINDOW_START];
 
-    if (windowstart & windowstart_bit(windowbase - 1, env)) {
+    if(windowstart & windowstart_bit(windowbase - 1, env)) {
         m = 1;
-    } else if (windowstart & windowstart_bit(windowbase - 2, env)) {
+    } else if(windowstart & windowstart_bit(windowbase - 2, env)) {
         m = 2;
-    } else if (windowstart & windowstart_bit(windowbase - 3, env)) {
+    } else if(windowstart & windowstart_bit(windowbase - 3, env)) {
         m = 3;
     }
 
-    if (n == 0 || (m != 0 && m != n)) {
-        tlib_printf(LOG_LEVEL_ERROR, "Illegal retw instruction(pc = %08x), "
-                      "PS = %08x, m = %d, n = %d\n",
-                      pc, env->sregs[PS], m, n);
+    if(n == 0 || (m != 0 && m != n)) {
+        tlib_printf(LOG_LEVEL_ERROR,
+                    "Illegal retw instruction(pc = %08x), "
+                    "PS = %08x, m = %d, n = %d\n",
+                    pc, env->sregs[PS], m, n);
         HELPER(exception_cause)(env, pc, ILLEGAL_INSTRUCTION_CAUSE);
     }
 }
@@ -161,21 +152,19 @@ void HELPER(test_underflow_retw)(CPUState *env, uint32_t pc)
 {
     int n = (env->regs[0] >> 30) & 0x3;
 
-    if (!(env->sregs[WINDOW_START] &
-          windowstart_bit(env->sregs[WINDOW_BASE] - n, env))) {
+    if(!(env->sregs[WINDOW_START] & windowstart_bit(env->sregs[WINDOW_BASE] - n, env))) {
         uint32_t windowbase = windowbase_bound(env->sregs[WINDOW_BASE], env);
 
         xtensa_rotate_window(env, -n);
         /* window underflow */
-        env->sregs[PS] = (env->sregs[PS] & ~PS_OWB) |
-            (windowbase << PS_OWB_SHIFT) | PS_EXCM;
+        env->sregs[PS] = (env->sregs[PS] & ~PS_OWB) | (windowbase << PS_OWB_SHIFT) | PS_EXCM;
         env->sregs[EPC1] = env->pc = pc;
 
-        if (n == 1) {
+        if(n == 1) {
             HELPER(exception)(env, EXC_WINDOW_UNDERFLOW4);
-        } else if (n == 2) {
+        } else if(n == 2) {
             HELPER(exception)(env, EXC_WINDOW_UNDERFLOW8);
-        } else if (n == 3) {
+        } else if(n == 3) {
             HELPER(exception)(env, EXC_WINDOW_UNDERFLOW12);
         }
     }
@@ -200,10 +189,9 @@ void HELPER(restore_owb)(CPUState *env)
 
 void HELPER(movsp)(CPUState *env, uint32_t pc)
 {
-    if ((env->sregs[WINDOW_START] &
-         (windowstart_bit(env->sregs[WINDOW_BASE] - 3, env) |
-          windowstart_bit(env->sregs[WINDOW_BASE] - 2, env) |
-          windowstart_bit(env->sregs[WINDOW_BASE] - 1, env))) == 0) {
+    if((env->sregs[WINDOW_START] &
+        (windowstart_bit(env->sregs[WINDOW_BASE] - 3, env) | windowstart_bit(env->sregs[WINDOW_BASE] - 2, env) |
+         windowstart_bit(env->sregs[WINDOW_BASE] - 1, env))) == 0) {
         HELPER(exception_cause)(env, pc, ALLOCA_CAUSE);
     }
 }

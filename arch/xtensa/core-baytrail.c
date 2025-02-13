@@ -33,9 +33,5 @@
 
 #include "core-baytrail/xtensa-modules.c.inc"
 
-XtensaConfig baytrail __attribute__((unused)) = {
-    .name = "baytrail",
-    .isa_internal = &xtensa_modules,
-    .clock_freq_khz = 5000,
-    DEFAULT_SECTIONS
-};
+XtensaConfig baytrail
+    __attribute__((unused)) = { .name = "baytrail", .isa_internal = &xtensa_modules, .clock_freq_khz = 5000, DEFAULT_SECTIONS };

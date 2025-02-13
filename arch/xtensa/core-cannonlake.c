@@ -33,9 +33,5 @@
 
 #include "core-cannonlake/xtensa-modules.c.inc"
 
-XtensaConfig cannonlake __attribute__((unused)) = {
-    .name = "cannonlake",
-    .isa_internal = &xtensa_modules,
-    .clock_freq_khz = 5000,
-    DEFAULT_SECTIONS
-};
+XtensaConfig cannonlake
+    __attribute__((unused)) = { .name = "cannonlake", .isa_internal = &xtensa_modules, .clock_freq_khz = 5000, DEFAULT_SECTIONS };

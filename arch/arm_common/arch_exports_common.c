@@ -13,19 +13,19 @@ uint32_t tlib_check_system_register_access(const char *name, bool is_write)
     enum {
         REGISTER_NOT_FOUND = 1,
         ACCESSOR_NOT_FOUND = 2,
-        ACCESS_VALID       = 3,
+        ACCESS_VALID = 3,
     };
 
     const ARMCPRegInfo *ri = sysreg_find_by_name(env, name);
-    if (ri == NULL) {
+    if(ri == NULL) {
         return REGISTER_NOT_FOUND;
     }
 
-    if (ri->fieldoffset) {
+    if(ri->fieldoffset) {
         return ACCESS_VALID;
     }
 
-    if (is_write) {
+    if(is_write) {
         bool write_possible = ri->writefn != NULL;
         return write_possible ? ACCESS_VALID : ACCESSOR_NOT_FOUND;
     } else {

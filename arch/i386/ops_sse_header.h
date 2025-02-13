@@ -17,11 +17,11 @@
  * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 #if SHIFT == 0
-#define Reg                 MMXReg
-#define SUFFIX              _mmx
+#define Reg    MMXReg
+#define SUFFIX _mmx
 #else
-#define Reg                 XMMReg
-#define SUFFIX              _xmm
+#define Reg    XMMReg
+#define SUFFIX _xmm
 #endif
 
 #define dh_alias_Reg        ptr
@@ -48,17 +48,13 @@ DEF_HELPER_2(glue(psrldq, SUFFIX), void, Reg, Reg)
 DEF_HELPER_2(glue(pslldq, SUFFIX), void, Reg, Reg)
 #endif
 
-#define SSE_HELPER_B(name, F) \
-    DEF_HELPER_2(glue(name, SUFFIX), void, Reg, Reg)
+#define SSE_HELPER_B(name, F) DEF_HELPER_2(glue(name, SUFFIX), void, Reg, Reg)
 
-#define SSE_HELPER_W(name, F) \
-    DEF_HELPER_2(glue(name, SUFFIX), void, Reg, Reg)
+#define SSE_HELPER_W(name, F) DEF_HELPER_2(glue(name, SUFFIX), void, Reg, Reg)
 
-#define SSE_HELPER_L(name, F) \
-    DEF_HELPER_2(glue(name, SUFFIX), void, Reg, Reg)
+#define SSE_HELPER_L(name, F) DEF_HELPER_2(glue(name, SUFFIX), void, Reg, Reg)
 
-#define SSE_HELPER_Q(name, F) \
-    DEF_HELPER_2(glue(name, SUFFIX), void, Reg, Reg)
+#define SSE_HELPER_Q(name, F) DEF_HELPER_2(glue(name, SUFFIX), void, Reg, Reg)
 
 SSE_HELPER_B(paddb, FADD)
 SSE_HELPER_W(paddw, FADD)
@@ -133,11 +129,11 @@ DEF_HELPER_3(glue(pshufhw, SUFFIX), void, Reg, Reg, int)
 /* FPU ops */
 /* XXX: not accurate */
 
-#define SSE_HELPER_S(name, F) \
-    DEF_HELPER_2(name ## ps , void, Reg, Reg)        \
-    DEF_HELPER_2(name ## ss , void, Reg, Reg)        \
-    DEF_HELPER_2(name ## pd , void, Reg, Reg)        \
-    DEF_HELPER_2(name ## sd , void, Reg, Reg)
+#define SSE_HELPER_S(name, F)              \
+    DEF_HELPER_2(name##ps, void, Reg, Reg) \
+    DEF_HELPER_2(name##ss, void, Reg, Reg) \
+    DEF_HELPER_2(name##pd, void, Reg, Reg) \
+    DEF_HELPER_2(name##sd, void, Reg, Reg)
 
 SSE_HELPER_S(add, FPU_ADD)
 SSE_HELPER_S(sub, FPU_SUB)
@@ -200,11 +196,11 @@ DEF_HELPER_2(hsubpd, void, XMMReg, XMMReg)
 DEF_HELPER_2(addsubps, void, XMMReg, XMMReg)
 DEF_HELPER_2(addsubpd, void, XMMReg, XMMReg)
 
-#define SSE_HELPER_CMP(name, F) \
-    DEF_HELPER_2( name ## ps , void, Reg, Reg)        \
-    DEF_HELPER_2( name ## ss , void, Reg, Reg)        \
-    DEF_HELPER_2( name ## pd , void, Reg, Reg)        \
-    DEF_HELPER_2( name ## sd , void, Reg, Reg)
+#define SSE_HELPER_CMP(name, F)            \
+    DEF_HELPER_2(name##ps, void, Reg, Reg) \
+    DEF_HELPER_2(name##ss, void, Reg, Reg) \
+    DEF_HELPER_2(name##pd, void, Reg, Reg) \
+    DEF_HELPER_2(name##sd, void, Reg, Reg)
 
 SSE_HELPER_CMP(cmpeq, FPU_CMPEQ)
 SSE_HELPER_CMP(cmplt, FPU_CMPLT)
@@ -227,10 +223,10 @@ DEF_HELPER_1(glue(pmovmskb, SUFFIX), i32, Reg)
 DEF_HELPER_2(glue(packsswb, SUFFIX), void, Reg, Reg)
 DEF_HELPER_2(glue(packuswb, SUFFIX), void, Reg, Reg)
 DEF_HELPER_2(glue(packssdw, SUFFIX), void, Reg, Reg)
-#define UNPCK_OP(base_name, base)                               \
-    DEF_HELPER_2(glue(punpck ## base_name ## bw, SUFFIX) , void, Reg, Reg) \
-    DEF_HELPER_2(glue(punpck ## base_name ## wd, SUFFIX) , void, Reg, Reg) \
-    DEF_HELPER_2(glue(punpck ## base_name ## dq, SUFFIX) , void, Reg, Reg)
+#define UNPCK_OP(base_name, base)                                     \
+    DEF_HELPER_2(glue(punpck##base_name##bw, SUFFIX), void, Reg, Reg) \
+    DEF_HELPER_2(glue(punpck##base_name##wd, SUFFIX), void, Reg, Reg) \
+    DEF_HELPER_2(glue(punpck##base_name##dq, SUFFIX), void, Reg, Reg)
 
 UNPCK_OP(l, 0)
 UNPCK_OP(h, 1)

@@ -27,8 +27,7 @@
 
 #if !defined(TCG_TARGET_I386) || HOST_LONG_BITS != 64
 /* Long integer helpers */
-static inline void mul64(uint64_t *plow, uint64_t *phigh,
-                         uint64_t a, uint64_t b)
+static inline void mul64(uint64_t *plow, uint64_t *phigh, uint64_t a, uint64_t b)
 {
     typedef union {
         uint64_t ll;
@@ -63,23 +62,23 @@ static inline void mul64(uint64_t *plow, uint64_t *phigh,
 }
 
 /* Unsigned 64x64 -> 128 multiplication */
-void mulu64 (uint64_t *plow, uint64_t *phigh, uint64_t a, uint64_t b)
+void mulu64(uint64_t *plow, uint64_t *phigh, uint64_t a, uint64_t b)
 {
     mul64(plow, phigh, a, b);
 }
 
 /* Signed 64x64 -> 128 multiplication */
-void muls64 (uint64_t *plow, uint64_t *phigh, int64_t a, int64_t b)
+void muls64(uint64_t *plow, uint64_t *phigh, int64_t a, int64_t b)
 {
     uint64_t rh;
 
     mul64(plow, &rh, a, b);
 
     /* Adjust for signs.  */
-    if (b < 0) {
+    if(b < 0) {
         rh -= a;
     }
-    if (a < 0) {
+    if(a < 0) {
         rh -= b;
     }
     *phigh = rh;

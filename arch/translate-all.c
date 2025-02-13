@@ -43,7 +43,7 @@ CPUBreakpoint *process_breakpoints(CPUState *env, target_ulong pc)
 {
     CPUBreakpoint *bp;
     QTAILQ_FOREACH(bp, &env->breakpoints, entry) {
-        if (bp->pc == pc) {
+        if(bp->pc == pc) {
             return bp;
         }
     }
@@ -52,12 +52,12 @@ CPUBreakpoint *process_breakpoints(CPUState *env, target_ulong pc)
 
 static inline void gen_declare_instructions_count(TranslationBlock *tb)
 {
-    // Assumption: tb == cpu->current_tb when this block is executed
-    // This is ensured by the prepare_block_for_execution helper
+    //  Assumption: tb == cpu->current_tb when this block is executed
+    //  This is ensured by the prepare_block_for_execution helper
     TCGv_i32 declaration = tcg_temp_new_i32();
     TCGv_ptr tb_pointer = tcg_const_ptr((tcg_target_long)tb);
 
-    // (uint32_t) cpu->instructions_count_declaration = tb->icount
+    //  (uint32_t) cpu->instructions_count_declaration = tb->icount
     tcg_gen_ld_i32(declaration, tb_pointer, offsetof(TranslationBlock, icount));
     tcg_gen_st_i32(declaration, cpu_env, offsetof(CPUState, instructions_count_declaration));
 
@@ -65,10 +65,9 @@ static inline void gen_declare_instructions_count(TranslationBlock *tb)
     tcg_temp_free_i32(declaration);
 }
 
-__attribute__((weak))
-void gen_block_header_arch_action(TranslationBlock *tb)
+__attribute__((weak)) void gen_block_header_arch_action(TranslationBlock *tb)
 {
-    // It will be overriden by arch-specific actions
+    //  It will be overriden by arch-specific actions
 }
 
 static inline void gen_block_header(TranslationBlock *tb)
@@ -82,7 +81,7 @@ static inline void gen_block_header(TranslationBlock *tb)
     tcg_gen_brcondi_i32(TCG_COND_NE, flag, 0, exit_no_hook_label);
     tcg_temp_free_i32(flag);
 
-    if (cpu->block_begin_hook_present) {
+    if(cpu->block_begin_hook_present) {
         TCGv_i32 result = tcg_temp_new_i32();
         gen_helper_block_begin_event(result);
         block_header_interrupted_label = gen_new_label();
@@ -92,14 +91,14 @@ static inline void gen_block_header(TranslationBlock *tb)
 
     gen_declare_instructions_count(tb);
 
-    // It's important that the arch_action occurs after all other actions in the header are generated
-    // PMU counters in Arm depend on it
+    //  It's important that the arch_action occurs after all other actions in the header are generated
+    //  PMU counters in Arm depend on it
     gen_block_header_arch_action(tb);
 }
 
 static void gen_block_finished_hook(TranslationBlock *tb, uint32_t instructions_count)
 {
-    if (cpu->block_finished_hook_present) {
+    if(cpu->block_finished_hook_present) {
         TCGv first_instruction = tcg_const_tl(tb->pc);
         TCGv_i32 executed_instructions = tcg_const_i32(instructions_count);
         gen_helper_block_finished_event(first_instruction, executed_instructions);
@@ -116,7 +115,7 @@ static void gen_exit_tb_inner(TranslationBlock *tb, int n, uint32_t instructions
 
 static void gen_interrupt_tb(TranslationBlock *tb, int n)
 {
-    // since the block was interrupted before executing any instruction we return 0
+    //  since the block was interrupted before executing any instruction we return 0
     gen_exit_tb_inner(tb, n, 0);
 }
 
@@ -133,7 +132,7 @@ void gen_exit_tb_no_chaining(TranslationBlock *tb)
 
 static inline void gen_block_footer(TranslationBlock *tb)
 {
-    if (tlib_is_on_block_translation_enabled) {
+    if(tlib_is_on_block_translation_enabled) {
         tlib_on_block_translation(tb->pc, tb->size, tb->disas_flags);
     }
 
@@ -141,8 +140,7 @@ static inline void gen_block_footer(TranslationBlock *tb)
     gen_exit_tb(tb, EXIT_TB_FORCE);
     tcg_gen_br(finish_label);
 
-
-    if (cpu->block_begin_hook_present) {
+    if(cpu->block_begin_hook_present) {
         gen_set_label(block_header_interrupted_label);
         gen_interrupt_tb(tb, EXIT_TB_FORCE);
         tcg_gen_br(finish_label);
@@ -183,11 +181,11 @@ static void cpu_gen_code_inner(CPUState *env, TranslationBlock *tb)
     setup_disas_context(dc, env);
     tcg_clear_temp_count();
     UNLOCK_TB(tb);
-    while (1) {
+    while(1) {
         CHECK_LOCKED(tb);
-        if (unlikely(!QTAILQ_EMPTY(&env->breakpoints))) {
+        if(unlikely(!QTAILQ_EMPTY(&env->breakpoints))) {
             bp = process_breakpoints(env, dc->pc);
-            if (bp != NULL && gen_breakpoint(dc, bp)) {
+            if(bp != NULL && gen_breakpoint(dc, bp)) {
                 break;
             }
         }
@@ -196,32 +194,32 @@ static void cpu_gen_code_inner(CPUState *env, TranslationBlock *tb)
         int do_break = 0;
         tb->icount++;
 
-        if (!cpu->sync_pc_every_instruction_disabled) {
+        if(!cpu->sync_pc_every_instruction_disabled) {
             gen_sync_pc(&dcc);
         }
 
-        if (!gen_intermediate_code(env, dc)) {
+        if(!gen_intermediate_code(env, dc)) {
             do_break = 1;
         }
 
-        if (unlikely(dc->generate_block_exit_check)) {
+        if(unlikely(dc->generate_block_exit_check)) {
             dc->generate_block_exit_check = false;
             gen_helper_try_exit_cpu_loop(cpu_env);
         }
 
-        if (tcg_check_temp_count()) {
+        if(tcg_check_temp_count()) {
             tlib_abortf("TCG temps leak detected at PC %08X", dc->pc);
         }
-        if (do_break) {
+        if(do_break) {
             break;
         }
-        if (dc->is_jmp != DISAS_NEXT) {
+        if(dc->is_jmp != DISAS_NEXT) {
             break;
         }
-        if ((gen_opc_ptr - tcg->gen_opc_buf) >= OPC_MAX_SIZE) {
+        if((gen_opc_ptr - tcg->gen_opc_buf) >= OPC_MAX_SIZE) {
             break;
         }
-        if (tb->icount >= max_tb_icount) {
+        if(tb->icount >= max_tb_icount) {
             tb->was_cut = true;
             break;
         }
@@ -241,13 +239,12 @@ static uint8_t *encode_sleb128(uint8_t *p, target_long val)
     do {
         byte = val & 0x7f;
         val >>= 7;
-        more = !((val == 0 && (byte & 0x40) == 0)
-                 || (val == -1 && (byte & 0x40) != 0));
-        if (more) {
+        more = !((val == 0 && (byte & 0x40) == 0) || (val == -1 && (byte & 0x40) != 0));
+        if(more) {
             byte |= 0x80;
         }
         *p++ = byte;
-    } while (more);
+    } while(more);
 
     return p;
 }
@@ -264,8 +261,8 @@ static target_long decode_sleb128(uint8_t **pp)
         byte = *p++;
         val |= (target_ulong)(byte & 0x7f) << shift;
         shift += 7;
-    } while (byte & 0x80);
-    if (shift < TARGET_LONG_BITS && (byte & 0x40)) {
+    } while(byte & 0x80);
+    if(shift < TARGET_LONG_BITS && (byte & 0x40)) {
         val |= -(target_ulong)1 << shift;
     }
 
@@ -301,11 +298,11 @@ static int encode_search(TranslationBlock *tb, uint8_t *block)
 
     tb->tc_search = block;
 
-    for (i = 0, n = tb->icount; i < n; ++i) {
+    for(i = 0, n = tb->icount; i < n; ++i) {
         target_ulong prev;
 
-        for (j = 0; j < TARGET_INSN_START_WORDS; ++j) {
-            if (i == 0) {
+        for(j = 0; j < TARGET_INSN_START_WORDS; ++j) {
+            if(i == 0) {
                 prev = (j == 0 ? tb->pc : 0);
             } else {
                 prev = tcg->gen_insn_data[i - 1][j];
@@ -348,28 +345,30 @@ void cpu_gen_code(CPUState *env, TranslationBlock *tb, int *gen_code_size_ptr, i
     *search_size_ptr = search_size;
 }
 
-/* If `skip_current_instruction` is true state will be restored to the NEXT instruction after the found instruction (if the found instruction is not the last one in the block)
-  */
-static inline int cpu_restore_state_from_tb_ex(CPUState *env, TranslationBlock *tb, uintptr_t searched_pc, bool skip_current_instruction)
+/* If `skip_current_instruction` is true state will be restored to the NEXT instruction after the found instruction (if the found
+ * instruction is not the last one in the block)
+ */
+static inline int cpu_restore_state_from_tb_ex(CPUState *env, TranslationBlock *tb, uintptr_t searched_pc,
+                                               bool skip_current_instruction)
 {
     target_ulong data[TARGET_INSN_START_WORDS] = { tb->pc };
     uintptr_t host_pc = (uintptr_t)tb->tc_ptr;
     uint8_t *p = tb->tc_search;
     int i, j, num_insns = tb->icount;
 
-    if (searched_pc < host_pc) {
+    if(searched_pc < host_pc) {
         return -1;
     }
 
     /* Reconstruct the stored insn data while looking for the point at
        which the end of the insn exceeds the searched_pc.  */
-    for (i = 1; i <= num_insns; ++i) {
-        for (j = 0; j < TARGET_INSN_START_WORDS; ++j) {
+    for(i = 1; i <= num_insns; ++i) {
+        for(j = 0; j < TARGET_INSN_START_WORDS; ++j) {
             data[j] += decode_sleb128(&p);
         }
         host_pc += decode_sleb128(&p);
-        if (host_pc > searched_pc) {
-            if (skip_current_instruction) {                
+        if(host_pc > searched_pc) {
+            if(skip_current_instruction) {
                 skip_current_instruction = false;
                 continue;
             }
@@ -390,16 +389,15 @@ int cpu_restore_state_from_tb(CPUState *env, TranslationBlock *tb, uintptr_t sea
 
 static inline int adjust_instructions_count(TranslationBlock *tb, bool include_last_instruction, int executed_instructions)
 {
-    if (executed_instructions == -1) {
+    if(executed_instructions == -1) {
         return -1;
     }
 
-    if (executed_instructions > 0 && !include_last_instruction) {
+    if(executed_instructions > 0 && !include_last_instruction) {
         executed_instructions--;
     }
 
-
-    if (executed_instructions != -1) {
+    if(executed_instructions != -1) {
         cpu->instructions_count_value += executed_instructions;
         cpu->instructions_count_total_value += executed_instructions;
         cpu->instructions_count_declaration = 0;
@@ -408,7 +406,8 @@ static inline int adjust_instructions_count(TranslationBlock *tb, bool include_l
     return executed_instructions;
 }
 
-int cpu_restore_state_and_restore_instructions_count(CPUState *env, TranslationBlock *tb, uintptr_t searched_pc, bool include_last_instruction)
+int cpu_restore_state_and_restore_instructions_count(CPUState *env, TranslationBlock *tb, uintptr_t searched_pc,
+                                                     bool include_last_instruction)
 {
     return adjust_instructions_count(tb, include_last_instruction, cpu_restore_state_from_tb_ex(env, tb, searched_pc, false));
 }
@@ -418,28 +417,29 @@ int cpu_restore_state_to_next_instruction(CPUState *env, struct TranslationBlock
     return adjust_instructions_count(tb, false, cpu_restore_state_from_tb_ex(env, tb, searched_pc, true));
 }
 
-void cpu_restore_state(CPUState *env, void *retaddr) {
-  TranslationBlock *tb;
-  uintptr_t pc = (uintptr_t)retaddr;
+void cpu_restore_state(CPUState *env, void *retaddr)
+{
+    TranslationBlock *tb;
+    uintptr_t pc = (uintptr_t)retaddr;
 
-  if (pc) {
-    /* now we have a real cpu fault */
-    tb = tb_find_pc(pc);
-    if (tb) {
-      /* the PC is inside the translated code. It means that we have
-         a virtual CPU fault */
-      cpu_restore_state_and_restore_instructions_count(env, tb, pc, true);
+    if(pc) {
+        /* now we have a real cpu fault */
+        tb = tb_find_pc(pc);
+        if(tb) {
+            /* the PC is inside the translated code. It means that we have
+               a virtual CPU fault */
+            cpu_restore_state_and_restore_instructions_count(env, tb, pc, true);
+        }
     }
-  }
 }
 
 void generate_opcode_count_increment(CPUState *env, uint64_t opcode)
 {
     uint64_t masked_opcode;
-    for (uint32_t i = 0; i < env->opcode_counters_size; i++) {
-        // mask out non-opcode fields
+    for(uint32_t i = 0; i < env->opcode_counters_size; i++) {
+        //  mask out non-opcode fields
         masked_opcode = opcode & env->opcode_counters[i].mask;
-        if (env->opcode_counters[i].opcode == masked_opcode) {
+        if(env->opcode_counters[i].opcode == masked_opcode) {
             TCGv_i32 p = tcg_const_i32(i);
             gen_helper_count_opcode_inner(p);
             tcg_temp_free_i32(p);
@@ -469,15 +469,15 @@ void generate_stack_announcement_imm_i64(uint64_t addr, int type, bool clear_lsb
  * last bit = 1 - change to Thumb mode
  * This bit has to be cleared if it is set to 1 since it will produce an invalid address
  * (PC has to be alligned to 4 or 2 bytes, in both cases the last bit should be set to 0)
-*/
+ */
 void generate_stack_announcement(TCGv pc, int type, bool clear_lsb)
 {
-    if (type == STACK_FRAME_NO_CHANGE) {
+    if(type == STACK_FRAME_NO_CHANGE) {
         return;
     }
     TCGv helper_type = tcg_const_i32(type);
     TCGv jump_target = tcg_temp_new();
-    if (clear_lsb) {
+    if(clear_lsb) {
         tcg_gen_andi_tl(jump_target, pc, ~1);
     } else {
         tcg_gen_mov_tl(jump_target, pc);
@@ -489,18 +489,18 @@ void generate_stack_announcement(TCGv pc, int type, bool clear_lsb)
 
 void tlib_announce_stack_change(target_ulong address, int change_type)
 {
-    #ifdef SUPPORTS_GUEST_PROFILING
+#ifdef SUPPORTS_GUEST_PROFILING
     tlib_profiler_announce_stack_change(address, tlib_get_register_value(RA), cpu->instructions_count_total_value, change_type);
-    #else
+#else
     tlib_abortf("This architecture does not support the profiler");
-    #endif
+#endif
 }
 
 void tlib_announce_context_change(target_ulong context_id)
 {
-    #ifdef SUPPORTS_GUEST_PROFILING
+#ifdef SUPPORTS_GUEST_PROFILING
     tlib_profiler_announce_context_change(context_id);
-    #else
+#else
     tlib_abortf("This architecture does not support the profiler");
-    #endif
+#endif
 }

@@ -22,7 +22,7 @@
 #include "cpu-common.h"
 #include "arch_callbacks.h"
 
-// This is used as a part of MISA register, indicating the architecture width.
+//  This is used as a part of MISA register, indicating the architecture width.
 #if defined(TARGET_RISCV32)
 #define RVXLEN ((target_ulong)1 << (TARGET_LONG_BITS - 2))
 #elif defined(TARGET_RISCV64)
@@ -42,8 +42,7 @@ void cpu_reset(CPUState *env)
     memcpy(custom_instructions, env->custom_instructions,
            sizeof(custom_instruction_descriptor_t) * CPU_CUSTOM_INSTRUCTIONS_LIMIT);
     uint64_t custom_csrs[CSRS_SLOTS];
-    memcpy(custom_csrs, env->custom_csrs,
-           sizeof(uint64_t) * CSRS_SLOTS);
+    memcpy(custom_csrs, env->custom_csrs, sizeof(uint64_t) * CSRS_SLOTS);
     target_ulong vlenb = env->vlenb;
     target_ulong elen = env->elen;
 
@@ -69,8 +68,7 @@ void cpu_reset(CPUState *env)
     env->custom_instructions_count = custom_instructions_count;
     memcpy(env->custom_instructions, custom_instructions,
            sizeof(custom_instruction_descriptor_t) * CPU_CUSTOM_INSTRUCTIONS_LIMIT);
-    memcpy(env->custom_csrs, custom_csrs,
-           sizeof(uint64_t) * CSRS_SLOTS);
+    memcpy(env->custom_csrs, custom_csrs, sizeof(uint64_t) * CSRS_SLOTS);
     env->pmp_napot_grain = -1;
     env->tb_broadcast_dirty = false;
 
@@ -87,15 +85,15 @@ int get_interrupts_in_order(target_ulong pending_interrupts, target_ulong priv)
      * We should take interrupts for priority >= env->priv
      * If no interrupt should be taken returns -1 */
     int bit = EXCP_NONE;
-    if (pending_interrupts & 0b1111) {
-        for (int i = PRV_M; i >= priv; i--) {
-            if ((1 << (bit = i | 8)) & pending_interrupts) { /* external int */
+    if(pending_interrupts & 0b1111) {
+        for(int i = PRV_M; i >= priv; i--) {
+            if((1 << (bit = i | 8)) & pending_interrupts) { /* external int */
                 break;
             }
-            if ((1 << (bit = i | 0)) & pending_interrupts) { /* software int */
+            if((1 << (bit = i | 0)) & pending_interrupts) { /* software int */
                 break;
             }
-            if ((1 << (bit = i | 4)) & pending_interrupts) { /* timer int */
+            if((1 << (bit = i | 4)) & pending_interrupts) { /* timer int */
                 break;
             }
         }
@@ -111,7 +109,7 @@ static int riscv_clic_interrupt_pending(CPUState *env)
 {
     target_ulong priv = env->priv;
 
-    if (!cpu_in_clic_mode(env)) {
+    if(!cpu_in_clic_mode(env)) {
         return EXCP_NONE;
     }
 
@@ -119,7 +117,7 @@ static int riscv_clic_interrupt_pending(CPUState *env)
     uint32_t mintthresh = get_field(env->mintthresh, MINTTHRESH_TH);
     uint32_t mlevel = mintthresh > mil ? mintthresh : mil;
     /* all machine-mode interrupts are always enabled when at lower privilege levels */
-    if (priv < PRV_M) {
+    if(priv < PRV_M) {
         mlevel = 0;
     }
 
@@ -127,7 +125,7 @@ static int riscv_clic_interrupt_pending(CPUState *env)
     uint32_t sintthresh = get_field(env->sintthresh, SINTTHRESH_TH);
     uint32_t slevel = sintthresh > sil ? sintthresh : sil;
     /* all supervisor-mode interrupts are always enabled when at lower privilege levels */
-    if (priv < PRV_S) {
+    if(priv < PRV_S) {
         slevel = 0;
     }
 
@@ -135,17 +133,13 @@ static int riscv_clic_interrupt_pending(CPUState *env)
     bool mie = (priv == PRV_M && get_field(env->mstatus, MSTATUS_MIE)) || priv < PRV_M;
     bool sie = (priv == PRV_S && get_field(env->mstatus, MSTATUS_SIE)) || priv < PRV_S;
 
-    if (sie &&
-        env->clic_interrupt_priv == PRV_S &&
-        env->interrupt_request & RISCV_CPU_INTERRUPT_CLIC &&
-        env->clic_interrupt_level > slevel) {
+    if(sie && env->clic_interrupt_priv == PRV_S && env->interrupt_request & RISCV_CPU_INTERRUPT_CLIC &&
+       env->clic_interrupt_level > slevel) {
         return env->clic_interrupt_pending;
     }
 
-    if (mie &&
-        env->clic_interrupt_priv == PRV_M &&
-        env->interrupt_request & RISCV_CPU_INTERRUPT_CLIC &&
-        env->clic_interrupt_level > mlevel) {
+    if(mie && env->clic_interrupt_priv == PRV_M && env->interrupt_request & RISCV_CPU_INTERRUPT_CLIC &&
+       env->clic_interrupt_level > mlevel) {
         return env->clic_interrupt_pending;
     }
 
@@ -162,37 +156,37 @@ int riscv_cpu_hw_interrupts_pending(CPUState *env)
 {
     target_ulong pending_interrupts = env->mip & env->mie;
     target_ulong priv = env->priv;
-    target_ulong enabled_interrupts = (target_ulong) - 1UL;
+    target_ulong enabled_interrupts = (target_ulong)-1UL;
 
-    if (cpu_in_clic_mode(env)) {
+    if(cpu_in_clic_mode(env)) {
         return riscv_clic_interrupt_pending(env);
     }
 
-    switch (priv) {
-    /* Disable interrupts for lower privileges, if interrupt is not delegated it is for higher level */
-    case PRV_M:
-        pending_interrupts &= ~((IRQ_SS | IRQ_ST | IRQ_SE) & env->mideleg);                /* fall through */
-    case PRV_S:
-        /* For future use, extension N not implemented yet */
-        pending_interrupts &= ~((IRQ_US | IRQ_UT | IRQ_UE) & env->mideleg & env->sideleg); /* fall through */
-    case PRV_U:
-        break;
+    switch(priv) {
+        /* Disable interrupts for lower privileges, if interrupt is not delegated it is for higher level */
+        case PRV_M:
+            pending_interrupts &= ~((IRQ_SS | IRQ_ST | IRQ_SE) & env->mideleg); /* fall through */
+        case PRV_S:
+            /* For future use, extension N not implemented yet */
+            pending_interrupts &= ~((IRQ_US | IRQ_UT | IRQ_UE) & env->mideleg & env->sideleg); /* fall through */
+        case PRV_U:
+            break;
     }
 
-    if (priv == PRV_M && !get_field(env->mstatus, MSTATUS_MIE)) {
+    if(priv == PRV_M && !get_field(env->mstatus, MSTATUS_MIE)) {
         enabled_interrupts = 0;
-    } else if (priv == PRV_S && !get_field(env->mstatus, MSTATUS_SIE)) {
+    } else if(priv == PRV_S && !get_field(env->mstatus, MSTATUS_SIE)) {
         enabled_interrupts &= ~(env->mideleg);
     }
 
     enabled_interrupts &= pending_interrupts;
 
-    if (!enabled_interrupts) {
+    if(!enabled_interrupts) {
         return EXCP_NONE;
     }
 
-    return (env->privilege_architecture >= RISCV_PRIV1_11) ? get_interrupts_in_order(enabled_interrupts, priv) : ctz64(
-        enabled_interrupts);
+    return (env->privilege_architecture >= RISCV_PRIV1_11) ? get_interrupts_in_order(enabled_interrupts, priv)
+                                                           : ctz64(enabled_interrupts);
 }
 
 /* get_physical_address - get the physical address for this virtual address
@@ -206,8 +200,7 @@ int riscv_cpu_hw_interrupts_pending(CPUState *env)
 static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int *prot, target_ulong address, int access_type,
                                 int mmu_idx, int no_page_fault)
 {
-    if(unlikely(cpu->external_mmu_enabled))
-    {
+    if(unlikely(cpu->external_mmu_enabled)) {
         return get_external_mmu_phys_addr(env, address, access_type, physical, prot, no_page_fault);
     }
     /* NOTE: the env->pc value visible here will not be
@@ -215,13 +208,13 @@ static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int
      * (riscv_cpu_do_interrupt) is correct */
     int mode = mmu_idx;
 
-    if (mode == PRV_M && access_type != ACCESS_INST_FETCH) {
-        if (get_field(env->mstatus, MSTATUS_MPRV)) {
+    if(mode == PRV_M && access_type != ACCESS_INST_FETCH) {
+        if(get_field(env->mstatus, MSTATUS_MPRV)) {
             mode = get_field(env->mstatus, MSTATUS_MPP);
         }
     }
 
-    if (mode == PRV_M) {
+    if(mode == PRV_M) {
         *physical = address;
         *prot = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
         return TRANSLATE_SUCCESS;
@@ -235,56 +228,77 @@ static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int
     int levels = 0, ptidxbits = 0, ptesize = 0, vm = 0, sum = 0;
     int mxr = get_field(env->mstatus, MSTATUS_MXR);
 
-    if (env->privilege_architecture >= RISCV_PRIV1_10) {
+    if(env->privilege_architecture >= RISCV_PRIV1_10) {
         base = get_field(env->satp, SATP_PPN) << PGSHIFT;
         sum = get_field(env->mstatus, MSTATUS_SUM);
         vm = get_field(env->satp, SATP_MODE);
-        switch (vm) {
-        case VM_1_10_SV32:
-            levels = 2; ptidxbits = 10; ptesize = 4; break;
-        case VM_1_10_SV39:
-            levels = 3; ptidxbits = 9; ptesize = 8; break;
-        case VM_1_10_SV48:
-            levels = 4; ptidxbits = 9; ptesize = 8; break;
-        case VM_1_10_SV57:
-            levels = 5; ptidxbits = 9; ptesize = 8; break;
-        case VM_1_10_MBARE:
-            *physical = addr;
-            *prot = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
-            return TRANSLATE_SUCCESS;
-        default:
-            tlib_abort("unsupported SATP_MODE value\n");
+        switch(vm) {
+            case VM_1_10_SV32:
+                levels = 2;
+                ptidxbits = 10;
+                ptesize = 4;
+                break;
+            case VM_1_10_SV39:
+                levels = 3;
+                ptidxbits = 9;
+                ptesize = 8;
+                break;
+            case VM_1_10_SV48:
+                levels = 4;
+                ptidxbits = 9;
+                ptesize = 8;
+                break;
+            case VM_1_10_SV57:
+                levels = 5;
+                ptidxbits = 9;
+                ptesize = 8;
+                break;
+            case VM_1_10_MBARE:
+                *physical = addr;
+                *prot = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
+                return TRANSLATE_SUCCESS;
+            default:
+                tlib_abort("unsupported SATP_MODE value\n");
         }
     } else {
         base = env->sptbr << PGSHIFT;
         sum = !get_field(env->mstatus, MSTATUS_PUM);
         vm = get_field(env->mstatus, MSTATUS_VM);
-        switch (vm) {
-        case VM_1_09_SV32:
-            levels = 2; ptidxbits = 10; ptesize = 4; break;
-        case VM_1_09_SV39:
-            levels = 3; ptidxbits = 9; ptesize = 8; break;
-        case VM_1_09_SV48:
-            levels = 4; ptidxbits = 9; ptesize = 8; break;
-        case VM_1_09_MBARE:
-            *physical = addr;
-            *prot = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
-            return TRANSLATE_SUCCESS;
-        default:
-            tlib_abort("unsupported MSTATUS_VM value\n");
+        switch(vm) {
+            case VM_1_09_SV32:
+                levels = 2;
+                ptidxbits = 10;
+                ptesize = 4;
+                break;
+            case VM_1_09_SV39:
+                levels = 3;
+                ptidxbits = 9;
+                ptesize = 8;
+                break;
+            case VM_1_09_SV48:
+                levels = 4;
+                ptidxbits = 9;
+                ptesize = 8;
+                break;
+            case VM_1_09_MBARE:
+                *physical = addr;
+                *prot = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
+                return TRANSLATE_SUCCESS;
+            default:
+                tlib_abort("unsupported MSTATUS_VM value\n");
         }
     }
 
     int va_bits = PGSHIFT + levels * ptidxbits;
     target_ulong mask = (1L << (TARGET_LONG_BITS - (va_bits - 1))) - 1;
     target_ulong masked_msbs = (addr >> (va_bits - 1)) & mask;
-    if (masked_msbs != 0 && masked_msbs != mask) {
+    if(masked_msbs != 0 && masked_msbs != mask) {
         return TRANSLATE_FAIL;
     }
 
     int ptshift = (levels - 1) * ptidxbits;
     int i;
-    for (i = 0; i < levels; i++, ptshift -= ptidxbits) {
+    for(i = 0; i < levels; i++, ptshift -= ptidxbits) {
         target_ulong idx = (addr >> (PGSHIFT + ptshift)) & ((1 << ptidxbits) - 1);
 
         /* check that physical address of PTE is legal */
@@ -296,21 +310,22 @@ static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int
 #endif
         target_ulong ppn = pte >> PTE_PPN_SHIFT;
 
-        if (PTE_TABLE(pte)) { /* next level of page table */
+        if(PTE_TABLE(pte)) { /* next level of page table */
             base = ppn << PGSHIFT;
-        } else if ((pte & PTE_U) && (mode == PRV_S) &&
-                   (!sum || ((env->privilege_architecture >= RISCV_PRIV1_11) && access_type == ACCESS_INST_FETCH))) {
+        } else if((pte & PTE_U) && (mode == PRV_S) &&
+                  (!sum || ((env->privilege_architecture >= RISCV_PRIV1_11) && access_type == ACCESS_INST_FETCH))) {
             break;
-        } else if (!(pte & PTE_U) && (mode != PRV_S)) {
+        } else if(!(pte & PTE_U) && (mode != PRV_S)) {
             break;
-        } else if (!(pte & PTE_V) || (!(pte & PTE_R) && (pte & PTE_W))) {
+        } else if(!(pte & PTE_V) || (!(pte & PTE_R) && (pte & PTE_W))) {
             break;
-        } else if (access_type == ACCESS_INST_FETCH ? !(pte & PTE_X) : access_type == ACCESS_DATA_LOAD ?  !(pte & PTE_R) &&
-                   !(mxr && (pte & PTE_X)) : !((pte & PTE_R) && (pte & PTE_W))) {
+        } else if(access_type == ACCESS_INST_FETCH  ? !(pte & PTE_X)
+                  : access_type == ACCESS_DATA_LOAD ? !(pte & PTE_R) && !(mxr && (pte & PTE_X))
+                                                    : !((pte & PTE_R) && (pte & PTE_W))) {
             break;
         } else {
             target_ulong updated_pte = pte | PTE_A | ((access_type == ACCESS_DATA_STORE) * PTE_D);
-            if (pte != updated_pte) {
+            if(pte != updated_pte) {
                 /* set accessed and possibly dirty bits.
                    we only put it in the TLB if it has the right stuff */
 #if defined(TARGET_RISCV64)
@@ -330,13 +345,13 @@ static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int
              * or if it was already dirty
              *
              * at this point, we assume that protection checks have occurred */
-            if (pte & PTE_X) {
+            if(pte & PTE_X) {
                 *prot |= PAGE_EXEC;
             }
-            if ((pte & PTE_W) && (access_type == ACCESS_DATA_STORE || (pte & PTE_D))) {
+            if((pte & PTE_W) && (access_type == ACCESS_DATA_STORE || (pte & PTE_D))) {
                 *prot |= PAGE_WRITE;
             }
-            if ((pte & PTE_R) || ((pte & PTE_X) && mxr)) {
+            if((pte & PTE_R) || ((pte & PTE_X) && mxr)) {
                 *prot |= PAGE_READ;
             }
             return TRANSLATE_SUCCESS;
@@ -347,16 +362,16 @@ static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int
 
 static void raise_mmu_exception(CPUState *env, target_ulong address, int access_type)
 {
-    int page_fault_exceptions =
-        (env->privilege_architecture >= RISCV_PRIV1_10) && get_field(env->satp, SATP_MODE) != VM_1_10_MBARE;
+    int page_fault_exceptions = (env->privilege_architecture >= RISCV_PRIV1_10) &&
+                                get_field(env->satp, SATP_MODE) != VM_1_10_MBARE;
     int exception = 0;
-    if (access_type == ACCESS_INST_FETCH) {        /* inst access */
+    if(access_type == ACCESS_INST_FETCH) { /* inst access */
         exception = page_fault_exceptions ? RISCV_EXCP_INST_PAGE_FAULT : RISCV_EXCP_INST_ACCESS_FAULT;
         env->badaddr = address;
-    } else if (access_type == ACCESS_DATA_STORE) { /* store access */
+    } else if(access_type == ACCESS_DATA_STORE) { /* store access */
         exception = page_fault_exceptions ? RISCV_EXCP_STORE_PAGE_FAULT : RISCV_EXCP_STORE_AMO_ACCESS_FAULT;
         env->badaddr = address;
-    } else if (access_type == ACCESS_DATA_LOAD) {  /* load access */
+    } else if(access_type == ACCESS_DATA_LOAD) { /* load access */
         exception = page_fault_exceptions ? RISCV_EXCP_LOAD_PAGE_FAULT : RISCV_EXCP_LOAD_ACCESS_FAULT;
         env->badaddr = address;
     } else {
@@ -371,7 +386,7 @@ target_phys_addr_t cpu_get_phys_page_debug(CPUState *env, target_ulong addr)
     int prot;
     int mem_idx = cpu_mmu_index(env);
 
-    if (get_physical_address(env, &phys_addr, &prot, addr, ACCESS_DATA_LOAD, mem_idx, 0)) {
+    if(get_physical_address(env, &phys_addr, &prot, addr, ACCESS_DATA_LOAD, mem_idx, 0)) {
         return -1;
     }
     return phys_addr;
@@ -392,32 +407,29 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, i
 
     ret = get_physical_address(env, &pa, &prot, address, access_type, mmu_idx, no_page_fault);
     pmp_prot = pmp_get_access(env, pa, access_width, access_type);
-    if (!cpu->external_mmu_enabled && !((pmp_access_type & pmp_prot) == pmp_access_type)) {
+    if(!cpu->external_mmu_enabled && !((pmp_access_type & pmp_prot) == pmp_access_type)) {
         ret = TRANSLATE_FAIL;
     }
-    if (ret == TRANSLATE_SUCCESS) {
+    if(ret == TRANSLATE_SUCCESS) {
         overlapping_region_id = pmp_find_overlapping(env, pa & TARGET_PAGE_MASK, TARGET_PAGE_SIZE, 0);
 
-        // are there any PMP regions defined for this page?
-        if (overlapping_region_id != -1) {
-            // does the PMP region cover only a part of the page?
-            if (env->pmp_state.addr[overlapping_region_id].sa > (pa & TARGET_PAGE_MASK)
-                || env->pmp_state.addr[overlapping_region_id].ea < (pa & TARGET_PAGE_MASK) + TARGET_PAGE_SIZE - 1)
-            {
-                // this effectively makes the tlb page entry one-shot:
-                // thanks to this every access to this page will be verified against PMP
+        //  are there any PMP regions defined for this page?
+        if(overlapping_region_id != -1) {
+            //  does the PMP region cover only a part of the page?
+            if(env->pmp_state.addr[overlapping_region_id].sa > (pa & TARGET_PAGE_MASK) ||
+               env->pmp_state.addr[overlapping_region_id].ea < (pa & TARGET_PAGE_MASK) + TARGET_PAGE_SIZE - 1) {
+                //  this effectively makes the tlb page entry one-shot:
+                //  thanks to this every access to this page will be verified against PMP
                 page_size = access_width;
-            }
-            else
-            {
-                // PMP region covers the entire page, we can safely propagate restrictions
-                // to the page level (PAGE_xxxx follows the same notation as PMP_xxxx)
+            } else {
+                //  PMP region covers the entire page, we can safely propagate restrictions
+                //  to the page level (PAGE_xxxx follows the same notation as PMP_xxxx)
                 prot &= pmp_prot;
             }
         }
 
         tlb_set_page(env, address & TARGET_PAGE_MASK, pa & TARGET_PAGE_MASK, prot, mmu_idx, page_size);
-    } else if (!cpu->external_mmu_enabled && !no_page_fault && ret == TRANSLATE_FAIL) {
+    } else if(!cpu->external_mmu_enabled && !no_page_fault && ret == TRANSLATE_FAIL) {
         raise_mmu_exception(env, address, access_type);
     }
     return ret;
@@ -431,12 +443,12 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, i
  */
 void do_interrupt(CPUState *env)
 {
-    if (env->nmi_pending > NMI_NONE) {
+    if(env->nmi_pending > NMI_NONE) {
         do_nmi(env);
         return;
     }
 
-    if (env->exception_index == EXCP_NONE) {
+    if(env->exception_index == EXCP_NONE) {
         return;
     }
 
@@ -449,7 +461,7 @@ void do_interrupt(CPUState *env)
     uint8_t is_interrupt = 0;
     uint8_t is_in_clic_mode = cpu_in_clic_mode(env);
 
-    if (env->exception_index & (RISCV_EXCP_INT_FLAG)) {
+    if(env->exception_index & (RISCV_EXCP_INT_FLAG)) {
         /* hacky for now. the MSB (bit 63) indicates interrupt but cs->exception
            index is only 32 bits wide */
         fixed_cause = env->exception_index & RISCV_EXCP_INT_MASK;
@@ -458,20 +470,20 @@ void do_interrupt(CPUState *env)
         is_interrupt = 1;
     } else {
         /* fixup User ECALL -> correct priv ECALL */
-        if (env->exception_index == RISCV_EXCP_U_ECALL) {
-            switch (env->priv) {
-            case PRV_U:
-                fixed_cause = RISCV_EXCP_U_ECALL;
-                break;
-            case PRV_S:
-                fixed_cause = RISCV_EXCP_S_ECALL;
-                break;
-            case PRV_H:
-                fixed_cause = RISCV_EXCP_H_ECALL;
-                break;
-            case PRV_M:
-                fixed_cause = RISCV_EXCP_M_ECALL;
-                break;
+        if(env->exception_index == RISCV_EXCP_U_ECALL) {
+            switch(env->priv) {
+                case PRV_U:
+                    fixed_cause = RISCV_EXCP_U_ECALL;
+                    break;
+                case PRV_S:
+                    fixed_cause = RISCV_EXCP_S_ECALL;
+                    break;
+                case PRV_H:
+                    fixed_cause = RISCV_EXCP_H_ECALL;
+                    break;
+                case PRV_M:
+                    fixed_cause = RISCV_EXCP_M_ECALL;
+                    break;
             }
         } else {
             fixed_cause = env->exception_index;
@@ -479,17 +491,16 @@ void do_interrupt(CPUState *env)
         bit = fixed_cause;
     }
 
-    uint8_t hasbadaddr =
-        (fixed_cause == RISCV_EXCP_ILLEGAL_INST) || (fixed_cause == RISCV_EXCP_INST_ADDR_MIS) ||
-        (fixed_cause == RISCV_EXCP_INST_ACCESS_FAULT) || (fixed_cause == RISCV_EXCP_LOAD_ADDR_MIS) ||
-        (fixed_cause == RISCV_EXCP_STORE_AMO_ADDR_MIS) || (fixed_cause == RISCV_EXCP_LOAD_ACCESS_FAULT) ||
-        (fixed_cause == RISCV_EXCP_STORE_AMO_ACCESS_FAULT) || (fixed_cause == RISCV_EXCP_INST_PAGE_FAULT) ||
-        (fixed_cause == RISCV_EXCP_LOAD_PAGE_FAULT) || (fixed_cause == RISCV_EXCP_STORE_PAGE_FAULT);
+    uint8_t hasbadaddr = (fixed_cause == RISCV_EXCP_ILLEGAL_INST) || (fixed_cause == RISCV_EXCP_INST_ADDR_MIS) ||
+                         (fixed_cause == RISCV_EXCP_INST_ACCESS_FAULT) || (fixed_cause == RISCV_EXCP_LOAD_ADDR_MIS) ||
+                         (fixed_cause == RISCV_EXCP_STORE_AMO_ADDR_MIS) || (fixed_cause == RISCV_EXCP_LOAD_ACCESS_FAULT) ||
+                         (fixed_cause == RISCV_EXCP_STORE_AMO_ACCESS_FAULT) || (fixed_cause == RISCV_EXCP_INST_PAGE_FAULT) ||
+                         (fixed_cause == RISCV_EXCP_LOAD_PAGE_FAULT) || (fixed_cause == RISCV_EXCP_STORE_PAGE_FAULT);
 
     bool is_clic_interrupt = is_in_clic_mode && is_interrupt;
 
     target_ulong int_priv = env->priv;
-    if (is_clic_interrupt) {
+    if(is_clic_interrupt) {
         int_priv = env->clic_interrupt_priv;
         tlib_clic_acknowledge_interrupt();
         if(env->clic_interrupt_vectored) {
@@ -499,11 +510,11 @@ void do_interrupt(CPUState *env)
 
     /* if in CLIC mode then only medeleg is active (interrupt privilege mode is set in the CLIC instead of mideleg) */
     bool is_delegated = (is_interrupt ? env->mideleg : env->medeleg) & (1 << bit);
-    if (int_priv == PRV_M || !(is_delegated || is_clic_interrupt)) {
+    if(int_priv == PRV_M || !(is_delegated || is_clic_interrupt)) {
         /* handle the trap in M-mode */
         env->mepc = env->pc;
-        if (hasbadaddr) {
-            if (fixed_cause == RISCV_EXCP_ILLEGAL_INST) {
+        if(hasbadaddr) {
+            if(fixed_cause == RISCV_EXCP_ILLEGAL_INST) {
                 env->mtval = env->opcode;
             } else {
                 env->mtval = env->badaddr;
@@ -511,8 +522,8 @@ void do_interrupt(CPUState *env)
         }
 
         /* Lowest 2 bits of MTVEC change mode to vectored (01) or CLIC (11) */
-        if (is_in_clic_mode) {
-            if (is_interrupt && env->clic_interrupt_vectored) {
+        if(is_in_clic_mode) {
+            if(is_interrupt && env->clic_interrupt_vectored) {
                 target_ulong vect_addr = env->mtvt + bit * sizeof(target_ulong);
                 target_ulong vect = ldp_phys(vect_addr);
                 env->pc = vect;
@@ -520,7 +531,8 @@ void do_interrupt(CPUState *env)
                 /* CLIC mode exception or shv non-vectored interrupt */
                 env->pc = env->mtvec & ~MTVEC_MODE_SUBMODE;
             }
-        } else if (get_field(env->mtvec, MTVEC_MODE) == MTVEC_MODE_CLINT_VECTORED && is_interrupt && env->privilege_architecture >= RISCV_PRIV1_10) {
+        } else if(get_field(env->mtvec, MTVEC_MODE) == MTVEC_MODE_CLINT_VECTORED && is_interrupt &&
+                  env->privilege_architecture >= RISCV_PRIV1_10) {
             /* CLINT vectored mode */
             env->pc = (env->mtvec & ~MTVEC_MODE) + (fixed_cause * 4);
         } else {
@@ -529,7 +541,8 @@ void do_interrupt(CPUState *env)
         }
 
         target_ulong ms = env->mstatus;
-        target_ulong mpie = (env->privilege_architecture >= RISCV_PRIV1_10) ? get_field(ms, MSTATUS_MIE) : get_field(ms, 1 << env->priv);
+        target_ulong mpie = (env->privilege_architecture >= RISCV_PRIV1_10) ? get_field(ms, MSTATUS_MIE)
+                                                                            : get_field(ms, 1 << env->priv);
         ms = set_field(ms, MSTATUS_MPIE, mpie);
         ms = set_field(ms, MSTATUS_MIE, 0);
         ms = set_field(ms, MSTATUS_MPP, env->priv);
@@ -538,7 +551,7 @@ void do_interrupt(CPUState *env)
         /* Use fixed_cause as a base for mcause, it already has the interrupt bit set properly */
         target_ulong mc = fixed_cause;
         /* These extra fields are present in mcause only in CLIC mode */
-        if (is_in_clic_mode) {
+        if(is_in_clic_mode) {
             mc = set_field(mc, MCAUSE_MPIL, get_field(env->mintstatus, MINTSTATUS_MIL));
             mc = set_field(mc, MCAUSE_MPIE, mpie);
             mc = set_field(mc, MCAUSE_MPP, env->priv);
@@ -548,15 +561,15 @@ void do_interrupt(CPUState *env)
         }
         csr_write_helper(env, mc, CSR_MCAUSE);
 
-        if (is_interrupt) {
+        if(is_interrupt) {
             env->mintstatus = set_field(env->mintstatus, MINTSTATUS_MIL, env->clic_interrupt_level);
         }
         riscv_set_mode(env, PRV_M);
     } else {
         /* handle the trap in S-mode */
         env->sepc = env->pc;
-        if (hasbadaddr) {
-            if (fixed_cause == RISCV_EXCP_ILLEGAL_INST) {
+        if(hasbadaddr) {
+            if(fixed_cause == RISCV_EXCP_ILLEGAL_INST) {
                 env->stval = env->opcode;
             } else {
                 env->stval = env->badaddr;
@@ -564,16 +577,17 @@ void do_interrupt(CPUState *env)
         }
 
         /* mtvec controls CLIC mode for all privileges, lowest bit of STVEC switches CLINT vectoring for S mode */
-        if (is_in_clic_mode) {
+        if(is_in_clic_mode) {
             target_ulong vect_addr = env->stvt + bit * sizeof(target_ulong);
-            if (is_interrupt && env->clic_interrupt_vectored) {
+            if(is_interrupt && env->clic_interrupt_vectored) {
                 target_ulong vect = ldp_phys(vect_addr);
                 env->pc = vect;
             } else {
                 /* CLIC mode exception or shv non-vectored interrupt */
                 env->pc = env->stvec & ~MTVEC_MODE_SUBMODE;
             }
-        } else if (get_field(env->stvec, MTVEC_MODE) == MTVEC_MODE_CLINT_VECTORED && is_interrupt && (env->privilege_architecture >= RISCV_PRIV1_10)) {
+        } else if(get_field(env->stvec, MTVEC_MODE) == MTVEC_MODE_CLINT_VECTORED && is_interrupt &&
+                  (env->privilege_architecture >= RISCV_PRIV1_10)) {
             /* CLINT vectored mode */
             env->pc = (env->stvec & ~MTVEC_MODE) + (fixed_cause * 4);
         } else {
@@ -582,13 +596,14 @@ void do_interrupt(CPUState *env)
         }
 
         target_ulong s = env->mstatus;
-        target_ulong spie = (env->privilege_architecture >= RISCV_PRIV1_10) ? get_field(s, SSTATUS_SIE) : get_field(s, 1 << env->priv);
+        target_ulong spie = (env->privilege_architecture >= RISCV_PRIV1_10) ? get_field(s, SSTATUS_SIE)
+                                                                            : get_field(s, 1 << env->priv);
         s = set_field(s, SSTATUS_SPIE, spie);
         s = set_field(s, SSTATUS_SIE, 0);
         s = set_field(s, SSTATUS_SPP, env->priv);
         csr_write_helper(env, s, CSR_SSTATUS);
         target_ulong sc = fixed_cause;
-        if (is_in_clic_mode) {
+        if(is_in_clic_mode) {
             sc = set_field(sc, SCAUSE_SPIL, get_field(env->mintstatus, MINTSTATUS_SIL));
             sc = set_field(sc, SCAUSE_SPIE, spie);
             sc = set_field(sc, SCAUSE_SPP, env->priv);
@@ -597,13 +612,13 @@ void do_interrupt(CPUState *env)
             sc = set_field(sc, SCAUSE_SINHV, 0);
         }
         csr_write_helper(env, sc, CSR_SCAUSE);
-        if (is_interrupt) {
+        if(is_interrupt) {
             env->mintstatus = set_field(env->mintstatus, MINTSTATUS_SIL, env->clic_interrupt_level);
         }
         riscv_set_mode(env, PRV_S);
     }
 
-    if (unlikely(env->guest_profiler_enabled)) {
+    if(unlikely(env->guest_profiler_enabled)) {
         tlib_announce_stack_change(env->pc, STACK_FRAME_ADD);
     }
     /* TODO yield load reservation  */
@@ -612,15 +627,13 @@ void do_interrupt(CPUState *env)
 
 void do_nmi(CPUState *env)
 {
-    if (env->nmi_pending == NMI_NONE) {
+    if(env->nmi_pending == NMI_NONE) {
         return;
     }
     target_ulong s = env->mstatus;
-    s =
-        set_field(s, MSTATUS_MPIE,
-                  (env->privilege_architecture >= RISCV_PRIV1_10) ? get_field(s, MSTATUS_MIE) : get_field(s,
-                                                                                                          MSTATUS_UIE <<
-    env->priv));
+    s = set_field(s, MSTATUS_MPIE,
+                  (env->privilege_architecture >= RISCV_PRIV1_10) ? get_field(s, MSTATUS_MIE)
+                                                                  : get_field(s, MSTATUS_UIE << env->priv));
     s = set_field(s, MSTATUS_MPP, env->priv); /* store current priv level */
     s = set_field(s, MSTATUS_MIE, 0);
     csr_write_helper(env, s, CSR_MSTATUS);
@@ -636,9 +649,7 @@ void do_nmi(CPUState *env)
     env->nmi_pending &= ~(1 << nmi_index); /* mark this nmi as handled */
 }
 
-void tlib_arch_dispose()
-{
-}
+void tlib_arch_dispose() { }
 
 int cpu_init(const char *cpu_model)
 {
@@ -651,7 +662,7 @@ int cpu_init(const char *cpu_model)
     return 0;
 }
 
-// returns 1 if the PC has already been modified by the instruction
+//  returns 1 if the PC has already been modified by the instruction
 uint32_t HELPER(handle_custom_instruction)(uint64_t id, uint64_t opcode)
 {
     return tlib_handle_custom_instruction(id, opcode);

@@ -34,9 +34,5 @@
 #define xtensa_modules xtensa_modules_de212
 #include "core-de212/xtensa-modules.c.inc"
 
-XtensaConfig de212 __attribute__((unused)) = {
-    .name = "de212",
-    .isa_internal = &xtensa_modules,
-    .clock_freq_khz = 40000,
-    DEFAULT_SECTIONS
-};
+XtensaConfig de212
+    __attribute__((unused)) = { .name = "de212", .isa_internal = &xtensa_modules, .clock_freq_khz = 40000, DEFAULT_SECTIONS };

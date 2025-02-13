@@ -17,25 +17,25 @@ DEF_HELPER_2(udiv, i32, i32, i32)
 DEF_HELPER_1(rbit, i32, i32)
 DEF_HELPER_1(abs, i32, i32)
 
-#define PAS_OP(pfx)  \
-    DEF_HELPER_3(pfx ## add8, i32, i32, i32, ptr) \
-    DEF_HELPER_3(pfx ## sub8, i32, i32, i32, ptr) \
-    DEF_HELPER_3(pfx ## sub16, i32, i32, i32, ptr) \
-    DEF_HELPER_3(pfx ## add16, i32, i32, i32, ptr) \
-    DEF_HELPER_3(pfx ## addsubx, i32, i32, i32, ptr) \
-    DEF_HELPER_3(pfx ## subaddx, i32, i32, i32, ptr)
+#define PAS_OP(pfx)                                \
+    DEF_HELPER_3(pfx##add8, i32, i32, i32, ptr)    \
+    DEF_HELPER_3(pfx##sub8, i32, i32, i32, ptr)    \
+    DEF_HELPER_3(pfx##sub16, i32, i32, i32, ptr)   \
+    DEF_HELPER_3(pfx##add16, i32, i32, i32, ptr)   \
+    DEF_HELPER_3(pfx##addsubx, i32, i32, i32, ptr) \
+    DEF_HELPER_3(pfx##subaddx, i32, i32, i32, ptr)
 
 PAS_OP(s)
 PAS_OP(u)
 #undef PAS_OP
 
-#define PAS_OP(pfx)  \
-    DEF_HELPER_2(pfx ## add8, i32, i32, i32) \
-    DEF_HELPER_2(pfx ## sub8, i32, i32, i32) \
-    DEF_HELPER_2(pfx ## sub16, i32, i32, i32) \
-    DEF_HELPER_2(pfx ## add16, i32, i32, i32) \
-    DEF_HELPER_2(pfx ## addsubx, i32, i32, i32) \
-    DEF_HELPER_2(pfx ## subaddx, i32, i32, i32)
+#define PAS_OP(pfx)                           \
+    DEF_HELPER_2(pfx##add8, i32, i32, i32)    \
+    DEF_HELPER_2(pfx##sub8, i32, i32, i32)    \
+    DEF_HELPER_2(pfx##sub16, i32, i32, i32)   \
+    DEF_HELPER_2(pfx##add16, i32, i32, i32)   \
+    DEF_HELPER_2(pfx##addsubx, i32, i32, i32) \
+    DEF_HELPER_2(pfx##subaddx, i32, i32, i32)
 PAS_OP(q)
 PAS_OP(sh)
 PAS_OP(uq)
@@ -381,10 +381,10 @@ DEF_HELPER_2(iwmmxt_macsw, i64, i64, i64)
 DEF_HELPER_2(iwmmxt_macuw, i64, i64, i64)
 DEF_HELPER_1(iwmmxt_setpsr_nz, i32, i64)
 
-#define DEF_IWMMXT_HELPER_SIZE_ENV(name) \
-DEF_HELPER_3(iwmmxt_##name##b, i64, env, i64, i64) \
-DEF_HELPER_3(iwmmxt_##name##w, i64, env, i64, i64) \
-DEF_HELPER_3(iwmmxt_##name##l, i64, env, i64, i64) \
+#define DEF_IWMMXT_HELPER_SIZE_ENV(name)               \
+    DEF_HELPER_3(iwmmxt_##name##b, i64, env, i64, i64) \
+    DEF_HELPER_3(iwmmxt_##name##w, i64, env, i64, i64) \
+    DEF_HELPER_3(iwmmxt_##name##l, i64, env, i64, i64)
 
 DEF_IWMMXT_HELPER_SIZE_ENV(unpackl)
 DEF_IWMMXT_HELPER_SIZE_ENV(unpackh)

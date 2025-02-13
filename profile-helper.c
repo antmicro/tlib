@@ -23,7 +23,5 @@ void tcg_perf_out_symbol_from_tb(TranslationBlock *tb, int host_size, const char
     tcg_perf_out_symbol_s(tb->tc_ptr, host_size, comment, tb);
 }
 #else
-inline void tcg_perf_out_symbol_from_tb(struct TranslationBlock *tb, int host_size, const char *comment)
-{
-}
+inline void tcg_perf_out_symbol_from_tb(struct TranslationBlock *tb, int host_size, const char *comment) { }
 #endif

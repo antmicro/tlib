@@ -16,9 +16,9 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
-#define DATA_BITS   (1 << (3 + SHIFT))
-#define SHIFT_MASK  (DATA_BITS - 1)
-#define SIGN_MASK   (((target_ulong)1) << (DATA_BITS - 1))
+#define DATA_BITS  (1 << (3 + SHIFT))
+#define SHIFT_MASK (DATA_BITS - 1)
+#define SIGN_MASK  (((target_ulong)1) << (DATA_BITS - 1))
 #if DATA_BITS <= 32
 #define SHIFT1_MASK 0x1f
 #else
@@ -26,25 +26,25 @@
 #endif
 
 #if DATA_BITS == 8
-#define SUFFIX      b
-#define DATA_TYPE   uint8_t
-#define DATA_STYPE  int8_t
-#define DATA_MASK   0xff
+#define SUFFIX     b
+#define DATA_TYPE  uint8_t
+#define DATA_STYPE int8_t
+#define DATA_MASK  0xff
 #elif DATA_BITS == 16
-#define SUFFIX      w
-#define DATA_TYPE   uint16_t
-#define DATA_STYPE  int16_t
-#define DATA_MASK   0xffff
+#define SUFFIX     w
+#define DATA_TYPE  uint16_t
+#define DATA_STYPE int16_t
+#define DATA_MASK  0xffff
 #elif DATA_BITS == 32
-#define SUFFIX      l
-#define DATA_TYPE   uint32_t
-#define DATA_STYPE  int32_t
-#define DATA_MASK   0xffffffff
+#define SUFFIX     l
+#define DATA_TYPE  uint32_t
+#define DATA_STYPE int32_t
+#define DATA_MASK  0xffffffff
 #elif DATA_BITS == 64
-#define SUFFIX      q
-#define DATA_TYPE   uint64_t
-#define DATA_STYPE  int64_t
-#define DATA_MASK   0xffffffffffffffffULL
+#define SUFFIX     q
+#define DATA_TYPE  uint64_t
+#define DATA_STYPE int64_t
+#define DATA_MASK  0xffffffffffffffffULL
 #else
 #error unhandled operand size
 #endif
@@ -278,17 +278,17 @@ target_ulong glue(helper_rcl, SUFFIX)(target_ulong t0, target_ulong t1)
 #elif DATA_BITS == 8
     count = rclb_table[count];
 #endif
-    if (count) {
+    if(count) {
         eflags = helper_cc_compute_all(CC_OP);
         t0 &= DATA_MASK;
         src = t0;
         res = (t0 << count) | ((target_ulong)(eflags & CC_C) << (count - 1));
-        if (count > 1) {
+        if(count > 1) {
             res |= t0 >> (DATA_BITS + 1 - count);
         }
         t0 = res;
-        env->cc_tmp = (eflags & ~(CC_C | CC_O)) |
-                      (lshift(src ^ t0, 11 - (DATA_BITS - 1)) & CC_O) | ((src >> (DATA_BITS - count)) & CC_C);
+        env->cc_tmp = (eflags & ~(CC_C | CC_O)) | (lshift(src ^ t0, 11 - (DATA_BITS - 1)) & CC_O) |
+                      ((src >> (DATA_BITS - count)) & CC_C);
     } else {
         env->cc_tmp = -1;
     }
@@ -307,12 +307,12 @@ target_ulong glue(helper_rcr, SUFFIX)(target_ulong t0, target_ulong t1)
 #elif DATA_BITS == 8
     count = rclb_table[count];
 #endif
-    if (count) {
+    if(count) {
         eflags = helper_cc_compute_all(CC_OP);
         t0 &= DATA_MASK;
         src = t0;
         res = (t0 >> count) | ((target_ulong)(eflags & CC_C) << (DATA_BITS - count));
-        if (count > 1) {
+        if(count > 1) {
             res |= t0 << (DATA_BITS + 1 - count);
         }
         t0 = res;

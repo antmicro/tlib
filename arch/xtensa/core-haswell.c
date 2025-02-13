@@ -33,9 +33,5 @@
 
 #include "core-haswell/xtensa-modules.c.inc"
 
-XtensaConfig haswell __attribute__((unused)) = {
-    .name = "haswell",
-    .isa_internal = &xtensa_modules,
-    .clock_freq_khz = 5000,
-    DEFAULT_SECTIONS
-};
+XtensaConfig haswell
+    __attribute__((unused)) = { .name = "haswell", .isa_internal = &xtensa_modules, .clock_freq_khz = 5000, DEFAULT_SECTIONS };

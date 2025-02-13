@@ -47,11 +47,21 @@ static const struct {
     uint32_t xtensa_fp_flag;
     int softfloat_fp_flag;
 } xtensa_fp_flag_map[] = {
-    { XTENSA_FP_I, float_flag_inexact, },
-    { XTENSA_FP_U, float_flag_underflow, },
-    { XTENSA_FP_O, float_flag_overflow, },
-    { XTENSA_FP_Z, float_flag_divbyzero, },
-    { XTENSA_FP_V, float_flag_invalid, },
+    {
+     XTENSA_FP_I, float_flag_inexact,
+     },
+    {
+     XTENSA_FP_U,           float_flag_underflow,
+     },
+    {
+     XTENSA_FP_O, float_flag_overflow,
+     },
+    {
+     XTENSA_FP_Z,           float_flag_divbyzero,
+     },
+    {
+     XTENSA_FP_V, float_flag_invalid,
+     },
 };
 
 void HELPER(wur_fpu2k_fcr)(CPUState *env, uint32_t v)
@@ -76,9 +86,8 @@ void HELPER(wur_fpu_fcr)(CPUState *env, uint32_t v)
         float_round_down,
     };
 
-    if (v & 0xfffff000) {
-        tlib_printf(LOG_LEVEL_ERROR,
-                      "MBZ field of FCR is written non-zero: %08x\n", v);
+    if(v & 0xfffff000) {
+        tlib_printf(LOG_LEVEL_ERROR, "MBZ field of FCR is written non-zero: %08x\n", v);
     }
     env->uregs[FCR] = v & 0x0000007f;
     set_float_rounding_mode(rounding_mode[v & 3], &env->fp_status);
@@ -90,13 +99,12 @@ void HELPER(wur_fpu_fsr)(CPUState *env, uint32_t v)
     int fef = 0;
     unsigned i;
 
-    if (v & 0xfffff000) {
-        tlib_printf(LOG_LEVEL_ERROR,
-                      "MBZ field of FSR is written non-zero: %08x\n", v);
+    if(v & 0xfffff000) {
+        tlib_printf(LOG_LEVEL_ERROR, "MBZ field of FSR is written non-zero: %08x\n", v);
     }
     env->uregs[FSR] = v & 0x00000f80;
-    for (i = 0; i < ARRAY_SIZE(xtensa_fp_flag_map); ++i) {
-        if (flags & xtensa_fp_flag_map[i].xtensa_fp_flag) {
+    for(i = 0; i < ARRAY_SIZE(xtensa_fp_flag_map); ++i) {
+        if(flags & xtensa_fp_flag_map[i].xtensa_fp_flag) {
             fef |= xtensa_fp_flag_map[i].softfloat_fp_flag;
         }
     }
@@ -109,8 +117,8 @@ uint32_t HELPER(rur_fpu_fsr)(CPUState *env)
     int fef = get_float_exception_flags(&env->fp_status);
     unsigned i;
 
-    for (i = 0; i < ARRAY_SIZE(xtensa_fp_flag_map); ++i) {
-        if (fef & xtensa_fp_flag_map[i].softfloat_fp_flag) {
+    for(i = 0; i < ARRAY_SIZE(xtensa_fp_flag_map); ++i) {
+        if(fef & xtensa_fp_flag_map[i].softfloat_fp_flag) {
             flags |= xtensa_fp_flag_map[i].xtensa_fp_flag;
         }
     }
@@ -153,17 +161,14 @@ float32 HELPER(fpu2k_mul_s)(CPUState *env, float32 a, float32 b)
     return float32_mul(a, b, &env->fp_status);
 }
 
-float32 HELPER(fpu2k_madd_s)(CPUState *env,
-                             float32 a, float32 b, float32 c)
+float32 HELPER(fpu2k_madd_s)(CPUState *env, float32 a, float32 b, float32 c)
 {
     return float32_muladd(b, c, a, 0, &env->fp_status);
 }
 
-float32 HELPER(fpu2k_msub_s)(CPUState *env,
-                             float32 a, float32 b, float32 c)
+float32 HELPER(fpu2k_msub_s)(CPUState *env, float32 a, float32 b, float32 c)
 {
-    return float32_muladd(b, c, a, float_muladd_negate_product,
-                          &env->fp_status);
+    return float32_muladd(b, c, a, float_muladd_negate_product, &env->fp_status);
 }
 
 float64 HELPER(add_d)(CPUState *env, float64 a, float64 b)
@@ -217,15 +222,13 @@ float32 HELPER(madd_s)(CPUState *env, float32 a, float32 b, float32 c)
 float64 HELPER(msub_d)(CPUState *env, float64 a, float64 b, float64 c)
 {
     set_use_first_nan(env->config->use_first_nan, &env->fp_status);
-    return float64_muladd(b, c, a, float_muladd_negate_product,
-                          &env->fp_status);
+    return float64_muladd(b, c, a, float_muladd_negate_product, &env->fp_status);
 }
 
 float32 HELPER(msub_s)(CPUState *env, float32 a, float32 b, float32 c)
 {
     set_use_first_nan(env->config->use_first_nan, &env->fp_status);
-    return float32_muladd(b, c, a, float_muladd_negate_product,
-                          &env->fp_status);
+    return float32_muladd(b, c, a, float_muladd_negate_product, &env->fp_status);
 }
 
 float64 HELPER(mkdadj_d)(CPUState *env, float64 a, float64 b)
@@ -252,34 +255,29 @@ float32 HELPER(mksadj_s)(CPUState *env, float32 v)
     return float32_sqrt(v, &env->fp_status);
 }
 
-uint32_t HELPER(ftoi_d)(CPUState *env, float64 v,
-                        uint32_t rounding_mode, uint32_t scale)
+uint32_t HELPER(ftoi_d)(CPUState *env, float64 v, uint32_t rounding_mode, uint32_t scale)
 {
     float_status fp_status = env->fp_status;
     uint32_t res;
 
     set_float_rounding_mode(rounding_mode, &fp_status);
     res = float64_to_int32(float64_scalbn(v, scale, &fp_status), &fp_status);
-    set_float_exception_flags(get_float_exception_flags(&fp_status),
-                              &env->fp_status);
+    set_float_exception_flags(get_float_exception_flags(&fp_status), &env->fp_status);
     return res;
 }
 
-uint32_t HELPER(ftoi_s)(CPUState *env, float32 v,
-                        uint32_t rounding_mode, uint32_t scale)
+uint32_t HELPER(ftoi_s)(CPUState *env, float32 v, uint32_t rounding_mode, uint32_t scale)
 {
     float_status fp_status = env->fp_status;
     uint32_t res;
 
     set_float_rounding_mode(rounding_mode, &fp_status);
     res = float32_to_int32(float32_scalbn(v, scale, &fp_status), &fp_status);
-    set_float_exception_flags(get_float_exception_flags(&fp_status),
-                              &env->fp_status);
+    set_float_exception_flags(get_float_exception_flags(&fp_status), &env->fp_status);
     return res;
 }
 
-uint32_t HELPER(ftoui_d)(CPUState *env, float64 v,
-                         uint32_t rounding_mode, uint32_t scale)
+uint32_t HELPER(ftoui_d)(CPUState *env, float64 v, uint32_t rounding_mode, uint32_t scale)
 {
     float_status fp_status = env->fp_status;
     float64 res;
@@ -289,19 +287,17 @@ uint32_t HELPER(ftoui_d)(CPUState *env, float64 v,
 
     res = float64_scalbn(v, scale, &fp_status);
 
-    if (float64_is_neg(v) && !float64_is_any_nan(v)) {
+    if(float64_is_neg(v) && !float64_is_any_nan(v)) {
         set_float_exception_flags(float_flag_invalid, &fp_status);
         rv = float64_to_int32(res, &fp_status);
     } else {
         rv = float64_to_uint32(res, &fp_status);
     }
-    set_float_exception_flags(get_float_exception_flags(&fp_status),
-                              &env->fp_status);
+    set_float_exception_flags(get_float_exception_flags(&fp_status), &env->fp_status);
     return rv;
 }
 
-uint32_t HELPER(ftoui_s)(CPUState *env, float32 v,
-                         uint32_t rounding_mode, uint32_t scale)
+uint32_t HELPER(ftoui_s)(CPUState *env, float32 v, uint32_t rounding_mode, uint32_t scale)
 {
     float_status fp_status = env->fp_status;
     float32 res;
@@ -311,41 +307,36 @@ uint32_t HELPER(ftoui_s)(CPUState *env, float32 v,
 
     res = float32_scalbn(v, scale, &fp_status);
 
-    if (float32_is_neg(v) && !float32_is_any_nan(v)) {
+    if(float32_is_neg(v) && !float32_is_any_nan(v)) {
         rv = float32_to_int32(res, &fp_status);
-        if (rv) {
+        if(rv) {
             set_float_exception_flags(float_flag_invalid, &fp_status);
         }
     } else {
         rv = float32_to_uint32(res, &fp_status);
     }
-    set_float_exception_flags(get_float_exception_flags(&fp_status),
-                              &env->fp_status);
+    set_float_exception_flags(get_float_exception_flags(&fp_status), &env->fp_status);
     return rv;
 }
 
 float64 HELPER(itof_d)(CPUState *env, uint32_t v, uint32_t scale)
 {
-    return float64_scalbn(int32_to_float64(v, &env->fp_status),
-                          (int32_t)scale, &env->fp_status);
+    return float64_scalbn(int32_to_float64(v, &env->fp_status), (int32_t)scale, &env->fp_status);
 }
 
 float32 HELPER(itof_s)(CPUState *env, uint32_t v, uint32_t scale)
 {
-    return float32_scalbn(int32_to_float32(v, &env->fp_status),
-                          (int32_t)scale, &env->fp_status);
+    return float32_scalbn(int32_to_float32(v, &env->fp_status), (int32_t)scale, &env->fp_status);
 }
 
 float64 HELPER(uitof_d)(CPUState *env, uint32_t v, uint32_t scale)
 {
-    return float64_scalbn(uint32_to_float64(v, &env->fp_status),
-                          (int32_t)scale, &env->fp_status);
+    return float64_scalbn(uint32_to_float64(v, &env->fp_status), (int32_t)scale, &env->fp_status);
 }
 
 float32 HELPER(uitof_s)(CPUState *env, uint32_t v, uint32_t scale)
 {
-    return float32_scalbn(uint32_to_float32(v, &env->fp_status),
-                          (int32_t)scale, &env->fp_status);
+    return float32_scalbn(uint32_to_float32(v, &env->fp_status), (int32_t)scale, &env->fp_status);
 }
 
 float64 HELPER(cvtd_s)(CPUState *env, float32 v)
@@ -382,16 +373,14 @@ uint32_t HELPER(ueq_d)(CPUState *env, float64 a, float64 b)
 {
     int v = float64_compare_quiet(a, b, &env->fp_status);
 
-    return v == float_relation_equal ||
-           v == float_relation_unordered;
+    return v == float_relation_equal || v == float_relation_unordered;
 }
 
 uint32_t HELPER(ueq_s)(CPUState *env, float32 a, float32 b)
 {
     int v = float32_compare_quiet(a, b, &env->fp_status);
 
-    return v == float_relation_equal ||
-           v == float_relation_unordered;
+    return v == float_relation_equal || v == float_relation_unordered;
 }
 
 uint32_t HELPER(olt_d)(CPUState *env, float64 a, float64 b)
@@ -408,16 +397,14 @@ uint32_t HELPER(ult_d)(CPUState *env, float64 a, float64 b)
 {
     int v = float64_compare_quiet(a, b, &env->fp_status);
 
-    return v == float_relation_less ||
-           v == float_relation_unordered;
+    return v == float_relation_less || v == float_relation_unordered;
 }
 
 uint32_t HELPER(ult_s)(CPUState *env, float32 a, float32 b)
 {
     int v = float32_compare_quiet(a, b, &env->fp_status);
 
-    return v == float_relation_less ||
-           v == float_relation_unordered;
+    return v == float_relation_less || v == float_relation_unordered;
 }
 
 uint32_t HELPER(ole_d)(CPUState *env, float64 a, float64 b)

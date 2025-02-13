@@ -25,21 +25,21 @@
 #ifdef TARGET_PPC64
 uint64_t *get_reg_pointer_64(int reg)
 {
-    switch (reg) {
-    case R_0_64 ... R_31_64:
-        return &(cpu->gpr[reg - R_0_64]);
-    case NIP_64:
-        return &(cpu->nip);
-    case MSR_64:
-        return &(cpu->msr);
-    case LR_64:
-        return &(cpu->lr);
-    case CTR_64:
-        return &(cpu->ctr);
-    case XER_64:
-        return &(cpu->xer);
-    default:
-        return NULL;
+    switch(reg) {
+        case R_0_64 ... R_31_64:
+            return &(cpu->gpr[reg - R_0_64]);
+        case NIP_64:
+            return &(cpu->nip);
+        case MSR_64:
+            return &(cpu->msr);
+        case LR_64:
+            return &(cpu->lr);
+        case CTR_64:
+            return &(cpu->ctr);
+        case XER_64:
+            return &(cpu->xer);
+        default:
+            return NULL;
     }
 }
 CPU_REGISTER_ACCESSOR(64);
@@ -47,21 +47,21 @@ CPU_REGISTER_ACCESSOR(64);
 #ifdef TARGET_PPC32
 uint32_t *get_reg_pointer_32(int reg)
 {
-    switch (reg) {
-    case R_0_32 ... R_31_32:
-        return &(cpu->gpr[reg - R_0_32]);
-    case NIP_32:
-        return &(cpu->nip);
-    case MSR_32:
-        return &(cpu->msr);
-    case LR_32:
-        return &(cpu->lr);
-    case CTR_32:
-        return &(cpu->ctr);
-    case XER_32:
-        return &(cpu->xer);
-    default:
-        return NULL;
+    switch(reg) {
+        case R_0_32 ... R_31_32:
+            return &(cpu->gpr[reg - R_0_32]);
+        case NIP_32:
+            return &(cpu->nip);
+        case MSR_32:
+            return &(cpu->msr);
+        case LR_32:
+            return &(cpu->lr);
+        case CTR_32:
+            return &(cpu->ctr);
+        case XER_32:
+            return &(cpu->xer);
+        default:
+            return NULL;
     }
 }
 CPU_REGISTER_ACCESSOR(32);

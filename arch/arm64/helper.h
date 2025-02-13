@@ -60,7 +60,7 @@ DEF_HELPER_3(vfp_cmpeh, void, f16, f16, env)
 DEF_HELPER_3(vfp_cmpes, void, f32, f32, env)
 DEF_HELPER_3(vfp_cmped, void, f64, f64, env)
 
-// CONV_ITOF helpers
+//  CONV_ITOF helpers
 DEF_HELPER_2(vfp_uitoh, f16, i32, ptr)
 DEF_HELPER_2(vfp_uitos, f32, i32, ptr)
 DEF_HELPER_2(vfp_uitod, f64, i32, ptr)
@@ -68,7 +68,7 @@ DEF_HELPER_2(vfp_sitoh, f16, i32, ptr)
 DEF_HELPER_2(vfp_sitos, f32, i32, ptr)
 DEF_HELPER_2(vfp_sitod, f64, i32, ptr)
 
-// CONV_FTOI helpers
+//  CONV_FTOI helpers
 DEF_HELPER_2(vfp_touih, i32, f16, ptr)
 DEF_HELPER_2(vfp_touis, i32, f32, ptr)
 DEF_HELPER_2(vfp_touid, i32, f64, ptr)
@@ -76,7 +76,7 @@ DEF_HELPER_2(vfp_tosih, s32, f16, ptr)
 DEF_HELPER_2(vfp_tosis, s32, f32, ptr)
 DEF_HELPER_2(vfp_tosid, s32, f64, ptr)
 
-// CONV_FTOI (using '*_round_to_zero')
+//  CONV_FTOI (using '*_round_to_zero')
 DEF_HELPER_2(vfp_touizh, i32, f16, ptr)
 DEF_HELPER_2(vfp_touizs, i32, f32, ptr)
 DEF_HELPER_2(vfp_touizd, i32, f64, ptr)
@@ -89,7 +89,7 @@ DEF_HELPER_2(vfp_fcvtsd, f32, f64, env)
 DEF_HELPER_2(bfcvt, i32, f32, ptr)
 DEF_HELPER_2(bfcvt_pair, i32, i64, ptr)
 
-// VFP_CONV_FIX*(s{h,l,q}, d)
+//  VFP_CONV_FIX*(s{h,l,q}, d)
 DEF_HELPER_3(vfp_shtod, f64, i64, i32, ptr)
 DEF_HELPER_3(vfp_shtod_round_to_nearest, f64, i64, i32, ptr)
 DEF_HELPER_3(vfp_toshd_round_to_zero, i64, f64, i32, ptr)
@@ -101,7 +101,7 @@ DEF_HELPER_3(vfp_tosld, i64, f64, i32, ptr)
 DEF_HELPER_3(vfp_sqtod, f64, i64, i32, ptr)
 DEF_HELPER_3(vfp_tosqd, i64, f64, i32, ptr)
 
-// VFP_CONV_FIX*(u{h,l,q}, d)
+//  VFP_CONV_FIX*(u{h,l,q}, d)
 DEF_HELPER_3(vfp_uhtod, f64, i64, i32, ptr)
 DEF_HELPER_3(vfp_uhtod_round_to_nearest, f64, i64, i32, ptr)
 DEF_HELPER_3(vfp_touhd_round_to_zero, i64, f64, i32, ptr)
@@ -113,7 +113,7 @@ DEF_HELPER_3(vfp_tould, i64, f64, i32, ptr)
 DEF_HELPER_3(vfp_uqtod, f64, i64, i32, ptr)
 DEF_HELPER_3(vfp_touqd, i64, f64, i32, ptr)
 
-// VFP_CONV_FIX*(s{h,l,q}, s)
+//  VFP_CONV_FIX*(s{h,l,q}, s)
 DEF_HELPER_3(vfp_shtos, f32, i32, i32, ptr)
 DEF_HELPER_3(vfp_shtos_round_to_nearest, f32, i32, i32, ptr)
 DEF_HELPER_3(vfp_toshs_round_to_zero, i32, f32, i32, ptr)
@@ -125,7 +125,7 @@ DEF_HELPER_3(vfp_tosls, i32, f32, i32, ptr)
 DEF_HELPER_3(vfp_sqtos, f32, i64, i32, ptr)
 DEF_HELPER_3(vfp_tosqs, i64, f32, i32, ptr)
 
-// VFP_CONV_FIX*(u{h,l,q}, s)
+//  VFP_CONV_FIX*(u{h,l,q}, s)
 DEF_HELPER_3(vfp_uhtos, f32, i32, i32, ptr)
 DEF_HELPER_3(vfp_uhtos_round_to_nearest, f32, i32, i32, ptr)
 DEF_HELPER_3(vfp_touhs_round_to_zero, i32, f32, i32, ptr)
@@ -137,7 +137,7 @@ DEF_HELPER_3(vfp_touls, i32, f32, i32, ptr)
 DEF_HELPER_3(vfp_uqtos, f32, i64, i32, ptr)
 DEF_HELPER_3(vfp_touqs, i64, f32, i32, ptr)
 
-// VFP_CONV_FIX*(s{h,l,q}, h)
+//  VFP_CONV_FIX*(s{h,l,q}, h)
 DEF_HELPER_3(vfp_shtoh, f16, i32, i32, ptr)
 DEF_HELPER_3(vfp_shtoh_round_to_nearest, f16, i32, i32, ptr)
 DEF_HELPER_3(vfp_toshh_round_to_zero, i32, f16, i32, ptr)
@@ -151,7 +151,7 @@ DEF_HELPER_3(vfp_toslh, i32, f16, i32, ptr)
 DEF_HELPER_3(vfp_sqtoh, f16, i64, i32, ptr)
 DEF_HELPER_3(vfp_tosqh, i64, f16, i32, ptr)
 
-// VFP_CONV_FIX*(u{h,l,q}, h)
+//  VFP_CONV_FIX*(u{h,l,q}, h)
 DEF_HELPER_3(vfp_uhtoh, f16, i32, i32, ptr)
 DEF_HELPER_3(vfp_uhtoh_round_to_nearest, f16, i32, i32, ptr)
 DEF_HELPER_3(vfp_touhh_round_to_zero, i32, f16, i32, ptr)
@@ -167,7 +167,7 @@ DEF_HELPER_3(vfp_touqh, i64, f16, i32, ptr)
 
 DEF_HELPER_2(set_rmode, i32, i32, ptr)
 
-// There are no separate 'vfp_fcvt*' helpers for NEON like we have for ARM.
+//  There are no separate 'vfp_fcvt*' helpers for NEON like we have for ARM.
 DEF_HELPER_3(vfp_fcvt_f16_to_f32, f32, i32, ptr, i32)
 DEF_HELPER_3(vfp_fcvt_f32_to_f16, i32, f32, ptr, i32)
 DEF_HELPER_3(vfp_fcvt_f64_to_f16, i32, f64, ptr, i32)
@@ -259,25 +259,25 @@ DEF_HELPER_3(sub_saturate, i32, env, i32, i32)
 DEF_HELPER_3(add_usaturate, i32, env, i32, i32)
 DEF_HELPER_3(sub_usaturate, i32, env, i32, i32)
 
-#define PAS_OP(pfx)  \
-    DEF_HELPER_3(pfx ## add8, i32, i32, i32, ptr) \
-    DEF_HELPER_3(pfx ## sub8, i32, i32, i32, ptr) \
-    DEF_HELPER_3(pfx ## sub16, i32, i32, i32, ptr) \
-    DEF_HELPER_3(pfx ## add16, i32, i32, i32, ptr) \
-    DEF_HELPER_3(pfx ## addsubx, i32, i32, i32, ptr) \
-    DEF_HELPER_3(pfx ## subaddx, i32, i32, i32, ptr)
+#define PAS_OP(pfx)                                \
+    DEF_HELPER_3(pfx##add8, i32, i32, i32, ptr)    \
+    DEF_HELPER_3(pfx##sub8, i32, i32, i32, ptr)    \
+    DEF_HELPER_3(pfx##sub16, i32, i32, i32, ptr)   \
+    DEF_HELPER_3(pfx##add16, i32, i32, i32, ptr)   \
+    DEF_HELPER_3(pfx##addsubx, i32, i32, i32, ptr) \
+    DEF_HELPER_3(pfx##subaddx, i32, i32, i32, ptr)
 
 PAS_OP(s)
 PAS_OP(u)
 #undef PAS_OP
 
-#define PAS_OP(pfx)  \
-    DEF_HELPER_2(pfx ## add8, i32, i32, i32) \
-    DEF_HELPER_2(pfx ## sub8, i32, i32, i32) \
-    DEF_HELPER_2(pfx ## sub16, i32, i32, i32) \
-    DEF_HELPER_2(pfx ## add16, i32, i32, i32) \
-    DEF_HELPER_2(pfx ## addsubx, i32, i32, i32) \
-    DEF_HELPER_2(pfx ## subaddx, i32, i32, i32)
+#define PAS_OP(pfx)                           \
+    DEF_HELPER_2(pfx##add8, i32, i32, i32)    \
+    DEF_HELPER_2(pfx##sub8, i32, i32, i32)    \
+    DEF_HELPER_2(pfx##sub16, i32, i32, i32)   \
+    DEF_HELPER_2(pfx##add16, i32, i32, i32)   \
+    DEF_HELPER_2(pfx##addsubx, i32, i32, i32) \
+    DEF_HELPER_2(pfx##subaddx, i32, i32, i32)
 PAS_OP(q)
 PAS_OP(sh)
 PAS_OP(uq)
@@ -541,10 +541,10 @@ DEF_HELPER_2(iwmmxt_macsw, i64, i64, i64)
 DEF_HELPER_2(iwmmxt_macuw, i64, i64, i64)
 DEF_HELPER_1(iwmmxt_setpsr_nz, i32, i64)
 
-#define DEF_IWMMXT_HELPER_SIZE_ENV(name) \
-DEF_HELPER_3(iwmmxt_##name##b, i64, env, i64, i64) \
-DEF_HELPER_3(iwmmxt_##name##w, i64, env, i64, i64) \
-DEF_HELPER_3(iwmmxt_##name##l, i64, env, i64, i64) \
+#define DEF_IWMMXT_HELPER_SIZE_ENV(name)               \
+    DEF_HELPER_3(iwmmxt_##name##b, i64, env, i64, i64) \
+    DEF_HELPER_3(iwmmxt_##name##w, i64, env, i64, i64) \
+    DEF_HELPER_3(iwmmxt_##name##l, i64, env, i64, i64)
 
 DEF_IWMMXT_HELPER_SIZE_ENV(unpackl)
 DEF_IWMMXT_HELPER_SIZE_ENV(unpackh)
@@ -897,10 +897,10 @@ DEF_HELPER_5(gvec_uclamp_h, void, ptr, ptr, ptr, ptr, i32)
 DEF_HELPER_5(gvec_uclamp_s, void, ptr, ptr, ptr, ptr, i32)
 DEF_HELPER_5(gvec_uclamp_d, void, ptr, ptr, ptr, ptr, i32)
 
-// TODO: Add support for these flags to TCG?
-#define TCG_CALL_NO_RWG 0
+//  TODO: Add support for these flags to TCG?
+#define TCG_CALL_NO_RWG    0
 #define TCG_CALL_NO_RWG_SE 0
-#define TCG_CALL_NO_WG 0
+#define TCG_CALL_NO_WG     0
 
 #ifdef TARGET_AARCH64
 #include "helper-a64.h"

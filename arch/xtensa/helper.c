@@ -43,17 +43,17 @@ static TTable *hash_opcode_translators(const XtensaOpcodeTranslators *t)
     unsigned i, j;
     TTable *translator = ttable_create(MAX_TTABLE_SIZE, NULL, ttable_compare_key_string);
 
-    for (i = 0; i < t->num_opcodes; ++i) {
-        if (t->opcode[i].op_flags & XTENSA_OP_NAME_ARRAY) {
-            const char * const *name = t->opcode[i].name;
+    for(i = 0; i < t->num_opcodes; ++i) {
+        if(t->opcode[i].op_flags & XTENSA_OP_NAME_ARRAY) {
+            const char *const *name = t->opcode[i].name;
 
-            for (j = 0; name[j]; ++j) {
-                if (!ttable_insert_check(translator, (void *)name[j], (void *)(t->opcode + i))) {
+            for(j = 0; name[j]; ++j) {
+                if(!ttable_insert_check(translator, (void *)name[j], (void *)(t->opcode + i))) {
                     tlib_abortf("Translators: Multiple definitions of '%s' opcode in a single table", name[j]);
                 }
             }
         } else {
-            if (!ttable_insert_check(translator, (void *)t->opcode[i].name, (void *)(t->opcode + i))) {
+            if(!ttable_insert_check(translator, (void *)t->opcode[i].name, (void *)(t->opcode + i))) {
                 tlib_abortf("Translators: Multiple definitions of '%s' opcode in a single table", t->opcode[i].name);
             }
         }
@@ -65,22 +65,20 @@ static TTable *hash_opcode_translators(const XtensaOpcodeTranslators *t)
 
 static TTable *translators = NULL;
 
-static XtensaOpcodeOps *
-xtensa_find_opcode_ops(const XtensaOpcodeTranslators *t,
-                       const char *name)
+static XtensaOpcodeOps *xtensa_find_opcode_ops(const XtensaOpcodeTranslators *t, const char *name)
 {
     TTable *translator;
 
-    if (translators == NULL) {
+    if(translators == NULL) {
         translators = ttable_create(MAX_TTABLE_SIZE, NULL, ttable_compare_key_pointer);
     }
     translator = ttable_lookup_value_eq(translators, (void *)t);
-    if (translator == NULL) {
+    if(translator == NULL) {
         translator = hash_opcode_translators(t);
 
         ttable_insert(translators, (void *)t, translator);
     }
-    return (XtensaOpcodeOps*)ttable_lookup_value_eq(translator, (void *)name);
+    return (XtensaOpcodeOps *)ttable_lookup_value_eq(translator, (void *)name);
 }
 
 static void init_libisa(XtensaConfig *config)
@@ -98,28 +96,25 @@ static void init_libisa(XtensaConfig *config)
     regfiles = xtensa_isa_num_regfiles(config->isa);
     config->opcode_ops = malloc(sizeof(XtensaOpcodeOps *) * opcodes);
 
-    for (i = 0; i < formats; ++i) {
+    for(i = 0; i < formats; ++i) {
         assert(xtensa_format_num_slots(config->isa, i) <= MAX_INSN_SLOTS);
     }
 
-    for (i = 0; i < opcodes; ++i) {
+    for(i = 0; i < opcodes; ++i) {
         const char *opc_name = xtensa_opcode_name(config->isa, i);
         XtensaOpcodeOps *ops = NULL;
 
         assert(xtensa_opcode_num_operands(config->isa, i) <= MAX_OPCODE_ARGS);
-        if (!config->opcode_translators) {
+        if(!config->opcode_translators) {
             ops = xtensa_find_opcode_ops(&xtensa_core_opcodes, opc_name);
         } else {
-            for (j = 0; !ops && config->opcode_translators[j]; ++j) {
-                ops = xtensa_find_opcode_ops(config->opcode_translators[j],
-                                             opc_name);
+            for(j = 0; !ops && config->opcode_translators[j]; ++j) {
+                ops = xtensa_find_opcode_ops(config->opcode_translators[j], opc_name);
             }
         }
 #ifdef DEBUG
-        if (ops == NULL) {
-            tlib_printf(LOG_LEVEL_WARNING,
-                    "opcode translator not found for %s's opcode '%s'\n",
-                    config->name, opc_name);
+        if(ops == NULL) {
+            tlib_printf(LOG_LEVEL_WARNING, "opcode translator not found for %s's opcode '%s'\n", config->name, opc_name);
         }
 #endif
         config->opcode_ops[i] = ops;
@@ -129,79 +124,59 @@ static void init_libisa(XtensaConfig *config)
     config->a_regfile = xtensa_regfile_lookup(config->isa, "AR");
 
     config->regfile = malloc(sizeof(int *) * regfiles);
-    for (i = 0; i < regfiles; ++i) {
+    for(i = 0; i < regfiles; ++i) {
         const char *name = xtensa_regfile_name(config->isa, i);
         int entries = xtensa_regfile_num_entries(config->isa, i);
         int bits = xtensa_regfile_num_bits(config->isa, i);
 
         config->regfile[i] = xtensa_get_regfile_by_name(name, entries, bits);
 #ifdef DEBUG
-        if (config->regfile[i] == NULL) {
-            tlib_printf(LOG_LEVEL_WARNING, "regfile '%s' not found for %s\n",
-                    name, config->name);
+        if(config->regfile[i] == NULL) {
+            tlib_printf(LOG_LEVEL_WARNING, "regfile '%s' not found for %s\n", name, config->name);
         }
 #endif
     }
     xtensa_collect_sr_names(config);
 }
 
-XtensaConfig* xtensa_finalize_config(const char *core_name)
+XtensaConfig *xtensa_finalize_config(const char *core_name)
 {
     XtensaConfig *config = NULL;
 
-    #define TRY_SET_CONFIG(X) if(strcmp(core_name, X.name) == 0) config = &X;
+#define TRY_SET_CONFIG(X)              \
+    if(strcmp(core_name, X.name) == 0) \
+        config = &X;
     TRY_SET_CONFIG(apollolake)
-    else TRY_SET_CONFIG(baytrail)
-    else TRY_SET_CONFIG(cannonlake)
-    else TRY_SET_CONFIG(dc233c)
-    else TRY_SET_CONFIG(de212)
-    else TRY_SET_CONFIG(de233_fpu)
-    else TRY_SET_CONFIG(dsp3400)
-    else TRY_SET_CONFIG(esp32)
-    else TRY_SET_CONFIG(esp32s2)
-    else TRY_SET_CONFIG(esp32s3)
-    else TRY_SET_CONFIG(haswell)
-    else TRY_SET_CONFIG(icelake)
-    else TRY_SET_CONFIG(imx8)
-    else TRY_SET_CONFIG(imx8m)
-    else TRY_SET_CONFIG(sample_controller)
-    else TRY_SET_CONFIG(test_kc705_be)
-    else TRY_SET_CONFIG(test_mmuhifi_c3)
-    else TRY_SET_CONFIG(tigerlake)
-    else
+    else TRY_SET_CONFIG(baytrail) else TRY_SET_CONFIG(cannonlake) else TRY_SET_CONFIG(dc233c) else TRY_SET_CONFIG(de212) else TRY_SET_CONFIG(de233_fpu) else TRY_SET_CONFIG(dsp3400) else TRY_SET_CONFIG(esp32) else TRY_SET_CONFIG(esp32s2) else TRY_SET_CONFIG(
+        esp32s3) else TRY_SET_CONFIG(haswell) else TRY_SET_CONFIG(icelake) else TRY_SET_CONFIG(imx8) else TRY_SET_CONFIG(imx8m) else TRY_SET_CONFIG(sample_controller) else TRY_SET_CONFIG(test_kc705_be) else TRY_SET_CONFIG(test_mmuhifi_c3) else TRY_SET_CONFIG(tigerlake) else
     {
         tlib_abortf("Invalid Xtensa core name: %s", core_name);
         __builtin_unreachable();
     }
 
-    if (config && config->isa_internal) {
+    if(config && config->isa_internal) {
         init_libisa(config);
     }
     return config;
 }
 
-void do_unaligned_access(target_ulong addr, MMUAccessType access_type,
-                         int mmu_idx, uintptr_t retaddr)
+void do_unaligned_access(target_ulong addr, MMUAccessType access_type, int mmu_idx, uintptr_t retaddr)
 {
-    if (xtensa_option_enabled(env->config, XTENSA_OPTION_UNALIGNED_EXCEPTION) &&
-        !xtensa_option_enabled(env->config, XTENSA_OPTION_HW_ALIGNMENT)) {
+    if(xtensa_option_enabled(env->config, XTENSA_OPTION_UNALIGNED_EXCEPTION) &&
+       !xtensa_option_enabled(env->config, XTENSA_OPTION_HW_ALIGNMENT)) {
         cpu_restore_state(env, (void *)retaddr);
-        HELPER(exception_cause_vaddr)(env,
-                                      env->pc, LOAD_STORE_ALIGNMENT_CAUSE,
-                                      addr);
+        HELPER(exception_cause_vaddr)(env, env->pc, LOAD_STORE_ALIGNMENT_CAUSE, addr);
     }
 }
 
-int xtensa_cpu_tlb_fill(CPUState *env, vaddr address, int size,
-                         MMUAccessType access_type, int mmu_idx,
-                         bool probe, uintptr_t retaddr, int no_page_fault)
+int xtensa_cpu_tlb_fill(CPUState *env, vaddr address, int size, MMUAccessType access_type, int mmu_idx, bool probe,
+                        uintptr_t retaddr, int no_page_fault)
 {
     uint32_t paddr;
     uint32_t page_size;
     int access, ret;
 
-    if(unlikely(cpu->external_mmu_enabled))
-    {
+    if(unlikely(cpu->external_mmu_enabled)) {
         if(TRANSLATE_SUCCESS == get_external_mmu_phys_addr(env, address, access_type, &paddr, &access, no_page_fault)) {
             page_size = TARGET_PAGE_SIZE;
             tlb_set_page(env, address & TARGET_PAGE_MASK, paddr & TARGET_PAGE_MASK, access, mmu_idx, page_size);
@@ -211,18 +186,16 @@ int xtensa_cpu_tlb_fill(CPUState *env, vaddr address, int size,
         }
     }
 
-    ret = get_physical_address(env, true, address, access_type,
-                                       mmu_idx, &paddr, &page_size, &access);
+    ret = get_physical_address(env, true, address, access_type, mmu_idx, &paddr, &page_size, &access);
 #if DEBUG
-    tlib_printf(LOG_LEVEL_DEBUG, "%s(%08" VADDR_PRIx
-                  ", %d, %d) -> %08x, ret = %d\n",
-                  __func__, address, access_type, mmu_idx, paddr, ret);
+    tlib_printf(LOG_LEVEL_DEBUG, "%s(%08" VADDR_PRIx ", %d, %d) -> %08x, ret = %d\n", __func__, address, access_type, mmu_idx,
+                paddr, ret);
 #endif
 
-    if (ret == TRANSLATE_SUCCESS) {
+    if(ret == TRANSLATE_SUCCESS) {
         tlb_set_page(env, address & TARGET_PAGE_MASK, paddr & TARGET_PAGE_MASK, access, mmu_idx, page_size);
         return TRANSLATE_SUCCESS;
-    } else if (probe) {
+    } else if(probe) {
         return TRANSLATE_FAIL;
     } else {
         cpu_restore_state(env, (void *)retaddr);
@@ -232,11 +205,12 @@ int xtensa_cpu_tlb_fill(CPUState *env, vaddr address, int size,
 
 int tlb_fill(CPUState *env, target_ulong addr, int is_write, int mmu_idx, void *retaddr, int no_page_fault, int access_width)
 {
-    // TODO: we don't use access_width?!
-    return xtensa_cpu_tlb_fill(env, addr, 0 /* size not used anyway */, is_write, mmu_idx, no_page_fault, (uintptr_t)retaddr, no_page_fault);
+    //  TODO: we don't use access_width?!
+    return xtensa_cpu_tlb_fill(env, addr, 0 /* size not used anyway */, is_write, mmu_idx, no_page_fault, (uintptr_t)retaddr,
+                               no_page_fault);
 }
 
 void tlib_arch_dispose()
 {
-    // TODO: do we want to put sth here? Probably not - there are no mallocs in our code
+    //  TODO: do we want to put sth here? Probably not - there are no mallocs in our code
 }

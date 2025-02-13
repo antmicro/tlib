@@ -34,17 +34,26 @@ static int cpu_sparc_find_by_name(sparc_def_t *cpu_def, const char *cpu_model);
  * Sparc V8 Reference MMU (SRMMU)
  */
 static const int access_table[8][8] = {
-    { 0, 0, 0, 0, 8, 0, 12, 12 }, { 0, 0, 0, 0, 8, 0, 0, 0 }, { 8, 8, 0, 0, 0, 8, 12, 12 }, { 8, 8, 0, 0, 0, 8, 0, 0 },
-    { 8, 0, 8, 0, 8, 8, 12, 12 }, { 8, 0, 8, 0, 8, 0, 8, 0 }, { 8, 8, 8, 0, 8, 8, 12, 12 }, { 8, 8, 8, 0, 8, 8, 8, 0 }
+    { 0, 0, 0, 0, 8, 0, 12, 12 },
+    { 0, 0, 0, 0, 8, 0, 0,  0  },
+    { 8, 8, 0, 0, 0, 8, 12, 12 },
+    { 8, 8, 0, 0, 0, 8, 0,  0  },
+    { 8, 0, 8, 0, 8, 8, 12, 12 },
+    { 8, 0, 8, 0, 8, 0, 8,  0  },
+    { 8, 8, 8, 0, 8, 8, 12, 12 },
+    { 8, 8, 8, 0, 8, 8, 8,  0  }
 };
 
 static const int perm_table[2][8] = {
+    { PAGE_READ, PAGE_READ | PAGE_WRITE, PAGE_READ | PAGE_EXEC, PAGE_READ | PAGE_WRITE | PAGE_EXEC, PAGE_EXEC,
+     PAGE_READ | PAGE_WRITE, PAGE_READ | PAGE_EXEC, PAGE_READ | PAGE_WRITE | PAGE_EXEC },
     {
-        PAGE_READ, PAGE_READ | PAGE_WRITE, PAGE_READ | PAGE_EXEC, PAGE_READ | PAGE_WRITE | PAGE_EXEC, PAGE_EXEC,
-        PAGE_READ | PAGE_WRITE, PAGE_READ | PAGE_EXEC, PAGE_READ | PAGE_WRITE | PAGE_EXEC
-    }, {
-        PAGE_READ, PAGE_READ | PAGE_WRITE, PAGE_READ | PAGE_EXEC, PAGE_READ | PAGE_WRITE | PAGE_EXEC, PAGE_EXEC, PAGE_READ, 0, 0,
-    }
+     PAGE_READ, PAGE_READ | PAGE_WRITE,
+     PAGE_READ | PAGE_EXEC,
+     PAGE_READ | PAGE_WRITE | PAGE_EXEC,
+     PAGE_EXEC, PAGE_READ,
+     0, 0,
+     }
 };
 
 static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int *prot, int *access_index, target_ulong address,
@@ -58,10 +67,10 @@ static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int
 
     is_user = mmu_idx == MMU_USER_IDX;
 
-    if ((env->mmuregs[0] & MMU_E) == 0) { /* MMU disabled */
+    if((env->mmuregs[0] & MMU_E) == 0) { /* MMU disabled */
         *page_size = TARGET_PAGE_SIZE;
-        // Boot mode: instruction fetches are taken from PROM
-        if (access_type == ACCESS_INST_FETCH && (env->mmuregs[0] & env->def->mmu_bm)) {
+        //  Boot mode: instruction fetches are taken from PROM
+        if(access_type == ACCESS_INST_FETCH && (env->mmuregs[0] & env->def->mmu_bm)) {
             *physical = env->prom_addr | (address & 0x7ffffULL);
             *prot = PAGE_READ | PAGE_EXEC;
             return TRANSLATE_SUCCESS;
@@ -80,72 +89,72 @@ static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int
     pde = ldl_phys(pde_ptr);
 
     /* Ctx pde */
-    switch (pde & PTE_ENTRYTYPE_MASK) {
-    default:
-    case 0: /* Invalid */
-        return 1 << 2; // TRANSLATE_FAIL
-    case 2: /* L0 PTE, maybe should not happen? */
-    case 3: /* Reserved */
-        return 4 << 2; // TRANSLATE_FAIL
-    case 1: /* L0 PDE */
-        pde_ptr = ((address >> 22) & ~3) + ((pde & ~3) << 4);
-        pde = ldl_phys(pde_ptr);
-
-        switch (pde & PTE_ENTRYTYPE_MASK) {
+    switch(pde & PTE_ENTRYTYPE_MASK) {
         default:
-        case 0: /* Invalid */
-            return (1 << 8) | (1 << 2); // TRANSLATE_FAIL
-        case 3: /* Reserved */
-            return (1 << 8) | (4 << 2); // TRANSLATE_FAIL
-        case 1: /* L1 PDE */
-            pde_ptr = ((address & 0xfc0000) >> 16) + ((pde & ~3) << 4);
+        case 0:             /* Invalid */
+            return 1 << 2;  //  TRANSLATE_FAIL
+        case 2:             /* L0 PTE, maybe should not happen? */
+        case 3:             /* Reserved */
+            return 4 << 2;  //  TRANSLATE_FAIL
+        case 1:             /* L0 PDE */
+            pde_ptr = ((address >> 22) & ~3) + ((pde & ~3) << 4);
             pde = ldl_phys(pde_ptr);
 
-            switch (pde & PTE_ENTRYTYPE_MASK) {
-            default:
-            case 0: /* Invalid */
-                return (2 << 8) | (1 << 2); // TRANSLATE_FAIL
-            case 3: /* Reserved */
-                return (2 << 8) | (4 << 2); // TRANSLATE_FAIL
-            case 1: /* L2 PDE */
-                pde_ptr = ((address & 0x3f000) >> 10) + ((pde & ~3) << 4);
-                pde = ldl_phys(pde_ptr);
-
-                switch (pde & PTE_ENTRYTYPE_MASK) {
+            switch(pde & PTE_ENTRYTYPE_MASK) {
                 default:
-                case 0: /* Invalid */
-                    return (3 << 8) | (1 << 2); // TRANSLATE_FAIL
-                case 1: /* PDE, should not happen */
-                case 3: /* Reserved */
-                    return (3 << 8) | (4 << 2); // TRANSLATE_FAIL
-                case 2: /* L3 PTE */
-                    page_offset = (address & TARGET_PAGE_MASK) & (TARGET_PAGE_SIZE - 1);
-                }
-                *page_size = TARGET_PAGE_SIZE;
-                break;
-            case 2: /* L2 PTE */
-                page_offset = address & 0x3ffff;
-                *page_size = 0x40000;
+                case 0:                          /* Invalid */
+                    return (1 << 8) | (1 << 2);  //  TRANSLATE_FAIL
+                case 3:                          /* Reserved */
+                    return (1 << 8) | (4 << 2);  //  TRANSLATE_FAIL
+                case 1:                          /* L1 PDE */
+                    pde_ptr = ((address & 0xfc0000) >> 16) + ((pde & ~3) << 4);
+                    pde = ldl_phys(pde_ptr);
+
+                    switch(pde & PTE_ENTRYTYPE_MASK) {
+                        default:
+                        case 0:                          /* Invalid */
+                            return (2 << 8) | (1 << 2);  //  TRANSLATE_FAIL
+                        case 3:                          /* Reserved */
+                            return (2 << 8) | (4 << 2);  //  TRANSLATE_FAIL
+                        case 1:                          /* L2 PDE */
+                            pde_ptr = ((address & 0x3f000) >> 10) + ((pde & ~3) << 4);
+                            pde = ldl_phys(pde_ptr);
+
+                            switch(pde & PTE_ENTRYTYPE_MASK) {
+                                default:
+                                case 0:                          /* Invalid */
+                                    return (3 << 8) | (1 << 2);  //  TRANSLATE_FAIL
+                                case 1:                          /* PDE, should not happen */
+                                case 3:                          /* Reserved */
+                                    return (3 << 8) | (4 << 2);  //  TRANSLATE_FAIL
+                                case 2:                          /* L3 PTE */
+                                    page_offset = (address & TARGET_PAGE_MASK) & (TARGET_PAGE_SIZE - 1);
+                            }
+                            *page_size = TARGET_PAGE_SIZE;
+                            break;
+                        case 2: /* L2 PTE */
+                            page_offset = address & 0x3ffff;
+                            *page_size = 0x40000;
+                    }
+                    break;
+                case 2: /* L1 PTE */
+                    page_offset = address & 0xffffff;
+                    *page_size = 0x1000000;
             }
-            break;
-        case 2: /* L1 PTE */
-            page_offset = address & 0xffffff;
-            *page_size = 0x1000000;
-        }
     }
 
     /* check access */
     access_perms = (pde & PTE_ACCESS_MASK) >> PTE_ACCESS_SHIFT;
     error_code = access_table[*access_index][access_perms];
-    if (error_code && !((env->mmuregs[0] & MMU_NF) && is_user)) {
-        return error_code; // TRANSLATE_FAIL
+    if(error_code && !((env->mmuregs[0] & MMU_NF) && is_user)) {
+        return error_code;  //  TRANSLATE_FAIL
     }
 
     /* update page modified and dirty bits */
     is_dirty = (access_type & ACCESS_DATA_STORE) && !(pde & PG_MODIFIED_MASK);
-    if (!(pde & PG_ACCESSED_MASK) || is_dirty) {
+    if(!(pde & PG_ACCESSED_MASK) || is_dirty) {
         pde |= PG_ACCESSED_MASK;
-        if (is_dirty) {
+        if(is_dirty) {
             pde |= PG_MODIFIED_MASK;
         }
         stl_phys_notdirty(pde_ptr, pde);
@@ -153,7 +162,7 @@ static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int
 
     /* the page can be put in the TLB */
     *prot = perm_table[is_user][access_perms];
-    if (!(pde & PG_MODIFIED_MASK)) {
+    if(!(pde & PG_MODIFIED_MASK)) {
         /* only set write access if already dirty... otherwise wait
            for dirty access */
         *prot &= ~PAGE_WRITE;
@@ -162,21 +171,19 @@ static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int
     /* Even if large ptes, we map only one 4KB page in the cache to
        avoid filling it too fast */
     *physical = ((target_phys_addr_t)(pde & PTE_ADDR_MASK) << 4) + page_offset;
-    return error_code; // TRANSLATE_FAIL
+    return error_code;  //  TRANSLATE_FAIL
 }
 
 /* Perform address translation */
-int cpu_handle_mmu_fault (CPUState *env, target_ulong address, int access_type, int mmu_idx, int is_softmmu, int no_page_fault)
+int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, int mmu_idx, int is_softmmu, int no_page_fault)
 {
     target_phys_addr_t paddr;
     target_ulong vaddr;
     target_ulong page_size;
     int error_code = 0, prot, access_index;
 
-    if(unlikely(cpu->external_mmu_enabled))
-    {
-        if(TRANSLATE_SUCCESS == get_external_mmu_phys_addr(env, address, access_type, &paddr, &prot, no_page_fault))
-        {
+    if(unlikely(cpu->external_mmu_enabled)) {
+        if(TRANSLATE_SUCCESS == get_external_mmu_phys_addr(env, address, access_type, &paddr, &prot, no_page_fault)) {
             page_size = TARGET_PAGE_SIZE;
             goto set_page;
         }
@@ -184,31 +191,31 @@ int cpu_handle_mmu_fault (CPUState *env, target_ulong address, int access_type, 
     }
 
     error_code = get_physical_address(env, &paddr, &prot, &access_index, address, access_type, mmu_idx, &page_size);
-    if (error_code == 0) {
-set_page:
+    if(error_code == 0) {
+    set_page:
         vaddr = address & TARGET_PAGE_MASK;
         paddr &= TARGET_PAGE_MASK;
         tlb_set_page(env, vaddr, paddr, prot, mmu_idx, page_size);
         return TRANSLATE_SUCCESS;
     }
 
-    if (env->mmuregs[3]) {     /* Fault status register */
-        env->mmuregs[3] = 1;   /* overflow (not read before another fault) */
+    if(env->mmuregs[3]) {    /* Fault status register */
+        env->mmuregs[3] = 1; /* overflow (not read before another fault) */
     }
     env->mmuregs[3] |= (access_index << 5) | error_code | 2;
     env->mmuregs[4] = address; /* Fault address register */
 
-    if ((env->mmuregs[0] & MMU_NF) || env->psret == 0) {
-        // No fault mode: if a mapping is available, just override
-        // permissions. If no mapping is available, redirect accesses to
-        // neverland. Fake/overridden mappings will be flushed when
-        // switching to normal mode.
+    if((env->mmuregs[0] & MMU_NF) || env->psret == 0) {
+        //  No fault mode: if a mapping is available, just override
+        //  permissions. If no mapping is available, redirect accesses to
+        //  neverland. Fake/overridden mappings will be flushed when
+        //  switching to normal mode.
         vaddr = address & TARGET_PAGE_MASK;
         prot = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
         tlb_set_page(env, vaddr, paddr, prot, mmu_idx, TARGET_PAGE_SIZE);
         return TRANSLATE_SUCCESS;
     } else {
-        if (access_type == ACCESS_INST_FETCH) {
+        if(access_type == ACCESS_INST_FETCH) {
             env->exception_index = TT_TFAULT;
         } else {
             env->exception_index = TT_DFAULT;
@@ -226,58 +233,58 @@ target_ulong mmu_probe(CPUState *env, target_ulong address, int mmulev)
     pde_ptr = (target_phys_addr_t)(env->mmuregs[1] << 4) + (env->mmuregs[2] << 2);
     pde = ldl_phys(pde_ptr);
 
-    switch (pde & PTE_ENTRYTYPE_MASK) {
-    default:
-    case 0: /* Invalid */
-    case 2: /* PTE, maybe should not happen? */
-    case 3: /* Reserved */
-        return 0;
-    case 1: /* L1 PDE */
-        if (mmulev == 3) {
-            return pde;
-        }
-        pde_ptr = ((address >> 22) & ~3) + ((pde & ~3) << 4);
-        pde = ldl_phys(pde_ptr);
-
-        switch (pde & PTE_ENTRYTYPE_MASK) {
+    switch(pde & PTE_ENTRYTYPE_MASK) {
         default:
         case 0: /* Invalid */
+        case 2: /* PTE, maybe should not happen? */
         case 3: /* Reserved */
             return 0;
-        case 2: /* L1 PTE */
-            return pde;
-        case 1: /* L2 PDE */
-            if (mmulev == 2) {
+        case 1: /* L1 PDE */
+            if(mmulev == 3) {
                 return pde;
             }
-            pde_ptr = ((address & 0xfc0000) >> 16) + ((pde & ~3) << 4);
+            pde_ptr = ((address >> 22) & ~3) + ((pde & ~3) << 4);
             pde = ldl_phys(pde_ptr);
 
-            switch (pde & PTE_ENTRYTYPE_MASK) {
-            default:
-            case 0: /* Invalid */
-            case 3: /* Reserved */
-                return 0;
-            case 2: /* L2 PTE */
-                return pde;
-            case 1: /* L3 PDE */
-                if (mmulev == 1) {
-                    return pde;
-                }
-                pde_ptr = ((address & 0x3f000) >> 10) + ((pde & ~3) << 4);
-                pde = ldl_phys(pde_ptr);
-
-                switch (pde & PTE_ENTRYTYPE_MASK) {
+            switch(pde & PTE_ENTRYTYPE_MASK) {
                 default:
                 case 0: /* Invalid */
-                case 1: /* PDE, should not happen */
                 case 3: /* Reserved */
                     return 0;
-                case 2: /* L3 PTE */
+                case 2: /* L1 PTE */
                     return pde;
-                }
+                case 1: /* L2 PDE */
+                    if(mmulev == 2) {
+                        return pde;
+                    }
+                    pde_ptr = ((address & 0xfc0000) >> 16) + ((pde & ~3) << 4);
+                    pde = ldl_phys(pde_ptr);
+
+                    switch(pde & PTE_ENTRYTYPE_MASK) {
+                        default:
+                        case 0: /* Invalid */
+                        case 3: /* Reserved */
+                            return 0;
+                        case 2: /* L2 PTE */
+                            return pde;
+                        case 1: /* L3 PDE */
+                            if(mmulev == 1) {
+                                return pde;
+                            }
+                            pde_ptr = ((address & 0x3f000) >> 10) + ((pde & ~3) << 4);
+                            pde = ldl_phys(pde_ptr);
+
+                            switch(pde & PTE_ENTRYTYPE_MASK) {
+                                default:
+                                case 0: /* Invalid */
+                                case 1: /* PDE, should not happen */
+                                case 3: /* Reserved */
+                                    return 0;
+                                case 2: /* L3 PTE */
+                                    return pde;
+                            }
+                    }
             }
-        }
     }
     return 0;
 }
@@ -295,12 +302,12 @@ target_phys_addr_t cpu_get_phys_page_debug(CPUState *env, target_ulong addr)
     target_phys_addr_t phys_addr;
     int mmu_idx = cpu_mmu_index(env);
 
-    if (cpu_sparc_get_phys_page(env, &phys_addr, addr, 2, mmu_idx) != 0) {
-        if (cpu_sparc_get_phys_page(env, &phys_addr, addr, 0, mmu_idx) != 0) {
+    if(cpu_sparc_get_phys_page(env, &phys_addr, addr, 2, mmu_idx) != 0) {
+        if(cpu_sparc_get_phys_page(env, &phys_addr, addr, 0, mmu_idx) != 0) {
             return -1;
         }
     }
-    if (cpu_get_physical_page_desc(phys_addr) == IO_MEM_UNASSIGNED) {
+    if(cpu_get_physical_page_desc(phys_addr) == IO_MEM_UNASSIGNED) {
         return -1;
     }
     return phys_addr;
@@ -311,21 +318,20 @@ void do_interrupt(CPUState *env)
     target_ulong tbr_base;
     int cwp, intno = env->exception_index;
     int svt = (env->def->features & CPU_FEATURE_ASR)
-              ? !!(env->asr[1] & (0x1 << 13)) // ASR contains regs 16-31; here we are accessing ASR17
-              : 0;
+                  ? !!(env->asr[1] & (0x1 << 13))  //  ASR contains regs 16-31; here we are accessing ASR17
+                  : 0;
 
-    if(env->interrupt_begin_callback_enabled)
-    {
+    if(env->interrupt_begin_callback_enabled) {
         tlib_on_interrupt_begin(env->exception_index);
     }
 
     /* Compute PSR before exposing state.  */
-    if (env->cc_op != CC_OP_FLAGS) {
+    if(env->cc_op != CC_OP_FLAGS) {
         cpu_get_psr(env);
     }
 
-    if (env->psret == 0) {
-        if (env->exception_index == 0x80 && env->def->features & CPU_FEATURE_TA0_SHUTDOWN) {
+    if(env->psret == 0) {
+        if(env->exception_index == 0x80 && env->def->features & CPU_FEATURE_TA0_SHUTDOWN) {
             tlib_on_cpu_power_down();
         } else {
             cpu_abort(env, "Trap 0x%02x while interrupts disabled, Error state", env->exception_index);
@@ -346,7 +352,7 @@ void do_interrupt(CPUState *env)
     env->exception_index = -1;
     env->wfi = 0;
     /* IRQ acknowledgment */
-    if ((intno & ~15) == TT_EXTINT) {
+    if((intno & ~15) == TT_EXTINT) {
         tlib_acknowledge_interrupt(intno);
     }
 }
@@ -371,7 +377,7 @@ static int cpu_sparc_register(CPUState *env, const char *cpu_model)
 {
     sparc_def_t def1, *def = &def1;
 
-    if (cpu_sparc_find_by_name(def, cpu_model) < 0) {
+    if(cpu_sparc_find_by_name(def, cpu_model) < 0) {
         return -1;
     }
 
@@ -394,7 +400,7 @@ void tlib_arch_dispose()
 
 int cpu_init(const char *cpu_model)
 {
-    if (cpu_sparc_register(cpu, cpu_model) < 0) {
+    if(cpu_sparc_register(cpu, cpu_model) < 0) {
         return -1;
     }
     cpu_reset(cpu);
@@ -744,8 +750,8 @@ static void add_flagname_to_bitmaps(const char *flagname, uint32_t *features)
 {
     unsigned int i;
 
-    for (i = 0; i < ARRAY_SIZE(feature_name); i++) {
-        if (feature_name[i] && !strcmp(flagname, feature_name[i])) {
+    for(i = 0; i < ARRAY_SIZE(feature_name); i++) {
+        if(feature_name[i] && !strcmp(flagname, feature_name[i])) {
             *features |= 1 << i;
             return;
         }
@@ -764,58 +770,59 @@ static int cpu_sparc_find_by_name(sparc_def_t *cpu_def, const char *cpu_model)
     uint64_t iu_version;
     uint32_t fpu_version, mmu_version, nwindows;
 
-    for (i = 0; i < ARRAY_SIZE(sparc_defs); i++) {
-        if (strcasecmp(name, sparc_defs[i].name) == 0) {
+    for(i = 0; i < ARRAY_SIZE(sparc_defs); i++) {
+        if(strcasecmp(name, sparc_defs[i].name) == 0) {
             def = &sparc_defs[i];
         }
     }
-    if (!def) {
+    if(!def) {
         goto error;
     }
     memcpy(cpu_def, def, sizeof(*def));
 
     featurestr = strtok(NULL, ",");
-    while (featurestr) {
+    while(featurestr) {
         char *val;
 
-        if (featurestr[0] == '+') {
+        if(featurestr[0] == '+') {
             add_flagname_to_bitmaps(featurestr + 1, &plus_features);
-        } else if (featurestr[0] == '-') {
+        } else if(featurestr[0] == '-') {
             add_flagname_to_bitmaps(featurestr + 1, &minus_features);
-        } else if ((val = strchr(featurestr, '='))) {
-            *val = 0; val++;
-            if (!strcmp(featurestr, "iu_version")) {
+        } else if((val = strchr(featurestr, '='))) {
+            *val = 0;
+            val++;
+            if(!strcmp(featurestr, "iu_version")) {
                 char *err;
 
                 iu_version = strtoll(val, &err, 0);
-                if (!*val || *err) {
+                if(!*val || *err) {
                     tlib_printf(LOG_LEVEL_ERROR, "bad numerical value %s\n", val);
                     goto error;
                 }
                 cpu_def->iu_version = iu_version;
-            } else if (!strcmp(featurestr, "fpu_version")) {
+            } else if(!strcmp(featurestr, "fpu_version")) {
                 char *err;
 
                 fpu_version = strtol(val, &err, 0);
-                if (!*val || *err) {
+                if(!*val || *err) {
                     tlib_printf(LOG_LEVEL_ERROR, "bad numerical value %s\n", val);
                     goto error;
                 }
                 cpu_def->fpu_version = fpu_version;
-            } else if (!strcmp(featurestr, "mmu_version")) {
+            } else if(!strcmp(featurestr, "mmu_version")) {
                 char *err;
 
                 mmu_version = strtol(val, &err, 0);
-                if (!*val || *err) {
+                if(!*val || *err) {
                     tlib_printf(LOG_LEVEL_ERROR, "bad numerical value %s\n", val);
                     goto error;
                 }
                 cpu_def->mmu_version = mmu_version;
-            } else if (!strcmp(featurestr, "nwindows")) {
+            } else if(!strcmp(featurestr, "nwindows")) {
                 char *err;
 
                 nwindows = strtol(val, &err, 0);
-                if (!*val || *err || nwindows > MAX_NWINDOWS || nwindows < MIN_NWINDOWS) {
+                if(!*val || *err || nwindows > MAX_NWINDOWS || nwindows < MIN_NWINDOWS) {
                     tlib_printf(LOG_LEVEL_ERROR, "bad numerical value %s\n", val);
                     goto error;
                 }
@@ -825,8 +832,10 @@ static int cpu_sparc_find_by_name(sparc_def_t *cpu_def, const char *cpu_model)
                 goto error;
             }
         } else {
-            tlib_printf(LOG_LEVEL_ERROR, "feature string `%s' not in format "
-                        "(+feature|-feature|feature=xyz)\n", featurestr);
+            tlib_printf(LOG_LEVEL_ERROR,
+                        "feature string `%s' not in format "
+                        "(+feature|-feature|feature=xyz)\n",
+                        featurestr);
             goto error;
         }
         featurestr = strtok(NULL, ",");

@@ -41,20 +41,17 @@ static void xtensa_cpu_reset(CPUState *env)
 
     /* Reset Xtensa-specific parts */
 
-    bool dfpu = xtensa_option_enabled(env->config,
-                                      XTENSA_OPTION_DFP_COPROCESSOR);
+    bool dfpu = xtensa_option_enabled(env->config, XTENSA_OPTION_DFP_COPROCESSOR);
 
     env->exception_taken = 0;
     env->pc = env->config->exception_vector[EXC_RESET0];
     env->sregs[LITBASE] &= ~1;
-    env->sregs[PS] = xtensa_option_enabled(env->config,
-            XTENSA_OPTION_INTERRUPT) ? 0x1f : 0x10;
+    env->sregs[PS] = xtensa_option_enabled(env->config, XTENSA_OPTION_INTERRUPT) ? 0x1f : 0x10;
     env->pending_irq_level = 0;
     env->sregs[VECBASE] = env->config->vecbase;
     env->sregs[IBREAKENABLE] = 0;
     env->sregs[MEMCTL] = MEMCTL_IL0EN & env->config->memctl_mask;
-    env->sregs[ATOMCTL] = xtensa_option_enabled(env->config,
-            XTENSA_OPTION_ATOMCTL) ? 0x28 : 0x15;
+    env->sregs[ATOMCTL] = xtensa_option_enabled(env->config, XTENSA_OPTION_ATOMCTL) ? 0x28 : 0x15;
     env->sregs[CONFIGID0] = env->config->configid[0];
     env->sregs[CONFIGID1] = env->config->configid[1];
     env->exclusive_addr = -1;
@@ -79,8 +76,8 @@ static void xtensa_cpu_initfn(CPUState *env, XtensaConfig *config)
 int cpu_init(const char *cpu_model)
 {
     XtensaConfig *config = xtensa_finalize_config(cpu_model);
-    // Has to be run after 'xtensa_finalize_config' which calls
-    // 'xtensa_collect_sr_names' required to initialize cpu_SR array.
+    //  Has to be run after 'xtensa_finalize_config' which calls
+    //  'xtensa_collect_sr_names' required to initialize cpu_SR array.
     xtensa_translate_init();
     xtensa_cpu_initfn(cpu, config);
     cpu_reset(cpu);

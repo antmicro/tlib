@@ -28,7 +28,7 @@ void tlib_set_slot(uint32_t slot)
     unsigned int asr17;
     /* Default value is set for core 0, */
     /* only update ASR17 for slave cores 1-15 */
-    if ((slot > 0) && slot < 16) {
+    if((slot > 0) && slot < 16) {
         asr17 = (unsigned int)((cpu->asr[1] & 0xFFFFFFF) + ((slot << 28) & 0xF0000000));
         cpu->asr[1] = asr17;
     }

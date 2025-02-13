@@ -36,10 +36,10 @@ DEF_HELPER_1(raise_exception, void, int)
 DEF_HELPER_0(shutdown, void)
 DEF_HELPER_1(ldstub, tl, i32)
 DEF_HELPER_2(swap, tl, tl, i32)
-#define F_HELPER_0_0(name) DEF_HELPER_0(f ## name, void)
-#define F_HELPER_DQ_0_0(name)                   \
-    F_HELPER_0_0(name ## d);                    \
-    F_HELPER_0_0(name ## q)
+#define F_HELPER_0_0(name) DEF_HELPER_0(f##name, void)
+#define F_HELPER_DQ_0_0(name) \
+    F_HELPER_0_0(name##d);    \
+    F_HELPER_0_0(name##q)
 
 F_HELPER_DQ_0_0(add);
 F_HELPER_DQ_0_0(sub);

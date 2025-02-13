@@ -39,10 +39,10 @@ XtensaConfig dsp3400 __attribute__((unused)) = {
     .name = "dsp3400",
     .isa_internal = &xtensa_modules,
     .clock_freq_khz = 40000,
-    .opcode_translators = (const XtensaOpcodeTranslators *[]){
-        &xtensa_core_opcodes,
-        &xtensa_fpu2000_opcodes,
-        NULL,
-    },
+    .opcode_translators =
+        (const XtensaOpcodeTranslators *[]) {
+                                             &xtensa_core_opcodes,
+                                             &xtensa_fpu2000_opcodes,
+                                             NULL, },
     DEFAULT_SECTIONS
 };

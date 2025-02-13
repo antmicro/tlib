@@ -125,7 +125,7 @@ const float64 float64_default_nan = const_float64(LIT64(0xFFF8000000000000));
  | The pattern for a default generated extended double-precision NaN.
  *----------------------------------------------------------------------------*/
 #define floatx80_default_nan_high 0xFFFF
-#define floatx80_default_nan_low  LIT64( 0xC000000000000000 )
+#define floatx80_default_nan_low  LIT64(0xC000000000000000)
 
 const floatx80 floatx80_default_nan = make_floatx80(floatx80_default_nan_high, floatx80_default_nan_low);
 
@@ -133,8 +133,8 @@ const floatx80 floatx80_default_nan = make_floatx80(floatx80_default_nan_high, f
  | The pattern for a default generated quadruple-precision NaN.  The `high' and
  | `low' values hold the most- and least-significant bits, respectively.
  *----------------------------------------------------------------------------*/
-#define float128_default_nan_high LIT64( 0xFFFF800000000000 )
-#define float128_default_nan_low  LIT64( 0x0000000000000000 )
+#define float128_default_nan_high LIT64(0xFFFF800000000000)
+#define float128_default_nan_low  LIT64(0x0000000000000000)
 
 const float128 float128_default_nan = make_float128(float128_default_nan_high, float128_default_nan_low);
 
@@ -152,9 +152,9 @@ const float128 float128_default_nan = make_float128(float128_default_nan_high, f
 void float_raise(int8 flags STATUS_PARAM)
 {
     STATUS(float_exception_flags) |= flags;
-    #ifdef TARGET_PROTO_ARM_M
+#ifdef TARGET_PROTO_ARM_M
     vfp_trigger_exception();
-    #endif
+#endif
 }
 
 /*----------------------------------------------------------------------------
@@ -172,7 +172,7 @@ typedef struct {
 
 int float16_is_signaling_nan(float16 a_ STATUS_PARAM)
 {
-    if (no_signaling_nans(status)) {
+    if(no_signaling_nans(status)) {
         return 0;
     }
     uint16_t a = float16_val(a_);
@@ -185,7 +185,7 @@ int float16_is_signaling_nan(float16 a_ STATUS_PARAM)
  *----------------------------------------------------------------------------*/
 float16 float16_maybe_silence_nan(float16 a_ STATUS_PARAM)
 {
-    if (float16_is_signaling_nan(a_ STATUS_VAR)) {
+    if(float16_is_signaling_nan(a_ STATUS_VAR)) {
         uint16_t a = float16_val(a_);
         a |= (1 << 9);
         return make_float16(a);
@@ -203,7 +203,7 @@ static commonNaNT float16ToCommonNaN(float16 a STATUS_PARAM)
 {
     commonNaNT z;
 
-    if (float16_is_signaling_nan(a STATUS_VAR)) {
+    if(float16_is_signaling_nan(a STATUS_VAR)) {
         float_raise(float_flag_invalid STATUS_VAR);
     }
     z.sign = float16_val(a) >> 15;
@@ -221,11 +221,11 @@ static float16 commonNaNToFloat16(commonNaNT a STATUS_PARAM)
 {
     uint16_t mantissa = a.high >> 54;
 
-    if (STATUS(default_nan_mode)) {
+    if(STATUS(default_nan_mode)) {
         return float16_default_nan;
     }
 
-    if (mantissa) {
+    if(mantissa) {
         return make_float16(((((uint16_t)a.sign) << 15) | (0x1F << 10) | mantissa));
     } else {
         return float16_default_nan;
@@ -239,7 +239,7 @@ static float16 commonNaNToFloat16(commonNaNT a STATUS_PARAM)
 
 int float32_is_quiet_nan(float32 a_ STATUS_PARAM)
 {
-    if (no_signaling_nans(status)) {
+    if(no_signaling_nans(status)) {
         return float32_is_any_nan(a_);
     }
     uint32_t a = float32_val(a_);
@@ -253,7 +253,7 @@ int float32_is_quiet_nan(float32 a_ STATUS_PARAM)
 
 int float32_is_signaling_nan(float32 a_ STATUS_PARAM)
 {
-    if (no_signaling_nans(status)) {
+    if(no_signaling_nans(status)) {
         return 0;
     }
     uint32_t a = float32_val(a_);
@@ -267,7 +267,7 @@ int float32_is_signaling_nan(float32 a_ STATUS_PARAM)
 
 float32 float32_maybe_silence_nan(float32 a_ STATUS_PARAM)
 {
-    if (float32_is_signaling_nan(a_ STATUS_VAR)) {
+    if(float32_is_signaling_nan(a_ STATUS_VAR)) {
         uint32_t a = float32_val(a_);
         a |= (1 << 22);
         return make_float32(a);
@@ -285,7 +285,7 @@ static commonNaNT float32ToCommonNaN(float32 a STATUS_PARAM)
 {
     commonNaNT z;
 
-    if (float32_is_signaling_nan(a STATUS_VAR)) {
+    if(float32_is_signaling_nan(a STATUS_VAR)) {
         float_raise(float_flag_invalid STATUS_VAR);
     }
     z.sign = float32_val(a) >> 31;
@@ -303,13 +303,12 @@ static float32 commonNaNToFloat32(commonNaNT a STATUS_PARAM)
 {
     uint32_t mantissa = a.high >> 41;
 
-    if (STATUS(default_nan_mode)) {
+    if(STATUS(default_nan_mode)) {
         return float32_default_nan;
     }
 
-    if (mantissa) {
-        return make_float32(
-            (((uint32_t)a.sign) << 31) | 0x7F800000 | (a.high >> 41));
+    if(mantissa) {
+        return make_float32((((uint32_t)a.sign) << 31) | 0x7F800000 | (a.high >> 41));
     } else {
         return float32_default_nan;
     }
@@ -342,11 +341,11 @@ static int pickNaN(flag aIsQNaN, flag aIsSNaN, flag bIsQNaN, flag bIsSNaN, flag 
      *  4. B (quiet)
      * A signaling NaN is always quietened before returning it.
      */
-    if (aIsSNaN) {
+    if(aIsSNaN) {
         return 0;
-    } else if (bIsSNaN) {
+    } else if(bIsSNaN) {
         return 1;
-    } else if (aIsQNaN) {
+    } else if(aIsQNaN) {
         return 0;
     } else {
         return 1;
@@ -357,7 +356,7 @@ static int pickNaN(flag aIsQNaN, flag aIsSNaN, flag bIsQNaN, flag bIsSNaN, flag 
      *  2. B if it sNaN or qNaN
      * A signaling NaN is always silenced before returning it.
      */
-    if (aIsSNaN || aIsQNaN) {
+    if(aIsSNaN || aIsQNaN) {
         return 0;
     } else {
         return 1;
@@ -367,14 +366,14 @@ static int pickNaN(flag aIsQNaN, flag aIsSNaN, flag bIsQNaN, flag bIsSNaN, flag 
      * Xtensa has two NaN propagation modes.
      * Which one is active is controlled by float_status::use_first_nan.
      */
-    if (STATUS(use_first_nan)) {
-        if (aIsQNaN || aIsSNaN) {
+    if(STATUS(use_first_nan)) {
+        if(aIsQNaN || aIsSNaN) {
             return 0;
         } else {
             return 1;
         }
     } else {
-        if (bIsQNaN || bIsSNaN) {
+        if(bIsQNaN || bIsSNaN) {
             return 1;
         } else {
             return 0;
@@ -391,13 +390,13 @@ static int pickNaN(flag aIsQNaN, flag aIsSNaN, flag bIsQNaN, flag bIsSNaN, flag 
      * If we get down to comparing significands and they are the same,
      * return the NaN with the positive sign bit (if any).
      */
-    if (aIsSNaN) {
-        if (bIsSNaN) {
+    if(aIsSNaN) {
+        if(bIsSNaN) {
             return aIsLargerSignificand ? 0 : 1;
         }
         return bIsQNaN ? 1 : 0;
-    } else if (aIsQNaN) {
-        if (bIsSNaN || !bIsQNaN) {
+    } else if(aIsQNaN) {
+        if(bIsSNaN || !bIsQNaN) {
             return 0;
         } else {
             return aIsLargerSignificand ? 0 : 1;
@@ -421,7 +420,7 @@ static int pickNaNMulAdd(flag aIsQNaN, flag aIsSNaN, flag bIsQNaN, flag bIsSNaN,
     /* For ARM, the (inf,zero,qnan) case sets InvalidOp and returns
      * the default NaN
      */
-    if (infzero && cIsQNaN) {
+    if(infzero && cIsQNaN) {
         float_raise(float_flag_invalid STATUS_VAR);
         return 3;
     }
@@ -429,15 +428,15 @@ static int pickNaNMulAdd(flag aIsQNaN, flag aIsSNaN, flag bIsQNaN, flag bIsSNaN,
     /* This looks different from the ARM ARM pseudocode, because the ARM ARM
      * puts the operands to a fused mac operation (a*b)+c in the order c,a,b.
      */
-    if (cIsSNaN) {
+    if(cIsSNaN) {
         return 2;
-    } else if (aIsSNaN) {
+    } else if(aIsSNaN) {
         return 0;
-    } else if (bIsSNaN) {
+    } else if(bIsSNaN) {
         return 1;
-    } else if (cIsQNaN) {
+    } else if(cIsQNaN) {
         return 2;
-    } else if (aIsQNaN) {
+    } else if(aIsQNaN) {
         return 0;
     } else {
         return 1;
@@ -451,7 +450,7 @@ static int pickNaNMulAdd(flag aIsQNaN, flag aIsSNaN, flag bIsQNaN, flag bIsSNaN,
      * to return an input NaN if we have one (ie c) rather than generating
      * a default NaN
      */
-    if (infzero) {
+    if(infzero) {
         float_raise(float_flag_invalid STATUS_VAR);
         return 2;
     }
@@ -459,9 +458,9 @@ static int pickNaNMulAdd(flag aIsQNaN, flag aIsSNaN, flag bIsQNaN, flag bIsSNaN,
     /* If fRA is a NaN return it; otherwise if fRB is a NaN return it;
      * otherwise return fRC. Note that muladd on PPC is (fRA * fRC) + frB
      */
-    if (aIsSNaN || aIsQNaN) {
+    if(aIsSNaN || aIsQNaN) {
         return 0;
-    } else if (cIsSNaN || cIsQNaN) {
+    } else if(cIsSNaN || cIsQNaN) {
         return 2;
     } else {
         return 1;
@@ -475,22 +474,22 @@ static int pickNaNMulAdd(flag aIsQNaN, flag aIsSNaN, flag bIsQNaN, flag bIsSNaN,
      * For Xtensa, the (inf,zero,nan) case sets InvalidOp and returns
      * an input NaN if we have one (ie c).
      */
-    if (infzero) {
+    if(infzero) {
         float_raise(float_flag_invalid STATUS_VAR);
         return 2;
     }
-    if (STATUS(use_first_nan)) {
-        if (aIsQNaN || aIsSNaN) {
+    if(STATUS(use_first_nan)) {
+        if(aIsQNaN || aIsSNaN) {
             return 0;
-        } else if (bIsQNaN || bIsSNaN) {
+        } else if(bIsQNaN || bIsSNaN) {
             return 1;
         } else {
             return 2;
         }
     } else {
-        if (cIsQNaN || cIsSNaN) {
+        if(cIsQNaN || cIsSNaN) {
             return 2;
-        } else if (bIsQNaN || bIsSNaN) {
+        } else if(bIsQNaN || bIsSNaN) {
             return 1;
         } else {
             return 0;
@@ -504,9 +503,9 @@ static int pickNaNMulAdd(flag aIsQNaN, flag aIsSNaN, flag bIsQNaN, flag bIsSNaN,
 static int pickNaNMulAdd(flag aIsQNaN, flag aIsSNaN, flag bIsQNaN, flag bIsSNaN, flag cIsQNaN, flag cIsSNaN,
                          flag infzero STATUS_PARAM)
 {
-    if (aIsSNaN || aIsQNaN) {
+    if(aIsSNaN || aIsQNaN) {
         return 0;
-    } else if (bIsSNaN || bIsQNaN) {
+    } else if(bIsSNaN || bIsQNaN) {
         return 1;
     } else {
         return 2;
@@ -533,23 +532,23 @@ static float32 propagateFloat32NaN(float32 a, float32 b STATUS_PARAM)
     av = float32_val(a);
     bv = float32_val(b);
 
-    if (aIsSignalingNaN | bIsSignalingNaN) {
+    if(aIsSignalingNaN | bIsSignalingNaN) {
         float_raise(float_flag_invalid STATUS_VAR);
     }
 
-    if (STATUS(default_nan_mode)) {
+    if(STATUS(default_nan_mode)) {
         return float32_default_nan;
     }
 
-    if ((uint32_t)(av << 1) < (uint32_t)(bv << 1)) {
+    if((uint32_t)(av << 1) < (uint32_t)(bv << 1)) {
         aIsLargerSignificand = 0;
-    } else if ((uint32_t)(bv << 1) < (uint32_t)(av << 1)) {
+    } else if((uint32_t)(bv << 1) < (uint32_t)(av << 1)) {
         aIsLargerSignificand = 1;
     } else {
         aIsLargerSignificand = (av < bv) ? 1 : 0;
     }
 
-    if (pickNaN(aIsQuietNaN, aIsSignalingNaN, bIsQuietNaN, bIsSignalingNaN, aIsLargerSignificand STATUS_VAR)) {
+    if(pickNaN(aIsQuietNaN, aIsSignalingNaN, bIsQuietNaN, bIsSignalingNaN, aIsLargerSignificand STATUS_VAR)) {
         return float32_maybe_silence_nan(b STATUS_VAR);
     } else {
         return float32_maybe_silence_nan(a STATUS_VAR);
@@ -577,30 +576,30 @@ static float32 propagateFloat32MulAddNaN(float32 a, float32 b, float32 c, flag i
     cIsQuietNaN = float32_is_quiet_nan(c STATUS_VAR);
     cIsSignalingNaN = float32_is_signaling_nan(c STATUS_VAR);
 
-    if (aIsSignalingNaN | bIsSignalingNaN | cIsSignalingNaN) {
+    if(aIsSignalingNaN | bIsSignalingNaN | cIsSignalingNaN) {
         float_raise(float_flag_invalid STATUS_VAR);
     }
 
     which = pickNaNMulAdd(aIsQuietNaN, aIsSignalingNaN, bIsQuietNaN, bIsSignalingNaN, cIsQuietNaN, cIsSignalingNaN,
                           infzero STATUS_VAR);
 
-    if (STATUS(default_nan_mode)) {
+    if(STATUS(default_nan_mode)) {
         /* Note that this check is after pickNaNMulAdd so that function
          * has an opportunity to set the Invalid flag.
          */
         return float32_default_nan;
     }
 
-    switch (which) {
-    case 0:
-        return float32_maybe_silence_nan(a STATUS_VAR);
-    case 1:
-        return float32_maybe_silence_nan(b STATUS_VAR);
-    case 2:
-        return float32_maybe_silence_nan(c STATUS_VAR);
-    case 3:
-    default:
-        return float32_default_nan;
+    switch(which) {
+        case 0:
+            return float32_maybe_silence_nan(a STATUS_VAR);
+        case 1:
+            return float32_maybe_silence_nan(b STATUS_VAR);
+        case 2:
+            return float32_maybe_silence_nan(c STATUS_VAR);
+        case 3:
+        default:
+            return float32_default_nan;
     }
 }
 
@@ -611,7 +610,7 @@ static float32 propagateFloat32MulAddNaN(float32 a, float32 b, float32 c, flag i
 
 int float64_is_quiet_nan(float64 a_ STATUS_PARAM)
 {
-    if (no_signaling_nans(status)) {
+    if(no_signaling_nans(status)) {
         return float64_is_any_nan(a_);
     }
     uint64_t a = float64_val(a_);
@@ -625,12 +624,11 @@ int float64_is_quiet_nan(float64 a_ STATUS_PARAM)
 
 int float64_is_signaling_nan(float64 a_ STATUS_PARAM)
 {
-    if (no_signaling_nans(status)) {
+    if(no_signaling_nans(status)) {
         return 0;
     }
     uint64_t a = float64_val(a_);
-    return
-        (((a >> 51) & 0xFFF) == 0xFFE) && (a & LIT64(0x0007FFFFFFFFFFFF));
+    return (((a >> 51) & 0xFFF) == 0xFFE) && (a & LIT64(0x0007FFFFFFFFFFFF));
 }
 
 /*----------------------------------------------------------------------------
@@ -640,7 +638,7 @@ int float64_is_signaling_nan(float64 a_ STATUS_PARAM)
 
 float64 float64_maybe_silence_nan(float64 a_ STATUS_PARAM)
 {
-    if (float64_is_signaling_nan(a_ STATUS_VAR)) {
+    if(float64_is_signaling_nan(a_ STATUS_VAR)) {
         uint64_t a = float64_val(a_);
         a |= LIT64(0x0008000000000000);
         return make_float64(a);
@@ -658,7 +656,7 @@ static commonNaNT float64ToCommonNaN(float64 a STATUS_PARAM)
 {
     commonNaNT z;
 
-    if (float64_is_signaling_nan(a STATUS_VAR)) {
+    if(float64_is_signaling_nan(a STATUS_VAR)) {
         float_raise(float_flag_invalid STATUS_VAR);
     }
     z.sign = float64_val(a) >> 63;
@@ -676,13 +674,12 @@ static float64 commonNaNToFloat64(commonNaNT a STATUS_PARAM)
 {
     uint64_t mantissa = a.high >> 12;
 
-    if (STATUS(default_nan_mode)) {
+    if(STATUS(default_nan_mode)) {
         return float64_default_nan;
     }
 
-    if (mantissa) {
-        return make_float64(
-            (((uint64_t)a.sign) << 63) | LIT64(0x7FF0000000000000) | (a.high >> 12));
+    if(mantissa) {
+        return make_float64((((uint64_t)a.sign) << 63) | LIT64(0x7FF0000000000000) | (a.high >> 12));
     } else {
         return float64_default_nan;
     }
@@ -707,23 +704,23 @@ static float64 propagateFloat64NaN(float64 a, float64 b STATUS_PARAM)
     av = float64_val(a);
     bv = float64_val(b);
 
-    if (aIsSignalingNaN | bIsSignalingNaN) {
+    if(aIsSignalingNaN | bIsSignalingNaN) {
         float_raise(float_flag_invalid STATUS_VAR);
     }
 
-    if (STATUS(default_nan_mode)) {
+    if(STATUS(default_nan_mode)) {
         return float64_default_nan;
     }
 
-    if ((uint64_t)(av << 1) < (uint64_t)(bv << 1)) {
+    if((uint64_t)(av << 1) < (uint64_t)(bv << 1)) {
         aIsLargerSignificand = 0;
-    } else if ((uint64_t)(bv << 1) < (uint64_t)(av << 1)) {
+    } else if((uint64_t)(bv << 1) < (uint64_t)(av << 1)) {
         aIsLargerSignificand = 1;
     } else {
         aIsLargerSignificand = (av < bv) ? 1 : 0;
     }
 
-    if (pickNaN(aIsQuietNaN, aIsSignalingNaN, bIsQuietNaN, bIsSignalingNaN, aIsLargerSignificand STATUS_VAR)) {
+    if(pickNaN(aIsQuietNaN, aIsSignalingNaN, bIsQuietNaN, bIsSignalingNaN, aIsLargerSignificand STATUS_VAR)) {
         return float64_maybe_silence_nan(b STATUS_VAR);
     } else {
         return float64_maybe_silence_nan(a STATUS_VAR);
@@ -751,30 +748,30 @@ static float64 propagateFloat64MulAddNaN(float64 a, float64 b, float64 c, flag i
     cIsQuietNaN = float64_is_quiet_nan(c STATUS_VAR);
     cIsSignalingNaN = float64_is_signaling_nan(c STATUS_VAR);
 
-    if (aIsSignalingNaN | bIsSignalingNaN | cIsSignalingNaN) {
+    if(aIsSignalingNaN | bIsSignalingNaN | cIsSignalingNaN) {
         float_raise(float_flag_invalid STATUS_VAR);
     }
 
     which = pickNaNMulAdd(aIsQuietNaN, aIsSignalingNaN, bIsQuietNaN, bIsSignalingNaN, cIsQuietNaN, cIsSignalingNaN,
                           infzero STATUS_VAR);
 
-    if (STATUS(default_nan_mode)) {
+    if(STATUS(default_nan_mode)) {
         /* Note that this check is after pickNaNMulAdd so that function
          * has an opportunity to set the Invalid flag.
          */
         return float64_default_nan;
     }
 
-    switch (which) {
-    case 0:
-        return float64_maybe_silence_nan(a STATUS_VAR);
-    case 1:
-        return float64_maybe_silence_nan(b STATUS_VAR);
-    case 2:
-        return float64_maybe_silence_nan(c STATUS_VAR);
-    case 3:
-    default:
-        return float64_default_nan;
+    switch(which) {
+        case 0:
+            return float64_maybe_silence_nan(a STATUS_VAR);
+        case 1:
+            return float64_maybe_silence_nan(b STATUS_VAR);
+        case 2:
+            return float64_maybe_silence_nan(c STATUS_VAR);
+        case 3:
+        default:
+            return float64_default_nan;
     }
 }
 
@@ -786,7 +783,7 @@ static float64 propagateFloat64MulAddNaN(float64 a, float64 b, float64 c, flag i
 
 int floatx80_is_quiet_nan(floatx80 a STATUS_PARAM)
 {
-    if (no_signaling_nans(status)) {
+    if(no_signaling_nans(status)) {
         return floatx80_is_any_nan(a);
     }
     return ((a.high & 0x7FFF) == 0x7FFF) && (LIT64(0x8000000000000000) <= ((uint64_t)(a.low << 1)));
@@ -800,14 +797,13 @@ int floatx80_is_quiet_nan(floatx80 a STATUS_PARAM)
 
 int floatx80_is_signaling_nan(floatx80 a STATUS_PARAM)
 {
-    if (no_signaling_nans(status)) {
+    if(no_signaling_nans(status)) {
         return 0;
     }
     uint64_t aLow;
 
     aLow = a.low & ~LIT64(0x4000000000000000);
-    return
-        ((a.high & 0x7FFF) == 0x7FFF) && (uint64_t)(aLow << 1) && (a.low == aLow);
+    return ((a.high & 0x7FFF) == 0x7FFF) && (uint64_t)(aLow << 1) && (a.low == aLow);
 }
 
 /*----------------------------------------------------------------------------
@@ -817,7 +813,7 @@ int floatx80_is_signaling_nan(floatx80 a STATUS_PARAM)
 
 floatx80 floatx80_maybe_silence_nan(floatx80 a STATUS_PARAM)
 {
-    if (floatx80_is_signaling_nan(a STATUS_VAR)) {
+    if(floatx80_is_signaling_nan(a STATUS_VAR)) {
         a.low |= LIT64(0xC000000000000000);
         return a;
     }
@@ -834,10 +830,10 @@ static commonNaNT floatx80ToCommonNaN(floatx80 a STATUS_PARAM)
 {
     commonNaNT z;
 
-    if (floatx80_is_signaling_nan(a STATUS_VAR)) {
+    if(floatx80_is_signaling_nan(a STATUS_VAR)) {
         float_raise(float_flag_invalid STATUS_VAR);
     }
-    if (a.low >> 63) {
+    if(a.low >> 63) {
         z.sign = a.high >> 15;
         z.low = 0;
         z.high = a.low << 1;
@@ -858,13 +854,13 @@ static floatx80 commonNaNToFloatx80(commonNaNT a STATUS_PARAM)
 {
     floatx80 z;
 
-    if (STATUS(default_nan_mode)) {
+    if(STATUS(default_nan_mode)) {
         z.low = floatx80_default_nan_low;
         z.high = floatx80_default_nan_high;
         return z;
     }
 
-    if (a.high >> 1) {
+    if(a.high >> 1) {
         z.low = LIT64(0x8000000000000000) | a.high >> 1;
         z.high = (((uint16_t)a.sign) << 15) | 0x7FFF;
     } else {
@@ -891,25 +887,25 @@ static floatx80 propagateFloatx80NaN(floatx80 a, floatx80 b STATUS_PARAM)
     bIsQuietNaN = floatx80_is_quiet_nan(b STATUS_VAR);
     bIsSignalingNaN = floatx80_is_signaling_nan(b STATUS_VAR);
 
-    if (aIsSignalingNaN | bIsSignalingNaN) {
+    if(aIsSignalingNaN | bIsSignalingNaN) {
         float_raise(float_flag_invalid STATUS_VAR);
     }
 
-    if (STATUS(default_nan_mode)) {
+    if(STATUS(default_nan_mode)) {
         a.low = floatx80_default_nan_low;
         a.high = floatx80_default_nan_high;
         return a;
     }
 
-    if (a.low < b.low) {
+    if(a.low < b.low) {
         aIsLargerSignificand = 0;
-    } else if (b.low < a.low) {
+    } else if(b.low < a.low) {
         aIsLargerSignificand = 1;
     } else {
         aIsLargerSignificand = (a.high < b.high) ? 1 : 0;
     }
 
-    if (pickNaN(aIsQuietNaN, aIsSignalingNaN, bIsQuietNaN, bIsSignalingNaN, aIsLargerSignificand STATUS_VAR)) {
+    if(pickNaN(aIsQuietNaN, aIsSignalingNaN, bIsQuietNaN, bIsSignalingNaN, aIsLargerSignificand STATUS_VAR)) {
         return floatx80_maybe_silence_nan(b STATUS_VAR);
     } else {
         return floatx80_maybe_silence_nan(a STATUS_VAR);
@@ -923,11 +919,10 @@ static floatx80 propagateFloatx80NaN(floatx80 a, floatx80 b STATUS_PARAM)
 
 int float128_is_quiet_nan(float128 a STATUS_PARAM)
 {
-    if (no_signaling_nans(status)) {
+    if(no_signaling_nans(status)) {
         return float128_is_any_nan(a);
     }
-    return
-        (LIT64(0xFFFE000000000000) <= (uint64_t)(a.high << 1)) && (a.low || (a.high & LIT64(0x0000FFFFFFFFFFFF)));
+    return (LIT64(0xFFFE000000000000) <= (uint64_t)(a.high << 1)) && (a.low || (a.high & LIT64(0x0000FFFFFFFFFFFF)));
 }
 
 /*----------------------------------------------------------------------------
@@ -937,11 +932,10 @@ int float128_is_quiet_nan(float128 a STATUS_PARAM)
 
 int float128_is_signaling_nan(float128 a STATUS_PARAM)
 {
-    if (no_signaling_nans(status)) {
+    if(no_signaling_nans(status)) {
         return 0;
     }
-    return
-        (((a.high >> 47) & 0xFFFF) == 0xFFFE) && (a.low || (a.high & LIT64(0x00007FFFFFFFFFFF)));
+    return (((a.high >> 47) & 0xFFFF) == 0xFFFE) && (a.low || (a.high & LIT64(0x00007FFFFFFFFFFF)));
 }
 
 /*----------------------------------------------------------------------------
@@ -951,7 +945,7 @@ int float128_is_signaling_nan(float128 a STATUS_PARAM)
 
 float128 float128_maybe_silence_nan(float128 a STATUS_PARAM)
 {
-    if (float128_is_signaling_nan(a STATUS_VAR)) {
+    if(float128_is_signaling_nan(a STATUS_VAR)) {
         a.high |= LIT64(0x0000800000000000);
         return a;
     }
@@ -968,7 +962,7 @@ static commonNaNT float128ToCommonNaN(float128 a STATUS_PARAM)
 {
     commonNaNT z;
 
-    if (float128_is_signaling_nan(a STATUS_VAR)) {
+    if(float128_is_signaling_nan(a STATUS_VAR)) {
         float_raise(float_flag_invalid STATUS_VAR);
     }
     z.sign = a.high >> 63;
@@ -985,7 +979,7 @@ static float128 commonNaNToFloat128(commonNaNT a STATUS_PARAM)
 {
     float128 z;
 
-    if (STATUS(default_nan_mode)) {
+    if(STATUS(default_nan_mode)) {
         z.low = float128_default_nan_low;
         z.high = float128_default_nan_high;
         return z;
@@ -1012,25 +1006,25 @@ static float128 propagateFloat128NaN(float128 a, float128 b STATUS_PARAM)
     bIsQuietNaN = float128_is_quiet_nan(b STATUS_VAR);
     bIsSignalingNaN = float128_is_signaling_nan(b STATUS_VAR);
 
-    if (aIsSignalingNaN | bIsSignalingNaN) {
+    if(aIsSignalingNaN | bIsSignalingNaN) {
         float_raise(float_flag_invalid STATUS_VAR);
     }
 
-    if (STATUS(default_nan_mode)) {
+    if(STATUS(default_nan_mode)) {
         a.low = float128_default_nan_low;
         a.high = float128_default_nan_high;
         return a;
     }
 
-    if (lt128(a.high << 1, a.low, b.high << 1, b.low)) {
+    if(lt128(a.high << 1, a.low, b.high << 1, b.low)) {
         aIsLargerSignificand = 0;
-    } else if (lt128(b.high << 1, b.low, a.high << 1, a.low)) {
+    } else if(lt128(b.high << 1, b.low, a.high << 1, a.low)) {
         aIsLargerSignificand = 1;
     } else {
         aIsLargerSignificand = (a.high < b.high) ? 1 : 0;
     }
 
-    if (pickNaN(aIsQuietNaN, aIsSignalingNaN, bIsQuietNaN, bIsSignalingNaN, aIsLargerSignificand STATUS_VAR)) {
+    if(pickNaN(aIsQuietNaN, aIsSignalingNaN, bIsQuietNaN, bIsSignalingNaN, aIsLargerSignificand STATUS_VAR)) {
         return float128_maybe_silence_nan(b STATUS_VAR);
     } else {
         return float128_maybe_silence_nan(a STATUS_VAR);
