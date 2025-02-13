@@ -1391,8 +1391,6 @@ static void tcg_out_qemu_st(TCGContext *s, const TCGArg *args, int opc)
     }
 }
 
-// clang-format off
-
 static inline void tcg_out_op(TCGContext *s, TCGOpcode opc,
                               const TCGArg *args, const int *const_args)
 {
@@ -1952,8 +1950,6 @@ static int tcg_target_callee_save_regs[] = {
     TCG_REG_EDI,
 #endif
 };
-
-// clang-format on
 
 /* Generate global QEMU prologue and epilogue code */
 static void tcg_target_qemu_prologue(TCGContext *s)

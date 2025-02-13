@@ -2823,8 +2823,6 @@ static inline void gen_op_movq_env_0(int d_offset)
 #define SSE_FOP(x) { gen_helper_ ## x ## ps, gen_helper_ ## x ## pd, \
                      gen_helper_ ## x ## ss, gen_helper_ ## x ## sd, }
 
-// clang-format off
-
 static void *sse_op_table1[256][4] = {
     /* 3DNow! extensions */
     [0x0e] = { SSE_DUMMY }, /* femms */
@@ -3104,8 +3102,6 @@ static struct sse_op_helper_s sse_op_table7[256] = {
     [0x62] = SSE42_OP(pcmpistrm),
     [0x63] = SSE42_OP(pcmpistri),
 };
-
-// clang-format on
 
 static void gen_sse(DisasContext *s, int b, target_ulong pc_start, int rex_r)
 {
