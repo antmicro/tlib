@@ -23,6 +23,7 @@
 #include "debug.h"
 #include "arch_callbacks.h"
 #include "cpu_registers.h"
+#include "atomic-intrinsics.h"
 
 /* global register indices */
 static TCGv cpu_gpr[32], cpu_pc, cpu_opcode;
@@ -2008,24 +2009,10 @@ static void gen_v_store(DisasContext *dc, uint32_t opc, uint32_t rest, uint32_t 
 #endif  //  HOST_LONG_BITS != 32
 }
 
-static void gen_atomic(CPUState *env, DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
+static inline void gen_atomic_with_global_memory_lock(DisasContext *dc, uint32_t opc, TCGv dat, TCGv source1, TCGv source2)
 {
-    if(!ensure_extension(dc, RISCV_FEATURE_RVA)) {
-        return;
-    }
-
-    /* TODO: handle aq, rl bits? - for now just get rid of them: */
-    opc = MASK_OP_ATOMIC_NO_AQ_RL(opc);
-    TCGv source1, source2, dat;
     int done;
-    source1 = tcg_temp_local_new();
-    source2 = tcg_temp_local_new();
     done = gen_new_label();
-    dat = tcg_temp_local_new();
-    gen_get_gpr(source1, rs1);
-    gen_get_gpr(source2, rs2);
-
-    gen_sync_pc(dc);
 
     gen_helper_acquire_global_memory_lock(cpu_env);
 
@@ -2043,11 +2030,6 @@ static void gen_atomic(CPUState *env, DisasContext *dc, uint32_t opc, int rd, in
             break;
         case OPC_RISC_AMOSWAP_W:
             tcg_gen_qemu_ld32s(dat, source1, dc->base.mem_idx);
-            tcg_gen_qemu_st32(source2, source1, dc->base.mem_idx);
-            break;
-        case OPC_RISC_AMOADD_W:
-            tcg_gen_qemu_ld32s(dat, source1, dc->base.mem_idx);
-            tcg_gen_add_tl(source2, dat, source2);
             tcg_gen_qemu_st32(source2, source1, dc->base.mem_idx);
             break;
         case OPC_RISC_AMOXOR_W:
@@ -2101,11 +2083,6 @@ static void gen_atomic(CPUState *env, DisasContext *dc, uint32_t opc, int rd, in
             tcg_gen_qemu_ld64(dat, source1, dc->base.mem_idx);
             tcg_gen_qemu_st64(source2, source1, dc->base.mem_idx);
             break;
-        case OPC_RISC_AMOADD_D:
-            tcg_gen_qemu_ld64(dat, source1, dc->base.mem_idx);
-            tcg_gen_add_tl(source2, dat, source2);
-            tcg_gen_qemu_st64(source2, source1, dc->base.mem_idx);
-            break;
         case OPC_RISC_AMOXOR_D:
             tcg_gen_qemu_ld64(dat, source1, dc->base.mem_idx);
             tcg_gen_xor_tl(source2, dat, source2);
@@ -2150,6 +2127,87 @@ static void gen_atomic(CPUState *env, DisasContext *dc, uint32_t opc, int rd, in
     gen_helper_release_global_memory_lock(cpu_env);
 
     gen_set_label(done);
+}
+
+static inline void gen_amoadd(TCGv result, TCGv guestAddress, TCGv toAdd, uint32_t memIndex, uint8_t size)
+{
+    tlib_assert(size == 64 || size == 32);
+
+    int fallback = gen_new_label();
+    //  Use host intrinsic if possible.
+    if(size == 64) {
+        tcg_try_gen_atomic_fetch_add_intrinsic_i64(result, guestAddress, toAdd, memIndex, fallback);
+    } else {
+        tcg_try_gen_atomic_fetch_add_intrinsic_i32(result, guestAddress, toAdd, memIndex, fallback);
+    }
+
+    int done = gen_new_label();
+    tcg_gen_br(done);
+
+    /*
+     * If it's not possible to utilize host intrinsics, fall back to slower version:
+     */
+    gen_set_label(fallback);
+
+    gen_helper_acquire_global_memory_lock(cpu_env);
+
+    if(size == 64) {
+        tcg_gen_qemu_ld64(result, guestAddress, memIndex);
+        tcg_gen_add_i64(toAdd, result, toAdd);
+        tcg_gen_qemu_st64(toAdd, guestAddress, memIndex);
+    } else {
+        tcg_gen_qemu_ld32s(result, guestAddress, memIndex);
+        tcg_gen_add_i32(toAdd, result, toAdd);
+        tcg_gen_qemu_st32(toAdd, guestAddress, memIndex);
+    }
+
+    gen_helper_release_global_memory_lock(cpu_env);
+
+    gen_set_label(done);
+}
+
+static void gen_atomic(CPUState *env, DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
+{
+    if(!ensure_extension(dc, RISCV_FEATURE_RVA)) {
+        return;
+    }
+
+    /* TODO: handle aq, rl bits? - for now just get rid of them: */
+    opc = MASK_OP_ATOMIC_NO_AQ_RL(opc);
+
+    gen_sync_pc(dc);
+
+    TCGv source1, source2, dat;
+    source1 = tcg_temp_local_new();
+    source2 = tcg_temp_local_new();
+    dat = tcg_temp_local_new();
+
+    gen_get_gpr(source1, rs1);
+    gen_get_gpr(source2, rs2);
+
+    int done = gen_new_label();
+
+    switch(opc) {
+        /*
+         * AMO instructions:
+         * rd = *rs1
+         * *rs1 = rd OP rs2
+         */
+        case OPC_RISC_AMOADD_W:
+            gen_amoadd(dat, source1, source2, dc->base.mem_idx, 32);
+            break;
+#if defined(TARGET_RISCV64)
+        case OPC_RISC_AMOADD_D:
+            gen_amoadd(dat, source1, source2, dc->base.mem_idx, 64);
+            break;
+#endif
+        default:
+            gen_atomic_with_global_memory_lock(dc, opc, dat, source1, source2);
+            break;
+    }
+
+    gen_set_label(done);
+
     gen_set_gpr(rd, dat);
     tcg_temp_free(source1);
     tcg_temp_free(source2);
