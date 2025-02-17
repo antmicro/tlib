@@ -1400,7 +1400,7 @@ static int get_phys_addr_lpae(CPUState *env, uint32_t address, int access_type, 
             goto do_fault;
         case 1:
             //  descriptor type: block
-            phys_addr = (desc >> 30) | (address & 0x3FFFFFFF);
+            phys_addr = (desc & 0xC0000000) | (address & 0x3FFFFFFF);
             *page_size = 0x40000000;
             goto success;
     }
