@@ -775,8 +775,8 @@ static ARMCPRegInfo has_mmu_registers[] = {
     ARM32_CP_REG_DEFINE(WFAR,             15,   0,   6,   0,   1,   1,  RW, FIELD(cp15.c6_insn))  // WFAR, Watchpoint Fault Address Register
     ARM32_CP_REG_DEFINE(IFAR,             15,   0,   6,   0,   2,   1,  RW, FIELD(cp15.c6_insn))  // IFAR, Instruction Fault Address Register
 
-    // LPAE (64 bit variants)             cp  op1  crn  crm        el   extra_type, ...
-    ARM32_CP_64BIT_CRN_DEFINE(TTBR0_EA,   15,   0,   1,   2,        1,  RW, FIELD(cp15.c2_base0_ea)) // Translation Table Base Register 0 (64-bit)
+    // LPAE (64 bit variants)             cp, op1,      crm,       el,  extra_type, ...
+    ARM32_CP_64BIT_REG_DEFINE(TTBR0_EA,   15,   0,        2,        1,  RW, FIELD(cp15.c2_base0_ea))
 };
 
 static ARMCPRegInfo has_cp15_c13_registers[] = {

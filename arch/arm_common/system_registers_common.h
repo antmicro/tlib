@@ -148,9 +148,6 @@ static inline bool cp_access_ok(int current_el, const ARMCPRegInfo *reg_info, bo
 #define ARM32_CP_64BIT_REG_DEFINE(name, cp, op1, crm, el, extra_type, ...) \
     ARM_CP_REG_DEFINE(name, cp, 0, op1, 0, crm, 0, 32, el, extra_type | ARM_CP_64BIT, __VA_ARGS__)
 
-#define ARM32_CP_64BIT_CRN_DEFINE(name, cp, op1, crn, crm, el, extra_type, ...) \
-    ARM_CP_REG_DEFINE(name, cp, 0, op1, crn, crm, 0, 64, el, extra_type | ARM_CP_64BIT, __VA_ARGS__)
-
 /* Macros for the most common types used in 'extra_type'.
  *
  * Reading/writing the register specified as WO/RO (respectively) will trigger the 'Undefined instruction' exception.

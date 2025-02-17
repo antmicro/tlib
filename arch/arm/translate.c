@@ -7339,10 +7339,10 @@ static int disas_coproc_insn(CPUState *env, DisasContext *s, uint32_t insn)
                 opc2 = extract32(insn, 5, 3);
             }
             /*
-             * For 64 bit access crn is the same as rt2 (same place in insn), so we just pass it to do_coproc_insn
-             * It only makes sense for double R instructions
+             * For 64 bit access crn=0 so different combinations of rt2 don't make a difference
+             * when decoding the instruction.
              */
-            return do_coproc_insn(env, s, insn, cpnum, is64, opc1, crn, crm, opc2, isread, rt, crn);
+            return do_coproc_insn(env, s, insn, cpnum, is64, opc1, is64 ? 0 : crn, crm, opc2, isread, rt, crn);
     }
 }
 
