@@ -3,6 +3,7 @@
 #include "callbacks.h"
 #include "debug.h"
 #include "atomic.h"
+#include "address-translation.h"
 
 //  Dirty addresses handling
 #define MAX_DIRTY_ADDRESSES_LIST_COUNT 100
@@ -150,6 +151,16 @@ void HELPER(register_address_access)(CPUState *env, ram_addr_t address)
 void HELPER(cancel_reservation)(CPUState *env)
 {
     cancel_reservation(env);
+}
+
+uintptr_t HELPER(translate_page_aligned_address_and_fill_tlb_u32)(target_ulong addr, uint32_t mmu_idx)
+{
+    return translate_page_aligned_address_and_fill_tlb_u32(addr, mmu_idx);
+}
+
+uintptr_t HELPER(translate_page_aligned_address_and_fill_tlb_u64)(target_ulong addr, uint32_t mmu_idx)
+{
+    return translate_page_aligned_address_and_fill_tlb_u64(addr, mmu_idx);
 }
 
 void HELPER(var_log)(target_ulong v)
