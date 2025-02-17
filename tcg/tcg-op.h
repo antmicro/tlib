@@ -30,6 +30,161 @@
 #include "tcg.h"
 #include "additional.h"
 
+#if TARGET_LONG_BITS == 64
+#define tcg_gen_movi_tl      tcg_gen_movi_i64
+#define tcg_gen_mov_tl       tcg_gen_mov_i64
+#define tcg_gen_ld8u_tl      tcg_gen_ld8u_i64
+#define tcg_gen_ld8s_tl      tcg_gen_ld8s_i64
+#define tcg_gen_ld16u_tl     tcg_gen_ld16u_i64
+#define tcg_gen_ld16s_tl     tcg_gen_ld16s_i64
+#define tcg_gen_ld32u_tl     tcg_gen_ld32u_i64
+#define tcg_gen_ld32s_tl     tcg_gen_ld32s_i64
+#define tcg_gen_ld_tl        tcg_gen_ld_i64
+#define tcg_gen_st8_tl       tcg_gen_st8_i64
+#define tcg_gen_st16_tl      tcg_gen_st16_i64
+#define tcg_gen_st32_tl      tcg_gen_st32_i64
+#define tcg_gen_st_tl        tcg_gen_st_i64
+#define tcg_gen_add_tl       tcg_gen_add_i64
+#define tcg_gen_addi_tl      tcg_gen_addi_i64
+#define tcg_gen_sub_tl       tcg_gen_sub_i64
+#define tcg_gen_neg_tl       tcg_gen_neg_i64
+#define tcg_gen_subfi_tl     tcg_gen_subfi_i64
+#define tcg_gen_subi_tl      tcg_gen_subi_i64
+#define tcg_gen_and_tl       tcg_gen_and_i64
+#define tcg_gen_andi_tl      tcg_gen_andi_i64
+#define tcg_gen_or_tl        tcg_gen_or_i64
+#define tcg_gen_ori_tl       tcg_gen_ori_i64
+#define tcg_gen_xor_tl       tcg_gen_xor_i64
+#define tcg_gen_xori_tl      tcg_gen_xori_i64
+#define tcg_gen_not_tl       tcg_gen_not_i64
+#define tcg_gen_shl_tl       tcg_gen_shl_i64
+#define tcg_gen_shli_tl      tcg_gen_shli_i64
+#define tcg_gen_shr_tl       tcg_gen_shr_i64
+#define tcg_gen_shri_tl      tcg_gen_shri_i64
+#define tcg_gen_sar_tl       tcg_gen_sar_i64
+#define tcg_gen_sari_tl      tcg_gen_sari_i64
+#define tcg_gen_brcond_tl    tcg_gen_brcond_i64
+#define tcg_gen_brcondi_tl   tcg_gen_brcondi_i64
+#define tcg_gen_setcond_tl   tcg_gen_setcond_i64
+#define tcg_gen_setcondi_tl  tcg_gen_setcondi_i64
+#define tcg_gen_mul_tl       tcg_gen_mul_i64
+#define tcg_gen_muli_tl      tcg_gen_muli_i64
+#define tcg_gen_div_tl       tcg_gen_div_i64
+#define tcg_gen_rem_tl       tcg_gen_rem_i64
+#define tcg_gen_divu_tl      tcg_gen_divu_i64
+#define tcg_gen_remu_tl      tcg_gen_remu_i64
+#define tcg_gen_discard_tl   tcg_gen_discard_i64
+#define tcg_gen_trunc_tl_i32 tcg_gen_trunc_i64_i32
+#define tcg_gen_trunc_i64_tl tcg_gen_mov_i64
+#define tcg_gen_extu_i32_tl  tcg_gen_extu_i32_i64
+#define tcg_gen_ext_i32_tl   tcg_gen_ext_i32_i64
+#define tcg_gen_extu_tl_i64  tcg_gen_mov_i64
+#define tcg_gen_ext_tl_i64   tcg_gen_mov_i64
+#define tcg_gen_ext8u_tl     tcg_gen_ext8u_i64
+#define tcg_gen_ext8s_tl     tcg_gen_ext8s_i64
+#define tcg_gen_ext16u_tl    tcg_gen_ext16u_i64
+#define tcg_gen_ext16s_tl    tcg_gen_ext16s_i64
+#define tcg_gen_ext32u_tl    tcg_gen_ext32u_i64
+#define tcg_gen_ext32s_tl    tcg_gen_ext32s_i64
+//  Now these support passing flags so let's adjust calls used in i386 and ppc.
+#define tcg_gen_bswap16_tl(ret, arg) tcg_gen_bswap16_i64(ret, arg, 0)
+#define tcg_gen_bswap32_tl(ret, arg) tcg_gen_bswap32_i64(ret, arg, 0)
+#define tcg_gen_bswap64_tl           tcg_gen_bswap64_i64
+#define tcg_gen_concat_tl_i64        tcg_gen_concat32_i64
+#define tcg_gen_andc_tl              tcg_gen_andc_i64
+#define tcg_gen_eqv_tl               tcg_gen_eqv_i64
+#define tcg_gen_nand_tl              tcg_gen_nand_i64
+#define tcg_gen_nor_tl               tcg_gen_nor_i64
+#define tcg_gen_orc_tl               tcg_gen_orc_i64
+#define tcg_gen_rotl_tl              tcg_gen_rotl_i64
+#define tcg_gen_rotli_tl             tcg_gen_rotli_i64
+#define tcg_gen_rotr_tl              tcg_gen_rotr_i64
+#define tcg_gen_rotri_tl             tcg_gen_rotri_i64
+#define tcg_gen_deposit_tl           tcg_gen_deposit_i64
+#define tcg_const_tl                 tcg_const_i64
+#define tcg_const_local_tl           tcg_const_local_i64
+#define tcg_gen_mulu2_tl             tcg_gen_mulu2_i64
+#define tcg_gen_muls2_tl             tcg_gen_muls2_i64
+#define tcg_gen_movcond_tl           tcg_gen_movcond_i64
+#else
+#define tcg_gen_movi_tl              tcg_gen_movi_i32
+#define tcg_gen_mov_tl               tcg_gen_mov_i32
+#define tcg_gen_ld8u_tl              tcg_gen_ld8u_i32
+#define tcg_gen_ld8s_tl              tcg_gen_ld8s_i32
+#define tcg_gen_ld16u_tl             tcg_gen_ld16u_i32
+#define tcg_gen_ld16s_tl             tcg_gen_ld16s_i32
+#define tcg_gen_ld32u_tl             tcg_gen_ld_i32
+#define tcg_gen_ld32s_tl             tcg_gen_ld_i32
+#define tcg_gen_ld_tl                tcg_gen_ld_i32
+#define tcg_gen_st8_tl               tcg_gen_st8_i32
+#define tcg_gen_st16_tl              tcg_gen_st16_i32
+#define tcg_gen_st32_tl              tcg_gen_st_i32
+#define tcg_gen_st_tl                tcg_gen_st_i32
+#define tcg_gen_add_tl               tcg_gen_add_i32
+#define tcg_gen_addi_tl              tcg_gen_addi_i32
+#define tcg_gen_sub_tl               tcg_gen_sub_i32
+#define tcg_gen_neg_tl               tcg_gen_neg_i32
+#define tcg_gen_subfi_tl             tcg_gen_subfi_i32
+#define tcg_gen_subi_tl              tcg_gen_subi_i32
+#define tcg_gen_and_tl               tcg_gen_and_i32
+#define tcg_gen_andi_tl              tcg_gen_andi_i32
+#define tcg_gen_or_tl                tcg_gen_or_i32
+#define tcg_gen_ori_tl               tcg_gen_ori_i32
+#define tcg_gen_xor_tl               tcg_gen_xor_i32
+#define tcg_gen_xori_tl              tcg_gen_xori_i32
+#define tcg_gen_not_tl               tcg_gen_not_i32
+#define tcg_gen_shl_tl               tcg_gen_shl_i32
+#define tcg_gen_shli_tl              tcg_gen_shli_i32
+#define tcg_gen_shr_tl               tcg_gen_shr_i32
+#define tcg_gen_shri_tl              tcg_gen_shri_i32
+#define tcg_gen_sar_tl               tcg_gen_sar_i32
+#define tcg_gen_sari_tl              tcg_gen_sari_i32
+#define tcg_gen_brcond_tl            tcg_gen_brcond_i32
+#define tcg_gen_brcondi_tl           tcg_gen_brcondi_i32
+#define tcg_gen_setcond_tl           tcg_gen_setcond_i32
+#define tcg_gen_setcondi_tl          tcg_gen_setcondi_i32
+#define tcg_gen_mul_tl               tcg_gen_mul_i32
+#define tcg_gen_muli_tl              tcg_gen_muli_i32
+#define tcg_gen_div_tl               tcg_gen_div_i32
+#define tcg_gen_rem_tl               tcg_gen_rem_i32
+#define tcg_gen_divu_tl              tcg_gen_divu_i32
+#define tcg_gen_remu_tl              tcg_gen_remu_i32
+#define tcg_gen_discard_tl           tcg_gen_discard_i32
+#define tcg_gen_trunc_tl_i32         tcg_gen_mov_i32
+#define tcg_gen_trunc_i64_tl         tcg_gen_trunc_i64_i32
+#define tcg_gen_extu_i32_tl          tcg_gen_mov_i32
+#define tcg_gen_ext_i32_tl           tcg_gen_mov_i32
+#define tcg_gen_extu_tl_i64          tcg_gen_extu_i32_i64
+#define tcg_gen_ext_tl_i64           tcg_gen_ext_i32_i64
+#define tcg_gen_ext8u_tl             tcg_gen_ext8u_i32
+#define tcg_gen_ext8s_tl             tcg_gen_ext8s_i32
+#define tcg_gen_ext16u_tl            tcg_gen_ext16u_i32
+#define tcg_gen_ext16s_tl            tcg_gen_ext16s_i32
+#define tcg_gen_ext32u_tl            tcg_gen_mov_i32
+#define tcg_gen_ext32s_tl            tcg_gen_mov_i32
+//  Now it supports passing flags so let's adjust calls used in i386 and ppc.
+#define tcg_gen_bswap16_tl(ret, arg) tcg_gen_bswap16_i32(ret, arg, 0)
+#define tcg_gen_bswap32_tl           tcg_gen_bswap32_i32
+#define tcg_gen_concat_tl_i64        tcg_gen_concat_i32_i64
+#define tcg_gen_andc_tl              tcg_gen_andc_i32
+#define tcg_gen_eqv_tl               tcg_gen_eqv_i32
+#define tcg_gen_nand_tl              tcg_gen_nand_i32
+#define tcg_gen_nor_tl               tcg_gen_nor_i32
+#define tcg_gen_orc_tl               tcg_gen_orc_i32
+#define tcg_gen_rotl_tl              tcg_gen_rotl_i32
+#define tcg_gen_rotli_tl             tcg_gen_rotli_i32
+#define tcg_gen_rotr_tl              tcg_gen_rotr_i32
+#define tcg_gen_rotri_tl             tcg_gen_rotri_i32
+#define tcg_gen_deposit_tl           tcg_gen_deposit_i32
+#define tcg_const_tl                 tcg_const_i32
+#define tcg_const_local_tl           tcg_const_local_i32
+#define tcg_gen_mulu2_tl             tcg_gen_mulu2_i32
+#define tcg_gen_muls2_tl             tcg_gen_muls2_i32
+#define tcg_gen_movcond_tl           tcg_gen_movcond_i32
+#define tcg_gen_qemu_ld_tl           tcg_gen_qemu_ld_i32
+#define tcg_gen_qemu_st_tl           tcg_gen_qemu_st_i32
+#endif
+
 int gen_new_label(void);
 
 static inline void tcg_request_block_interrupt_check()
@@ -3742,161 +3897,6 @@ void tcg_gen_cmpsel_vec(TCGCond cond, unsigned vece, TCGv_vec r, TCGv_vec a, TCG
 void tcg_gen_ld_vec(TCGv_vec r, TCGv_ptr base, TCGArg offset);
 void tcg_gen_st_vec(TCGv_vec r, TCGv_ptr base, TCGArg offset);
 void tcg_gen_stl_vec(TCGv_vec r, TCGv_ptr base, TCGArg offset, TCGType t);
-
-#if TARGET_LONG_BITS == 64
-#define tcg_gen_movi_tl      tcg_gen_movi_i64
-#define tcg_gen_mov_tl       tcg_gen_mov_i64
-#define tcg_gen_ld8u_tl      tcg_gen_ld8u_i64
-#define tcg_gen_ld8s_tl      tcg_gen_ld8s_i64
-#define tcg_gen_ld16u_tl     tcg_gen_ld16u_i64
-#define tcg_gen_ld16s_tl     tcg_gen_ld16s_i64
-#define tcg_gen_ld32u_tl     tcg_gen_ld32u_i64
-#define tcg_gen_ld32s_tl     tcg_gen_ld32s_i64
-#define tcg_gen_ld_tl        tcg_gen_ld_i64
-#define tcg_gen_st8_tl       tcg_gen_st8_i64
-#define tcg_gen_st16_tl      tcg_gen_st16_i64
-#define tcg_gen_st32_tl      tcg_gen_st32_i64
-#define tcg_gen_st_tl        tcg_gen_st_i64
-#define tcg_gen_add_tl       tcg_gen_add_i64
-#define tcg_gen_addi_tl      tcg_gen_addi_i64
-#define tcg_gen_sub_tl       tcg_gen_sub_i64
-#define tcg_gen_neg_tl       tcg_gen_neg_i64
-#define tcg_gen_subfi_tl     tcg_gen_subfi_i64
-#define tcg_gen_subi_tl      tcg_gen_subi_i64
-#define tcg_gen_and_tl       tcg_gen_and_i64
-#define tcg_gen_andi_tl      tcg_gen_andi_i64
-#define tcg_gen_or_tl        tcg_gen_or_i64
-#define tcg_gen_ori_tl       tcg_gen_ori_i64
-#define tcg_gen_xor_tl       tcg_gen_xor_i64
-#define tcg_gen_xori_tl      tcg_gen_xori_i64
-#define tcg_gen_not_tl       tcg_gen_not_i64
-#define tcg_gen_shl_tl       tcg_gen_shl_i64
-#define tcg_gen_shli_tl      tcg_gen_shli_i64
-#define tcg_gen_shr_tl       tcg_gen_shr_i64
-#define tcg_gen_shri_tl      tcg_gen_shri_i64
-#define tcg_gen_sar_tl       tcg_gen_sar_i64
-#define tcg_gen_sari_tl      tcg_gen_sari_i64
-#define tcg_gen_brcond_tl    tcg_gen_brcond_i64
-#define tcg_gen_brcondi_tl   tcg_gen_brcondi_i64
-#define tcg_gen_setcond_tl   tcg_gen_setcond_i64
-#define tcg_gen_setcondi_tl  tcg_gen_setcondi_i64
-#define tcg_gen_mul_tl       tcg_gen_mul_i64
-#define tcg_gen_muli_tl      tcg_gen_muli_i64
-#define tcg_gen_div_tl       tcg_gen_div_i64
-#define tcg_gen_rem_tl       tcg_gen_rem_i64
-#define tcg_gen_divu_tl      tcg_gen_divu_i64
-#define tcg_gen_remu_tl      tcg_gen_remu_i64
-#define tcg_gen_discard_tl   tcg_gen_discard_i64
-#define tcg_gen_trunc_tl_i32 tcg_gen_trunc_i64_i32
-#define tcg_gen_trunc_i64_tl tcg_gen_mov_i64
-#define tcg_gen_extu_i32_tl  tcg_gen_extu_i32_i64
-#define tcg_gen_ext_i32_tl   tcg_gen_ext_i32_i64
-#define tcg_gen_extu_tl_i64  tcg_gen_mov_i64
-#define tcg_gen_ext_tl_i64   tcg_gen_mov_i64
-#define tcg_gen_ext8u_tl     tcg_gen_ext8u_i64
-#define tcg_gen_ext8s_tl     tcg_gen_ext8s_i64
-#define tcg_gen_ext16u_tl    tcg_gen_ext16u_i64
-#define tcg_gen_ext16s_tl    tcg_gen_ext16s_i64
-#define tcg_gen_ext32u_tl    tcg_gen_ext32u_i64
-#define tcg_gen_ext32s_tl    tcg_gen_ext32s_i64
-//  Now these support passing flags so let's adjust calls used in i386 and ppc.
-#define tcg_gen_bswap16_tl(ret, arg) tcg_gen_bswap16_i64(ret, arg, 0)
-#define tcg_gen_bswap32_tl(ret, arg) tcg_gen_bswap32_i64(ret, arg, 0)
-#define tcg_gen_bswap64_tl           tcg_gen_bswap64_i64
-#define tcg_gen_concat_tl_i64        tcg_gen_concat32_i64
-#define tcg_gen_andc_tl              tcg_gen_andc_i64
-#define tcg_gen_eqv_tl               tcg_gen_eqv_i64
-#define tcg_gen_nand_tl              tcg_gen_nand_i64
-#define tcg_gen_nor_tl               tcg_gen_nor_i64
-#define tcg_gen_orc_tl               tcg_gen_orc_i64
-#define tcg_gen_rotl_tl              tcg_gen_rotl_i64
-#define tcg_gen_rotli_tl             tcg_gen_rotli_i64
-#define tcg_gen_rotr_tl              tcg_gen_rotr_i64
-#define tcg_gen_rotri_tl             tcg_gen_rotri_i64
-#define tcg_gen_deposit_tl           tcg_gen_deposit_i64
-#define tcg_const_tl                 tcg_const_i64
-#define tcg_const_local_tl           tcg_const_local_i64
-#define tcg_gen_mulu2_tl             tcg_gen_mulu2_i64
-#define tcg_gen_muls2_tl             tcg_gen_muls2_i64
-#define tcg_gen_movcond_tl           tcg_gen_movcond_i64
-#else
-#define tcg_gen_movi_tl              tcg_gen_movi_i32
-#define tcg_gen_mov_tl               tcg_gen_mov_i32
-#define tcg_gen_ld8u_tl              tcg_gen_ld8u_i32
-#define tcg_gen_ld8s_tl              tcg_gen_ld8s_i32
-#define tcg_gen_ld16u_tl             tcg_gen_ld16u_i32
-#define tcg_gen_ld16s_tl             tcg_gen_ld16s_i32
-#define tcg_gen_ld32u_tl             tcg_gen_ld_i32
-#define tcg_gen_ld32s_tl             tcg_gen_ld_i32
-#define tcg_gen_ld_tl                tcg_gen_ld_i32
-#define tcg_gen_st8_tl               tcg_gen_st8_i32
-#define tcg_gen_st16_tl              tcg_gen_st16_i32
-#define tcg_gen_st32_tl              tcg_gen_st_i32
-#define tcg_gen_st_tl                tcg_gen_st_i32
-#define tcg_gen_add_tl               tcg_gen_add_i32
-#define tcg_gen_addi_tl              tcg_gen_addi_i32
-#define tcg_gen_sub_tl               tcg_gen_sub_i32
-#define tcg_gen_neg_tl               tcg_gen_neg_i32
-#define tcg_gen_subfi_tl             tcg_gen_subfi_i32
-#define tcg_gen_subi_tl              tcg_gen_subi_i32
-#define tcg_gen_and_tl               tcg_gen_and_i32
-#define tcg_gen_andi_tl              tcg_gen_andi_i32
-#define tcg_gen_or_tl                tcg_gen_or_i32
-#define tcg_gen_ori_tl               tcg_gen_ori_i32
-#define tcg_gen_xor_tl               tcg_gen_xor_i32
-#define tcg_gen_xori_tl              tcg_gen_xori_i32
-#define tcg_gen_not_tl               tcg_gen_not_i32
-#define tcg_gen_shl_tl               tcg_gen_shl_i32
-#define tcg_gen_shli_tl              tcg_gen_shli_i32
-#define tcg_gen_shr_tl               tcg_gen_shr_i32
-#define tcg_gen_shri_tl              tcg_gen_shri_i32
-#define tcg_gen_sar_tl               tcg_gen_sar_i32
-#define tcg_gen_sari_tl              tcg_gen_sari_i32
-#define tcg_gen_brcond_tl            tcg_gen_brcond_i32
-#define tcg_gen_brcondi_tl           tcg_gen_brcondi_i32
-#define tcg_gen_setcond_tl           tcg_gen_setcond_i32
-#define tcg_gen_setcondi_tl          tcg_gen_setcondi_i32
-#define tcg_gen_mul_tl               tcg_gen_mul_i32
-#define tcg_gen_muli_tl              tcg_gen_muli_i32
-#define tcg_gen_div_tl               tcg_gen_div_i32
-#define tcg_gen_rem_tl               tcg_gen_rem_i32
-#define tcg_gen_divu_tl              tcg_gen_divu_i32
-#define tcg_gen_remu_tl              tcg_gen_remu_i32
-#define tcg_gen_discard_tl           tcg_gen_discard_i32
-#define tcg_gen_trunc_tl_i32         tcg_gen_mov_i32
-#define tcg_gen_trunc_i64_tl         tcg_gen_trunc_i64_i32
-#define tcg_gen_extu_i32_tl          tcg_gen_mov_i32
-#define tcg_gen_ext_i32_tl           tcg_gen_mov_i32
-#define tcg_gen_extu_tl_i64          tcg_gen_extu_i32_i64
-#define tcg_gen_ext_tl_i64           tcg_gen_ext_i32_i64
-#define tcg_gen_ext8u_tl             tcg_gen_ext8u_i32
-#define tcg_gen_ext8s_tl             tcg_gen_ext8s_i32
-#define tcg_gen_ext16u_tl            tcg_gen_ext16u_i32
-#define tcg_gen_ext16s_tl            tcg_gen_ext16s_i32
-#define tcg_gen_ext32u_tl            tcg_gen_mov_i32
-#define tcg_gen_ext32s_tl            tcg_gen_mov_i32
-//  Now it supports passing flags so let's adjust calls used in i386 and ppc.
-#define tcg_gen_bswap16_tl(ret, arg) tcg_gen_bswap16_i32(ret, arg, 0)
-#define tcg_gen_bswap32_tl           tcg_gen_bswap32_i32
-#define tcg_gen_concat_tl_i64        tcg_gen_concat_i32_i64
-#define tcg_gen_andc_tl              tcg_gen_andc_i32
-#define tcg_gen_eqv_tl               tcg_gen_eqv_i32
-#define tcg_gen_nand_tl              tcg_gen_nand_i32
-#define tcg_gen_nor_tl               tcg_gen_nor_i32
-#define tcg_gen_orc_tl               tcg_gen_orc_i32
-#define tcg_gen_rotl_tl              tcg_gen_rotl_i32
-#define tcg_gen_rotli_tl             tcg_gen_rotli_i32
-#define tcg_gen_rotr_tl              tcg_gen_rotr_i32
-#define tcg_gen_rotri_tl             tcg_gen_rotri_i32
-#define tcg_gen_deposit_tl           tcg_gen_deposit_i32
-#define tcg_const_tl                 tcg_const_i32
-#define tcg_const_local_tl           tcg_const_local_i32
-#define tcg_gen_mulu2_tl             tcg_gen_mulu2_i32
-#define tcg_gen_muls2_tl             tcg_gen_muls2_i32
-#define tcg_gen_movcond_tl           tcg_gen_movcond_i32
-#define tcg_gen_qemu_ld_tl           tcg_gen_qemu_ld_i32
-#define tcg_gen_qemu_st_tl           tcg_gen_qemu_st_i32
-#endif
 
 #if TCG_TARGET_REG_BITS == 32
 #define tcg_gen_add_ptr(R, A, B)  tcg_gen_add_i32(TCGV_PTR_TO_NAT(R), TCGV_PTR_TO_NAT(A), TCGV_PTR_TO_NAT(B))
