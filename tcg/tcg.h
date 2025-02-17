@@ -308,6 +308,21 @@ typedef int TCGv_i64;
 #else
 #define TCGv_ptr TCGv_i64
 #endif
+
+#if HOST_LONG_BITS == 64
+
+#define TCGv_hostptr TCGv_i64
+
+#elif HOST_LONG_BITS == 32
+
+#define TCGv_hostptr TCGv_i32
+
+#else
+
+#error Unsupported host long bits
+
+#endif
+
 typedef TCGv_ptr TCGv_env;
 
 /* Define type and accessor macros for TCG variables.
@@ -706,6 +721,24 @@ void tcg_add_target_add_op_defs(const TCGTargetOpDef *tdefs);
 #define tcg_global_mem_new_ptr(R, O, N) TCGV_NAT_TO_PTR(tcg_global_mem_new_i64((R), (O), (N)))
 #define tcg_temp_new_ptr()              TCGV_NAT_TO_PTR(tcg_temp_new_i64())
 #define tcg_temp_free_ptr(T)            tcg_temp_free_i64(TCGV_PTR_TO_NAT(T))
+#endif
+
+#if HOST_LONG_BITS == 64
+
+#define tcg_temp_new_hostptr()       tcg_temp_new_i64()
+#define tcg_temp_local_new_hostptr() tcg_temp_local_new_i64()
+#define tcg_temp_free_hostptr(T)     tcg_temp_free_i64(T)
+
+#elif HOST_LONG_BITS == 32
+
+#define tcg_temp_new_hostptr()       tcg_temp_new_i32()
+#define tcg_temp_local_new_hostptr() tcg_temp_local_new_i32()
+#define tcg_temp_free_hostptr(T)     tcg_temp_free_i32(T)
+
+#else
+
+#error Unsupported host long bits
+
 #endif
 
 void tcg_gen_callN(TCGContext *s, TCGv_ptr func, unsigned int flags, int sizemask, TCGArg ret, int nargs, TCGArg *args);

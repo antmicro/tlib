@@ -84,6 +84,14 @@ DEF(rotl_i32, 1, 2, 0, IMPL(TCG_TARGET_HAS_rot_i32))
 DEF(rotr_i32, 1, 2, 0, IMPL(TCG_TARGET_HAS_rot_i32))
 DEF(deposit_i32, 1, 2, 2, IMPL(TCG_TARGET_HAS_deposit_i32))
 DEF(extract_i32, 1, 1, 2, IMPL(TCG_TARGET_HAS_extract_i32))
+/* atomics */
+//  operation has 1 output arg, 2 input args and 0 constant args.
+//  TCG_OPF_CALL_CLOBBER: The implementation makes function calls and thus clobbers call registers,
+//                        so inform TCG about it such that it may avoid allocating these registers.
+//  TCG_OPF_SIDE_EFFECTS: The operation writes to memory, i.e. it has side-effects.
+//                        Therefore it shouldn't be optimized away even if the result of
+//                        the operation is unused.
+DEF(atomic_fetch_add_intrinsic_i32, 1, 2, 0, TCG_OPF_CALL_CLOBBER | TCG_OPF_SIDE_EFFECTS)
 
 DEF(brcond_i32, 0, 2, 2, TCG_OPF_BB_END | TCG_OPF_SIDE_EFFECTS)
 
@@ -144,6 +152,14 @@ DEF(sar_i64, 1, 2, 0, IMPL64)
 DEF(rotl_i64, 1, 2, 0, IMPL64 | IMPL(TCG_TARGET_HAS_rot_i64))
 DEF(rotr_i64, 1, 2, 0, IMPL64 | IMPL(TCG_TARGET_HAS_rot_i64))
 DEF(deposit_i64, 1, 2, 2, IMPL64 | IMPL(TCG_TARGET_HAS_deposit_i64))
+/* atomics */
+//  operation has 1 output arg, 2 input args and 0 constant args.
+//  TCG_OPF_CALL_CLOBBER: The implementation makes function calls and thus clobbers call registers,
+//                        so inform TCG about it such that it may avoid allocating these registers.
+//  TCG_OPF_SIDE_EFFECTS: The operation writes to memory, i.e. it has side-effects.
+//                        Therefore it shouldn't be optimized away even if the result of
+//                        the operation is unused.
+DEF(atomic_fetch_add_intrinsic_i64, 1, 2, 0, TCG_OPF_CALL_CLOBBER | TCG_OPF_SIDE_EFFECTS)
 
 DEF(brcond_i64, 0, 2, 2, TCG_OPF_BB_END | TCG_OPF_SIDE_EFFECTS | IMPL64)
 DEF(ext8s_i64, 1, 1, 0, IMPL64 | IMPL(TCG_TARGET_HAS_ext8s_i64))

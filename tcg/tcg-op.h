@@ -195,6 +195,22 @@ static inline void tcg_gen_op4i_i32(TCGOpcode opc, TCGv_i32 arg1, TCGv_i32 arg2,
     *gen_opparam_ptr++ = arg4;
 }
 
+static inline void tcg_gen_fetch_add_intrinsic_op_i32(TCGOpcode opc, TCGv_i32 ret, TCGv_ptr address, TCGv_i32 toAdd)
+{
+    *gen_opc_ptr++ = opc;
+    *gen_opparam_ptr++ = GET_TCGV_I32(ret);
+    *gen_opparam_ptr++ = GET_TCGV_PTR(address);
+    *gen_opparam_ptr++ = GET_TCGV_I32(toAdd);
+}
+
+static inline void tcg_gen_fetch_add_intrinsic_op_i64(TCGOpcode opc, TCGv_i64 ret, TCGv_ptr address, TCGv_i64 toAdd)
+{
+    *gen_opc_ptr++ = opc;
+    *gen_opparam_ptr++ = GET_TCGV_I64(ret);
+    *gen_opparam_ptr++ = GET_TCGV_PTR(address);
+    *gen_opparam_ptr++ = GET_TCGV_I64(toAdd);
+}
+
 static inline void tcg_gen_op4i_i64(TCGOpcode opc, TCGv_i64 arg1, TCGv_i64 arg2, TCGv_i64 arg3, TCGArg arg4)
 {
     *gen_opc_ptr++ = opc;
@@ -3633,6 +3649,45 @@ static inline void tcg_gen_clzi_i64(TCGv_i64 ret, TCGv_i64 arg1, uint64_t arg2)
     tcg_gen_clz_i64(ret, arg1, t0);
     tcg_temp_free_i64(t0);
 }
+
+#if __llvm__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
+#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+
+#if TCG_TARGET_HAS_atomic_fetch_add_intrinsic_i32
+/*
+ * Atomically adds `toAdd` to the value located at `address` in host memory.
+ * The original value located at `address`, before the addition, is returned in `ret`.
+ */
+static void tcg_gen_atomic_fetch_add_intrinsic_i32(TCGv_i32 ret, TCGv_ptr hostAddress, TCGv_i32 toAdd)
+{
+    tcg_gen_fetch_add_intrinsic_op_i32(INDEX_op_atomic_fetch_add_intrinsic_i32, ret, hostAddress, toAdd);
+    tcg_gen_ext32s_i64(ret, ret);
+}
+
+#endif
+
+#if TCG_TARGET_HAS_atomic_fetch_add_intrinsic_i64
+/*
+ * Atomically adds `toAdd` to the value located at `address` in host memory.
+ * The original value located at `address`, before the addition, is returned in `ret`.
+ */
+static void tcg_gen_atomic_fetch_add_intrinsic_i64(TCGv_i64 ret, TCGv_ptr hostAddress, TCGv_i64 toAdd)
+{
+    tcg_gen_fetch_add_intrinsic_op_i64(INDEX_op_atomic_fetch_add_intrinsic_i64, ret, hostAddress, toAdd);
+}
+
+#endif
+
+#ifdef __llvm__
+#pragma clang diagnostic pop
+#else
+#pragma GCC diagnostic pop
+#endif
 
 void tcg_gen_mov_vec(TCGv_vec, TCGv_vec);
 void tcg_gen_dup_i32_vec(unsigned vece, TCGv_vec, TCGv_i32);
