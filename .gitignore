@@ -10,3 +10,4 @@ CMakeFiles/
 *.so
 *.a
 Makefile
+.idea/
