@@ -496,6 +496,15 @@ static inline void tcg_out_modrm_offset(TCGContext *s, int opc, int r, int rm, t
     tcg_out_modrm_sib_offset(s, opc, r, rm, -1, 0, offset);
 }
 
+/* Emits the given instruction with a LOCK prefix to ensure atomicity (if supported). */
+static inline void tcg_out_locked_modrm_offset(TCGContext *s, int opc, int r, int rm, tcg_target_long offset)
+{
+    //  Compose and emit the "lock opc" machine code.
+    const uint8_t lock = 0xf0;
+    tcg_out8(s, lock);
+    tcg_out_modrm_offset(s, opc, r, rm, offset);
+}
+
 /* Generate dest op= src.  Uses the same ARITH_* codes as tgen_arithi.  */
 static inline void tgen_arithr(TCGContext *s, int subop, int dest, int src)
 {
@@ -935,6 +944,11 @@ static void tcg_out_branch(TCGContext *s, int call, tcg_target_long dest)
     }
 }
 
+/*
+ * NOTE: this generates code that clobbers RAX and argument-passing registers.
+ * Be sure to take this clobbering into account by configuring your instruction's
+ * register constraints correctly in `x86_op_defs`.
+ */
 static inline void tcg_out_calli(TCGContext *s, tcg_target_long dest)
 {
     tcg_out_branch(s, 1, dest);
@@ -1384,11 +1398,13 @@ static void tcg_out_qemu_st(TCGContext *s, const TCGArg *args, int opc)
 static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, const int *const_args)
 {
     int c, rexw = 0;
+    TCGType type = TCG_TYPE_I32;
 
 #if TCG_TARGET_REG_BITS == 64
-#define OP_32_64(x)                      \
-    case glue(glue(INDEX_op_, x), _i64): \
-        rexw = P_REXW; /* FALLTHRU */    \
+#define OP_32_64(x)                         \
+    case glue(glue(INDEX_op_, x), _i64):    \
+        rexw = P_REXW;                      \
+        type = TCG_TYPE_I64; /* FALLTHRU */ \
     case glue(glue(INDEX_op_, x), _i32)
 #else
 #define OP_32_64(x) case glue(glue(INDEX_op_, x), _i32)
@@ -1762,6 +1778,22 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
             }
             break;
 
+            OP_32_64(atomic_fetch_add_intrinsic)
+                :
+            {
+                const TCGReg retRegister = args[0];
+                const TCGReg hostAddressRegister = args[1];
+                const TCGReg toAddRegister = args[2];
+
+                //  Compose and emit the "lock xadd" machine code.
+                const int16_t xadd = P_EXT | 0xc1 + (type == TCG_TYPE_I64 ? P_REXW : 0);
+                tcg_out_locked_modrm_offset(s, xadd, toAddRegister, hostAddressRegister, 0);
+
+                //  Move the exchanged value (i.e. the old value at the guest address in memory) to an output register.
+                tcg_out_mov(s, type, retRegister, toAddRegister);
+                break;
+            }
+
         default:
             tcg_abort();
     }
@@ -1802,6 +1834,8 @@ static const TCGTargetOpDef x86_op_defs[] = {
     { INDEX_op_sar_i32, { "r", "0", "ci" } },
     { INDEX_op_rotl_i32, { "r", "0", "ci" } },
     { INDEX_op_rotr_i32, { "r", "0", "ci" } },
+
+    { INDEX_op_atomic_fetch_add_intrinsic_i32, { "r", "r", "L" } },
 
     { INDEX_op_brcond_i32, { "r", "ri" } },
 
@@ -1861,6 +1895,8 @@ static const TCGTargetOpDef x86_op_defs[] = {
     { INDEX_op_sar_i64, { "r", "0", "ci" } },
     { INDEX_op_rotl_i64, { "r", "0", "ci" } },
     { INDEX_op_rotr_i64, { "r", "0", "ci" } },
+
+    { INDEX_op_atomic_fetch_add_intrinsic_i64, { "r", "r", "L" } },
 
     { INDEX_op_brcond_i64, { "r", "re" } },
     { INDEX_op_setcond_i64, { "r", "r", "re" } },
