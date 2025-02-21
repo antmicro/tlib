@@ -4650,24 +4650,6 @@ static void do_coproc_insn(DisasContext *s, int cpnum, int is64, int opc1, int c
 {
     const ARMCPRegInfo *ri;
 
-    if(arm_dc_feature(s, ARM_FEATURE_AARCH64)) {
-        if(is64) {
-            tlib_printf(LOG_LEVEL_ERROR,
-                        "%s access to AArch32 "
-                        "64 bit system register cp:%d opc1: %d crm:%d "
-                        "(%s) on a core that was started in 64-bit mode, "
-                        "this is not supported.",
-                        isread ? "read" : "write", cpnum, opc1, crm, s->ns ? "non-secure" : "secure");
-        } else {
-            tlib_printf(LOG_LEVEL_ERROR,
-                        "%s access to AArch32 "
-                        "system register cp:%d opc1:%d crn:%d crm:%d opc2:%d "
-                        "(%s) on a core that was started in 64-bit mode, "
-                        "this is not supported.",
-                        isread ? "read" : "write", cpnum, opc1, crn, crm, opc2, s->ns ? "non-secure" : "secure");
-        }
-    }
-
     uint32_t key = ENCODE_CP_REG(cpnum, is64, s->ns, crn, crm, opc1, opc2);
     ri = ttable_lookup_value_eq(s->cp_regs, &key);
     if(ri) {
