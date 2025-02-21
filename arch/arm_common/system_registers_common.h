@@ -22,7 +22,7 @@
 //  Mask used on above type - remember to update it when adding more special types!
 #define ARM_CP_SPECIAL_MASK 0x00FF
 
-#define ARM_CP_64BIT           (1 << 8)
+#define ARM_CP_64BIT           (1 << 8)  //  Register is 64 bits wide
 #define ARM_CP_CONST           (1 << 9)
 #define ARM_CP_FPU             (1 << 10)
 #define ARM_CP_IO              (1 << 11)
@@ -146,7 +146,7 @@ static inline bool cp_access_ok(int current_el, const ARMCPRegInfo *reg_info, bo
     ARM_CP_REG_DEFINE(name, cp, 0, op1, crn, crm, op2, 32, el, extra_type, __VA_ARGS__)
 
 #define ARM32_CP_64BIT_REG_DEFINE(name, cp, op1, crm, el, extra_type, ...) \
-    ARM_CP_REG_DEFINE(name, cp, 0, op1, 0, crm, 0, 32, el, extra_type | ARM_CP_64BIT, __VA_ARGS__)
+    ARM_CP_REG_DEFINE(name, cp, 0, op1, 0, crm, 0, 64, el, extra_type, __VA_ARGS__)
 
 /* Macros for the most common types used in 'extra_type'.
  *
