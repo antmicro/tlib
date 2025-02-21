@@ -86,6 +86,12 @@ void tlib_try_interrupt_translation_block(void)
                 break;
         }
     }
+
+    //  Also do the C side of the exception unwinding process if it has beem requested
+    if(unlikely(unwind_state.need_jump)) {
+        unwind_state.need_jump = false;
+        longjmp(unwind_state.envs[unwind_state.env_idx], 1);
+    }
 }
 
 //  tlib_get_arch_string return an arch string that is
@@ -316,9 +322,12 @@ void tlib_reset()
 
 EXC_VOID_0(tlib_reset)
 
-void tlib_unwind()
+//  Does not actually unwind immediately, but sets a flag that requests unwinding at
+//  the end of the next reached `EXTERNAL` wrapper function. This will be the one whose
+//  wrapped managed function threw an exception.
+void tlib_unwind(void)
 {
-    longjmp(unwind_state.envs[unwind_state.env_idx], 1);
+    unwind_state.need_jump = true;
 }
 
 __attribute__((weak)) void cpu_on_leaving_reset_state(CPUState *env)

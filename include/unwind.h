@@ -1,6 +1,7 @@
 #pragma once
 
 #include <setjmp.h>
+#include <stdbool.h>
 #include <stdlib.h>
 
 /* The maximum _ex wrapper call nesting depth + 1 (that is, the allowed depth is
@@ -29,6 +30,7 @@
 extern __thread struct unwind_state {
     jmp_buf envs[UNWIND_MAX_DEPTH];
     int32_t env_idx;
+    bool need_jump;
 } unwind_state;
 
 /* Avoid two separate TLS lookups in each wrapper by caching the address of the env.
@@ -42,6 +44,7 @@ extern __thread struct unwind_state {
 #define PUSH_ENV()                                                  \
     ({                                                              \
         unwind_assert(local_state->env_idx < UNWIND_MAX_DEPTH - 1); \
+        local_state->need_jump = false;                             \
         setjmp(local_state->envs[++local_state->env_idx]);          \
     })
 
