@@ -1050,8 +1050,10 @@ static void do_interrupt_v7m(CPUState *env)
             /* Set default values from FPDSCR to FPSCR in new context */
             vfp_set_fpscr(env, (fpscr & ~ARM_FPDSCR_VALUES_MASK) | (env->v7m.fpdscr & ARM_FPDSCR_VALUES_MASK));
             for(int i = 0; i < 8; ++i) {
-                v7m_push(env, env->vfp.regs[8 - i]);
+                /* We need to swap low and high register parts, to pop them correctly on state restore.
+                 * The state can be restored on excp exit, or by specific load instructions */
                 v7m_push(env, env->vfp.regs[8 - i] >> 32);
+                v7m_push(env, env->vfp.regs[8 - i]);
             }
         }
     }
