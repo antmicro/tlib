@@ -1418,7 +1418,13 @@ void HELPER(rebuild_hflags_a32)(CPUState *env, int el)
     /* A-Profile flags */
 
     //  VFP enable (ARM floating-point extension enabled)
-    DP_TBFLAG_A32(env->hflags, VFPEN, FIELD_EX32(env->vfp.xregs[ARM_VFP_FPEXC], FPEXC, EN));
+    bool fpen;
+    if(arm_el_is_aa64(env, 1)) {
+        fpen = get_fp_exc_el(env, el) == 0;
+    } else {
+        fpen = FIELD_EX32(env->vfp.xregs[ARM_VFP_FPEXC], FPEXC, EN);
+    }
+    DP_TBFLAG_A32(env->hflags, VFPEN, fpen);
 
     //  Legacy support for alternative big-endian memory model (BE-32)
     DP_TBFLAG_A32(env->hflags, SCTLR__B, arm_sctlr_b(env));
