@@ -35,6 +35,10 @@
  * TARGET_WORDS_BIGENDIAN : same for target cpu
  */
 
+#ifdef HOST_WORDS_BIGENDIAN
+#warning Big-Endian Host architecture is currently only partially supported, emulation errors might arise
+#endif
+
 #include "softfloat-2.h"
 
 typedef union {
