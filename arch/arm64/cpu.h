@@ -447,6 +447,8 @@ typedef struct CPUState {
     uint32_t spsr;
 
     /* Banked registers.  */
+    /* The banked SPSR is actually 32-bit, made 64 here to simplify field
+       accesses in 'handle_sys' as they only need to handle 64-bit width  */
     uint64_t banked_spsr[8];
     uint32_t banked_r13[8];
     uint32_t banked_r14[8];
