@@ -29,6 +29,12 @@ redo:
 
         /* unaligned/aligned access in the same page */
         addend = cpu->tlb_table[mmu_idx][index].addend;
+
+#if DEBUG
+        //  Safeguard the assumption that addend == 0 iff the access is MMIO.
+        tlib_assert(addend != 0);
+#endif
+
         return addr + addend;
     } else {
         void *retaddr = GETPC();
