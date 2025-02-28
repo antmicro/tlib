@@ -120,3 +120,12 @@ void tlib_register_tcm_region(uint32_t address, uint64_t size, uint64_t region_i
 }
 
 EXC_VOID_3(tlib_register_tcm_region, uint32_t, address, uint64_t, size, uint64_t, index)
+
+void tlib_set_gic_cpu_register_interface_version(uint32_t iface_version)
+{
+    env->arm_core_config.gic_cpu_interface_version = iface_version;
+    env->arm_core_config.isar.id_aa64pfr0 = FIELD_DP64(env->arm_core_config.isar.id_aa64pfr0, ID_AA64PFR0, GIC, iface_version);
+    env->arm_core_config.isar.id_pfr1 = FIELD_DP64(env->arm_core_config.isar.id_pfr1, ID_PFR1, GIC, iface_version);
+}
+
+EXC_VOID_1(tlib_set_gic_cpu_register_interface_version, uint32_t, iface_version)
