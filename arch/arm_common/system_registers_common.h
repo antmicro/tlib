@@ -155,12 +155,12 @@ static inline bool cp_access_ok(int current_el, const ARMCPRegInfo *reg_info, bo
  * Therefore CONST can be used with RO if the instruction to write the given register doesn't exist.
  * Writes to a CONST register are simply ignored unless RO is used too.
  *
- * CONST has to be used as the last one in 'extra_type', e.g., 'RW | CONST(0xCAFE)'.
+ * CONST and GIC have to be used as the last ones in 'extra_type', e.g., 'RW | CONST(0xCAFE)'.
  * IGNORED silences the unhandled warning.
  */
 
 #define CONST(resetvalue) ARM_CP_CONST, RESETVALUE(resetvalue)
-#define GIC               ARM_CP_GIC
+#define GIC               ARM_CP_GIC, ACCESSFN(interrupt_cpu_interface)
 #define GTIMER            ARM_CP_GTIMER
 #define IGNORED           ARM_CP_NOP
 #define INSTRUCTION       ARM_CP_INSTRUCTION
@@ -195,6 +195,12 @@ static inline bool cp_access_ok(int current_el, const ARMCPRegInfo *reg_info, bo
     WRITE_FUNCTION(width, mnemonic, write_statement)
 
 #define RW_FUNCTIONS_PTR(width, mnemonic, pointer) RW_FUNCTIONS(width, mnemonic, *(pointer), *(pointer) = value)
+
+#define ACCESS_FUNCTION(mnemonic, expr)                                                    \
+    CPAccessResult access_##mnemonic(CPUState *env, const ARMCPRegInfo *info, bool isread) \
+    {                                                                                      \
+        return (expr);                                                                     \
+    }
 
 void cp_reg_add(CPUState *env, ARMCPRegInfo *reg_info);
 

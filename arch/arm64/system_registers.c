@@ -362,6 +362,8 @@ RW_FUNCTIONS(64, generic_timer_aarch32_64, tlib_read_system_register_generic_tim
 RW_FUNCTIONS(64, interrupt_cpu_interface, tlib_read_system_register_interrupt_cpu_interface(encode_gic_register(env, info)),
              tlib_write_system_register_interrupt_cpu_interface(encode_gic_register(env, info), value))
 
+ACCESS_FUNCTION(interrupt_cpu_interface, env->arm_core_config.gic_cpu_interface_version == 0 ? CP_ACCESS_TRAP : CP_ACCESS_OK)
+
 RW_FUNCTIONS(64, nzcv, nzcv_read(env), nzcv_write(env, value))
 
 RW_FUNCTIONS_PTR(64, cpacr_el1, cpacr_el1_register_pointer(env))
