@@ -288,3 +288,41 @@ static inline uint32_t syn_aa32_bkpt(uint32_t imm16, bool is_16bit)
 {
     return syndrome32_create(SYN_EC_AA32_BKPT, !is_16bit, imm16);
 }
+
+static inline uint32_t syn_rt_trap(SyndromeExceptionClass ec, bool cond_valid, uint32_t cond, uint32_t opc1, uint32_t opc2,
+                                   uint32_t crn, uint32_t crm, uint32_t rt, bool is_read, bool is_16bit)
+{
+    uint32_t iss = cond_valid << 24 | cond << 20 | opc2 << 17 | opc1 << 14 | crn << 10 | rt << 5 | crm << 1 | is_read;
+    return syndrome32_create(ec, !is_16bit, iss);
+}
+
+static inline uint32_t syn_rrt_trap(SyndromeExceptionClass ec, bool cond_valid, uint32_t cond, uint32_t opc1, uint32_t crm,
+                                    uint32_t rt, uint32_t rt2, bool is_read, bool is_16bit)
+{
+    uint32_t iss = cond_valid << 24 | cond << 20 | opc1 << 16 | /*res*/ 0 << 15 | rt2 << 10 | rt << 5 | crm << 1 | is_read;
+    return syndrome32_create(ec, !is_16bit, iss);
+}
+
+static inline uint32_t syn_cp15_rrt_trap(bool cond_valid, uint32_t cond, uint32_t opc1, uint32_t crm, uint32_t rt, uint32_t rt2,
+                                         bool is_read, bool is_16bit)
+{
+    return syn_rrt_trap(SYN_EC_AA32_TRAPPED_MCRR_MRRC_CP15, cond_valid, cond, opc1, crm, rt, rt2, is_read, is_16bit);
+}
+
+static inline uint32_t syn_cp14_rrt_trap(bool cond_valid, uint32_t cond, uint32_t opc1, uint32_t crm, uint32_t rt, uint32_t rt2,
+                                         bool is_read, bool is_16bit)
+{
+    return syn_rrt_trap(SYN_EC_AA32_TRAPPED_MRRC_CP14, cond_valid, cond, opc1, crm, rt, rt2, is_read, is_16bit);
+}
+
+static inline uint32_t syn_cp15_rt_trap(bool cond_valid, uint32_t cond, uint32_t opc1, uint32_t opc2, uint32_t crn, uint32_t crm,
+                                        uint32_t rt, bool is_read, bool is_16bit)
+{
+    return syn_rt_trap(SYN_EC_AA32_TRAPPED_MCR_MCR_CP15, cond_valid, cond, opc1, opc2, crn, crm, rt, is_read, is_16bit);
+}
+
+static inline uint32_t syn_cp14_rt_trap(bool cond_valid, uint32_t cond, uint32_t opc1, uint32_t opc2, uint32_t crn, uint32_t crm,
+                                        uint32_t rt, bool is_read, bool is_16bit)
+{
+    return syn_rt_trap(SYN_EC_AA32_TRAPPED_MCR_MRC_CP14, cond_valid, cond, opc1, opc2, crn, crm, rt, is_read, is_16bit);
+}
