@@ -29,7 +29,7 @@
 //  Order registers get picked in
 static const int tcg_target_reg_alloc_order[] = {
     TCG_REG_R8,  TCG_REG_R9,  TCG_REG_R10, TCG_REG_R11, TCG_REG_R12, TCG_REG_R13, TCG_REG_R14,
-    TCG_REG_R15, TCG_REG_R16, TCG_REG_R17, TCG_REG_R18, TCG_REG_R19, TCG_REG_R20, TCG_REG_R0,
+    TCG_REG_R15, TCG_REG_R16, TCG_REG_R17, TCG_REG_R19, TCG_REG_R20, TCG_REG_R0,
     TCG_REG_R1,  TCG_REG_R2,  TCG_REG_R3,  TCG_REG_R4,  TCG_REG_R5,  TCG_REG_R6,  TCG_REG_R7,
     TCG_REG_R21, TCG_REG_R22, TCG_REG_R23, TCG_REG_R24, TCG_REG_R25, TCG_REG_R26, TCG_REG_R27,
 };
@@ -1472,6 +1472,7 @@ static void tcg_target_init(TCGContext *s)
     tcg_regset_set_reg(s->reserved_regs, TCG_REG_CALL_STACK);  //  SP
     tcg_regset_set_reg(s->reserved_regs, TCG_TMP_REG);         //  R28 to use as an intermediate
     tcg_regset_set_reg(s->reserved_regs, TCG_REG_PC);          //  PC
+    tcg_regset_set_reg(s->reserved_regs, TCG_REG_R18);         //  R18 is reserved for the os on macOS
 
     tcg_add_target_add_op_defs(arm_op_defs);
     //  temp_buf_offset is set by init_tcg(), here used to find the start of the tcg frame
