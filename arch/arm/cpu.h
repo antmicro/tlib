@@ -375,12 +375,12 @@ typedef struct CPUState {
         uint32_t rbar[MAX_IDAU_REGIONS];
         uint32_t rlar[MAX_IDAU_REGIONS];
     } idau;
-    
+
     uint32_t number_of_idau_regions;
-    
+
     /* Additional memory attribution exemptions similar to the architecture-defined regions which
-    * make security attribution of these regions (S/NS) the same as current CPU state.
-    */
+     * make security attribution of these regions (S/NS) the same as current CPU state.
+     */
     struct {
         uint32_t count;
         uint32_t start[MAX_IMPL_DEF_ATTRIBUTION_EXEMPTIONS];
