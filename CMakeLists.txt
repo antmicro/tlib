@@ -58,7 +58,7 @@ if (HOST_ARCH MATCHES "(arm|aarch64)" AND CMAKE_BUILD_TYPE STREQUAL "Release" AN
     add_definitions(-Wno-clobbered)
 endif()
 
-option (TARGET_BIG_ENDIAN "Target big endian" OFF)
+option (TARGET_WORDS_BIGENDIAN "Target big endian" OFF)
 set (TARGET_ARCH "" CACHE STRING "Target architecture")
 set (TARGET_WORD_SIZE "32" CACHE STRING "Target word size")
 message(VERBOSE "Target is: ${TARGET_WORD_SIZE}-bit ${TARGET_ARCH}")
@@ -74,7 +74,7 @@ if(NOT TARGET_ARCH)
     message (FATAL_ERROR "Target architecture not set")
 endif()
 
-if(TARGET_BIG_ENDIAN)
+if(TARGET_WORDS_BIGENDIAN)
     set (BIG_ENDIAN_DEF -DTARGET_WORDS_BIGENDIAN=1)
 endif()
 
