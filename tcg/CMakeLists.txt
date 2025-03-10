@@ -6,7 +6,6 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(DEBUG_DEF "-DDEBUG")
 endif()
 
-option (BIG_ENDIAN "Big endian" OFF)
 set (HOST_ARCH "" CACHE STRING "Host architecture")
 set_property (CACHE HOST_ARCH PROPERTY STRINGS i386 arm)
 
@@ -20,10 +19,6 @@ endif()
 # Make sure host architecture is lower case,
 # as later we are including folder with this name
 string (TOLOWER ${HOST_ARCH} HOST_LOWER)
-
-if(BIG_ENDIAN)
-    set (BIG_ENDIAN_DEF -DTARGET_WORDS_BIGENDIAN)
-endif()
 
 add_definitions (
     -fPIC
