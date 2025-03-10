@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.12)
 project (tlib LANGUAGES C)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(DEBUG_DEFS "-DDEBUG -DDEBUG_ON")
+    set(DEBUG_DEF "-DDEBUG -DDEBUG_ON")
 endif()
 
 option (HOST_WORDS_BIGENDIAN "Host big endian" OFF)
@@ -168,7 +168,7 @@ add_definitions (
     -DTCG_TARGET_${HOST_ARCH_U}
     -DTLIB_COMMIT=${TLIB_COMMIT_SHA}
     ${BIG_ENDIAN_DEF}
-    ${DEBUG_DEFS}
+    ${DEBUG_DEF}
     )
 
 if("${TARGET_ACTUAL_ARCH}" STREQUAL "arm" OR "${TARGET_ACTUAL_ARCH}" STREQUAL "arm64")
