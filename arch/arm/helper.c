@@ -11,7 +11,7 @@
 #include "pmu.h"
 
 #ifdef HOST_WORDS_BIGENDIAN
-#error "This file depends on little-endian bitfield packing order"
+#warning "FP state preservation will not work correctly on big-endian hosts"
 #endif
 
 static uint32_t cortexa15_cp15_c0_c1[8] = { 0x00001131, 0x00011011, 0x02010555, 0x00000000,
@@ -2570,10 +2570,17 @@ uint64_t cpu_get_state_for_memory_transaction(CPUState *env, target_ulong addr, 
         uint64_t value;
         struct {
             /* Must be in sync with CortexM.StateBits */
+#if HOST_WORDS_BIGENDIAN
+            uint64_t : 61;
+            /*  2 */ bool bus_secure : 1;
+            /*  1 */ bool secure : 1;
+            /*  0 */ bool privileged : 1;
+#else
             /*  0 */ bool privileged : 1;
             /*  1 */ bool secure : 1;
             /*  2 */ bool bus_secure : 1;
             uint64_t : 61;
+#endif
         } flags;
     } state = { .value = 0 };
     pmsav8_get_security_attribution(env, addr, env->secure, access_type, /* access_width: */ 1, &idau_valid, &idau_region,
@@ -3818,6 +3825,19 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
     //  Based on TT_RESP from the ARMv8-M Architecture Reference Manual.
     union {
         struct {
+#if HOST_WORDS_BIGENDIAN
+            unsigned idau_region : 8;
+            unsigned idau_region_valid : 1;
+            unsigned target_secure : 1;
+            unsigned nonsecure_readwrite_ok : 1;
+            unsigned nonsecure_read_ok : 1;
+            unsigned readwrite_ok : 1;
+            unsigned read_ok : 1;
+            unsigned sau_region_valid : 1;
+            unsigned mpu_region_valid : 1;
+            unsigned sau_region : 8;
+            unsigned mpu_region : 8;
+#else
             unsigned mpu_region : 8;
             unsigned sau_region : 8;
             unsigned mpu_region_valid : 1;
@@ -3829,6 +3849,7 @@ uint32_t HELPER(v8m_tt)(CPUState *env, uint32_t addr, uint32_t op)
             unsigned target_secure : 1;
             unsigned idau_region_valid : 1;
             unsigned idau_region : 8;
+#endif
         } flags;
         uint32_t value;
     } addr_info = { .value = 0 };
