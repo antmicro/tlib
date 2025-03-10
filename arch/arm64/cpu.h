@@ -127,7 +127,7 @@ uint64_t arm_sctlr(struct CPUState *env, int el);
  * therefore useful to be able to pass TCG the offset of the least
  * significant half of a uint64_t struct member.
  */
-#if HOST_BIG_ENDIAN
+#if HOST_WORDS_BIGENDIAN
 #define offsetoflow32(S, M)  (offsetof(S, M) + sizeof(uint32_t))
 #define offsetofhigh32(S, M) offsetof(S, M)
 #else
@@ -552,7 +552,7 @@ typedef struct CPUState {
         union {                /* Fault address registers. */
             struct {
                 uint64_t _unused_far0;
-#if HOST_BIG_ENDIAN
+#if HOST_WORDS_BIGENDIAN
                 uint32_t ifar_ns;
                 uint32_t dfar_ns;
                 uint32_t ifar_s;
@@ -589,7 +589,7 @@ typedef struct CPUState {
         uint64_t c9_pminten;   /* perf monitor interrupt enables */
         union {                /* Memory attribute redirection */
             struct {
-#if HOST_BIG_ENDIAN
+#if HOST_WORDS_BIGENDIAN
                 uint64_t _unused_mair_0;
                 uint32_t mair1_ns;
                 uint32_t mair0_ns;
@@ -975,7 +975,7 @@ static inline void aarch64_sve_change_el(CPUARMState *env, int o, int n, bool a)
  */
 static inline uint64_t *sve_bswap64(uint64_t *dst, uint64_t *src, int nr)
 {
-#if HOST_BIG_ENDIAN
+#if HOST_WORDS_BIGENDIAN
     int i;
 
     for(i = 0; i < nr; ++i) {

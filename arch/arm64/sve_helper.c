@@ -2807,7 +2807,7 @@ static void swap_memmove(void *vd, void *vs, size_t n)
     uintptr_t o = (d | s | n) & 7;
     size_t i;
 
-#if !HOST_BIG_ENDIAN
+#if !HOST_WORDS_BIGENDIAN
     o = 0;
 #endif
     if(n >= PTRDIFF_MAX) {
@@ -2872,7 +2872,7 @@ static void swap_memzero(void *vd, size_t n)
         return;
     }
 
-#if !HOST_BIG_ENDIAN
+#if !HOST_WORDS_BIGENDIAN
     o = 0;
 #endif
     switch(o) {

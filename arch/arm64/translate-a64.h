@@ -79,7 +79,7 @@ static inline int vec_reg_offset(DisasContext *s, int regno, int element, MemOp 
 {
     int element_size = 1 << size;
     int offs = element * element_size;
-#if HOST_BIG_ENDIAN
+#if HOST_WORDS_BIGENDIAN
     /* This is complicated slightly because vfp.zregs[n].d[0] is
      * still the lowest and vfp.zregs[n].d[15] the highest of the
      * 256 byte vector, even on big endian systems.

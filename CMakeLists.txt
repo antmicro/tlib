@@ -6,7 +6,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(DEBUG_DEFS "-DDEBUG -DDEBUG_ON")
 endif()
 
-option (HOST_BIG_ENDIAN "Host big endian" OFF)
+option (HOST_WORDS_BIGENDIAN "Host big endian" OFF)
 
 if(NOT DEFINED HOST_ARCH)
     message(STATUS "'HOST_ARCH' isn't set; analyzing the CPU (${CMAKE_SYSTEM_PROCESSOR})...")

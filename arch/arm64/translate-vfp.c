@@ -89,7 +89,7 @@ uint64_t vfp_expand_imm(int size, uint8_t imm8)
 static inline long vfp_f16_offset(unsigned reg, bool top)
 {
     long offs = vfp_reg_offset(false, reg);
-#if HOST_BIG_ENDIAN
+#if HOST_WORDS_BIGENDIAN
     if(!top) {
         offs += 2;
     }

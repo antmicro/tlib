@@ -21,7 +21,7 @@ union CRYPTO_STATE {
     uint64_t l[2];
 };
 
-#if HOST_BIG_ENDIAN
+#if HOST_WORDS_BIGENDIAN
 #define CR_ST_BYTE(state, i) ((state).bytes[(15 - (i)) ^ 8])
 #define CR_ST_WORD(state, i) ((state).words[(3 - (i)) ^ 2])
 #else
