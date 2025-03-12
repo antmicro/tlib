@@ -2169,6 +2169,60 @@ static inline void gen_amoadd(TCGv result, TCGv guestAddress, TCGv toAdd, uint32
     gen_set_label(done);
 }
 
+static void gen_atomic_fetch_and_op(DisasContext *dc, uint32_t opc, TCGv result, TCGv source1, TCGv source2)
+{
+    if(!ensure_extension(dc, RISCV_FEATURE_RVA)) {
+        return;
+    }
+
+    switch(opc) {
+        /*
+         * AMO instructions:
+         * rd = *rs1
+         * *rs1 = rd OP rs2
+         */
+        case OPC_RISC_AMOADD_W:
+            gen_amoadd(result, source1, source2, dc->base.mem_idx, 32);
+            break;
+#if defined(TARGET_RISCV64)
+        case OPC_RISC_AMOADD_D:
+            gen_amoadd(result, source1, source2, dc->base.mem_idx, 64);
+            break;
+#endif
+        default:
+            gen_atomic_with_global_memory_lock(dc, opc, result, source1, source2);
+            break;
+    }
+}
+
+static void gen_atomic_compare_and_swap(DisasContext *dc, uint32_t opc, TCGv result, TCGv source1, TCGv source2)
+{
+    if(!ensure_additional_extension(dc, RISCV_FEATURE_ZACAS)) {
+        return;
+    }
+
+    switch(opc) {
+        case OPC_RISC_AMOCAS_W:
+            tlib_abortf("OPC_RISC_AMOCAS_W not yet implemented");
+            break;
+        case OPC_RISC_AMOCAS_D:  //  amocas.d is available on RV32
+#if defined(TARGET_RISCV64)
+            tlib_abortf("OPC_RISC_AMOCAS_D for rv64 not yet implemented");
+#else
+            tlib_abortf("OPC_RISC_AMOCAS_D for rv32 not yet implemented");
+#endif
+            break;
+#if defined(TARGET_RISCV64)
+        case OPC_RISC_AMOCAS_Q:
+            tlib_abortf("OPC_RISC_AMOCAS_Q not yet implemented");
+            break;
+#endif
+        default:
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+            break;
+    }
+}
+
 static void gen_atomic(CPUState *env, DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
 {
     if(!ensure_extension(dc, RISCV_FEATURE_RVA)) {
@@ -2180,41 +2234,32 @@ static void gen_atomic(CPUState *env, DisasContext *dc, uint32_t opc, int rd, in
 
     gen_sync_pc(dc);
 
-    TCGv source1, source2, dat;
+    TCGv source1, source2, result;
     source1 = tcg_temp_local_new();
     source2 = tcg_temp_local_new();
-    dat = tcg_temp_local_new();
+    result = tcg_temp_local_new();
 
     gen_get_gpr(source1, rs1);
     gen_get_gpr(source2, rs2);
 
     int done = gen_new_label();
 
-    switch(opc) {
-        /*
-         * AMO instructions:
-         * rd = *rs1
-         * *rs1 = rd OP rs2
-         */
-        case OPC_RISC_AMOADD_W:
-            gen_amoadd(dat, source1, source2, dc->base.mem_idx, 32);
+    int funct5_bits = MASK_FUNCT5(opc);
+    switch(funct5_bits) {
+        case FUNCT5_AMOCAS:
+            gen_atomic_compare_and_swap(dc, opc, result, source1, source2);
             break;
-#if defined(TARGET_RISCV64)
-        case OPC_RISC_AMOADD_D:
-            gen_amoadd(dat, source1, source2, dc->base.mem_idx, 64);
-            break;
-#endif
         default:
-            gen_atomic_with_global_memory_lock(dc, opc, dat, source1, source2);
+            gen_atomic_fetch_and_op(dc, opc, result, source1, source2);
             break;
     }
 
     gen_set_label(done);
 
-    gen_set_gpr(rd, dat);
+    gen_set_gpr(rd, result);
     tcg_temp_free(source1);
     tcg_temp_free(source2);
-    tcg_temp_free(dat);
+    tcg_temp_free(result);
 }
 
 static void gen_fp_helper_fpr_3fpr_1imm(void (*gen_fp_helper)(TCGv_i64, TCGv_ptr, TCGv_i64, TCGv_i64, TCGv_i64, TCGv_i64),
