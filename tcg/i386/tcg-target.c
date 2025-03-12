@@ -1794,6 +1794,32 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
                 break;
             }
 
+            OP_32_64(atomic_compare_and_swap_intrinsic)
+                :
+            {
+                //  Even though the semantics of the cmpxchg allow for the result-register
+                //  and the expected-register to be one and the same, it seems that TCG
+                //  does not behave well when I use a register declared as "output"
+                //  as an input register, and vice-versa. Hence, the need to separate them.
+                const TCGReg returnRegister = args[0];
+
+                const TCGReg expectedRegister = args[1];
+                const TCGReg hostAddressRegister = args[2];
+                const TCGReg newValueRegister = args[3];
+
+                //  cmpxchg uses the value in RAX as the expected value,
+                //  and replaces it with the actual value.
+                tcg_out_mov(s, type, TCG_REG_RAX, expectedRegister);
+
+                //  Compose and emit the "lock cmpxchg" machine code.
+                const int16_t xadd = P_EXT | 0xb1 + (type == TCG_TYPE_I64 ? P_REXW : 0);
+                tcg_out_locked_modrm_offset(s, xadd, newValueRegister, hostAddressRegister, 0);
+
+                //  Move the resulting value to the output register.
+                tcg_out_mov(s, type, returnRegister, TCG_REG_RAX);
+                break;
+            }
+
         default:
             tcg_abort();
     }
@@ -1836,6 +1862,7 @@ static const TCGTargetOpDef x86_op_defs[] = {
     { INDEX_op_rotr_i32, { "r", "0", "ci" } },
 
     { INDEX_op_atomic_fetch_add_intrinsic_i32, { "r", "r", "L" } },
+    { INDEX_op_atomic_compare_and_swap_intrinsic_i32, { "r", "r", "r", "r" } },
 
     { INDEX_op_brcond_i32, { "r", "ri" } },
 
@@ -1897,6 +1924,7 @@ static const TCGTargetOpDef x86_op_defs[] = {
     { INDEX_op_rotr_i64, { "r", "0", "ci" } },
 
     { INDEX_op_atomic_fetch_add_intrinsic_i64, { "r", "r", "L" } },
+    { INDEX_op_atomic_compare_and_swap_intrinsic_i64, { "r", "r", "r", "r" } },
 
     { INDEX_op_brcond_i64, { "r", "re" } },
     { INDEX_op_setcond_i64, { "r", "r", "re" } },

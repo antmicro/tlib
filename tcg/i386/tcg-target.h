@@ -98,7 +98,7 @@ typedef enum {
 #define TCG_TARGET_HAS_orc_i32                               0
 #define TCG_TARGET_HAS_rot_i32                               1
 #define TCG_TARGET_HAS_atomic_fetch_add_intrinsic_i32        1
-#define TCG_TARGET_HAS_atomic_compare_and_swap_intrinsic_i32 0
+#define TCG_TARGET_HAS_atomic_compare_and_swap_intrinsic_i32 1
 
 #if TCG_TARGET_REG_BITS == 64
 #define TCG_TARGET_HAS_andc_i64                              0
@@ -125,7 +125,7 @@ typedef enum {
 #define TCG_TARGET_HAS_qemu_st8_i32                          0
 #define TCG_TARGET_HAS_rot_i64                               1
 #define TCG_TARGET_HAS_atomic_fetch_add_intrinsic_i64        1
-#define TCG_TARGET_HAS_atomic_compare_and_swap_intrinsic_i64 0
+#define TCG_TARGET_HAS_atomic_compare_and_swap_intrinsic_i64 1
 
 #else
 #define TCG_TARGET_HAS_qemu_st8_i32 1
