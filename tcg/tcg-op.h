@@ -366,6 +366,24 @@ static inline void tcg_gen_atomic_intrinsic_op_i64(TCGOpcode opc, TCGv_i64 ret, 
     *gen_opparam_ptr++ = GET_TCGV_I64(arg);
 }
 
+static inline void tcg_gen_atomic_intrinsic_op4_i32(TCGOpcode opc, TCGv_i32 ret, TCGv_i32 arg0, TCGv_ptr address, TCGv_i32 arg1)
+{
+    *gen_opc_ptr++ = opc;
+    *gen_opparam_ptr++ = GET_TCGV_I32(ret);
+    *gen_opparam_ptr++ = GET_TCGV_I32(arg0);
+    *gen_opparam_ptr++ = GET_TCGV_PTR(address);
+    *gen_opparam_ptr++ = GET_TCGV_I32(arg1);
+}
+
+static inline void tcg_gen_atomic_intrinsic_op4_i64(TCGOpcode opc, TCGv_i64 ret, TCGv_i64 arg0, TCGv_ptr address, TCGv_i64 arg1)
+{
+    *gen_opc_ptr++ = opc;
+    *gen_opparam_ptr++ = GET_TCGV_I64(ret);
+    *gen_opparam_ptr++ = GET_TCGV_I64(arg0);
+    *gen_opparam_ptr++ = GET_TCGV_PTR(address);
+    *gen_opparam_ptr++ = GET_TCGV_I64(arg1);
+}
+
 static inline void tcg_gen_op4i_i64(TCGOpcode opc, TCGv_i64 arg1, TCGv_i64 arg2, TCGv_i64 arg3, TCGArg arg4)
 {
     *gen_opc_ptr++ = opc;
@@ -3823,7 +3841,6 @@ static void tcg_gen_atomic_fetch_add_intrinsic_i32(TCGv_i32 ret, TCGv_ptr hostAd
     tcg_gen_atomic_intrinsic_op_i32(INDEX_op_atomic_fetch_add_intrinsic_i32, ret, hostAddress, toAdd);
     tcg_gen_ext32s_i64(ret, ret);
 }
-
 #endif
 
 #if TCG_TARGET_HAS_atomic_fetch_add_intrinsic_i64
@@ -3835,7 +3852,32 @@ static void tcg_gen_atomic_fetch_add_intrinsic_i64(TCGv_i64 ret, TCGv_ptr hostAd
 {
     tcg_gen_atomic_intrinsic_op_i64(INDEX_op_atomic_fetch_add_intrinsic_i64, ret, hostAddress, toAdd);
 }
+#endif
 
+#if TCG_TARGET_HAS_atomic_compare_and_swap_intrinsic_i32
+/*
+ * Atomically compares the expected value in `expected` with the value
+ * located at `hostAddress` in memory. If they are equal, `newValue` is written
+ * to `hostAddress`. The actual value at `hostAddress` is written to `actual`.
+ */
+static void tcg_gen_atomic_compare_and_swap_intrinsic_i32(TCGv_i32 actual, TCGv_i32 expected, TCGv_ptr hostAddress,
+                                                          TCGv_i32 newValue)
+{
+    tcg_gen_atomic_intrinsic_op4_i32(INDEX_op_atomic_compare_and_swap_intrinsic_i32, actual, expected, hostAddress, newValue);
+}
+#endif
+
+#if TCG_TARGET_HAS_atomic_compare_and_swap_intrinsic_i64
+/*
+ * Atomically compares the expected value in `expected` with the value
+ * located at `hostAddress` in memory. If they are equal, `newValue` is written
+ * to `hostAddress`. The actual value at `hostAddress` is written to `actual`.
+ */
+static void tcg_gen_atomic_compare_and_swap_intrinsic_i64(TCGv_i64 actual, TCGv_i64 expected, TCGv_ptr hostAddress,
+                                                          TCGv_i64 newValue)
+{
+    tcg_gen_atomic_intrinsic_op4_i64(INDEX_op_atomic_compare_and_swap_intrinsic_i64, actual, expected, hostAddress, newValue);
+}
 #endif
 
 #ifdef __llvm__
