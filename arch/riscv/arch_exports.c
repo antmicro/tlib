@@ -140,6 +140,7 @@ void tlib_allow_additional_feature(uint32_t feature)
         case RISCV_FEATURE_ZBS:
         case RISCV_FEATURE_ZICSR:
         case RISCV_FEATURE_ZIFENCEI:
+        case RISCV_FEATURE_ZACAS:
             //  No dependencies
             break;
     }

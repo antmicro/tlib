@@ -180,6 +180,9 @@ static int ensure_additional_extension(DisasContext *dc, enum riscv_additional_f
         case RISCV_FEATURE_ZVE64D:
             encoding = "ve64d";
             break;
+        case RISCV_FEATURE_ZACAS:
+            encoding = "acas";
+            break;
         default:
             tlib_printf(LOG_LEVEL_ERROR, "Unexpected additional extension encoding: %d", ext);
             break;
