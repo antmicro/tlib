@@ -24,6 +24,7 @@
 #include "arch_callbacks.h"
 #include "cpu_registers.h"
 #include "atomic-intrinsics.h"
+#include "tcg-op-atomic.h"
 
 /* global register indices */
 static TCGv cpu_gpr[32], cpu_pc, cpu_opcode;
@@ -2195,6 +2196,40 @@ static void gen_atomic_fetch_and_op(DisasContext *dc, uint32_t opc, TCGv result,
     }
 }
 
+static inline void gen_amocas(TCGv expectedValue, TCGv guestAddress, TCGv newValue, uint32_t memIndex, uint8_t size)
+{
+    tlib_assert(size == 64 || size == 32);
+
+    int fallback = gen_new_label();
+    TCGv result = tcg_temp_local_new();
+
+    //  Use host intrinsic if possible.
+    if(size == 64) {
+        tcg_try_gen_atomic_compare_and_swap_intrinsic_i64(result, expectedValue, guestAddress, newValue, memIndex, fallback);
+    } else {
+        tcg_try_gen_atomic_compare_and_swap_intrinsic_i32(result, expectedValue, guestAddress, newValue, memIndex, fallback);
+    }
+
+    int done = gen_new_label();
+    tcg_gen_br(done);
+
+    /*
+     * If it's not possible to utilize host intrinsics, fall back to slower version:
+     */
+    gen_set_label(fallback);
+
+    if(size == 64) {
+        tcg_gen_atomic_cmpxchg_i64(result, guestAddress, expectedValue, newValue, memIndex, MO_64);
+    } else {
+        tcg_gen_atomic_cmpxchg_i32(result, guestAddress, expectedValue, newValue, memIndex, MO_32);
+    }
+
+    gen_set_label(done);
+
+    tcg_gen_mov_tl(expectedValue, result);
+    tcg_temp_free(result);
+}
+
 static void gen_atomic_compare_and_swap(DisasContext *dc, uint32_t opc, TCGv result, TCGv source1, TCGv source2)
 {
     if(!ensure_additional_extension(dc, RISCV_FEATURE_ZACAS)) {
@@ -2203,13 +2238,15 @@ static void gen_atomic_compare_and_swap(DisasContext *dc, uint32_t opc, TCGv res
 
     switch(opc) {
         case OPC_RISC_AMOCAS_W:
-            tlib_abortf("OPC_RISC_AMOCAS_W not yet implemented");
+            gen_amocas(result, source1, source2, dc->base.mem_idx, 32);
             break;
-        case OPC_RISC_AMOCAS_D:  //  amocas.d is available on RV32
-#if defined(TARGET_RISCV64)
-            tlib_abortf("OPC_RISC_AMOCAS_D for rv64 not yet implemented");
-#else
+        case OPC_RISC_AMOCAS_D:  //  64-bit amocas.d is available on RV32
+#if defined(TARGET_RISCV64) && HOST_LONG_BITS == 64
+            gen_amocas(result, source1, source2, dc->base.mem_idx, 64);
+#elif HOST_LONG_BITS == 64
             tlib_abortf("OPC_RISC_AMOCAS_D for rv32 not yet implemented");
+#else
+#error 64-bit amocas.d is not implemented for 32-bit hosts.
 #endif
             break;
 #if defined(TARGET_RISCV64)
@@ -2241,6 +2278,7 @@ static void gen_atomic(CPUState *env, DisasContext *dc, uint32_t opc, int rd, in
 
     gen_get_gpr(source1, rs1);
     gen_get_gpr(source2, rs2);
+    gen_get_gpr(result, rd);
 
     int done = gen_new_label();
 
