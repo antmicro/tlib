@@ -14730,5 +14730,5 @@ uint32_t gen_intermediate_code_epilogue(CPUState *env, DisasContextBase *base)
     } else {
         arm_tr_tb_stop(base, env);
     }
-    return 0;
+    return (!env->aarch64 << 1) | env->thumb;
 }
