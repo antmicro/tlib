@@ -2196,12 +2196,13 @@ static void gen_atomic_fetch_and_op(DisasContext *dc, uint32_t opc, TCGv result,
     }
 }
 
-static inline void gen_amocas(TCGv expectedValue, TCGv guestAddress, TCGv newValue, uint32_t memIndex, uint8_t size)
+static inline void gen_amocas(TCGv_i64 expectedValue, TCGv guestAddress, TCGv newValue, uint32_t memIndex, uint8_t size)
 {
     tlib_assert(size == 64 || size == 32);
 
     int fallback = gen_new_label();
-    TCGv result = tcg_temp_local_new();
+    //  Needs to be 64-bit even for 32-bit guests, as they may do amocas.d
+    TCGv_i64 result = tcg_temp_local_new_i64();
 
     //  Use host intrinsic if possible.
     if(size == 64) {
@@ -2226,11 +2227,73 @@ static inline void gen_amocas(TCGv expectedValue, TCGv guestAddress, TCGv newVal
 
     gen_set_label(done);
 
-    tcg_gen_mov_tl(expectedValue, result);
-    tcg_temp_free(result);
+    tcg_gen_mov_i64(expectedValue, result);
+    tcg_temp_free_i64(result);
 }
 
-static void gen_atomic_compare_and_swap(DisasContext *dc, uint32_t opc, TCGv result, TCGv source1, TCGv source2)
+static inline void amocas_ensure_even_register(DisasContext *dc, int registerId)
+{
+    //  Encodings with odd numbered registers specified in rs2 and rd are reserved.
+    if(registerId % 2 != 0) {
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+    }
+}
+
+static inline void consolidate_32_registers_to_64(TCGv_i64 result, TCGv_i32 upper, TCGv_i32 lower)
+{
+    //  result = upper << 32
+    tcg_gen_mov_i32(result, upper);
+    tcg_gen_shli_i64(result, result, 32);
+    //  result |= lower
+    tcg_gen_or_i64(result, result, lower);
+}
+
+static inline void extract_and_consolidate_32_registers_to_64(TCGv_i64 result, TCGv_i32 lowerValue, int upperRegisterId)
+{
+    TCGv_i32 upperValue = tcg_temp_new();
+    gen_get_gpr(upperValue, upperRegisterId);
+    consolidate_32_registers_to_64(result, upperValue, lowerValue);
+    tcg_temp_free_i32(upperValue);
+}
+
+static inline void gen_amocas_d_on_rv32(TCGv_i32 lowerExpectedValue, TCGv_i32 guestAddress, TCGv_i32 lowerNewValue,
+                                        uint32_t memIndex, int newValueHighRegister, int destinationHighRegister)
+{
+    /*
+     * 32-bit guests split the 64-bit expected value in rd+1:rd, so
+     * before we can use the host's 64-bit operation we need to consolidate them.
+     */
+    TCGv_i64 expectedValue64 = tcg_temp_local_new_i64();
+    extract_and_consolidate_32_registers_to_64(expectedValue64, lowerExpectedValue, destinationHighRegister);
+
+    /*
+     * 32-bit guests split the 64-bit new value in rs2+1:rs2, so
+     * before we can use the host's 64-bit operation we need to consolidate them.
+     */
+    TCGv_i64 newValue64 = tcg_temp_local_new_i64();
+    extract_and_consolidate_32_registers_to_64(newValue64, lowerNewValue, newValueHighRegister);
+
+    //  Use 64-bit host intrinsic.
+    gen_amocas(expectedValue64, guestAddress, newValue64, memIndex, 64);
+
+    /*
+     * 32-bit guests expect the actual value to be placed in rd+1:rd, so
+     * before finishing we must split up the 64-bit result we've gotten.
+     */
+    //  the rd register gets set from `lowerExpectedValue` (in `gen_atomic`),
+    //  so all we need to do here is set rd+1 to the upper 32 bits of `expectedValue64`.
+    tcg_gen_mov_i32(lowerExpectedValue, expectedValue64);
+    //  chop off the lower 32 bits. BAM
+    tcg_gen_shri_i64(expectedValue64, expectedValue64, 32);
+    //  the rd+1 register is not already being set, so do it here.
+    gen_set_gpr(destinationHighRegister, expectedValue64);
+
+    tcg_temp_free_i64(expectedValue64);
+    tcg_temp_free_i64(newValue64);
+}
+
+static void gen_atomic_compare_and_swap(DisasContext *dc, uint32_t opc, TCGv result, TCGv source1, TCGv source2,
+                                        int newValueHighRegister, int destinationHighRegister)
 {
     if(!ensure_additional_extension(dc, RISCV_FEATURE_ZACAS)) {
         return;
@@ -2243,8 +2306,10 @@ static void gen_atomic_compare_and_swap(DisasContext *dc, uint32_t opc, TCGv res
         case OPC_RISC_AMOCAS_D:  //  64-bit amocas.d is available on RV32
 #if defined(TARGET_RISCV64) && HOST_LONG_BITS == 64
             gen_amocas(result, source1, source2, dc->base.mem_idx, 64);
-#elif HOST_LONG_BITS == 64
-            tlib_abortf("OPC_RISC_AMOCAS_D for rv32 not yet implemented");
+#elif defined(TARGET_RISCV32) && HOST_LONG_BITS == 64
+            amocas_ensure_even_register(dc, newValueHighRegister == 0 ? 0 : newValueHighRegister - 1);
+            amocas_ensure_even_register(dc, destinationHighRegister == 0 ? 0 : destinationHighRegister - 1);
+            gen_amocas_d_on_rv32(result, source1, source2, dc->base.mem_idx, newValueHighRegister, destinationHighRegister);
 #else
 #error 64-bit amocas.d is not implemented for 32-bit hosts.
 #endif
@@ -2285,7 +2350,7 @@ static void gen_atomic(CPUState *env, DisasContext *dc, uint32_t opc, int rd, in
     int funct5_bits = MASK_FUNCT5(opc);
     switch(funct5_bits) {
         case FUNCT5_AMOCAS:
-            gen_atomic_compare_and_swap(dc, opc, result, source1, source2);
+            gen_atomic_compare_and_swap(dc, opc, result, source1, source2, rs2 == 0 ? 0 : rs2 + 1, rd == 0 ? 0 : rd + 1);
             break;
         default:
             gen_atomic_fetch_and_op(dc, opc, result, source1, source2);
