@@ -87,6 +87,15 @@ void tcg_try_gen_atomic_fetch_add_intrinsic_i32(TCGv_i32 result, TCGv_ptr guestA
     toAddUnknown.size32 = toAdd;
     tcg_try_gen_atomic_fetch_add_intrinsic(retUnknown, guestAddress, toAddUnknown, memIndex, fallbackLabel, 32);
 }
+#else
+/*
+ * Always use the fallback, since the target doesn't have the intrinsic implemented.
+ */
+void tcg_try_gen_atomic_fetch_add_intrinsic_i32(TCGv_i32 result, TCGv_ptr guestAddress, TCGv_i32 toAdd, uint32_t memIndex,
+                                                int fallbackLabel)
+{
+    tcg_gen_br(fallbackLabel);
+}
 #endif
 
 #if TCG_TARGET_HAS_atomic_fetch_add_intrinsic_i64
@@ -102,6 +111,15 @@ void tcg_try_gen_atomic_fetch_add_intrinsic_i64(TCGv_i64 result, TCGv_ptr guestA
     retUnknown.size64 = result;
     toAddUnknown.size64 = toAdd;
     tcg_try_gen_atomic_fetch_add_intrinsic(retUnknown, guestAddress, toAddUnknown, memIndex, fallbackLabel, 64);
+}
+#else
+/*
+ * Always use the fallback, since the target doesn't have the intrinsic implemented.
+ */
+void tcg_try_gen_atomic_fetch_add_intrinsic_i64(TCGv_i64 result, TCGv_ptr guestAddress, TCGv_i64 toAdd, uint32_t memIndex,
+                                                int fallbackLabel)
+{
+    tcg_gen_br(fallbackLabel);
 }
 #endif
 
