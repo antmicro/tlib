@@ -23,6 +23,7 @@
 #include <signal.h>
 #include "osdep.h"
 #include "tlib-queue.h"
+#include "tlib-alloc.h"
 #include "targphys.h"
 #include "infrastructure.h"
 #include "atomic.h"
@@ -33,9 +34,20 @@
 #if defined(__arm__)
 /* Thumb return addresses have the low bit set, so we need to subtract two.
    This is still safe in ARM mode because instructions are 4 bytes.  */
-#define GETPC() ((void *)((uintptr_t)__builtin_return_address(0) - 2))
+#define GETPC_INTERNAL() ((void *)((uintptr_t)__builtin_return_address(0) - 2))
 #else
-#define GETPC() ((void *)((uintptr_t)__builtin_return_address(0) - 1))
+#define GETPC_INTERNAL() ((void *)((uintptr_t)__builtin_return_address(0) - 1))
+#endif
+
+#if defined(DEBUG)
+#define GETPC()                            \
+    ({                                     \
+        void *pc = GETPC_INTERNAL();       \
+        tlib_assert(is_ptr_in_rx_buf(pc)); \
+        pc;                                \
+    })
+#else
+#define GETPC() GETPC_INTERNAL()
 #endif
 
 #ifndef TARGET_LONG_BITS
