@@ -106,31 +106,32 @@ typedef struct TCGReg128 {
 #define TCG_TARGET_HAS_atomic_compare_and_swap_intrinsic_i32 1
 
 #if TCG_TARGET_REG_BITS == 64
-#define TCG_TARGET_HAS_andc_i64                              0
-#define TCG_TARGET_HAS_bswap16_i64                           1
-#define TCG_TARGET_HAS_bswap32_i64                           1
-#define TCG_TARGET_HAS_bswap64_i64                           1
-#define TCG_TARGET_HAS_deposit_i64                           1
-#define TCG_TARGET_HAS_div2_i64                              1
-#define TCG_TARGET_HAS_eqv_i64                               0
-#define TCG_TARGET_HAS_ext16s_i64                            1
-#define TCG_TARGET_HAS_ext16u_i64                            1
-#define TCG_TARGET_HAS_ext32s_i64                            1
-#define TCG_TARGET_HAS_ext32u_i64                            1
-#define TCG_TARGET_HAS_ext8s_i64                             1
-#define TCG_TARGET_HAS_ext8u_i64                             1
-#define TCG_TARGET_HAS_movcond_i64                           1
-#define TCG_TARGET_HAS_muls2_i64                             1
-#define TCG_TARGET_HAS_mulu2_i64                             1
-#define TCG_TARGET_HAS_nand_i64                              0
-#define TCG_TARGET_HAS_neg_i64                               1
-#define TCG_TARGET_HAS_nor_i64                               0
-#define TCG_TARGET_HAS_not_i64                               1
-#define TCG_TARGET_HAS_orc_i64                               0
-#define TCG_TARGET_HAS_qemu_st8_i32                          0
-#define TCG_TARGET_HAS_rot_i64                               1
-#define TCG_TARGET_HAS_atomic_fetch_add_intrinsic_i64        1
-#define TCG_TARGET_HAS_atomic_compare_and_swap_intrinsic_i64 1
+#define TCG_TARGET_HAS_andc_i64                               0
+#define TCG_TARGET_HAS_bswap16_i64                            1
+#define TCG_TARGET_HAS_bswap32_i64                            1
+#define TCG_TARGET_HAS_bswap64_i64                            1
+#define TCG_TARGET_HAS_deposit_i64                            1
+#define TCG_TARGET_HAS_div2_i64                               1
+#define TCG_TARGET_HAS_eqv_i64                                0
+#define TCG_TARGET_HAS_ext16s_i64                             1
+#define TCG_TARGET_HAS_ext16u_i64                             1
+#define TCG_TARGET_HAS_ext32s_i64                             1
+#define TCG_TARGET_HAS_ext32u_i64                             1
+#define TCG_TARGET_HAS_ext8s_i64                              1
+#define TCG_TARGET_HAS_ext8u_i64                              1
+#define TCG_TARGET_HAS_movcond_i64                            1
+#define TCG_TARGET_HAS_muls2_i64                              1
+#define TCG_TARGET_HAS_mulu2_i64                              1
+#define TCG_TARGET_HAS_nand_i64                               0
+#define TCG_TARGET_HAS_neg_i64                                1
+#define TCG_TARGET_HAS_nor_i64                                0
+#define TCG_TARGET_HAS_not_i64                                1
+#define TCG_TARGET_HAS_orc_i64                                0
+#define TCG_TARGET_HAS_qemu_st8_i32                           0
+#define TCG_TARGET_HAS_rot_i64                                1
+#define TCG_TARGET_HAS_atomic_fetch_add_intrinsic_i64         1
+#define TCG_TARGET_HAS_atomic_compare_and_swap_intrinsic_i64  1
+#define TCG_TARGET_HAS_atomic_compare_and_swap_intrinsic_i128 1
 
 #else
 #define TCG_TARGET_HAS_qemu_st8_i32 1

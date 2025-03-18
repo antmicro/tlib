@@ -56,3 +56,8 @@ uintptr_t translate_page_aligned_address_and_fill_tlb_u64(target_ulong addr, uin
 {
     return translate_page_aligned_address_and_fill_tlb(addr, mmu_idx, sizeof(uint64_t));
 }
+
+uintptr_t translate_page_aligned_address_and_fill_tlb_u128(target_ulong addr, uint32_t mmu_idx)
+{
+    return translate_page_aligned_address_and_fill_tlb(addr, mmu_idx, 2 * sizeof(uint64_t));
+}

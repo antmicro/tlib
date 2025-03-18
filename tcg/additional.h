@@ -31,8 +31,8 @@ extern unsigned int sizeof_CPUTLBEntry;
 #else
 #define MAX_OPC_PARAM_PER_ARG 1
 #endif
-#define MAX_OPC_PARAM_IARGS 4
-#define MAX_OPC_PARAM_OARGS 1
+#define MAX_OPC_PARAM_IARGS 5
+#define MAX_OPC_PARAM_OARGS 2
 #define MAX_OPC_PARAM_ARGS  (MAX_OPC_PARAM_IARGS + MAX_OPC_PARAM_OARGS)
 
 /* A Call op needs up to 4 + 2N parameters on 32-bit archs,

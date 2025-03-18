@@ -183,6 +183,16 @@ DEF(atomic_fetch_add_intrinsic_i64, 1, 2, 0, TCG_OPF_CALL_CLOBBER | TCG_OPF_SIDE
  */
 DEF(atomic_compare_and_swap_intrinsic_i64, 1, 3, 0,
     TCG_OPF_SIDE_EFFECTS | IMPL64 | IMPL(TCG_TARGET_HAS_atomic_compare_and_swap_intrinsic_i64))
+/*
+ * operation has 2 output args, 5 input args and 0 constant args.
+ * TCG_OPF_SIDE_EFFECTS: The operation writes to memory, i.e. it has side-effects.
+ *                       Therefore it shouldn't be optimized away even if the result of
+ *                       the operation is unused.
+ *            IMPL(...): This operation is only implemented when this definition is set to 1.
+ *               IMPL64: This operation is only implemented on 64-bit hosts.
+ */
+DEF(atomic_compare_and_swap_intrinsic_i128, 2, 5, 0,
+    TCG_OPF_SIDE_EFFECTS | IMPL64 | IMPL(TCG_TARGET_HAS_atomic_compare_and_swap_intrinsic_i128))
 
 DEF(brcond_i64, 0, 2, 2, TCG_OPF_BB_END | TCG_OPF_SIDE_EFFECTS | IMPL64)
 DEF(ext8s_i64, 1, 1, 0, IMPL64 | IMPL(TCG_TARGET_HAS_ext8s_i64))

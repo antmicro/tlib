@@ -2239,6 +2239,48 @@ static inline void amocas_ensure_even_register(DisasContext *dc, int registerId)
     }
 }
 
+#ifdef TARGET_RISCV64
+static inline void gen_amocas_128(TCGv_i64 expectedValueLow, TCGv_i64 guestAddress, TCGv_i64 newValueLow, uint32_t memIndex,
+                                  int newValueHighRegister, int destinationHighRegister)
+{
+    int fallback = gen_new_label();
+    TCGv_i128 result = tcg_temp_local_new_i128();
+
+    //  The lower parts of expectedValue and newValue are already loaded, but we still need to load in the high parts.
+    TCGv_i128 expectedValue = { .high = tcg_temp_local_new_i64(), .low = expectedValueLow };
+    TCGv_i128 newValue = { .high = tcg_temp_local_new_i64(), .low = newValueLow };
+    gen_get_gpr(expectedValue.high, destinationHighRegister);
+    gen_get_gpr(newValue.high, newValueHighRegister);
+
+    //  Use host intrinsic if possible.
+    tcg_try_gen_atomic_compare_and_swap_intrinsic_i128(result, expectedValue, guestAddress, newValue, memIndex, fallback);
+
+    int done = gen_new_label();
+    tcg_gen_br(done);
+
+    /*
+     * If it's not possible to utilize host intrinsics, fall back to slower version:
+     */
+    gen_set_label(fallback);
+
+    tcg_gen_atomic_cmpxchg_i128(result, guestAddress, expectedValue, newValue, memIndex);
+
+    gen_set_label(done);
+
+    //  the rd register gets set from `expectedValueLow` (in `gen_atomic`), so all we need to do here is move `resultLow` into it
+    //  and set rd+1 to `resultHigh`.
+    tcg_gen_mov_i64(expectedValue.low, result.low);
+    //  the rd+1 register is not already being set, so do it here.
+    gen_set_gpr(destinationHighRegister, result.high);
+
+    tcg_temp_free_i128(result);
+    //  The 'low' parts are freed up in `gen_atomic` where they were allocated.
+    tcg_temp_free_i64(expectedValue.high);
+    tcg_temp_free_i64(newValue.high);
+}
+#endif
+
+#if defined(TARGET_RISCV32) && HOST_LONG_BITS == 64
 static inline void consolidate_32_registers_to_64(TCGv_i64 result, TCGv_i32 upper, TCGv_i32 lower)
 {
     //  result = upper << 32
@@ -2291,6 +2333,7 @@ static inline void gen_amocas_d_on_rv32(TCGv_i32 lowerExpectedValue, TCGv_i32 gu
     tcg_temp_free_i64(expectedValue64);
     tcg_temp_free_i64(newValue64);
 }
+#endif
 
 static void gen_atomic_compare_and_swap(DisasContext *dc, uint32_t opc, TCGv result, TCGv source1, TCGv source2,
                                         int newValueHighRegister, int destinationHighRegister)
@@ -2316,7 +2359,9 @@ static void gen_atomic_compare_and_swap(DisasContext *dc, uint32_t opc, TCGv res
             break;
 #if defined(TARGET_RISCV64)
         case OPC_RISC_AMOCAS_Q:
-            tlib_abortf("OPC_RISC_AMOCAS_Q not yet implemented");
+            amocas_ensure_even_register(dc, newValueHighRegister == 0 ? 0 : newValueHighRegister - 1);
+            amocas_ensure_even_register(dc, destinationHighRegister == 0 ? 0 : destinationHighRegister - 1);
+            gen_amocas_128(result, source1, source2, dc->base.mem_idx, newValueHighRegister, destinationHighRegister);
             break;
 #endif
         default:

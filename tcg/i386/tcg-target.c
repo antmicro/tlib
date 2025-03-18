@@ -1831,7 +1831,33 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
                 break;
             }
 
+        case INDEX_op_atomic_compare_and_swap_intrinsic_i128: {
+            const TCGReg128 returnRegister = tcg_new_reg_128(args[0], args[1]);
+            const TCGReg128 expectedRegister = tcg_new_reg_128(args[2], args[3]);
+            const TCGReg hostAddressRegister = args[4];
+            const TCGReg128 newValueRegister = tcg_new_reg_128(args[5], args[6]);
+
+            //  cmpxchg16b uses the values in RDX:RAX as the expected value,
+            //  and replaces them with the actual value.
+            const TCGReg128 cmpxchgExpectedAndActualRegister = tcg_new_reg_128(TCG_REG_RDX, TCG_REG_RAX);
+            tcg_out_mov_128(s, cmpxchgExpectedAndActualRegister, expectedRegister);
+
+            //  cmpxchg16b uses the values in RCX:RBX as the new value.
+            const TCGReg128 cmpxchgNewValueRegister = tcg_new_reg_128(TCG_REG_RCX, TCG_REG_RBX);
+            tcg_out_mov_128(s, cmpxchgNewValueRegister, newValueRegister);
+
+            //  Compose and emit the "lock cmpxchg16b" machine code.
+            const uint16_t cmpxchg8b = P_EXT | 0xc7 + P_REXW;
+            const uint8_t r = 1;  //  The r field of the ModR/M byte needs to always be 1 for cmpxchg16b m128.
+            tcg_out_locked_modrm_offset(s, cmpxchg8b, r, hostAddressRegister, 0);
+
+            //  Move the resulting values to the output registers.
+            tcg_out_mov_128(s, returnRegister, cmpxchgExpectedAndActualRegister);
+            break;
+        }
+
         default:
+            tlib_printf(LOG_LEVEL_ERROR, "%s: unknown opcode %x", __func__, opc);
             tcg_abort();
     }
 
@@ -1936,6 +1962,7 @@ static const TCGTargetOpDef x86_op_defs[] = {
 
     { INDEX_op_atomic_fetch_add_intrinsic_i64, { "r", "r", "L" } },
     { INDEX_op_atomic_compare_and_swap_intrinsic_i64, { "r", "r", "r", "r" } },
+    { INDEX_op_atomic_compare_and_swap_intrinsic_i128, { "r", "r", "r", "r", "r", "r", "r" } },
 
     { INDEX_op_brcond_i64, { "r", "re" } },
     { INDEX_op_setcond_i64, { "r", "r", "re" } },

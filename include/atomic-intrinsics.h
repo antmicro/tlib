@@ -11,3 +11,6 @@ void tcg_try_gen_atomic_compare_and_swap_intrinsic_i32(TCGv_i32 actual, TCGv_i32
 
 void tcg_try_gen_atomic_compare_and_swap_intrinsic_i64(TCGv_i64 actual, TCGv_i64 expected, TCGv_ptr guestAddress,
                                                        TCGv_i64 newValue, uint32_t memIndex, int fallbackLabel);
+
+void tcg_try_gen_atomic_compare_and_swap_intrinsic_i128(TCGv_i128 actual, TCGv_i128 expected, TCGv_ptr guestAddress,
+                                                        TCGv_i128 newValue, uint64_t memIndex, int fallbackLabel);

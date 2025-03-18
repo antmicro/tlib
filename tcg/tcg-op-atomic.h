@@ -81,6 +81,31 @@ static inline void tcg_gen_atomic_cmpxchg_i64(TCGv_i64 retv, TCGv addr, TCGv_i64
     tcg_temp_free_i64(t1);
 }
 
+static inline void tcg_gen_atomic_cmpxchg_i128(TCGv_i128 result, TCGv guestAddressLow, TCGv_i128 expectedValue,
+                                               TCGv_i128 newValue, TCGArg memIndex)
+{
+    TCGMemOp memop = tcg_canonicalize_memop(MO_64, 1, 0);
+
+    gen_helper_acquire_global_memory_lock(cpu_env);
+
+    //  Load the actual value located at the address.
+    tcg_gen_qemu_ld_i128(result, guestAddressLow, memIndex, memop & ~MO_SIGN);
+
+    //  If the actual value is not the expected value, fail.
+    int fail = gen_new_label();
+    tcg_gen_brcond_i64(TCG_COND_NE, result.high, expectedValue.high, fail);
+    tcg_gen_brcond_i64(TCG_COND_NE, result.low, expectedValue.low, fail);
+
+    //  We didn't jump to `fail`, meaning the 128-bit comparison succeeded.
+
+    //  CAS success: store the new value.
+    tcg_gen_qemu_st_i128(newValue, guestAddressLow, memIndex, memop);
+
+    gen_set_label(fail);
+
+    gen_helper_release_global_memory_lock(cpu_env);
+}
+
 //  'new_val' controls whether a value before or after the operation should be returned.
 static void do_atomic_op_i32(TCGv_i32 ret, TCGv addr, TCGv_i32 val, TCGArg idx, TCGMemOp memop, bool new_val,
                              void (*gen)(TCGv_i32, TCGv_i32, TCGv_i32))
