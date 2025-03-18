@@ -422,6 +422,8 @@ static inline void __attribute__((always_inline)) ensure_vector_embedded_extensi
 static inline void __attribute__((always_inline)) ensure_vector_embedded_extension_for_eew_or_raise_exception(CPUState *env,
                                                                                                               target_ulong eew)
 {
+    uintptr_t pc = (uintptr_t)GETPC();
+
     //  Assume there is no EEW larger than 64.
     if(riscv_has_additional_ext(env, RISCV_FEATURE_ZVE64X)) {
         return;
@@ -431,36 +433,36 @@ static inline void __attribute__((always_inline)) ensure_vector_embedded_extensi
         if(eew < 64) {
             return;
         }
-        log_disabled_extension_and_raise_exception(env, (uintptr_t)GETPC(), RISCV_FEATURE_RVV,
-                                                   "EEW is too large for the Zve32x extension");
+        log_disabled_extension_and_raise_exception(env, pc, RISCV_FEATURE_RVV, "EEW is too large for the Zve32x extension");
     } else {
-        log_disabled_extension_and_raise_exception(env, (uintptr_t)GETPC(), RISCV_FEATURE_RVV, NULL);
+        log_disabled_extension_and_raise_exception(env, pc, RISCV_FEATURE_RVV, NULL);
     }
 }
 
 static inline void __attribute__((always_inline)) ensure_vector_float_embedded_extension_or_raise_exception(CPUState *env,
                                                                                                             target_ulong eew)
 {
+    uintptr_t pc = (uintptr_t)GETPC();
+
     if(eew == 32) {
         if(riscv_has_additional_ext(env, RISCV_FEATURE_ZVE64F) || riscv_has_additional_ext(env, RISCV_FEATURE_ZVE32F)) {
             return;
         }
         log_disabled_extension_and_raise_exception(
-            env, (uintptr_t)GETPC(), RISCV_FEATURE_RVV,
-            "Zve64f or Zve32f is required for single precision floating point vector operations");
+            env, pc, RISCV_FEATURE_RVV, "Zve64f or Zve32f is required for single precision floating point vector operations");
     }
     if(eew == 16) {
         if(riscv_has_additional_ext(env, RISCV_FEATURE_ZVFH)) {
             return;
         }
-        log_disabled_extension_and_raise_exception(env, (uintptr_t)GETPC(), RISCV_FEATURE_RVV,
+        log_disabled_extension_and_raise_exception(env, pc, RISCV_FEATURE_RVV,
                                                    "Zvfh is required for half precision floating point vector operations");
     }
     if(eew == 64) {
         if(riscv_has_additional_ext(env, RISCV_FEATURE_ZVE64D)) {
             return;
         }
-        log_disabled_extension_and_raise_exception(env, (uintptr_t)GETPC(), RISCV_FEATURE_RVV,
+        log_disabled_extension_and_raise_exception(env, pc, RISCV_FEATURE_RVV,
                                                    "Zve64d is required for double precision floating point vector operations");
     }
 
@@ -469,7 +471,7 @@ static inline void __attribute__((always_inline)) ensure_vector_float_embedded_e
        0) {
         tlib_abort("Unable to print log about unsupported EEW!");
     }
-    log_disabled_extension_and_raise_exception(env, (uintptr_t)GETPC(), RISCV_FEATURE_RVV, eww_unsupported_message);
+    log_disabled_extension_and_raise_exception(env, pc, RISCV_FEATURE_RVV, eww_unsupported_message);
 }
 
 static inline void mark_fs_dirty()
