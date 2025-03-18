@@ -3206,6 +3206,30 @@ static inline void tcg_gen_qemu_ld_i64(TCGv_i64 val, TCGv addr, TCGArg idx, TCGM
     }
 }
 
+/*
+ * Non-atomically loads a 128-bit value from guest memory.
+ * Subject to tearing.
+ * Assumes that half of the value is located at `guestAddressLow`
+ * and the other at `guestAddressLow + sizeof(uint64_t)`.
+ * Endianness is taken into account.
+ */
+static inline void tcg_gen_qemu_ld_i128(TCGv_i128 result, TCGv guestAddressLow, TCGArg memIndex, TCGMemOp memop)
+{
+    //  Compute the address of the upper 64 bits.
+    TCGv guestAddressHigh = tcg_temp_local_new();
+    tcg_gen_addi_tl(guestAddressHigh, guestAddressLow, sizeof(uint64_t));
+
+#ifdef TARGET_WORDS_BIGENDIAN
+    tcg_gen_qemu_ld_i64(result.low, guestAddressHigh, memIndex, memop);
+    tcg_gen_qemu_ld_i64(result.high, guestAddressLow, memIndex, memop);
+#else
+    tcg_gen_qemu_ld_i64(result.low, guestAddressLow, memIndex, memop);
+    tcg_gen_qemu_ld_i64(result.high, guestAddressHigh, memIndex, memop);
+#endif
+
+    tcg_temp_free(guestAddressHigh);
+}
+
 static inline void tcg_gen_qemu_st_i64(TCGv_i64 val, TCGv addr, TCGArg idx, TCGMemOp memop)
 {
     TCGv_i64 swap = -1;
@@ -3246,6 +3270,30 @@ static inline void tcg_gen_qemu_st_i64(TCGv_i64 val, TCGv addr, TCGArg idx, TCGM
     if(swap != -1) {
         tcg_temp_free_i64(swap);
     }
+}
+
+/*
+ * Non-atomically stores a 128-bit value to guest memory.
+ * Subject to tearing.
+ * Places half of the value located at `guestAddressLow`
+ * and the other at `guestAddressLow + sizeof(uint64_t)`.
+ * Endianness is taken into account.
+ */
+static inline void tcg_gen_qemu_st_i128(TCGv_i128 value, TCGv guestAddressLow, TCGArg memIndex, TCGMemOp memop)
+{
+    //  Compute the address of the upper 64 bits.
+    TCGv guestAddressHigh = tcg_temp_local_new();
+    tcg_gen_addi_tl(guestAddressHigh, guestAddressLow, sizeof(uint64_t));
+
+#ifdef TARGET_WORDS_BIGENDIAN
+    tcg_gen_qemu_st_i64(value.low, guestAddressHigh, memIndex, memop);
+    tcg_gen_qemu_st_i64(value.high, guestAddressLow, memIndex, memop);
+#else
+    tcg_gen_qemu_st_i64(value.low, guestAddressLow, memIndex, memop);
+    tcg_gen_qemu_st_i64(value.high, guestAddressHigh, memIndex, memop);
+#endif
+
+    tcg_temp_free(guestAddressHigh);
 }
 
 static inline void tcg_gen_abs_i32(TCGv_i32 ret, TCGv_i32 a)

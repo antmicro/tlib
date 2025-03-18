@@ -323,6 +323,14 @@ typedef int TCGv_i64;
 
 #endif
 
+/*
+ * 128-bit variables are simply implemented as two 64-bit ones.
+ */
+typedef struct TCGv_i128 {
+    TCGv_i64 low;
+    TCGv_i64 high;
+} TCGv_i128;
+
 typedef TCGv_ptr TCGv_env;
 
 /* Define type and accessor macros for TCG variables.
@@ -631,6 +639,16 @@ static inline TCGv_i64 tcg_temp_local_new_i64(void)
 }
 void tcg_temp_free_i64(TCGv_i64 arg);
 char *tcg_get_arg_str_i64(TCGContext *s, char *buf, int buf_size, TCGv_i64 arg);
+
+static inline TCGv_i128 tcg_temp_new_i128(void)
+{
+    return (TCGv_i128) { .low = tcg_temp_new_i64(), .high = tcg_temp_new_i64() };
+}
+static inline TCGv_i128 tcg_temp_local_new_i128(void)
+{
+    return (TCGv_i128) { .low = tcg_temp_local_new_i64(), .high = tcg_temp_local_new_i64() };
+}
+void tcg_temp_free_i128(TCGv_i128 arg);
 
 static inline bool tcg_arg_is_local(TCGContext *s, TCGArg arg)
 {

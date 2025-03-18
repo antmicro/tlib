@@ -545,6 +545,12 @@ void tcg_temp_free_i64(TCGv_i64 arg)
     tcg_temp_free_internal(GET_TCGV_I64(arg));
 }
 
+void tcg_temp_free_i128(TCGv_i128 arg)
+{
+    tcg_temp_free_i64(arg.low);
+    tcg_temp_free_i64(arg.high);
+}
+
 TCGv_i32 tcg_const_i32(int32_t val)
 {
     TCGv_i32 t0;

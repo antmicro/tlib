@@ -80,6 +80,11 @@ static const int tcg_target_call_oarg_regs[] = {
 
 // clang-format on
 
+static inline TCGReg128 tcg_new_reg_128(TCGReg high, TCGReg low)
+{
+    return (TCGReg128) { .low = low, .high = high };
+}
+
 static uint8_t *tb_ret_addr;
 
 static void patch_reloc(uint8_t *code_ptr, int type, tcg_target_long value, tcg_target_long addend)
@@ -533,6 +538,12 @@ static inline void tcg_out_mov(TCGContext *s, TCGType type, TCGReg ret, TCGReg a
         int opc = OPC_MOVL_GvEv + (type == TCG_TYPE_I64 ? P_REXW : 0);
         tcg_out_modrm(s, opc, ret, arg);
     }
+}
+
+static inline void tcg_out_mov_128(TCGContext *s, TCGReg128 ret, TCGReg128 arg)
+{
+    tcg_out_mov(s, TCG_TYPE_I64, ret.high, arg.high);
+    tcg_out_mov(s, TCG_TYPE_I64, ret.low, arg.low);
 }
 
 static void tcg_out_movi(TCGContext *s, TCGType type, TCGReg ret, tcg_target_long arg)

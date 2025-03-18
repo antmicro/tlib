@@ -64,6 +64,11 @@ typedef enum {
     TCG_REG_RDI = TCG_REG_EDI,
 } TCGReg;
 
+typedef struct TCGReg128 {
+    TCGReg low;
+    TCGReg high;
+} TCGReg128;
+
 #define TCG_CT_CONST_S32 0x100
 #define TCG_CT_CONST_U32 0x200
 
