@@ -1144,8 +1144,6 @@ static void disas_t32_extract_tbranch(DisasContext *ctx, arg_tbranch *a, uint32_
     a->rm = extract32(insn, 0, 4);
 }
 
-// TODO: Remove the attribute after restoring code using the function.
-__attribute__((unused))
 static bool disas_t32(DisasContext *ctx, uint32_t insn)
 {
     union {
