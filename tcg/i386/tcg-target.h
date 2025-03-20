@@ -137,6 +137,13 @@ typedef struct TCGReg128 {
 #define TCG_TARGET_HAS_qemu_st8_i32 1
 #endif
 
+/* Whether the host has any atomic intrinsics implemented at all. */
+#define TCG_TARGET_HAS_INTRINSIC_ATOMICS                                                                             \
+    ((TCG_TARGET_HAS_atomic_fetch_add_intrinsic_i32 == 1) || (TCG_TARGET_HAS_atomic_fetch_add_intrinsic_i64 == 1) || \
+     (TCG_TARGET_HAS_atomic_compare_and_swap_intrinsic_i32 == 1) ||                                                  \
+     (TCG_TARGET_HAS_atomic_compare_and_swap_intrinsic_i64 == 1) ||                                                  \
+     (TCG_TARGET_HAS_atomic_compare_and_swap_intrinsic_i128 == 1))
+
 //  MOVBE isn't very common in non-Atom CPUs and it isn't currently supported by TCG.
 #define TCG_TARGET_HAS_MEMORY_BSWAP 0
 

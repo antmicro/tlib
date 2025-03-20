@@ -15,9 +15,7 @@ typedef union TCGv_unknown {
     TCGv_i128 size128;
 } TCGv_unknown;
 
-#if (TCG_TARGET_HAS_atomic_fetch_add_intrinsic_i32 == 1) || (TCG_TARGET_HAS_atomic_fetch_add_intrinsic_i64 == 1) || \
-    (TCG_TARGET_HAS_atomic_compare_and_swap_intrinsic_i32 == 1) ||                                                  \
-    (TCG_TARGET_HAS_atomic_compare_and_swap_intrinsic_i64 == 1) || (TCG_TARGET_HAS_atomic_compare_and_swap_intrinsic_i128 == 1)
+#if TCG_TARGET_HAS_INTRINSIC_ATOMICS
 /*
  * Branches to `unalignedLabel` if the given `guestAddress` spans two pages.
  */
