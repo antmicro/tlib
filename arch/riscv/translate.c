@@ -298,7 +298,6 @@ void gen_sync_pc(DisasContext *dc)
 
 static inline void generate_exception(DisasContext *dc, int excp)
 {
-    gen_sync_pc(dc);
     TCGv_i32 helper_tmp = tcg_const_i32(excp);
     gen_helper_raise_exception(cpu_env, helper_tmp);
     tcg_temp_free_i32(helper_tmp);
@@ -306,7 +305,6 @@ static inline void generate_exception(DisasContext *dc, int excp)
 
 static inline void generate_exception_mbadaddr(DisasContext *dc, int excp)
 {
-    gen_sync_pc(dc);
     TCGv_i32 helper_tmp = tcg_const_i32(excp);
     gen_helper_raise_exception_mbadaddr(cpu_env, helper_tmp, cpu_pc);
     tcg_temp_free_i32(helper_tmp);
@@ -315,8 +313,6 @@ static inline void generate_exception_mbadaddr(DisasContext *dc, int excp)
 /* unknown instruction */
 static inline void kill_unknown(DisasContext *dc, int excp)
 {
-    gen_sync_pc(dc);
-
     //  According to the RISC-V ISA manual,
     //  for Illegal Instruction, mtval
     //  should contain an opcode of the faulting instruction.
@@ -1959,7 +1955,6 @@ static void gen_load(DisasContext *dc, uint32_t opc, int rd, int rs1, target_lon
         try_run_pre_stack_access_hook(t0, opc_to_width(opc), false);
     }
 
-    gen_sync_pc(dc);
     switch(opc) {
         case OPC_RISC_LB:
             tcg_gen_qemu_ld8s(t1, t0, dc->base.mem_idx);
@@ -2000,8 +1995,6 @@ static void gen_load(DisasContext *dc, uint32_t opc, int rd, int rs1, target_lon
 
 static void gen_store(DisasContext *dc, uint32_t opc, int rs1, int rs2, target_long imm)
 {
-    gen_sync_pc(dc);
-
     TCGv t0 = tcg_temp_local_new();
     TCGv dat = tcg_temp_local_new();
     gen_get_gpr(t0, rs1);
@@ -3010,8 +3003,6 @@ static void gen_atomic(CPUState *env, DisasContext *dc, uint32_t opc, int rd, in
     /* TODO: handle aq, rl bits? - for now just get rid of them: */
     opc = MASK_OP_ATOMIC_NO_AQ_RL(opc);
 
-    gen_sync_pc(dc);
-
     TCGv source1, source2, result;
     source1 = tcg_temp_local_new();
     source2 = tcg_temp_local_new();
@@ -3283,8 +3274,6 @@ static void gen_fp_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs
     if(!ensure_fp_extension(dc, 25)) {
         return;
     }
-
-    gen_sync_pc(dc);
 
     TCGv_i64 rm_reg = tcg_temp_local_new_i64();
     TCGv write_int_rd = tcg_temp_local_new();
@@ -3719,7 +3708,6 @@ static void gen_fp_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs
 
 static void gen_system(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2, int funct12)
 {
-    gen_sync_pc(dc);
     if(opc == OPC_RISC_ECALL) {
         //  This group uses both `I-type` and `R-type` instruction formats
         //  It's easier to start narrowing with the shorter function code
@@ -3893,7 +3881,6 @@ static void gen_v_cfg(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2, 
         tcg_gen_movi_i32(rs1_is_uimm, 0);
     }
 
-    gen_sync_pc(dc);
     returned_vl = tcg_temp_new();
 
     switch(opc) {
@@ -6940,6 +6927,10 @@ void setup_disas_context(DisasContextBase *dc, CPUState *env)
 int gen_breakpoint(DisasContextBase *base, CPUBreakpoint *bp)
 {
     DisasContext *dc = (DisasContext *)base;
+
+    //  Explicit PC sync is needed here, since breakpoints are handled before `disas_insn()`,
+    //  which calls `gen_sync_pc()` on every instruction
+    gen_sync_pc(dc);
     generate_exception(dc, EXCP_DEBUG);
     /* Advance PC so that clearing the breakpoint will
        invalidate this TB.  */
