@@ -2482,13 +2482,13 @@ static bool trans_VMOV_imm_dp(DisasContext *s, arg_VMOV_imm_dp *a)
         return do_vfp_2op_##PREC(s, FN, a->vd, a->vm);                         \
     }
 
-#define DO_VFP_VMOV(INSN, PREC, FN)                                                    \
-    static bool trans_##INSN##_##PREC(DisasContext *s, arg_##INSN##_##PREC *a)         \
-    {                                                                                  \
-        if(!dc_isar_feature(aa32_fp##PREC##_v2, s) && !dc_isar_feature(aa32_mve, s)) { \
-            return false;                                                              \
-        }                                                                              \
-        return do_vfp_2op_##PREC(s, FN, a->vd, a->vm);                                 \
+#define DO_VFP_VMOV(INSN, PREC, FN)                                                 \
+    static bool trans_##INSN##_##PREC(DisasContext *s, arg_##INSN##_##PREC *a)      \
+    {                                                                               \
+        if(!arm_dc_feature(s, ARM_FEATURE_NEON) && !dc_isar_feature(aa32_mve, s)) { \
+            return false;                                                           \
+        }                                                                           \
+        return do_vfp_2op_##PREC(s, FN, a->vd, a->vm);                              \
     }
 
 DO_VFP_VMOV(VMOV_reg, sp, tcg_gen_mov_i32)
