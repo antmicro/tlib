@@ -1425,6 +1425,10 @@ void HELPER(rebuild_hflags_a32)(CPUState *env, int el)
     }
     DP_TBFLAG_A32(env->hflags, VFPEN, fpen);
 
+    //  VFP state
+    DP_TBFLAG_A32(env->hflags, VECLEN, env->vfp.vec_len);
+    DP_TBFLAG_A32(env->hflags, VECSTRIDE, env->vfp.vec_stride);
+
     //  Legacy support for alternative big-endian memory model (BE-32)
     DP_TBFLAG_A32(env->hflags, SCTLR__B, arm_sctlr_b(env));
 
