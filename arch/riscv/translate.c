@@ -5860,8 +5860,8 @@ static int disas_insn(CPUState *env, DisasContext *dc)
         generate_opcode_count_increment(env, dc->opcode);
     }
 
-    // Here opcode already has a valid value and it can be synced together with pc.
-    // Syncing opcode allows to fill mtval with opcode value when it caused exception.
+    //  Here opcode already has a valid value and it can be synced together with pc.
+    //  Syncing opcode allows to fill mtval with opcode value when it caused exception.
     gen_sync_pc(dc);
 
     if(is_compressed) {
