@@ -14,9 +14,13 @@
 #define TARGET_PHYS_ADDR_SPACE_BITS 36
 #define TARGET_VIRT_ADDR_SPACE_BITS 32
 
+#include "cpu_registers.h"
+
 #include "cpu-defs.h"
 
 #include "softfloat-2.h"
+
+#define SUPPORTS_GUEST_PROFILING
 
 /*#define EXCP_INTERRUPT 0x100*/
 
@@ -155,6 +159,9 @@ enum {
 #define MAX_NWINDOWS 32
 
 #define NB_MMU_MODES 2
+
+//  Global registers R[0 - 8] are shared in all register windows.
+#define NB_SHARED_GLOBAL_REGS 8
 
 typedef struct sparc_def_t {
     const char *name;

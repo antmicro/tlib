@@ -1451,6 +1451,32 @@ static inline TCGv get_src2(unsigned int insn, TCGv def)
     if(!((dc)->def->features & CPU_FEATURE_##FEATURE)) \
         goto nfpu_insn;
 
+static inline int reg_window_offset(int reg)
+{
+    //  Returns an offset to a particular register in the current register window,
+    //  to be used with cpu_regwptr, which doesn't contain the global registers
+    //  shared across all register windows.
+    //  E. g. SP (R14) is at offset 14 - 8 (the number of global regs) = 6
+    return reg - NB_SHARED_GLOBAL_REGS;
+}
+
+static inline void generate_stack_frame_announcement(DisasContext *dc, int type)
+{
+    if(unlikely(dc->base.guest_profile)) {
+        TCGv frameptr = tcg_temp_new();
+        TCGv stackptr = tcg_temp_new();
+        tcg_gen_ld_tl(frameptr, cpu_regwptr, reg_window_offset(FP_32) * sizeof(target_ulong));
+        tcg_gen_ld_tl(stackptr, cpu_regwptr, reg_window_offset(SP_32) * sizeof(target_ulong));
+        if(type == STACK_FRAME_ADD) {
+            gen_helper_announce_stack_pointer_change(cpu_pc, frameptr, stackptr);
+        } else if(type == STACK_FRAME_POP) {
+            gen_helper_announce_stack_pointer_change(cpu_pc, stackptr, frameptr);
+        }
+        tcg_temp_free(frameptr);
+        tcg_temp_free(stackptr);
+    }
+}
+
 /* before an instruction, dc->base.pc must be static */
 static int disas_insn(CPUState *env, DisasContext *dc)
 {
@@ -2327,8 +2353,10 @@ static int disas_insn(CPUState *env, DisasContext *dc)
                         save_state(dc, cpu_cond);
                         gen_helper_save();
                         gen_movl_TN_reg(rd, cpu_dst);
+                        generate_stack_frame_announcement(dc, STACK_FRAME_ADD);
                         break;
                     case 0x3d: /* restore */
+                        generate_stack_frame_announcement(dc, STACK_FRAME_POP);
                         save_state(dc, cpu_cond);
                         gen_helper_restore();
                         gen_movl_TN_reg(rd, cpu_dst);

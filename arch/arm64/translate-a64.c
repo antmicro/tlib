@@ -40,6 +40,8 @@ void thumb_tr_translate_insn(DisasContextBase *dcbase, CPUState *env);
 static TCGv_i64 cpu_X[32];
 static TCGv_i64 cpu_pc;
 
+static TCGv_i64 cpu_prev_sp;
+
 /* Load/store exclusive handling */
 static TCGv_i64 cpu_exclusive_high;
 
@@ -71,6 +73,8 @@ void a64_translate_init(void)
     }
 
     cpu_exclusive_high = tcg_global_mem_new_i64(TCG_AREG0, offsetof(CPUARMState, exclusive_high), "exclusive_high");
+
+    cpu_prev_sp = tcg_global_mem_new_i64(TCG_AREG0, offsetof(CPUARMState, prev_sp), "previous sp");
 }
 
 /*
@@ -14587,6 +14591,14 @@ static void aarch64_tr_translate_insn(DisasContextBase *dcbase, CPUState *env)
      */
     if(s->btype > 0 && s->base.is_jmp != DISAS_NORETURN) {
         reset_btype(s);
+    }
+
+    if(unlikely(env->guest_profiler_enabled)) {
+        int end_label = gen_new_label();
+        tcg_gen_brcond_i64(TCG_COND_EQ, cpu_X[SP_64], cpu_prev_sp, end_label);
+        gen_helper_announce_stack_pointer_change(cpu_pc, cpu_prev_sp, cpu_X[SP_64]);
+        tcg_gen_mov_i64(cpu_prev_sp, cpu_X[SP_64]);
+        gen_set_label(end_label);
     }
 
     //  TODO: Implement and restore?

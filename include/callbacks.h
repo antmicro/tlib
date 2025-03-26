@@ -88,6 +88,8 @@ void tlib_profiler_announce_stack_change(uint64_t current_address, uint64_t curr
                                          uint64_t current_instructions_count, int32_t is_frame_add);
 void tlib_profiler_announce_context_change(uint64_t context_id);
 void tlib_on_memory_access(uint64_t pc, uint32_t operation, uint64_t addr, uint64_t value);
+void tlib_profiler_announce_stack_pointer_change(uint64_t address, uint64_t old_stack_pointer, uint64_t stack_pointer,
+                                                 uint64_t current_instructions_count);
 void tlib_on_memory_access_event_enabled(int32_t value);
 void tlib_mass_broadcast_dirty(void *list_start, int size);
 void *tlib_get_dirty_addresses_list(void *size);

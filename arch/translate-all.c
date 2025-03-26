@@ -504,3 +504,12 @@ void tlib_announce_context_change(target_ulong context_id)
     tlib_abortf("This architecture does not support the profiler");
 #endif
 }
+
+void tlib_announce_stack_pointer_change(target_ulong address, target_ulong old_stack_pointer, target_ulong stack_pointer)
+{
+#ifdef SUPPORTS_GUEST_PROFILING
+    tlib_profiler_announce_stack_pointer_change(address, old_stack_pointer, stack_pointer, cpu->instructions_count_total_value);
+#else
+    tlib_abortf("This architecture does not support the profiler");
+#endif
+}

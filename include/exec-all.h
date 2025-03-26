@@ -360,3 +360,4 @@ void generate_stack_announcement_imm_i64(uint64_t addr, int type, bool clear_lsb
 void generate_stack_announcement(TCGv pc, int type, bool clear_lsb);
 void tlib_announce_stack_change(target_ulong pc, int state);
 void tlib_announce_context_change(target_ulong context_id);
+void tlib_announce_stack_pointer_change(target_ulong address, target_ulong old_stack_pointer, target_ulong stack_pointer);

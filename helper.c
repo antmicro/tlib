@@ -183,6 +183,11 @@ void HELPER(announce_stack_change)(target_ulong pc, uint32_t state)
     tlib_announce_stack_change(pc, state);
 }
 
+void HELPER(announce_stack_pointer_change)(target_ulong pc, target_ulong old_stack_pointer, target_ulong stack_pointer)
+{
+    tlib_announce_stack_pointer_change(pc, old_stack_pointer, stack_pointer);
+}
+
 void HELPER(on_interrupt_end_event)(uint64_t exception_index)
 {
     tlib_on_interrupt_end(exception_index);

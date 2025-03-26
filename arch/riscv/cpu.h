@@ -151,6 +151,8 @@ struct CPUState {
     target_ulong vtype;
     target_ulong vlenb;
 
+    target_ulong prev_sp;
+
     target_ulong menvcfg;
     target_ulong menvcfgh;
     target_ulong mseccfg;

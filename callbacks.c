@@ -111,6 +111,9 @@ DEFAULT_VOID_HANDLER4(void tlib_profiler_announce_stack_change, uint64_t current
 
 DEFAULT_VOID_HANDLER1(void tlib_profiler_announce_context_change, uint64_t context_id)
 
+DEFAULT_VOID_HANDLER4(void tlib_profiler_announce_stack_pointer_change, uint64_t address, uint64_t old_stack_pointer,
+                      uint64_t stack_pointer, uint64_t instructions_count)
+
 DEFAULT_VOID_HANDLER2(void tlib_mass_broadcast_dirty, void *list_start, int32_t size)
 
 DEFAULT_PTR_HANDLER1(void *tlib_get_dirty_addresses_list, void *size)

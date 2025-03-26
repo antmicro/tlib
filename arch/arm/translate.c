@@ -175,7 +175,20 @@ static void store_reg(DisasContext *s, int reg, TCGv var)
         tcg_gen_andi_i32(var, var, ~1);
         s->base.is_jmp = DISAS_JUMP;
     }
-    tcg_gen_mov_i32(cpu_R[reg], var);
+    if(unlikely(s->base.guest_profile) && reg == SP_32) {
+        //  Store old SP
+        TCGv oldsp = tcg_temp_new_i32();
+        tcg_gen_mov_i32(oldsp, cpu_R[SP_32]);
+
+        //  Update SP
+        tcg_gen_mov_i32(cpu_R[SP_32], var);
+
+        //  Announce old and new SP values to the guest profiler
+        gen_helper_announce_stack_pointer_change(cpu_R[PC_32], oldsp, cpu_R[SP_32]);
+        tcg_temp_free_i32(oldsp);
+    } else {
+        tcg_gen_mov_i32(cpu_R[reg], var);
+    }
     tcg_temp_free_i32(var);
 }
 

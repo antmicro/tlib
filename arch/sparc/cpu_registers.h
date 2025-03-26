@@ -1,3 +1,5 @@
+#pragma once
+
 #include "cpu-defs.h"
 
 typedef enum {
@@ -58,3 +60,10 @@ typedef enum {
     FSR_32 = 70,
     CSR_32 = 71
 } Registers;
+
+//  Frame and stack pointers correspond to R30 and R14 respectively
+#define FP_32 30
+#define SP_32 14
+
+#define RA                    R_7_32
+#define RETURN_ADDRESS_OFFSET 8

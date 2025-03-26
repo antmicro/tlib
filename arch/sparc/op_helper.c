@@ -1413,6 +1413,10 @@ void helper_rett(void)
     }
     set_cwp(cwp);
     env->psrs = env->psrps;
+
+    if(env->interrupt_end_callback_enabled) {
+        tlib_on_interrupt_end(env->interrupt_index);
+    }
 }
 
 static target_ulong helper_udiv_common(target_ulong a, target_ulong b, int cc)

@@ -30,6 +30,7 @@
 static TCGv cpu_gpr[32], cpu_pc, cpu_opcode;
 static TCGv_i64 cpu_fpr[32]; /* assume F and D extensions */
 static TCGv cpu_vstart;
+static TCGv cpu_prev_sp;
 
 #include "tb-helper.h"
 
@@ -61,6 +62,8 @@ void translate_init(void)
     cpu_pc = tcg_global_mem_new(TCG_AREG0, offsetof(CPUState, pc), "pc");
     cpu_opcode = tcg_global_mem_new(TCG_AREG0, offsetof(CPUState, opcode), "opcode");
     cpu_vstart = tcg_global_mem_new(TCG_AREG0, offsetof(CPUState, vstart), "vstart");
+
+    cpu_prev_sp = tcg_global_mem_new(TCG_AREG0, offsetof(CPUState, prev_sp), "previous_sp");
 }
 
 static inline void kill_unknown(DisasContext *dc, int excp);
@@ -6080,6 +6083,21 @@ static int disas_insn(CPUState *env, DisasContext *dc)
     }
 
     dc->base.pc = dc->npc;
+
+    if(unlikely(env->guest_profiler_enabled)) {
+        int end_label = gen_new_label();
+#ifdef TARGET_RISCV64
+        tcg_gen_brcond_i64(TCG_COND_EQ, cpu_gpr[SP_64], cpu_prev_sp, end_label);
+        gen_helper_announce_stack_pointer_change(cpu_pc, cpu_prev_sp, cpu_gpr[SP_64]);
+        tcg_gen_mov_i64(cpu_prev_sp, cpu_gpr[SP_64]);
+#else
+        tcg_gen_brcond_i32(TCG_COND_EQ, cpu_gpr[SP_32], cpu_prev_sp, end_label);
+        gen_helper_announce_stack_pointer_change(cpu_pc, cpu_prev_sp, cpu_gpr[SP_32]);
+        tcg_gen_mov_i32(cpu_prev_sp, cpu_gpr[SP_32]);
+#endif
+        gen_set_label(end_label);
+    }
+
     return instruction_length;
 }
 

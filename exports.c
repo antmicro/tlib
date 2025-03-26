@@ -698,7 +698,7 @@ EXC_VOID_1(tlib_set_interrupt_begin_hook_present, uint32_t, val)
 
 void tlib_set_interrupt_end_hook_present(uint32_t val)
 {
-    //  Supported in RISC-V architecture only
+    //  Supported in RISC-V, ARM, SPARC architectures only
     cpu->interrupt_end_callback_enabled = !!val;
 }
 
