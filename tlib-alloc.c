@@ -66,7 +66,6 @@ static bool alloc_code_gen_buf_unified(uint64_t size)
         return false;
     }
     tcg_rx_buffer = tcg_rw_buffer = rwx;
-    code_gen_buffer_size = size;
     tcg_wx_diff = 0;
     return true;
 }
@@ -114,7 +113,6 @@ static bool alloc_code_gen_buf_split(uint64_t size)
     close(fd);
     tcg_rw_buffer = (uint8_t *)rw;
     tcg_rx_buffer = (uint8_t *)rx;
-    code_gen_buffer_size = size;
     tcg_wx_diff = tcg_rw_buffer - tcg_rx_buffer;
     return true;
 }
@@ -150,7 +148,6 @@ static bool alloc_code_gen_buf_split(uint64_t size)
     tcg_rw_buffer = (uint8_t *)rw;
     tcg_rx_buffer = (uint8_t *)rx;
     tcg_wx_diff = tcg_rw_buffer - tcg_rx_buffer;
-    code_gen_buffer_size = size;
     return true;
 }
 #elif defined(_WIN32)
@@ -170,7 +167,6 @@ static bool alloc_code_gen_buf_unified(uint64_t size)
         return false;
     }
     tcg_rw_buffer = tcg_rx_buffer = buf;
-    code_gen_buffer_size = size;
     tcg_wx_diff = 0;
     return true;
 }
