@@ -113,7 +113,8 @@ static inline address_reservation_t *make_reservation(struct CPUState *env, targ
     return reservation;
 }
 
-static inline void free_reservation(struct CPUState *env, address_reservation_t *reservation, uint8_t is_manual)
+//  Returns true if reservation was freed, false otherwise.
+static inline bool free_reservation(struct CPUState *env, address_reservation_t *reservation, uint8_t is_manual)
 {
 #if DEBUG
     if(reservation->active_flag == 0) {
@@ -125,7 +126,7 @@ static inline void free_reservation(struct CPUState *env, address_reservation_t 
 #endif
 
     if(reservation->manual_free && !is_manual) {
-        return;
+        return false;
     }
 
     env->atomic_memory_state->reservations_by_cpu[reservation->locking_cpu_id] = NO_RESERVATION;
@@ -134,7 +135,11 @@ static inline void free_reservation(struct CPUState *env, address_reservation_t 
         reservation->locking_cpu_id =
             env->atomic_memory_state->reservations[env->atomic_memory_state->reservations_count - 1].locking_cpu_id;
         reservation->address = env->atomic_memory_state->reservations[env->atomic_memory_state->reservations_count - 1].address;
+        reservation->manual_free =
+            env->atomic_memory_state->reservations[env->atomic_memory_state->reservations_count - 1].manual_free;
         //  active flag does not have to be copied as it's always 1
+        tlib_assert(reservation->active_flag == 1 &&
+                    env->atomic_memory_state->reservations[env->atomic_memory_state->reservations_count - 1].active_flag == 1);
 
         //  and update mapping
         env->atomic_memory_state->reservations_by_cpu[reservation->locking_cpu_id] = reservation->id;
@@ -142,6 +147,8 @@ static inline void free_reservation(struct CPUState *env, address_reservation_t 
 
     env->atomic_memory_state->reservations[env->atomic_memory_state->reservations_count - 1].active_flag = 0;
     env->atomic_memory_state->reservations_count--;
+
+    return true;
 }
 
 int32_t register_in_atomic_memory_state(atomic_memory_state_t *sm, int32_t atomic_id)
@@ -242,12 +249,21 @@ void register_address_access(struct CPUState *env, target_phys_addr_t address)
 
     ensure_locked_by_me(env);
 
-    address_reservation_t *reservation = find_reservation_on_address(env, address, 0);
+    int position = 0;
+    address_reservation_t *reservation = find_reservation_on_address(env, address, position);
     while(reservation != NULL) {
+        position = reservation->id + 1;
         if(reservation->locking_cpu_id != env->atomic_id) {
-            free_reservation(env, reservation, 0);
+            bool freed = free_reservation(env, reservation, 0);
+            if(freed) {
+                //  Reservations were possibly reordered as a result of moving entry from the end of the list to the freed slot.
+                //  To not miss reservation that should be cleared, look for the reservation from the same starting position as
+                //  before. If there were more reservations in the list and the current one was cleared, the last one was moved
+                //  into the slot of the cleared one.
+                position--;
+            }
         }
-        reservation = find_reservation_on_address(env, address, reservation->id + 1);
+        reservation = find_reservation_on_address(env, address, position);
     }
 }
 
