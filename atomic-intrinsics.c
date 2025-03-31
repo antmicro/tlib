@@ -67,7 +67,7 @@ static inline void tcg_gen_translate_address_and_fallback_guard(TCGv_hostptr hos
 }
 #endif
 
-#if defined(TCG_TARGET_HAS_atomic_fetch_add_intrinsic_i32) || defined(TCG_TARGET_HAS_atomic_fetch_add_intrinsic_i64)
+#if (TCG_TARGET_HAS_atomic_fetch_add_intrinsic_i32 == 1) || (TCG_TARGET_HAS_atomic_fetch_add_intrinsic_i64 == 1)
 static inline void tcg_try_gen_atomic_fetch_add_intrinsic(TCGv_unknown result, TCGv_ptr guestAddress, TCGv_unknown toAdd,
                                                           uint32_t memIndex, int fallbackLabel, uint8_t size)
 {
