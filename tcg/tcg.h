@@ -502,9 +502,6 @@ typedef struct TCGHelperInfo {
 
 typedef struct TCGContext TCGContext;
 
-//  Size in bytes of the tcg prologue, put at the end of the code_gen_buffer
-#define TCG_PROLOGUE_SIZE 1024
-
 struct TCGContext {
     uint8_t *pool_cur, *pool_end;
     TCGPool *pool_first, *pool_current;

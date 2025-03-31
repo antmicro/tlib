@@ -28,33 +28,6 @@ uint64_t code_gen_buffer_size;
 
 intptr_t tcg_wx_diff;
 
-bool is_ptr_in_rw_buf(const void *ptr)
-{
-    return (ptr >= (void *)tcg_rw_buffer) && (ptr < ((void *)tcg_rw_buffer + code_gen_buffer_size + TCG_PROLOGUE_SIZE));
-}
-bool is_ptr_in_rx_buf(const void *ptr)
-{
-    return (ptr >= (void *)tcg_rx_buffer) && (ptr < ((void *)tcg_rx_buffer + code_gen_buffer_size + TCG_PROLOGUE_SIZE));
-}
-void *rw_ptr_to_rx(void *ptr)
-{
-    if(ptr == NULL) {
-        //  null pointers should not be changed
-        return ptr;
-    }
-    tlib_assert(is_ptr_in_rx_buf(ptr - tcg_wx_diff));
-    return ptr - tcg_wx_diff;
-}
-void *rx_ptr_to_rw(const void *ptr)
-{
-    if(ptr == NULL) {
-        //  null pointers should not be changed
-        return (void *)ptr;
-    }
-    tlib_assert(is_ptr_in_rw_buf(ptr + tcg_wx_diff));
-    return (void *)(ptr + tcg_wx_diff);
-}
-
 #if (defined(__linux__) || defined(__APPLE__)) && (!defined(__aarch64__))
 static bool alloc_code_gen_buf_unified(uint64_t size)
 {
