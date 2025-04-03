@@ -53,14 +53,14 @@ uint32_t tlib_is_v8();
 
 void tlib_set_pmsav8_ctrl(uint32_t value, bool secure);
 void tlib_set_pmsav8_rnr(uint32_t value, bool secure);
-void tlib_set_pmsav8_rbar(uint32_t value, bool secure);
-void tlib_set_pmsav8_rlar(uint32_t value, bool secure);
+void tlib_set_pmsav8_rbar(uint32_t value, uint32_t region_offset, bool secure);
+void tlib_set_pmsav8_rlar(uint32_t value, uint32_t region_offset, bool secure);
 void tlib_set_pmsav8_mair(uint32_t index, uint32_t value, bool secure);
 uint32_t tlib_get_pmsav8_type(bool secure);
 uint32_t tlib_get_pmsav8_ctrl(bool secure);
 uint32_t tlib_get_pmsav8_rnr(bool secure);
-uint32_t tlib_get_pmsav8_rbar(bool secure);
-uint32_t tlib_get_pmsav8_rlar(bool secure);
+uint32_t tlib_get_pmsav8_rbar(uint32_t region_offset, bool secure);
+uint32_t tlib_get_pmsav8_rlar(uint32_t region_offset, bool secure);
 uint32_t tlib_get_pmsav8_mair(uint32_t index, bool secure);
 
 void tlib_set_idau_enabled(bool value);

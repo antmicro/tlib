@@ -772,18 +772,24 @@ void tlib_set_pmsav8_rnr(uint32_t value, bool secure)
 }
 EXC_VOID_2(tlib_set_pmsav8_rnr, uint32_t, value, bool, secure)
 
-void tlib_set_pmsav8_rbar(uint32_t value, bool secure)
+void tlib_set_pmsav8_rbar(uint32_t value, uint32_t region_offset, bool secure)
 {
     guard_pmsav8(true);
     uint32_t index = cpu->pmsav8[secure].rnr;
+    if(region_offset > 0) {
+        index = (index << 2) + region_offset;
+    }
     cpu->pmsav8[secure].rbar[index] = value;
 }
-EXC_VOID_2(tlib_set_pmsav8_rbar, uint32_t, value, bool, secure)
+EXC_VOID_3(tlib_set_pmsav8_rbar, uint32_t, value, uint32_t, region_offset, bool, secure)
 
-void tlib_set_pmsav8_rlar(uint32_t value, bool secure)
+void tlib_set_pmsav8_rlar(uint32_t value, uint32_t region_offset, bool secure)
 {
     guard_pmsav8(true);
     uint32_t index = cpu->pmsav8[secure].rnr;
+    if(region_offset > 0) {
+        index = (index << 2) + region_offset;
+    }
 
     //  XN is enforced in 0xE0000000-0xFFFFFFFF space; ARMv8-M Manual: Rules VCTC and KDJG.
     bool region_enabled = value & 0x1;
@@ -799,7 +805,7 @@ void tlib_set_pmsav8_rlar(uint32_t value, bool secure)
     }
     cpu->pmsav8[secure].rlar[index] = value;
 }
-EXC_VOID_2(tlib_set_pmsav8_rlar, uint32_t, value, bool, secure)
+EXC_VOID_3(tlib_set_pmsav8_rlar, uint32_t, value, uint32_t, region_offset, bool, secure)
 
 void tlib_set_pmsav8_mair(uint32_t index, uint32_t value, bool secure)
 {
@@ -826,21 +832,27 @@ uint32_t tlib_get_pmsav8_rnr(bool secure)
 }
 EXC_INT_1(uint32_t, tlib_get_pmsav8_rnr, bool, secure)
 
-uint32_t tlib_get_pmsav8_rbar(bool secure)
+uint32_t tlib_get_pmsav8_rbar(uint32_t region_offset, bool secure)
 {
     guard_pmsav8(false);
     uint32_t index = cpu->pmsav8[secure].rnr;
+    if(region_offset > 0) {
+        index = (index << 2) + region_offset;
+    }
     return cpu->pmsav8[secure].rbar[index];
 }
-EXC_INT_1(uint32_t, tlib_get_pmsav8_rbar, bool, secure)
+EXC_INT_2(uint32_t, tlib_get_pmsav8_rbar, uint32_t, region_offset, bool, secure)
 
-uint32_t tlib_get_pmsav8_rlar(bool secure)
+uint32_t tlib_get_pmsav8_rlar(uint32_t region_offset, bool secure)
 {
     guard_pmsav8(false);
     uint32_t index = cpu->pmsav8[secure].rnr;
+    if(region_offset > 0) {
+        index = (index << 2) + region_offset;
+    }
     return cpu->pmsav8[secure].rlar[index];
 }
-EXC_INT_1(uint32_t, tlib_get_pmsav8_rlar, bool, secure)
+EXC_INT_2(uint32_t, tlib_get_pmsav8_rlar, uint32_t, region_offset, bool, secure)
 
 uint32_t tlib_get_pmsav8_mair(uint32_t index, bool secure)
 {
