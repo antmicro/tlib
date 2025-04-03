@@ -735,6 +735,8 @@ static void tcg_out_addi(TCGContext *s, int reg, tcg_target_long val)
 static void tcg_out_jxx(TCGContext *s, int opc, int label_index, int small)
 {
     int32_t val, val1;
+    tcg_debug_assert(label_index >= 0);
+    tcg_debug_assert(label_index < TCG_MAX_LABELS);
     TCGLabel *l = &s->labels[label_index];
 
     if(l->has_value) {

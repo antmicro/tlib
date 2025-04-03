@@ -101,6 +101,8 @@ static void tcg_out_reloc(TCGContext *s, uint8_t *code_ptr, int type, int label_
     TCGLabel *l;
     TCGRelocation *r;
 
+    tcg_debug_assert(label_index >= 0);
+    tcg_debug_assert(label_index < TCG_MAX_LABELS);
     l = &s->labels[label_index];
     //  tcg_out_reloc should only be called once on each label
     tcg_debug_assert(!l->has_value);
@@ -118,6 +120,8 @@ static void tcg_out_label(TCGContext *s, int label_index, tcg_target_long value)
     TCGLabel *l;
     TCGRelocation *r;
 
+    tcg_debug_assert(label_index >= 0);
+    tcg_debug_assert(label_index < TCG_MAX_LABELS);
     l = &s->labels[label_index];
     if(l->has_value) {
         tcg_abort();

@@ -196,6 +196,8 @@ static inline void tcg_out_b_noaddr(TCGContext *s)
 #define TCG_UNUSED_CONSTANT 31337
 static inline void tcg_out_goto_label(TCGContext *s, int cond, int label_index)
 {
+    tcg_debug_assert(label_index < TCG_MAX_LABELS);
+    tcg_debug_assert(label_index >= 0);
     TCGLabel *l = &s->labels[label_index];
 
     if(l->has_value) {
