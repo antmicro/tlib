@@ -228,9 +228,8 @@ void tcg_try_gen_atomic_compare_and_swap_intrinsic_i128(TCGv_i128 actual, TCGv_i
 /*
  * Always use the fallback, since the target doesn't have the intrinsic implemented.
  */
-void tcg_try_gen_atomic_compare_and_swap_intrinsic_i128(TCGv_i64 actualHigh, TCGv_i64 actualLow, TCGv_i64 expectedHigh,
-                                                        TCGv_i64 expectedLow, TCGv_ptr guestAddress, TCGv_i64 newValueHigh,
-                                                        TCGv_i64 newValueLow, uint64_t memIndex, int fallbackLabel)
+void tcg_try_gen_atomic_compare_and_swap_intrinsic_i128(TCGv_i128 actual, TCGv_i128 expected, TCGv_ptr guestAddress,
+                                                        TCGv_i128 newValue, uint64_t memIndex, int fallbackLabel)
 {
     tcg_gen_br(fallbackLabel);
 }
