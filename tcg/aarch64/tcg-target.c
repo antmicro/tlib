@@ -269,7 +269,7 @@ static inline void tcg_out_calli(TCGContext *s, tcg_target_ulong addr)
     } else {
         target = addr;
     }
-    tcg_out_movi(s, 0, TCG_TMP_REG, target);
+    tcg_out_movi(s, TCG_TYPE_PTR, TCG_TMP_REG, target);
     tcg_out_blr(s, TCG_TMP_REG);
 }
 
