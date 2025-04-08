@@ -37,10 +37,12 @@ static const int tcg_target_reg_alloc_order[] = {
 static const int tcg_target_call_iarg_regs[8] = {
     TCG_REG_R0, TCG_REG_R1, TCG_REG_R2, TCG_REG_R3, TCG_REG_R4, TCG_REG_R5, TCG_REG_R6, TCG_REG_R7,
 };
+
 static inline int tcg_target_get_call_iarg_regs_count(int flags)
 {
     return 8;
 }
+
 //  Registers that can be used for output functions arguments
 static const int tcg_target_call_oarg_regs[8] = {
     TCG_REG_R0, TCG_REG_R1, TCG_REG_R2, TCG_REG_R3, TCG_REG_R4, TCG_REG_R5, TCG_REG_R6, TCG_REG_R7,
@@ -64,6 +66,7 @@ enum arm_cond_code_e {
     COND_LE = 0xd,
     COND_AL = 0xe,
 };
+
 static const uint8_t tcg_cond_to_arm_cond[] = {
     [TCG_COND_EQ] = COND_EQ,
     [TCG_COND_NE] = COND_NE,
@@ -119,6 +122,7 @@ static int target_parse_constraint(TCGArgConstraint *ct, const char **pct_str)
 
     return 0;
 }
+
 //  Tells tcg if a constant `val` can be used with the set arg constraints
 //  Can be used to check if tcg should put a value as an immediate or
 //  place it in a register before host code is generated,
@@ -153,6 +157,7 @@ static void reloc_condbr_19(void *code_ptr, tcg_target_long target, int cond)
     //  set bit 4 to zero
     *(uint32_t *)code_ptr &= (~(1 << 4));
 }
+
 //  Path the unconditional branch instruction, address is 26-bits long
 static void reloc_jump26(void *code_ptr, tcg_target_long target)
 {
@@ -162,6 +167,7 @@ static void reloc_jump26(void *code_ptr, tcg_target_long target)
     offset = offset >> 2;
     *(uint32_t *)code_ptr = (*(uint32_t *)code_ptr & ~0x3FFFFFF) | (offset & 0x3FFFFFF);
 }
+
 static void patch_reloc(uint8_t *code_ptr, int type, tcg_target_long value, tcg_target_long addend)
 {
     switch(type) {
@@ -181,24 +187,29 @@ static inline void tcg_out_br(TCGContext *s, int addr_reg)
 {
     tcg_out32(s, 0xd61f0000 | (addr_reg << 5));
 }
+
 static inline void tcg_out_b(TCGContext *s, int offset)
 {
     offset = offset >> 2;
     tcg_out32(s, 0x14000000 | ((offset & 0x3FFFFFF) << 0));
 }
+
 static inline void tcg_out_bl(TCGContext *s, int offset)
 {
     offset = offset >> 2;
     tcg_out32(s, 0x94000000 | ((offset & 0x3FFFFFF) << 0));
 }
+
 static inline void tcg_out_blr(TCGContext *s, int reg)
 {
     tcg_out32(s, 0xd63f0000 | (reg << 5));
 }
+
 static inline void tcg_out_ret(TCGContext *s, int reg)
 {
     tcg_out32(s, 0xd65f0000 | (reg << 5));
 }
+
 static inline void tcg_out_b_noaddr(TCGContext *s)
 {
     //  This sets up a unconditional branch to an adress that will be emited later
@@ -307,6 +318,7 @@ static const int SHIFT_0 = 0b00;
 static const int SHIFT_16 = 0b01;
 static const int SHIFT_32 = 0b10;
 static const int SHIFT_48 = 0b11;
+
 static inline void tcg_out_movi64(TCGContext *s, int reg1, tcg_target_long imm)
 {
     tcg_out32(s, 0xd2800000 | (SHIFT_0 << 21) | ((0xffff & imm) << 5) | (reg1 << 0));  //  MOVZ
@@ -317,6 +329,7 @@ static inline void tcg_out_movi64(TCGContext *s, int reg1, tcg_target_long imm)
     imm = imm >> 16;
     tcg_out32(s, 0xf2800000 | (SHIFT_48 << 21) | ((0xffff & imm) << 5) | (reg1 << 0));  //  MOVK
 }
+
 static inline void tcg_out_movi32(TCGContext *s, int reg1, tcg_target_long imm)
 {
     tcg_out32(s, 0x52800000 | (SHIFT_0 << 21) | ((0xffff & imm) << 5) | (reg1 << 0));  //  MOVZ
@@ -339,9 +352,9 @@ static inline void tcg_out_lsr_reg(TCGContext *s, int bits, int reg_dest, int re
             break;
     }
 }
+
 static inline void tcg_out_lsl_reg(TCGContext *s, int bits, int reg_dest, int reg_src, int reg_shift)
 {
-
     //  Emit LSLV instruction
     switch(bits) {
         case 32:
@@ -355,9 +368,9 @@ static inline void tcg_out_lsl_reg(TCGContext *s, int bits, int reg_dest, int re
             break;
     }
 }
+
 static inline void tcg_out_asr_reg(TCGContext *s, int bits, int reg_dest, int reg_src, int reg_shift)
 {
-
     switch(bits) {
         case 32:
             tcg_out32(s, 0x1AC02800 | reg_shift << 16 | reg_src << 5 | reg_dest << 0);
@@ -371,23 +384,23 @@ static inline void tcg_out_asr_reg(TCGContext *s, int bits, int reg_dest, int re
     }
     //  Emit ASRV instruction
 }
+
 static inline void tcg_out_lsr_imm(TCGContext *s, int bits, int reg_dest, int reg_src, tcg_target_long shift)
 {
-
     //  Move the offset into a register, and then call the register versions
     tcg_out_movi(s, TCG_TYPE_I64, TCG_TMP_REG, shift);
     tcg_out_lsr_reg(s, bits, reg_dest, reg_src, TCG_TMP_REG);
 }
+
 static inline void tcg_out_lsl_imm(TCGContext *s, int bits, int reg_dest, int reg_src, tcg_target_long shift)
 {
-
     //  Move the offset into a register, and then call the register versions
     tcg_out_movi(s, TCG_TYPE_I64, TCG_TMP_REG, shift);
     tcg_out_lsl_reg(s, bits, reg_dest, reg_src, TCG_TMP_REG);
 }
+
 static inline void tcg_out_asr_imm(TCGContext *s, int bits, int reg_dest, int reg_src, tcg_target_long shift)
 {
-
     //  Move the offset into a register, and then call the register versions
     tcg_out_movi(s, TCG_TYPE_I64, TCG_TMP_REG, shift);
     tcg_out_asr_reg(s, bits, reg_dest, reg_src, TCG_TMP_REG);
@@ -473,6 +486,7 @@ static inline void tcg_out_st_reg_offset(TCGContext *s, int bits, int reg_src, i
             break;
     }
 }
+
 static inline void tcg_out_st_offset(TCGContext *s, int bits, int reg_src, int reg_base, tcg_target_long offset)
 {
     tcg_out_movi64(s, TCG_TMP_REG, offset);
@@ -552,6 +566,7 @@ static inline void tcg_out_subi(TCGContext *s, int reg1, int reg2, tcg_target_lo
 {
     tcg_out32(s, 0xd1000000 | (imm << 10) | (reg2 << 5) | (reg1 << 0));
 }
+
 //  Helper function to emit ADD, with immediate
 static inline void tcg_out_addi(TCGContext *s, int reg1, int reg2, tcg_target_long imm)
 {
@@ -595,11 +610,11 @@ static inline void tcg_out_add_reg(TCGContext *s, int bits, int reg_dest, int re
 {
     tcg_out_add_shift_reg(s, bits, false, reg_dest, reg1, reg2, SHIFT_LSL, 0);
 }
+
 static inline void tcg_out_add_imm(TCGContext *s, int bits, int reg_dest, int reg_in, tcg_target_long imm)
 {
     switch(bits) {
         case 32:
-
             tcg_out_movi32(s, TCG_TMP_REG, imm);
             break;
         case 64:
@@ -706,22 +721,22 @@ static inline void tcg_out_mul_add(TCGContext *s, int bits, int reg_dest, int re
             break;
     }
 }
+
 static inline void tcg_out_mul_reg(TCGContext *s, int bits, int reg_dest, int reg_prod1, int reg_prod2)
 {
     //  Register multiplication is just MADD with the zero register as the addend
     tcg_out_mul_add(s, bits, reg_dest, reg_prod1, reg_prod2, TCG_REG_RZR);
 }
+
 static inline void tcg_out_mul_imm(TCGContext *s, int bits, int reg_dest, int reg_in, tcg_target_long imm)
 {
     switch(bits) {
         case 32:
-
             tcg_out_movi32(s, TCG_TMP_REG, imm);
             break;
         case 64:
             tcg_out_movi64(s, TCG_TMP_REG, imm);
             break;
-
         default:
             tcg_abortf("mul_imm for %i bits not implemented", bits);
     }
@@ -741,6 +756,7 @@ static inline void tcg_out_and_reg(TCGContext *s, int bits, int reg_dest, int re
             tcg_abortf("and_reg called with unsupported bit width: %i", bits);
     }
 }
+
 static inline void tcg_out_and_imm(TCGContext *s, int bits, int reg_dest, int reg_in, tcg_target_long imm)
 {
     switch(bits) {
@@ -755,6 +771,7 @@ static inline void tcg_out_and_imm(TCGContext *s, int bits, int reg_dest, int re
     }
     tcg_out_and_reg(s, bits, reg_dest, reg_in, TCG_TMP_REG);
 }
+
 static inline void tcg_out_or_reg(TCGContext *s, int bits, int reg_dest, int reg1, int reg2)
 {
     switch(bits) {
@@ -763,7 +780,6 @@ static inline void tcg_out_or_reg(TCGContext *s, int bits, int reg_dest, int reg
             break;
         case 64:
             tcg_out32(s, 0xaa000000 | (reg2 << 16) | (reg1 << 5) | (reg_dest << 0));
-
             break;
         default:
             tcg_abortf("or_reg called with unsupported bit width: %i", bits);
@@ -801,12 +817,13 @@ static inline void tcg_out_xor_shift_reg(TCGContext *s, int bits, int reg_dest, 
             tcg_abortf("xor_shift_reg called with unsupported bit width: %i", bits);
     }
 }
+
 static inline void tcg_out_xor_reg(TCGContext *s, int bits, int reg_dest, int reg1, int reg2)
 {
-
     //  This is just xor_shift_reg with shift amount set to 0
     tcg_out_xor_shift_reg(s, bits, reg_dest, reg1, reg2, SHIFT_LSL, 0);
 }
+
 static inline void tcg_out_xor_imm(TCGContext *s, int bits, int reg_dest, int reg_in, tcg_target_long imm)
 {
     switch(bits) {
@@ -910,6 +927,7 @@ static inline void tcg_out_qemu_st(TCGContext *s, int bits, int reg_data, int re
             tcg_abortf("tcg_out_qemu_st called with incorrect #%i bits as argument", bits);
     }
 }
+
 static inline void tcg_out_qemu_ld(TCGContext *s, int bits, bool sign_extend, int reg_data, int reg_addr, int mem_index)
 {
     //  Put the address in r0, and mem_index in r1
@@ -919,7 +937,6 @@ static inline void tcg_out_qemu_ld(TCGContext *s, int bits, bool sign_extend, in
     switch(bits) {
         case 8:
             tcg_out_calli(s, (tcg_target_long)tcg->ldb);
-
             break;
         case 16:
             tcg_out_calli(s, (tcg_target_long)tcg->ldw);
