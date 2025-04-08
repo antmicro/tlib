@@ -22,6 +22,10 @@
  * THE SOFTWARE.
  */
 
+#include "tcg-target.h"
+#include "tlib/include/infrastructure.h"
+#include "tlib/tcg/additional.h"
+#include "tlib/tcg/tcg.h"
 //  Order registers get picked in
 static const int tcg_target_reg_alloc_order[] = {
     TCG_REG_R8,  TCG_REG_R9,  TCG_REG_R10, TCG_REG_R11, TCG_REG_R12, TCG_REG_R13, TCG_REG_R14,
@@ -142,7 +146,9 @@ static void reloc_condbr_19(void *code_ptr, tcg_target_long target, int cond)
 {
     //  code_ptr should have bits [23, 5] set to target - current PC, 4 to zero and [3, 0] to cond
     //  Its a bit of a hack to set cond this way, but tcg does not seem to offer a better solution
-    uint32_t offset = target - ((tcg_target_long)code_ptr + 8);
+    uint32_t offset = target - ((tcg_target_long)code_ptr);
+    //  Offset for cond branch is encoded as offset * 4
+    offset = offset >> 2;
     //  Mask out 19 bits from the offset
     *(uint32_t *)code_ptr |= ((offset & 0x7FFFF) << 5) | cond;
     //  set bit 4 to zero
@@ -152,7 +158,9 @@ static void reloc_condbr_19(void *code_ptr, tcg_target_long target, int cond)
 static void reloc_jump26(void *code_ptr, tcg_target_long target)
 {
     //  code_ptr should have bits [25, 0] set to target - current PC
-    uint32_t offset = target - ((tcg_target_long)code_ptr + 8);
+    uint32_t offset = target - ((tcg_target_long)code_ptr);
+    //  Offset for cond branch is encoded as offset * 4
+    offset = offset >> 2;
     *(uint32_t *)code_ptr |= (offset & 0x3FFFFFF);
 }
 static void patch_reloc(uint8_t *code_ptr, int type, tcg_target_long value, tcg_target_long addend)
