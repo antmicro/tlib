@@ -136,14 +136,7 @@ static inline int tcg_target_const_match(tcg_target_long val, const TCGArgConstr
 //  Defines to match reloc names and ids from elf standard
 #define R_AARCH64_JUMP26   282
 #define R_AARCH64_CONDBR19 280
-#define R_AARCH64_PREL32   261
-static void reloc_pc32(void *code_ptr, tcg_target_long target)
-{
-    //  code_ptr should be set to target - current PC
-    //  Adapted from arm32 target
-    uint32_t offset = target - ((tcg_target_long)code_ptr + 8);
-    *(uint32_t *)code_ptr = offset;
-}
+
 //  Patch the conditional branch instruction, address is 19-bits long
 static void reloc_condbr_19(void *code_ptr, tcg_target_long target, int cond)
 {
@@ -170,10 +163,6 @@ static void patch_reloc(uint8_t *code_ptr, int type, tcg_target_long value, tcg_
             break;
         case R_AARCH64_CONDBR19:
             reloc_condbr_19(code_ptr, value, addend);
-            break;
-        case R_AARCH64_PREL32:
-            /* PC-relative 32-bit.	*/
-            reloc_pc32(code_ptr, value);
             break;
         default:
             tcg_abortf("patch reloc for type %i not implemented", type);
