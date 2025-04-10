@@ -14693,6 +14693,8 @@ void setup_disas_context(DisasContextBase *base, CPUState *env)
 
 int disas_insn(CPUState *env, DisasContextBase *base)
 {
+    uint64_t start_pc = base->pc;
+
     if(env->aarch64) {
         aarch64_tr_insn_start(base, env);
         aarch64_tr_translate_insn(base, env);
@@ -14704,7 +14706,7 @@ int disas_insn(CPUState *env, DisasContextBase *base)
             arm_tr_translate_insn(base, env);
         };
     }
-    return 4;
+    return base->pc - start_pc;
 }
 
 int gen_intermediate_code(CPUState *env, DisasContextBase *base)

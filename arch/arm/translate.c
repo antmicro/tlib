@@ -11189,7 +11189,8 @@ undef:
 
 int disas_insn(CPUState *env, DisasContext *dc)
 {
-    tcg_gen_insn_start(dc->base.pc, pack_condexec(dc));
+    target_ulong start_pc = dc->base.pc;
+    tcg_gen_insn_start(start_pc, pack_condexec(dc));
 
     if(dc->thumb) {
         disas_thumb_insn(env, dc);
@@ -11200,11 +11201,10 @@ int disas_insn(CPUState *env, DisasContext *dc)
                 dc->condexec_cond = 0;
             }
         }
-        return 2;
     } else {
         disas_arm_insn(env, dc);
-        return 4;
     }
+    return dc->base.pc - start_pc;
 }
 
 void setup_disas_context(DisasContextBase *base, CPUState *env)
