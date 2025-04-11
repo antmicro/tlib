@@ -1,6 +1,7 @@
 #include "cpu.h"
 
-uintptr_t REGPARM translate_page_aligned_address_and_fill_tlb(target_ulong addr, uint32_t mmu_idx, uint16_t dataSize)
+uintptr_t REGPARM translate_page_aligned_address_and_fill_tlb(target_ulong addr, uint32_t mmu_idx, uint16_t dataSize,
+                                                              void *return_address)
 {
     int index;
     target_ulong tlb_addr;
@@ -37,9 +38,8 @@ redo:
 
         return addr + addend;
     } else {
-        void *retaddr = GETPC();
         /* the page is not in the TLB : fill it */
-        if(!tlb_fill(cpu, addr, PAGE_READ, mmu_idx, retaddr, 0, dataSize)) {
+        if(!tlb_fill(cpu, addr, PAGE_READ, mmu_idx, return_address, 0, dataSize)) {
             goto redo;
         }
     }
@@ -47,17 +47,17 @@ redo:
     return (uintptr_t)NULL;
 }
 
-uintptr_t translate_page_aligned_address_and_fill_tlb_u32(target_ulong addr, uint32_t mmu_idx)
+uintptr_t translate_page_aligned_address_and_fill_tlb_u32(target_ulong addr, uint32_t mmu_idx, void *return_address)
 {
-    return translate_page_aligned_address_and_fill_tlb(addr, mmu_idx, sizeof(uint32_t));
+    return translate_page_aligned_address_and_fill_tlb(addr, mmu_idx, sizeof(uint32_t), return_address);
 }
 
-uintptr_t translate_page_aligned_address_and_fill_tlb_u64(target_ulong addr, uint32_t mmu_idx)
+uintptr_t translate_page_aligned_address_and_fill_tlb_u64(target_ulong addr, uint32_t mmu_idx, void *return_address)
 {
-    return translate_page_aligned_address_and_fill_tlb(addr, mmu_idx, sizeof(uint64_t));
+    return translate_page_aligned_address_and_fill_tlb(addr, mmu_idx, sizeof(uint64_t), return_address);
 }
 
-uintptr_t translate_page_aligned_address_and_fill_tlb_u128(target_ulong addr, uint32_t mmu_idx)
+uintptr_t translate_page_aligned_address_and_fill_tlb_u128(target_ulong addr, uint32_t mmu_idx, void *return_address)
 {
-    return translate_page_aligned_address_and_fill_tlb(addr, mmu_idx, 2 * sizeof(uint64_t));
+    return translate_page_aligned_address_and_fill_tlb(addr, mmu_idx, 2 * sizeof(uint64_t), return_address);
 }
