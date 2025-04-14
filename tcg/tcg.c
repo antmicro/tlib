@@ -77,6 +77,28 @@ static TCGRegSet tcg_target_call_clobber_regs;
 TCGOpcodeEntry *gen_opc_ptr;
 TCGArg *gen_opparam_ptr;
 
+static inline void tcg_print_opcode_backtrace(TCGContext *s)
+{
+#ifdef TCG_DEBUG_BACKTRACE
+    TCGOpcodeEntry *entry = s->current_code;
+    if(entry == NULL) {
+        tlib_printf(LOG_LEVEL_WARNING, "%s: Current opcode not set", __func__);
+        return;
+    }
+
+    if(entry->backtrace_symbols == NULL) {
+        tlib_printf(LOG_LEVEL_WARNING, "%s: Opcode %x has no backtrace", __func__, entry->opcode);
+        return;
+    }
+
+    tlib_printf(LOG_LEVEL_ERROR, "Failed when processing opcode %x", entry->opcode);
+    for(int i = 0; i < entry->backtrace_entries; i++) {
+        char *backtrace_symbol = entry->backtrace_symbols[i];
+        tlib_printf(LOG_LEVEL_ERROR, "At %s", backtrace_symbol);
+    }
+#endif
+}
+
 static inline void tcg_out8(TCGContext *s, uint8_t v)
 {
     *s->code_ptr++ = v;
@@ -1420,8 +1442,15 @@ static void tcg_reg_alloc_mov(TCGContext *s, const TCGOpDef *def, const TCGArg *
             ots->val = ts->val;
             return;
         }
+    } else if(ts->val_type == TEMP_VAL_DEAD) {
+        tcg_print_opcode_backtrace(s);
+        tlib_abortf("%s: "
+                    "unexpected val_type `TEMP_VAL_DEAD` for TCGv '%s' def '%s'",
+                    __func__, ts->name ? ts->name : "unnamed", def->name);
     } else {
-        tcg_abort();
+        tcg_print_opcode_backtrace(s);
+        tlib_abortf("%s: unexpected val_type `%d` for TCGv '%s' def '%s'", __func__, ts->val_type,
+                    ts->name ? ts->name : "unnamed", def->name);
     }
     s->reg_to_temp[reg] = args[0];
     ots->reg = reg;
@@ -1474,6 +1503,11 @@ static void tcg_reg_alloc_op(TCGContext *s, const TCGOpDef *def, TCGOpcode opc, 
                 ts->mem_coherent = 0;
                 s->reg_to_temp[reg] = arg;
             }
+        }
+        if(ts->val_type != TEMP_VAL_REG) {
+            tcg_print_opcode_backtrace(s);
+            tlib_abortf("%s: TCGv '%s' must be in register at this point when allocating arg %d of `%s`", __func__,
+                        ts->name ? ts->name : "unnamed", k, def->name);
         }
         assert(ts->val_type == TEMP_VAL_REG);
         if(arg_ct->ct & TCG_CT_IALIAS) {
@@ -1797,7 +1831,8 @@ static inline int tcg_gen_code_common(TCGContext *s, uint8_t *gen_code_buf)
     num_insns = -1;
 
     for(;;) {
-        opc = tcg->gen_opc_buf[op_index].opcode;
+        s->current_code = &tcg->gen_opc_buf[op_index];
+        opc = s->current_code->opcode;
         def = &tcg_op_defs[opc];
         switch(opc) {
             case INDEX_op_mov_i32:
