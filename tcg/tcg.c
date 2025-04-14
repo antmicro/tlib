@@ -74,7 +74,7 @@ static TCGRegSet tcg_target_available_regs[2];
 static TCGRegSet tcg_target_call_clobber_regs;
 
 /* XXX: move that inside the context */
-uint16_t *gen_opc_ptr;
+TCGOpcodeEntry *gen_opc_ptr;
 TCGArg *gen_opparam_ptr;
 
 static inline void tcg_out8(TCGContext *s, uint8_t v)
@@ -223,7 +223,7 @@ static void tcg_pool_free(TCGContext *s)
 
 static TCGContext ctx;
 static TCGArg gen_opparam_buf[OPPARAM_BUF_SIZE];
-static uint16_t gen_opc_buf[OPC_BUF_SIZE];
+static TCGOpcodeEntry gen_opc_buf[OPC_BUF_SIZE];
 
 static uint16_t gen_insn_end_off[TCG_MAX_INSNS];
 static target_ulong gen_insn_data[TCG_MAX_INSNS][TARGET_INSN_START_WORDS];
@@ -636,7 +636,7 @@ void tcg_gen_callN(TCGContext *s, TCGv_ptr func, unsigned int flags, int sizemas
     }
 #endif /* TCG_TARGET_EXTEND_ARGS */
 
-    *gen_opc_ptr++ = INDEX_op_call;
+    *gen_opc_ptr++ = (TCGOpcodeEntry) { .opcode = INDEX_op_call };
     nparam = gen_opparam_ptr++;
 #if defined(TCG_TARGET_I386) && TCG_TARGET_REG_BITS < 64
     call_type = (flags & TCG_CALL_TYPE_MASK);
@@ -985,12 +985,12 @@ void tcg_add_target_add_op_defs(const TCGTargetOpDef *tdefs)
 #ifdef USE_LIVENESS_ANALYSIS
 
 /* set a nop for an operation using 'nb_args' */
-static inline void tcg_set_nop(TCGContext *s, uint16_t *opc_ptr, TCGArg *args, int nb_args)
+static inline void tcg_set_nop(TCGContext *s, TCGOpcodeEntry *opc_ptr, TCGArg *args, int nb_args)
 {
     if(nb_args == 0) {
-        *opc_ptr = INDEX_op_nop;
+        *opc_ptr = (TCGOpcodeEntry) { .opcode = INDEX_op_nop };
     } else {
-        *opc_ptr = INDEX_op_nopn;
+        *opc_ptr = (TCGOpcodeEntry) { .opcode = INDEX_op_nopn };
         args[0] = nb_args;
         args[nb_args - 1] = nb_args;
     }
@@ -1049,7 +1049,7 @@ static void tcg_liveness_analysis(TCGContext *s)
     args = gen_opparam_ptr;
     op_index = nb_ops - 1;
     while(op_index >= 0) {
-        op = tcg->gen_opc_buf[op_index];
+        op = tcg->gen_opc_buf[op_index].opcode;
         def = &tcg_op_defs[op];
         switch(op) {
             case INDEX_op_call: {
@@ -1782,7 +1782,7 @@ static inline int tcg_gen_code_common(TCGContext *s, uint8_t *gen_code_buf)
     num_insns = -1;
 
     for(;;) {
-        opc = tcg->gen_opc_buf[op_index];
+        opc = tcg->gen_opc_buf[op_index].opcode;
         def = &tcg_op_defs[opc];
         switch(opc) {
             case INDEX_op_mov_i32:

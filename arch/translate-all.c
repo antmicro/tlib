@@ -151,7 +151,7 @@ static inline void gen_block_footer(TranslationBlock *tb)
     tcg_gen_exit_tb((uintptr_t)tb | EXIT_TB_FORCE);
 
     gen_set_label(finish_label);
-    *gen_opc_ptr = INDEX_op_end;
+    *gen_opc_ptr = (TCGOpcodeEntry) { .opcode = INDEX_op_end };
 }
 
 static inline uint32_t get_max_tb_instruction_count(CPUState *env)
@@ -167,7 +167,7 @@ static void cpu_gen_code_inner(CPUState *env, TranslationBlock *tb)
     DisasContextBase *dc = (DisasContextBase *)&dcc;
 
     uint32_t max_tb_icount = get_max_tb_instruction_count(env);
-    uint16_t *opc_start_ptr = gen_opc_ptr;
+    TCGOpcodeEntry *opc_start_ptr = gen_opc_ptr;
 
     tb->icount = 0;
     tb->was_cut = false;

@@ -198,7 +198,7 @@ typedef enum TCGOpcode {
 #include "tcg-opc.h"
 #undef DEF
     NB_OPS,
-} TCGOpcode;
+} __attribute__((__packed__)) TCGOpcode;
 
 #define tcg_regset_clear(d)             (d) = 0
 #define tcg_regset_set(d, s)            (d) = (s)
@@ -544,7 +544,14 @@ struct TCGContext {
     uint32_t *number_of_registered_cpus;
 };
 
-extern uint16_t *gen_opc_ptr;
+typedef struct TCGOpcodeEntry {
+    TCGOpcode opcode;
+#ifdef TCG_DEBUG_BACKTRACE
+    char **backtrace_symbols;
+#endif
+} TCGOpcodeEntry;
+
+extern TCGOpcodeEntry *gen_opc_ptr;
 extern TCGArg *gen_opparam_ptr;
 
 /* pool based memory allocation */
@@ -557,7 +564,7 @@ void tcg_pool_delete(TCGContext *s);
 
 typedef struct tcg_t {
     TCGContext *ctx;
-    uint16_t *gen_opc_buf;
+    TCGOpcodeEntry *gen_opc_buf;
     TCGArg *gen_opparam_buf;
     uint8_t *code_gen_prologue;
     uint16_t *gen_insn_end_off;
@@ -760,7 +767,7 @@ void tcg_gen_callN(TCGContext *s, TCGv_ptr func, unsigned int flags, int sizemas
 
 void tcg_gen_shifti_i64(TCGv_i64 ret, TCGv_i64 arg1, int c, int right, int arith);
 
-TCGArg *tcg_optimize(TCGContext *s, uint16_t *tcg_opc_ptr, TCGArg *args, TCGOpDef *tcg_op_def);
+TCGArg *tcg_optimize(TCGContext *s, TCGOpcodeEntry *tcg_opc_ptr, TCGArg *args, TCGOpDef *tcg_op_def);
 
 /* only used for debugging purposes */
 void tcg_register_helper(void *func, const char *name);
