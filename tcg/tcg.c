@@ -287,12 +287,27 @@ void tcg_context_use_tlb(int value)
     tcg->ctx->use_tlb = !!value;
 }
 
+void tcg_free_backtraces(const TCGOpcodeEntry *gen_opc_buf)
+{
+#ifdef TCG_DEBUG_BACKTRACE
+    for(int i = 0; i < OPC_BUF_SIZE; i++) {
+        const TCGOpcodeEntry entry = gen_opc_buf[i];
+        if(entry.backtrace_symbols == NULL) {
+            continue;
+        }
+        //  Backtraces are allocated using normal `malloc`, so must be freed by `free`.
+        free(entry.backtrace_symbols);
+    }
+#endif
+}
+
 void tcg_dispose()
 {
     TCG_free(tcg_op_defs[0].args_ct);
     TCG_free(tcg_op_defs[0].sorted_args);
     tcg_pool_free(tcg->ctx);
     TCG_free(tcg->ctx->helpers);
+    tcg_free_backtraces(tcg->gen_opc_buf);
 }
 
 void tcg_prologue_init()
@@ -1181,7 +1196,7 @@ static void tcg_liveness_analysis(TCGContext *s)
     }
 
     if(args != tcg->gen_opparam_buf) {
-        tcg_abort();
+        tlib_abortf("%s: %p should be %p. Missing %i args", __func__, args, tcg->gen_opparam_buf, args - tcg->gen_opparam_buf);
     }
 }
 #else

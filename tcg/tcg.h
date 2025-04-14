@@ -500,6 +500,14 @@ typedef struct TCGHelperInfo {
     const char *name;
 } TCGHelperInfo;
 
+typedef struct TCGOpcodeEntry {
+    TCGOpcode opcode;
+#ifdef TCG_DEBUG_BACKTRACE
+    char **backtrace_symbols;
+    uint32_t backtrace_entries;
+#endif
+} TCGOpcodeEntry;
+
 typedef struct TCGContext TCGContext;
 
 struct TCGContext {
@@ -515,6 +523,7 @@ struct TCGContext {
 
     /* goto_tb support */
     uint8_t *code_buf;
+    TCGOpcodeEntry *current_code;
     uintptr_t *tb_next;
     uint16_t *tb_next_offset;
     uint16_t *tb_jmp_offset;
@@ -543,13 +552,6 @@ struct TCGContext {
     uint8_t use_tlb;
     uint32_t *number_of_registered_cpus;
 };
-
-typedef struct TCGOpcodeEntry {
-    TCGOpcode opcode;
-#ifdef TCG_DEBUG_BACKTRACE
-    char **backtrace_symbols;
-#endif
-} TCGOpcodeEntry;
 
 extern TCGOpcodeEntry *gen_opc_ptr;
 extern TCGArg *gen_opparam_ptr;

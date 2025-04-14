@@ -24,6 +24,11 @@
 #pragma once
 
 #include <inttypes.h>
+#ifndef _WIN32  //  This header is not available on MinGW
+#include <execinfo.h>
+#endif
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "tcg-memop.h"
 #include "tcg-mo.h"
@@ -195,7 +200,19 @@ static inline void tcg_request_block_interrupt_check()
 
 static inline void tcg_gen_op0(TCGOpcode opc)
 {
-    *gen_opc_ptr++ = (TCGOpcodeEntry) { .opcode = opc };
+    TCGOpcodeEntry entry = { .opcode = opc };
+#if defined(TCG_DEBUG_BACKTRACE) && DEBUG && !defined(_WIN32)
+#define TRACE_MAX_SIZE 20
+    void *backtrace_buffer[TRACE_MAX_SIZE];
+    const uint32_t buffer_entries = backtrace(backtrace_buffer, TRACE_MAX_SIZE);
+    entry.backtrace_entries = buffer_entries;
+    char **backtrace_functions = backtrace_symbols(backtrace_buffer, buffer_entries);
+    if(unlikely(backtrace_functions == NULL)) {
+        tlib_printf(LOG_LEVEL_ERROR, "%s: failed to collect backtrace", __func__);
+    }
+    entry.backtrace_symbols = backtrace_functions;
+#endif
+    *gen_opc_ptr++ = entry;
 }
 
 static inline void tcg_gen_op1_i32(TCGOpcode opc, TCGv_i32 arg1)
