@@ -24,6 +24,7 @@
 #include "infrastructure.h"
 #include <stdint.h>
 #include "atomic.h"
+#include "cpu.h"
 
 extern void *global_retaddr;
 
@@ -360,7 +361,12 @@ __attribute__((always_inline)) inline void REGPARM glue(glue(__inner_st, SUFFIX)
     int index;
     uintptr_t addend;
 
+#ifndef SUPPORTS_HST_ATOMICS
+    //  Only needed for the old atomics implementation
+    acquire_global_memory_lock(cpu);
     register_address_access(cpu, addr);
+    release_global_memory_lock(cpu);
+#endif
 
     index = (addr >> TARGET_PAGE_BITS) & (CPU_TLB_SIZE - 1);
 
