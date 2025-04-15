@@ -151,7 +151,7 @@ static inline void gen_block_footer(TranslationBlock *tb)
     tcg_gen_exit_tb((uintptr_t)tb | EXIT_TB_FORCE);
 
     gen_set_label(finish_label);
-    *gen_opc_ptr = (TCGOpcodeEntry) { .opcode = INDEX_op_end };
+    *gen_opc_ptr = tcg_create_opcode_entry(INDEX_op_end);
 }
 
 static inline uint32_t get_max_tb_instruction_count(CPUState *env)

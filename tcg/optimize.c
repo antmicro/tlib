@@ -331,9 +331,9 @@ static TCGArg *tcg_constant_folding(TCGContext *s, TCGOpcodeEntry *tcg_opc_ptr, 
             if(temps[args[2]].state == TCG_TEMP_CONST && temps[args[2]].val == 0) {
                 if((temps[args[0]].state == TCG_TEMP_COPY && temps[args[0]].val == args[1]) || args[0] == args[1]) {
                     args += 3;
-                    tcg->gen_opc_buf[op_index].opcode = INDEX_op_nop;
+                    tcg->gen_opc_buf[op_index] = tcg_create_opcode_entry(INDEX_op_nop);
                 } else {
-                    tcg->gen_opc_buf[op_index].opcode = op_to_mov(op);
+                    tcg->gen_opc_buf[op_index] = tcg_create_opcode_entry(op_to_mov(op));
                     tcg_opt_gen_mov(s, gen_args, args[0], args[1], nb_temps, nb_globals);
                     gen_args += 2;
                     args += 3;
@@ -344,7 +344,7 @@ static TCGArg *tcg_constant_folding(TCGContext *s, TCGOpcodeEntry *tcg_opc_ptr, 
             CASE_OP_32_64(mul)
                 : if((temps[args[2]].state == TCG_TEMP_CONST && temps[args[2]].val == 0))
             {
-                tcg->gen_opc_buf[op_index].opcode = op_to_movi(op);
+                tcg->gen_opc_buf[op_index] = tcg_create_opcode_entry(op_to_movi(op));
                 tcg_opt_gen_movi(gen_args, args[0], 0, nb_temps, nb_globals);
                 args += 3;
                 gen_args += 2;
@@ -357,9 +357,9 @@ static TCGArg *tcg_constant_folding(TCGContext *s, TCGOpcodeEntry *tcg_opc_ptr, 
             {
                 if(args[1] == args[0]) {
                     args += 3;
-                    tcg->gen_opc_buf[op_index].opcode = INDEX_op_nop;
+                    tcg->gen_opc_buf[op_index] = tcg_create_opcode_entry(INDEX_op_nop);
                 } else {
-                    tcg->gen_opc_buf[op_index].opcode = op_to_mov(op);
+                    tcg->gen_opc_buf[op_index] = tcg_create_opcode_entry(op_to_mov(op));
                     tcg_opt_gen_mov(s, gen_args, args[0], args[1], nb_temps, nb_globals);
                     gen_args += 2;
                     args += 3;
@@ -379,7 +379,7 @@ static TCGArg *tcg_constant_folding(TCGContext *s, TCGOpcodeEntry *tcg_opc_ptr, 
                 : if((temps[args[1]].state == TCG_TEMP_COPY && temps[args[1]].val == args[0]) || args[0] == args[1])
             {
                 args += 2;
-                tcg->gen_opc_buf[op_index].opcode = INDEX_op_nop;
+                tcg->gen_opc_buf[op_index] = tcg_create_opcode_entry(INDEX_op_nop);
                 break;
             }
             if(temps[args[1]].state != TCG_TEMP_CONST) {
@@ -391,7 +391,7 @@ static TCGArg *tcg_constant_folding(TCGContext *s, TCGOpcodeEntry *tcg_opc_ptr, 
             /* Source argument is constant.  Rewrite the operation and
                let movi case handle it. */
             op = op_to_movi(op);
-            tcg->gen_opc_buf[op_index].opcode = op;
+            tcg->gen_opc_buf[op_index] = tcg_create_opcode_entry(op);
             args[1] = temps[args[1]].val;
             /* fallthrough */
             CASE_OP_32_64(movi)
@@ -408,7 +408,7 @@ static TCGArg *tcg_constant_folding(TCGContext *s, TCGOpcodeEntry *tcg_opc_ptr, 
             : case INDEX_op_ext32s_i64:
         case INDEX_op_ext32u_i64:
             if(temps[args[1]].state == TCG_TEMP_CONST) {
-                tcg->gen_opc_buf[op_index].opcode = op_to_movi(op);
+                tcg->gen_opc_buf[op_index] = tcg_create_opcode_entry(op_to_movi(op));
                 tmp = do_constant_folding(op, temps[args[1]].val, 0);
                 tcg_opt_gen_movi(gen_args, args[0], tmp, nb_temps, nb_globals);
                 gen_args += 2;
@@ -440,7 +440,7 @@ static TCGArg *tcg_constant_folding(TCGContext *s, TCGOpcodeEntry *tcg_opc_ptr, 
                 : CASE_OP_32_64(nor)
                 : if(temps[args[1]].state == TCG_TEMP_CONST && temps[args[2]].state == TCG_TEMP_CONST)
             {
-                tcg->gen_opc_buf[op_index].opcode = op_to_movi(op);
+                tcg->gen_opc_buf[op_index] = tcg_create_opcode_entry(op_to_movi(op));
                 tmp = do_constant_folding(op, temps[args[1]].val, temps[args[2]].val);
                 tcg_opt_gen_movi(gen_args, args[0], tmp, nb_temps, nb_globals);
                 gen_args += 2;

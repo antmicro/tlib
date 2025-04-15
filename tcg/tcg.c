@@ -673,7 +673,7 @@ void tcg_gen_callN(TCGContext *s, TCGv_ptr func, unsigned int flags, int sizemas
     }
 #endif /* TCG_TARGET_EXTEND_ARGS */
 
-    *gen_opc_ptr++ = (TCGOpcodeEntry) { .opcode = INDEX_op_call };
+    *gen_opc_ptr++ = tcg_create_opcode_entry(INDEX_op_call);
     nparam = gen_opparam_ptr++;
 #if defined(TCG_TARGET_I386) && TCG_TARGET_REG_BITS < 64
     call_type = (flags & TCG_CALL_TYPE_MASK);
@@ -1025,9 +1025,9 @@ void tcg_add_target_add_op_defs(const TCGTargetOpDef *tdefs)
 static inline void tcg_set_nop(TCGContext *s, TCGOpcodeEntry *opc_ptr, TCGArg *args, int nb_args)
 {
     if(nb_args == 0) {
-        *opc_ptr = (TCGOpcodeEntry) { .opcode = INDEX_op_nop };
+        *opc_ptr = tcg_create_opcode_entry(INDEX_op_nop);
     } else {
-        *opc_ptr = (TCGOpcodeEntry) { .opcode = INDEX_op_nopn };
+        *opc_ptr = tcg_create_opcode_entry(INDEX_op_nopn);
         args[0] = nb_args;
         args[nb_args - 1] = nb_args;
     }
