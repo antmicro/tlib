@@ -198,9 +198,9 @@ static inline void tcg_request_block_interrupt_check()
     tcg->disas_context->generate_block_exit_check = true;
 }
 
-static inline void tcg_gen_op0(TCGOpcode opc)
+static inline TCGOpcodeEntry tcg_create_opcode_entry(const TCGOpcode opcode)
 {
-    TCGOpcodeEntry entry = { .opcode = opc };
+    TCGOpcodeEntry entry = { .opcode = opcode };
 #if defined(TCG_DEBUG_BACKTRACE) && DEBUG && !defined(_WIN32)
 #define TRACE_MAX_SIZE 20
     void *backtrace_buffer[TRACE_MAX_SIZE];
@@ -212,7 +212,12 @@ static inline void tcg_gen_op0(TCGOpcode opc)
     }
     entry.backtrace_symbols = backtrace_functions;
 #endif
-    *gen_opc_ptr++ = entry;
+    return entry;
+}
+
+static inline void tcg_gen_op0(const TCGOpcode opc)
+{
+    *gen_opc_ptr++ = tcg_create_opcode_entry(opc);
 }
 
 static inline void tcg_gen_op1_i32(TCGOpcode opc, TCGv_i32 arg1)
