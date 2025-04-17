@@ -1317,27 +1317,6 @@ static void tcg_out_qemu_st(TCGContext *s, const TCGArg *args, int opc)
 
     tcg_prepare_st_ld_args(s, type, rexw, r0, r1, args[addrlo_idx]);
 
-    if(likely(s->use_tlb)) {
-        tcg_out_tlb_load(s, addrlo_idx, mem_index, s_bits, args, label_ptr,
-                         /* offsetof(CPUTLBEntry, addr_write) */ tlb_entry_addr_write, r0, r1, type, rexw);
-
-        /* TLB Hit.  */
-        tcg_out_qemu_st_direct(s, data_reg, data_reg2, tcg_target_call_iarg_regs[0], 0, opc);
-
-        /* jmp label2 */
-        tcg_out8(s, OPC_JMP_short);
-        label_ptr[2] = s->code_ptr;
-        s->code_ptr++;
-
-        /* TLB Miss.  */
-
-        /* label1: */
-        *label_ptr[0] = s->code_ptr - label_ptr[0] - 1;
-        if(TARGET_LONG_BITS > TCG_TARGET_REG_BITS) {
-            *label_ptr[1] = s->code_ptr - label_ptr[1] - 1;
-        }
-    }
-
     /* XXX: move that code at the end of the TB */
     if(TCG_TARGET_REG_BITS == 64) {
         tcg_out_mov(s, (opc == 3 ? TCG_TYPE_I64 : TCG_TYPE_I32), tcg_target_call_iarg_regs[1], data_reg);
@@ -1400,11 +1379,6 @@ static void tcg_out_qemu_st(TCGContext *s, const TCGArg *args, int opc)
         tcg_out_pop(s, TCG_REG_ECX);
     } else if(stack_adjust != 0) {
         tcg_out_addi(s, TCG_REG_CALL_STACK, stack_adjust);
-    }
-
-    if(likely(s->use_tlb)) {
-        /* label2: */
-        *label_ptr[2] = s->code_ptr - label_ptr[2] - 1;
     }
 }
 
