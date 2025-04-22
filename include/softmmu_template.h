@@ -135,14 +135,13 @@ static inline int glue(try_cached_access, SUFFIX)(target_ulong addr, DATA_TYPE *
 }
 
 /* handle all cases except unaligned access which span two pages */
-__attribute__((always_inline)) inline DATA_TYPE REGPARM glue(glue(glue(__ld, SUFFIX), _err), MMUSUFFIX)(target_ulong addr,
-                                                                                                        int mmu_idx, int *err)
+__attribute__((always_inline)) inline DATA_TYPE REGPARM glue(glue(glue(__inner_ld, SUFFIX), _err),
+                                                             MMUSUFFIX)(target_ulong addr, int mmu_idx, int *err, void *retaddr)
 {
     DATA_TYPE res;
     int index;
     target_ulong tlb_addr;
     target_phys_addr_t ioaddr;
-    void *retaddr = GETPC();
     uintptr_t addend;
     bool is_insn_fetch = (env->current_tb == NULL);
 
@@ -229,6 +228,11 @@ redo:
     }
 
     return res;
+}
+__attribute__((always_inline)) inline DATA_TYPE REGPARM glue(glue(glue(__ld, SUFFIX), _err), MMUSUFFIX)(target_ulong addr,
+                                                                                                        int mmu_idx, int *err)
+{
+    return glue(glue(glue(__inner_ld, SUFFIX), _err), MMUSUFFIX)(addr, mmu_idx, NULL, GETPC());
 }
 
 DATA_TYPE REGPARM glue(glue(__ld, SUFFIX), MMUSUFFIX)(target_ulong addr, int mmu_idx)
@@ -342,12 +346,11 @@ static inline void glue(io_write, SUFFIX)(target_phys_addr_t physaddr, DATA_TYPE
 #endif /* SHIFT > 2 */
 }
 
-__attribute__((always_inline)) inline void REGPARM glue(glue(__st, SUFFIX), MMUSUFFIX)(target_ulong addr, DATA_TYPE val,
-                                                                                       int mmu_idx)
+__attribute__((always_inline)) inline void REGPARM glue(glue(__inner_st, SUFFIX), MMUSUFFIX)(target_ulong addr, DATA_TYPE val,
+                                                                                             int mmu_idx, void *retaddr)
 {
     target_phys_addr_t ioaddr;
     target_ulong tlb_addr;
-    void *retaddr = GETPC();
     int index;
     uintptr_t addend;
 
@@ -426,6 +429,11 @@ redo:
     release_global_memory_lock(cpu);
 }
 
+__attribute__((always_inline)) inline void REGPARM glue(glue(__st, SUFFIX), MMUSUFFIX)(target_ulong addr, DATA_TYPE val,
+                                                                                       int mmu_idx)
+{
+    glue(glue(__inner_st, SUFFIX), MMUSUFFIX)(addr, val, mmu_idx, GETPC());
+}
 /* handles all unaligned cases */
 void glue(glue(slow_st, SUFFIX), MMUSUFFIX)(target_ulong addr, DATA_TYPE val, int mmu_idx, void *retaddr)
 {
