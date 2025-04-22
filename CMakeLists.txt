@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.12)
 project (tlib LANGUAGES C)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(DEBUG_DEF "-DDEBUG -DDEBUG_ON")
+    set(DEBUG_DEF "-DDEBUG -DDEBUG_ON -g3")
 endif()
 
 if(NOT DEFINED HOST_ARCH)
