@@ -26,17 +26,17 @@
 #include "syndrome.h"
 
 //  Some silly MMU adjustments. Memops (mostly MO_128, MO_ALIGN_16 and MO_BE) are ignored.
-#define cpu_ldq_be_mmu(env, address, memidx, ra) __ldq_mmu(address, memidx)
-#define cpu_ldq_le_mmu(env, address, memidx, ra) __ldq_mmu(address, memidx)
-#define cpu_stq_be_mmu(env, address, value, memidx, ra) \
-    {                                                   \
-        (void)ra;                                       \
-        __stq_mmu(address, value, memidx);              \
+#define cpu_ldq_be_mmu(env, address, memidx, ra) __inner_ldq_err_mmu(address, memidx, NULL, (void *)ra)
+#define cpu_ldq_le_mmu(env, address, memidx, ra) __inner_ldq_err_mmu(address, memidx, NULL, (void *)ra)
+#define cpu_stq_be_mmu(env, address, value, memidx, ra)      \
+    {                                                        \
+        (void)ra;                                            \
+        __inner_stq_mmu(address, value, memidx, (void *)ra); \
     }
-#define cpu_stq_le_mmu(env, address, value, memidx, ra) \
-    {                                                   \
-        (void)ra;                                       \
-        __stq_mmu(address, value, memidx);              \
+#define cpu_stq_le_mmu(env, address, value, memidx, ra)      \
+    {                                                        \
+        (void)ra;                                            \
+        __inner_stq_mmu(address, value, memidx, (void *)ra); \
     }
 #define make_memop_idx(memop, memidx) (memidx)
 
