@@ -3963,7 +3963,7 @@ float64 float64_muladd(float64 a, float64 b, float64 c, int flags STATUS_PARAM)
             /* Throw out the special case of c being an exact zero now */
             shift128RightJamming(pSig0, pSig1, 64, &pSig0, &pSig1);
 
-            zExp = pExp;
+            zExp = pExp - 1;
             zSig = pSig1;
             goto halve_round_and_pack_float64;
         }
