@@ -672,7 +672,7 @@ static ARMCPRegInfo feature_v7_registers[] = {
     ARM32_CP_REG_DEFINE(PMXEVTYPER,       15,   0,   9,  13,   1,   0, RW | ARM_CP_FORCE_TB_END, RW_FNS(c9_pmxevtyper)) // Event type select
     ARM32_CP_REG_DEFINE(PMXEVCNTR,        15,   0,   9,  13,   2,   0, RW | ARM_CP_FORCE_TB_END, RW_FNS(c9_pmxevcntr))  // Event counter value get/set
 
-    ARM32_CP_REG_DEFINE(PMUSERENR,        15,   0,   9,  14,   0,   0, RW, RW_FNS(c9_pmuserenr))                        // Performance monitor control user access enable
+    ARM32_CP_REG_DEFINE(PMUSERENR,        15,   0,   9,  14,   0,   0, RW | ARM_CP_FORCE_TB_END, RW_FNS(c9_pmuserenr))                        // Performance monitor control user access enable
     ARM32_CP_REG_DEFINE(PMINTENSET,       15,   0,   9,  14,   1,   1, RW, RW_FNS(c9_pmintenset))                       // Performance monitor control interrupt enable set
     ARM32_CP_REG_DEFINE(PMINTENCLR,       15,   0,   9,  14,   2,   1, RW, RW_FNS(c9_pmintenclr))                       // Performance monitor control interrupt enable clear
 
@@ -824,7 +824,7 @@ static ARMCPRegInfo xscale_registers[] = {
     ARM32_CP_REG_DEFINE(XSCALE_C0_DUMMY,  15,  10,   0,  10,  10,   1, WO | ARM_CP_NOP)                // In OMAP or XSCALE writes to crn0 have no effect, but don't raise exception either
     ARM32_CP_REG_DEFINE(ACTLR,            15,   0,   1,   0,   1,   1, RW, FIELD(cp15.c1_xscaleauxcr)) // Auxiliary Control Register (Impl. defined)
 
-    ARM32_CP_REG_DEFINE(CPAR,             15, ANY,  15,   1,   0,   1, RW, RW_FNS(c15_cpar))
+    ARM32_CP_REG_DEFINE(CPAR,             15, ANY,  15,   1,   0,   1, RW | ARM_CP_FORCE_TB_END, RW_FNS(c15_cpar))
 };
 
 static ARMCPRegInfo feature_auxcr_registers[] = {
@@ -833,7 +833,7 @@ static ARMCPRegInfo feature_auxcr_registers[] = {
 };
 
 static ARMCPRegInfo cpacr_register[] = {
-    ARM32_CP_REG_DEFINE(CPACR,            15,   0,   1,   0,   2,   1, RW, RW_FNS(c1_cpacr)) // Coprocessor Access Control Register
+    ARM32_CP_REG_DEFINE(CPACR,            15,   0,   1,   0,   2,   1, RW | ARM_CP_FORCE_TB_END, RW_FNS(c1_cpacr)) // Coprocessor Access Control Register
 };
 
 static ARMCPRegInfo feature_pmsa_registers[] = {
@@ -914,7 +914,7 @@ static ARMCPRegInfo feature_generic_timer_registers[] = {
 static ARMCPRegInfo feature_thumb2ee_registers[] = {
     // ================== Coprocessor 14 ==================
     // The params are:  name              cp, op1, crn, crm, op2,  el,  extra_type, ...
-    ARM32_CP_REG_DEFINE(TEECR,            14,   6,   0,   0,   0,   1,  RW, RW_FNS(cp14_c6_teecr)) // Thumb EE Configuration Register
+    ARM32_CP_REG_DEFINE(TEECR,            14,   6,   0,   0,   0,   1,  RW | ARM_CP_FORCE_TB_END, RW_FNS(cp14_c6_teecr)) // Thumb EE Configuration Register
     ARM32_CP_REG_DEFINE(TEEHBR,           14,   6,   1,   0,   0,   1,  RW, FIELD(teehbr))         // Thumb EE Handler Base Register
 };
 
