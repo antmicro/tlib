@@ -5975,15 +5975,34 @@ static void decode_RV32_64G(CPUState *env, DisasContext *dc)
     }
 }
 
-static void log_unhandled_instruction_length(DisasContext *dc, int instruction_length)
+static void log_unhandled_instruction_length(DisasContext *dc, uint32_t instruction_length)
 {
-    tlib_printf(LOG_LEVEL_ERROR, "Unsupported instruction length: %d bits. PC: 0x%llx, opcode: 0x%0*llx", 8 * instruction_length,
-                dc->base.pc, /* padding */ 2 * instruction_length, format_opcode(dc->opcode, instruction_length));
+    tlib_printf(LOG_LEVEL_ERROR, "Unsupported instruction length: %d bits. PC: 0x%llx, opcode: 0x%x", 8 * instruction_length,
+                dc->base.pc, dc->opcode);
 }
 
 static int disas_insn(CPUState *env, DisasContext *dc)
 {
     uint16_t first_word_of_opcode = lduw_code(dc->base.pc);
+
+    /* Instructions containg all zeros are illegal in RISC-V.
+       We don't need to check the length because the first
+       word 0x0 would be identified as 16-bit anyways. */
+    if(!first_word_of_opcode) {
+        dc->opcode = first_word_of_opcode;
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        return 0;
+    }
+
+    /* Instructions containg all ones are also illegal in RISC-V.
+       We don't need to check the length because the first half word
+       0xFFFF would be identified as >=192-bit which is not supported. */
+    if(first_word_of_opcode == 0xFFFF) {
+        dc->opcode = ldl_code(dc->base.pc);
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        return 0;
+    }
+
     int instruction_length = decode_instruction_length(first_word_of_opcode);
     int is_compressed = instruction_length == 2;
 
@@ -5999,11 +6018,11 @@ static int disas_insn(CPUState *env, DisasContext *dc)
             dc->opcode = ldq_code(dc->base.pc);
             break;
         default:
+            //  Load 32 bits (ILEN) of an instruction for storing in mtval and logging
+            dc->opcode = ldl_code(dc->base.pc);
             log_unhandled_instruction_length(dc, instruction_length);
-            //  Default to 32-bit if encountered an instruction of unsupported length.
-            //  Allow for an exception to be raised while decoding.
-            instruction_length = 4;
-            break;
+            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+            return 0;
     }
 
     /* handle custom instructions */
