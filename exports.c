@@ -774,7 +774,9 @@ void tlib_enable_guest_profiler(int value)
     //  When the profiler is enabled: to ensure that no block that don't
     //  signal stack changes will be used (function calls will not be detected)
     //  When the profiler is disabled: to ensure that no blocks that
-    //  signal stack changes will be used (events will be sent to a null object)
+    //  signal stack changes will be used (it's still possible because `tb_flush`
+    //  does not interrupt the currently executed block so events might
+    //  be sent to a null object but we handle that on the C# side)
     tlib_invalidate_translation_cache();
     cpu->guest_profiler_enabled = !!value;
 }

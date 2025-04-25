@@ -353,7 +353,7 @@ static inline void set_c1_cpacr(CPUState *env, uint64_t val)
 {
     if(env->cp15.c1_coproc != val) {
         env->cp15.c1_coproc = val;
-        /* ??? Is this safe when called from within a TB?  */
+        /* We're ensuring end of the block with `ARM_CP_FORCE_TB_END` so it's safe to call from within a TB */
         tb_flush(env);
     }
 }

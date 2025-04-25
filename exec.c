@@ -473,8 +473,10 @@ static void page_flush_tb(void)
     }
 }
 
-/* flush all the translation blocks */
-/* XXX: tb_flush is currently not thread safe */
+/* flush all the translation blocks
+   NOTE: tb_flush does not interrupt the currently executed and chained translation blocks
+   thus it should not be called during execution, unless it's on the end of the block
+   NOTE: tb_flush is currently not thread safe */
 void tb_flush(CPUState *env1)
 {
     if((uintptr_t)(code_gen_ptr - tcg_rw_buffer) > code_gen_buffer_size) {
