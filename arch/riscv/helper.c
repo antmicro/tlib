@@ -506,6 +506,10 @@ void do_interrupt(CPUState *env)
 
     bool is_clic_interrupt = is_in_clic_mode && is_interrupt;
 
+    if(fixed_cause == RISCV_EXCP_ILLEGAL_INST) {
+        tlib_printf(LOG_LEVEL_WARNING, "Illegal instruction at PC=0x%" PRIx64 ": 0x%" PRIx32, env->pc, env->opcode);
+    }
+
     target_ulong int_priv = env->priv;
     if(is_clic_interrupt) {
         int_priv = env->clic_interrupt_priv;
