@@ -731,3 +731,17 @@ void HELPER(handle_pre_stack_access_hook)(uint64_t address, uint32_t width, uint
 {
     tlib_handle_pre_stack_access_hook(address, width, is_write);
 }
+
+int process_bus_access_fault(CPUState *env, int access, uint64_t faulting_address)
+{
+    env->badaddr = faulting_address;
+    switch (access) {
+        case BUS_FAULT_STORE:
+            return RISCV_EXCP_STORE_AMO_ACCESS_FAULT;
+        case BUS_FAULT_LOAD:
+            return RISCV_EXCP_LOAD_ACCESS_FAULT;
+        default:
+            tlib_abort("Unexpected sysbus fault access type");
+            return -1;
+    }
+}

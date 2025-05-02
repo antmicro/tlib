@@ -90,6 +90,15 @@ void tlib_try_interrupt_translation_block(void)
         }
     }
 
+    #ifdef SUPPORTS_BUS_ACCESS_FAULTS
+    if(likely(cpu) && unlikely(cpu->tb_sysbus_access_fault)) {
+        int exception_id = process_bus_access_fault(cpu, cpu->tb_sysbus_access_fault, cpu->tb_sysbus_access_fault_addr);
+        cpu->tb_sysbus_access_fault = BUS_FAULT_NONE;
+        cpu->tb_sysbus_access_fault_addr = 0;
+        interrupt_current_translation_block(cpu, exception_id);
+    }
+    #endif
+
     //  Also do the C side of the exception unwinding process if it has beem requested
     if(unlikely(unwind_state.need_jump)) {
         unwind_state.need_jump = false;
@@ -405,6 +414,14 @@ void tlib_request_translation_block_interrupt(int shouldSubstractInstruction)
 }
 
 EXC_VOID_1(tlib_request_translation_block_interrupt, int, shouldSubstractInstruction)
+
+void tlib_raise_sysbus_access_fault(int access_type_store, uint64_t address)
+{
+    env->tb_sysbus_access_fault = access_type_store ? BUS_FAULT_STORE : BUS_FAULT_LOAD;
+    env->tb_sysbus_access_fault_addr = address;
+}
+
+EXC_VOID_2(tlib_raise_sysbus_access_fault, int, access_type_store, uint64_t, address)
 
 void tlib_set_return_request()
 {

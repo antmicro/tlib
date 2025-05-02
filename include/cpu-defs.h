@@ -207,6 +207,13 @@ enum block_interrupt_cause {
     TB_INTERRUPT_SYNCHRONOUS_EXCEPTION = 3,
 };
 
+//  Must be in sync with TranslationCPU:BusFaultAccessMode
+enum bus_fault_access_mode {
+    BUS_FAULT_NONE = 0,
+    BUS_FAULT_STORE = 1,
+    BUS_FAULT_LOAD = 2,
+};
+
 #define MAX_IO_ACCESS_REGIONS_COUNT 1024
 
 #define CPU_TEMP_BUF_NLONGS    128
@@ -237,6 +244,8 @@ enum block_interrupt_cause {
     int tb_restart_request;                                                    \
     int tb_interrupt_request_from_callback;                                    \
     int tb_interrupt_exception_from_callback;                                  \
+    int tb_sysbus_access_fault;                                                \
+    uint64_t tb_sysbus_access_fault_addr;                                      \
                                                                                \
     uint32_t io_access_regions_count;                                          \
     uint64_t io_access_regions[MAX_IO_ACCESS_REGIONS_COUNT];                   \

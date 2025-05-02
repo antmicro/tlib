@@ -21,6 +21,7 @@ uint64_t tlib_get_executed_instructions(void);
 void tlib_reset(void);
 int32_t tlib_execute(uint32_t max_insns);
 void tlib_request_translation_block_interrupt(int);
+void tlib_raise_sysbus_access_fault(int, uint64_t);
 void tlib_try_interrupt_translation_block(void);
 void tlib_set_return_request(void);
 void tlib_set_paused(void);
