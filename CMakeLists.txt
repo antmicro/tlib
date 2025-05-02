@@ -206,6 +206,7 @@ file (GLOB SOURCES
 
 add_library (tlib SHARED ${SOURCES})
 add_dependencies (tlib tcg)
+set_property(TARGET tlib PROPERTY C_STANDARD 11)
 
 if("${TARGET_ACTUAL_ARCH}" STREQUAL "i386")
     set (MATH_LIB_LINK_ARG "-lm" CACHE STRING
