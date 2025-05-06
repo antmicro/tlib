@@ -741,8 +741,11 @@ typedef union {
     struct {
         bool user : 1;
         bool secure : 1;
+        /* This field ensures that index is always initialized.
+         * Size of individual bits plus this field has to be equal to the size of the index */
+        int : 30;
     };
-    int index;
+    int32_t index;
 } MMUMode;
 
 static inline MMUMode context_to_mmu_mode(DisasContext *s)
