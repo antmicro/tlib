@@ -94,6 +94,9 @@ int get_external_mmu_phys_addr(CPUState *env, uint32_t address, int access_type,
 #if defined(__arm__)
 /* Map the buffer below 32MiB, so we can use direct calls and branches */
 #define MAX_CODE_GEN_BUFFER_SIZE (16 * 1024 * 1024)
+#elif defined(__aarch64__)
+//  Longest direct branch is 128MiB
+#define MAX_CODE_GEN_BUFFER_SIZE (128 * 1024 * 1024)
 #else
 /* Default to 800MiB - cannot map more than that */
 #define MAX_CODE_GEN_BUFFER_SIZE (800 * 1024 * 1024)
