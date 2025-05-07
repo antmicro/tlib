@@ -41,6 +41,18 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
         "Debug" "Release" "RelWithDebInfo")
 endif()
 
+option (COVERAGE_REPORTING "Report coverage in gcov format" OFF)
+if(COVERAGE_REPORTING)
+    add_definitions(
+        --coverage
+        -fprofile-abs-path
+        -fprofile-exclude-files=.*softfloat.*
+        -g
+        -O0
+    )
+    add_link_options(-lgcov --coverage)
+endif()
+
 option (PROFILING_BUILD "Build optimized for profiling" OFF)
 if(PROFILING_BUILD)
     message(STATUS "Profiling enhancements are enabled")
