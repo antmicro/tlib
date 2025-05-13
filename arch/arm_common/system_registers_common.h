@@ -8,6 +8,10 @@
 
 #include "cpu.h"
 
+#include "helper_common.h"
+#define GEN_HELPER 1
+#include "helper_common.h"
+
 //  Types of ARMCPRegInfo.
 //  Each bit is a different type.
 #define ARM_CP_NOP       (1 << 0)
@@ -107,14 +111,27 @@ static inline bool cp_access_ok(int current_el, const ARMCPRegInfo *reg_info, bo
 {
     uint32_t ri_type = reg_info->type;
 
+    //  The prints need to be emitted at runtime, so use helpers
     if(current_el < ARM_CP_GET_MIN_EL(ri_type)) {
-        tlib_printf(LOG_LEVEL_WARNING, "The '%s' register shouldn't be accessed on EL%d", reg_info->name, current_el);
+        TCGv_ptr reg_info_const = tcg_const_ptr((tcg_target_long)reg_info);
+        TCGv_i32 current_el_const = tcg_const_i32(current_el);
+
+        gen_helper_warn_cp_invalid_el(cpu_env, reg_info_const, current_el_const);
+
+        tcg_temp_free_ptr(reg_info_const);
+        tcg_temp_free_i32(current_el_const);
         return false;
     }
 
     //  Rule IWCXDT
     if((isread && !ARM_CP_READABLE(ri_type)) || (!isread && !ARM_CP_WRITABLE(ri_type))) {
-        tlib_printf(LOG_LEVEL_WARNING, "The '%s' register shouldn't be %s", reg_info->name, isread ? "read from" : "written to");
+        TCGv_ptr reg_info_const = tcg_const_ptr((tcg_target_long)reg_info);
+        TCGv_i32 isread_const = tcg_const_i32(isread);
+
+        gen_helper_warn_cp_invalid_access(cpu_env, reg_info_const, isread_const);
+
+        tcg_temp_free_ptr(reg_info_const);
+        tcg_temp_free_i32(isread_const);
         return false;
     }
     return true;
