@@ -262,7 +262,6 @@ typedef struct {
 #define SME_ET_InactiveZA   stub_abort("SME_ET_InactiveZA")
 #define SME_ET_NotStreaming stub_abort("SME_ET_NotStreaming")
 #define SME_ET_Streaming    stub_abort("SME_ET_Streaming")
-FUNC_STUB(arm_cpreg_encoding_in_idspace)
 FUNC_STUB(gen_io_start)
 FUNC_STUB_GENERIC(get_arm_cp_reginfo, void *)
 FUNC_STUB(target_disas)

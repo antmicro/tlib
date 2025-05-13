@@ -1817,6 +1817,15 @@ static void gen_set_nzcv(TCGv_i64 tcg_rt)
     tcg_temp_free_i32(nzcv);
 }
 
+/* FEAT_IDST causes all AArch64 read accesses to the feature ID space when exceptions are generated to be reported in ESR_ELx
+ * using the EC code 0x18. The Feature ID space is defined as the System register space in AArch64 with op0==3, op1=={0, 1, 3},
+ * CRn==0, CRm=={0-7}, op2=={0-7}.
+ */
+static inline bool arm_cpreg_encoding_in_idspace(uint8_t op0, uint8_t op1, uint8_t op2, uint8_t crn, uint8_t crm)
+{
+    return op0 == 3 && (op1 == 0 || op1 == 1 || op1 == 3) && crn == 0 && crm <= 7 && op2 <= 7;
+}
+
 static void gen_sysreg_undef(DisasContext *s, bool isread, uint8_t op0, uint8_t op1, uint8_t op2, uint8_t crn, uint8_t crm,
                              uint8_t rt)
 {
