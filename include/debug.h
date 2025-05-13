@@ -15,7 +15,7 @@ extern char *msgs[MAX_MSG_COUNT];
 #define LOG_CURRENT_LOCATION()
 #endif
 
-void generate_log(uint32_t pc, char *format, ...);
+void generate_log(uint64_t pc, char *format, ...);
 void generate_var_log(TCGv v);
 
 void mark_as_locked(struct TranslationBlock *tb, char *filename, int line_number);

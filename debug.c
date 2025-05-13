@@ -51,7 +51,7 @@ static uint32_t log_set_msg(char *msg)
 }
 #endif
 
-void generate_log(uint32_t pc, char *format, ...)
+void generate_log(uint64_t pc, char *format, ...)
 {
 #ifdef DEBUG_ON
     char msg[MAX_MSG_LENGTH];
