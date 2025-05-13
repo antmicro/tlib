@@ -798,7 +798,11 @@ void gen_set_condexec(DisasContext *s)
 
 void gen_set_pc_im(target_ulong val)
 {
-    tcg_gen_movi_i32(cpu_R[15], val);
+    if(is_a64(env)) {
+        tcg_gen_movi_i64(cpu_pc, val);
+    } else {
+        tcg_gen_movi_i32(cpu_R[15], val);
+    }
 }
 
 void gen_sync_pc(DisasContext *dc)
