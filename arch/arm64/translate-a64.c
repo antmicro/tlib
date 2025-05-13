@@ -38,7 +38,7 @@ void arm_tr_tb_stop(DisasContextBase *dcbase, CPUState *cpu);
 void thumb_tr_translate_insn(DisasContextBase *dcbase, CPUState *env);
 
 static TCGv_i64 cpu_X[32];
-static TCGv_i64 cpu_pc;
+TCGv_i64 cpu_pc;
 
 static TCGv_i64 cpu_prev_sp;
 

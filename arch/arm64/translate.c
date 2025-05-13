@@ -51,7 +51,7 @@ static TCGv_i32 cpu_R[16];
 TCGv_i32 cpu_CF, cpu_NF, cpu_VF, cpu_ZF;
 TCGv_i64 cpu_exclusive_addr;
 TCGv_i64 cpu_exclusive_val;
-extern TCGv_i64 cpu_PC;
+extern TCGv_i64 cpu_pc;
 
 static const char *const regnames[] = { "r0", "r1", "r2",  "r3",  "r4",  "r5",  "r6",  "r7",
                                         "r8", "r9", "r10", "r11", "r12", "r13", "r14", "pc" };
