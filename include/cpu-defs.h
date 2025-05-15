@@ -39,7 +39,10 @@
 #define GETPC_INTERNAL() ((void *)((uintptr_t)__builtin_return_address(0) - 1))
 #endif
 
-#if defined(DEBUG)
+//  This check currently fails on i386/x86_64, sparc, and ppc guests so disable it
+//  these guests need a rewrite of how they handle instruction fetching for it to
+//  work correctly
+#if defined(DEBUG) && !defined(TARGET_I386) && !defined(TARGET_SPARC) && !defined(TARGET_PPC)
 #define GETPC()                            \
     ({                                     \
         void *pc = GETPC_INTERNAL();       \
