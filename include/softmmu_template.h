@@ -232,7 +232,13 @@ redo:
 __attribute__((always_inline)) inline DATA_TYPE REGPARM glue(glue(glue(__ld, SUFFIX), _err), MMUSUFFIX)(target_ulong addr,
                                                                                                         int mmu_idx, int *err)
 {
-    return glue(glue(glue(__inner_ld, SUFFIX), _err), MMUSUFFIX)(addr, mmu_idx, NULL, GETPC());
+    //  ppc guests do a lot of loads that can't fault through this function so disable the debug check for now
+#if defined(TARGET_PPC)
+    void *retaddr = GETPC_INTERNAL();
+#else
+    void *retaddr = GETPC();
+#endif
+    return glue(glue(glue(__inner_ld, SUFFIX), _err), MMUSUFFIX)(addr, mmu_idx, NULL, retaddr);
 }
 
 DATA_TYPE REGPARM glue(glue(__ld, SUFFIX), MMUSUFFIX)(target_ulong addr, int mmu_idx)

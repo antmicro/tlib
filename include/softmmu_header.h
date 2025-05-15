@@ -126,7 +126,7 @@ static inline int glue(glue(lds, SUFFIX), MEMSUFFIX)(target_ulong ptr)
 
 /* generic store macro */
 
-static inline void glue(glue(st, SUFFIX), MEMSUFFIX)(target_ulong ptr, RES_TYPE v)
+static inline void glue(glue(glue(st, SUFFIX), MEMSUFFIX), _inner)(target_ulong ptr, RES_TYPE v, void *retaddr)
 {
     int page_index;
     target_ulong addr;
@@ -137,11 +137,16 @@ static inline void glue(glue(st, SUFFIX), MEMSUFFIX)(target_ulong ptr, RES_TYPE 
     page_index = (addr >> TARGET_PAGE_BITS) & (CPU_TLB_SIZE - 1);
     mmu_idx = CPU_MMU_INDEX;
     if(unlikely(env->tlb_table[mmu_idx][page_index].addr_write != (addr & (TARGET_PAGE_MASK | (DATA_SIZE - 1))))) {
-        glue(glue(__st, SUFFIX), MMUSUFFIX)(addr, v, mmu_idx);
+        glue(glue(__inner_st, SUFFIX), MMUSUFFIX)(addr, v, mmu_idx, retaddr);
     } else {
         physaddr = addr + env->tlb_table[mmu_idx][page_index].addend;
         glue(glue(st, SUFFIX), _raw)(physaddr, v);
     }
+}
+static inline void glue(glue(st, SUFFIX), MEMSUFFIX)(target_ulong ptr, RES_TYPE v)
+{
+    void *retaddr = GETPC();
+    glue(glue(glue(st, SUFFIX), MEMSUFFIX), _inner)(ptr, v, retaddr);
 }
 
 #endif /* ACCESS_TYPE != (NB_MMU_MODES + 1) */

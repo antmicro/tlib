@@ -228,11 +228,12 @@ void helper_lmw(target_ulong addr, uint32_t reg)
 
 void helper_stmw(target_ulong addr, uint32_t reg)
 {
+    void *retaddr = GETPC();
     for(; reg < 32; reg++) {
         if(msr_le) {
-            stl(addr, bswap32((uint32_t)env->gpr[reg]));
+            stl_data_inner(addr, bswap32((uint32_t)env->gpr[reg]), retaddr);
         } else {
-            stl(addr, (uint32_t)env->gpr[reg]);
+            stl_data_inner(addr, (uint32_t)env->gpr[reg], retaddr);
         }
         addr = addr_add(addr, 4);
     }
@@ -272,15 +273,16 @@ void helper_lswx(target_ulong addr, uint32_t reg, uint32_t ra, uint32_t rb)
 
 void helper_stsw(target_ulong addr, uint32_t nb, uint32_t reg)
 {
+    void *retaddr = GETPC();
     int sh;
     for(; nb > 3; nb -= 4) {
-        stl(addr, env->gpr[reg]);
+        stl_data_inner(addr, env->gpr[reg], retaddr);
         reg = (reg + 1) % 32;
         addr = addr_add(addr, 4);
     }
     if(unlikely(nb > 0)) {
         for(sh = 24; nb > 0; nb--, sh -= 8) {
-            stb(addr, (env->gpr[reg] >> sh) & 0xFF);
+            stb_data_inner(addr, (env->gpr[reg] >> sh) & 0xFF, retaddr);
             addr = addr_add(addr, 1);
         }
     }
