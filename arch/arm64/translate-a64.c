@@ -2126,20 +2126,28 @@ static void disas_exc(DisasContext *s, uint32_t insn)
                      */
                     gen_a64_set_pc_im(s->pc_curr);
                     gen_helper_pre_hvc(cpu_env);
+                    if(env->emulate_hvc_calls && imm16 == 0) {
+                        //  In line with the PSCI Calling Conventions, the immediate value used with an SMC (or HVC) instruction
+                        //  must be 0.
+                        gen_helper_handle_psci_calls();
+                        break;
+                    }
                     gen_ss_advance(s);
                     gen_exception_insn_el(s, s->base.pc_next, EXCP_HVC, syn_aa64_hvc(imm16), 2);
                     break;
                 case 3: /* SMC */
-                    if(env->stub_smc_calls) {
-                        gen_helper_stub_smc();
-                        break;
-                    }
                     if(s->current_el == 0) {
                         unallocated_encoding(s);
                         break;
                     }
                     gen_a64_set_pc_im(s->pc_curr);
                     gen_helper_pre_smc(cpu_env, tcg_constant_i32(syn_aa64_smc(imm16)));
+                    if(env->emulate_smc_calls && imm16 == 0) {
+                        //  In line with the PSCI Calling Conventions, the immediate value used with an SMC (or HVC) instruction
+                        //  must be 0.
+                        gen_helper_handle_psci_calls();
+                        break;
+                    }
                     gen_ss_advance(s);
                     gen_exception_insn_el(s, s->base.pc_next, EXCP_SMC, syn_aa64_smc(imm16), 3);
                     break;

@@ -820,9 +820,9 @@ void HELPER(pre_hvc)(CPUARMState *env)
     }
 }
 
-void HELPER(stub_smc)()
+void HELPER(handle_psci_calls)()
 {
-    tlib_handle_smc_call();
+    tlib_handle_psci_call();
 }
 
 void HELPER(pre_smc)(CPUARMState *env, uint32_t syndrome)

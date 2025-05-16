@@ -526,7 +526,8 @@ void cpu_reset_v8_a64(CPUState *env)
 
     pstate_write(env, pstate);
 
-    env->stub_smc_calls = false;
+    env->emulate_smc_calls = false;
+    env->emulate_hvc_calls = false;
 }
 
 void cpu_reset_v8_a32(CPUState *env)
@@ -553,7 +554,8 @@ void cpu_reset_v8_a32(CPUState *env)
      */
     env->cp15.c9_pmcr = (env->cp15.c0_cpuid & 0xff000000);
 
-    env->stub_smc_calls = false;
+    env->emulate_smc_calls = false;
+    env->emulate_hvc_calls = false;
 }
 
 void do_interrupt_a64(CPUState *env)

@@ -73,11 +73,27 @@ uint32_t tlib_set_available_els(bool el2_enabled, bool el3_enabled)
 }
 EXC_INT_2(uint32_t, tlib_set_available_els, bool, el2_enabled, bool, el3_enabled)
 
-void tlib_stub_smc_calls(uint32_t enabled)
+void tlib_psci_handler_enable(uint32_t mode)
 {
-    env->stub_smc_calls = enabled;
+    //  Options are mutually exclusive
+    env->emulate_smc_calls = false;
+    env->emulate_hvc_calls = false;
+
+    switch(mode) {
+        case 0:
+            //  We have already disabled the handlers
+            break;
+        case 1:
+            env->emulate_smc_calls = true;
+            break;
+        case 2:
+            env->emulate_hvc_calls = true;
+            break;
+        default:
+            tlib_abortf("Unknown PSCI handler mode %d", mode);
+    }
 }
-EXC_VOID_1(tlib_stub_smc_calls, uint32_t, enabled)
+EXC_VOID_1(tlib_psci_handler_enable, uint32_t, mode)
 
 void tlib_set_current_el(uint32_t el)
 {

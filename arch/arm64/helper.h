@@ -251,7 +251,7 @@ DEF_HELPER_1(setend, void, env)
 DEF_HELPER_2(v8m_stackcheck, void, env, i32)
 DEF_HELPER_1(vesb, void, env)
 DEF_HELPER_1(yield, void, env)
-DEF_HELPER_0(stub_smc, void)
+DEF_HELPER_0(handle_psci_calls, void)
 
 DEF_HELPER_3(add_setq, i32, env, i32, i32)
 DEF_HELPER_3(add_saturate, i32, env, i32, i32)

@@ -423,7 +423,9 @@ typedef struct CPUState {
     bool aarch64; /* True if CPU is in aarch64 state; inverse of PSTATE.nRW */
     bool thumb;   /* True if CPU is in thumb mode; cpsr[5] */
 
-    bool stub_smc_calls;
+    /* Emulate PSCI conduit calls, without directing them to the platform firmware */
+    bool emulate_smc_calls;
+    bool emulate_hvc_calls;
 
     /* Cached TBFLAGS state.  See below for which bits are included.  */
     CPUARMTBFlags hflags;
