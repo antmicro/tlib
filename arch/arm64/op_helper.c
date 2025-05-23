@@ -831,6 +831,12 @@ void HELPER(pre_smc)(CPUARMState *env, uint32_t syndrome)
     bool secure = arm_is_secure(env);
     bool smd_flag = env->cp15.scr_el3 & SCR_SMD;
 
+    //  For SMC call emulation purposes we ignore the SMD bit [7] in SCR_EL3 register
+    //  and treat it as 0, which means that SMC instructions are enabled at EL3, EL2 and EL1
+    if(env->emulate_smc_calls) {
+        smd_flag = 0;
+    }
+
     /*
      * SMC behaviour is summarized in the following table.
      * This helper handles the "Trap to EL2" and "Undef insn" cases.
