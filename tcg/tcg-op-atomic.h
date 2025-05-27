@@ -31,20 +31,19 @@
 //  These are based on TCG's 'nonatomic' functions.
 //  tlib global memory locking makes them atomic.
 
-static inline void tcg_gen_atomic_cmpxchg_i32(TCGv_i32 retv, TCGv addr, TCGv_i32 cmpv, TCGv_i32 newv, TCGArg idx, TCGMemOp memop)
+static inline void tcg_gen_atomic_cmpxchg_i32_unsafe(TCGv_i32 retv, TCGv addr, TCGv_i32 cmpv, TCGv_i32 newv, TCGArg idx,
+                                                     TCGMemOp memop)
 {
     memop = tcg_canonicalize_memop(memop, 0, 0);
 
-    TCGv_i32 t1 = tcg_temp_new_i32();
-    TCGv_i32 t2 = tcg_temp_new_i32();
+    TCGv_i32 t1 = tcg_temp_local_new_i32_named("t1");
+    TCGv_i32 t2 = tcg_temp_local_new_i32_named("t2");
 
     tcg_gen_ext_i32(t2, cmpv, memop & MO_SIZE);
 
-    gen_helper_acquire_global_memory_lock(cpu_env);
     tcg_gen_qemu_ld_i32(t1, addr, idx, memop & ~MO_SIGN);
     tcg_gen_movcond_i32(TCG_COND_EQ, t2, t1, t2, newv, t1);
-    tcg_gen_qemu_st_i32(t2, addr, idx, memop);
-    gen_helper_release_global_memory_lock(cpu_env);
+    tcg_gen_qemu_st_i32_unsafe(t2, addr, idx, memop);
 
     tcg_temp_free_i32(t2);
 
@@ -56,20 +55,43 @@ static inline void tcg_gen_atomic_cmpxchg_i32(TCGv_i32 retv, TCGv addr, TCGv_i32
     tcg_temp_free_i32(t1);
 }
 
-static inline void tcg_gen_atomic_cmpxchg_i64(TCGv_i64 retv, TCGv addr, TCGv_i64 cmpv, TCGv_i64 newv, TCGArg idx, TCGMemOp memop)
+static inline void tcg_gen_host_atomic_cmpxchg_i32_unsafe(TCGv_i32 retv, TCGv addr, TCGv_i32 cmpv, TCGv_i32 newv, TCGArg idx,
+                                                          TCGMemOp memop)
+{
+    memop = tcg_canonicalize_memop(memop, 0, 0);
+
+    TCGv_i32 t1 = tcg_temp_local_new_i32_named("t1");
+    TCGv_i32 t2 = tcg_temp_local_new_i32_named("t2");
+
+    tcg_gen_ext_i32(t2, cmpv, memop & MO_SIZE);
+
+    tcg_gen_ld_i32(t1, addr, 0);
+    tcg_gen_movcond_i32(TCG_COND_EQ, t2, t1, t2, newv, t1);
+    tcg_gen_st_i32(t2, addr, 0);
+
+    tcg_temp_free_i32(t2);
+
+    if(memop & MO_SIGN) {
+        tcg_gen_ext_i32(retv, t1, memop);
+    } else {
+        tcg_gen_mov_i32(retv, t1);
+    }
+    tcg_temp_free_i32(t1);
+}
+
+static inline void tcg_gen_atomic_cmpxchg_i64_unsafe(TCGv_i64 retv, TCGv addr, TCGv_i64 cmpv, TCGv_i64 newv, TCGArg idx,
+                                                     TCGMemOp memop)
 {
     memop = tcg_canonicalize_memop(memop, 1, 0);
 
-    TCGv_i64 t1 = tcg_temp_new_i64();
-    TCGv_i64 t2 = tcg_temp_new_i64();
+    TCGv_i64 t1 = tcg_temp_local_new_i64_named("t1");
+    TCGv_i64 t2 = tcg_temp_local_new_i64_named("t2");
 
     tcg_gen_ext_i64(t2, cmpv, memop & MO_SIZE);
 
-    gen_helper_acquire_global_memory_lock(cpu_env);
     tcg_gen_qemu_ld_i64(t1, addr, idx, memop & ~MO_SIGN);
     tcg_gen_movcond_i64(TCG_COND_EQ, t2, t1, t2, newv, t1);
-    tcg_gen_qemu_st_i64(t2, addr, idx, memop);
-    gen_helper_release_global_memory_lock(cpu_env);
+    tcg_gen_qemu_st_i64_unsafe(t2, addr, idx, memop);
 
     tcg_temp_free_i64(t2);
 
@@ -81,12 +103,10 @@ static inline void tcg_gen_atomic_cmpxchg_i64(TCGv_i64 retv, TCGv addr, TCGv_i64
     tcg_temp_free_i64(t1);
 }
 
-static inline void tcg_gen_atomic_cmpxchg_i128(TCGv_i128 result, TCGv guestAddressLow, TCGv_i128 expectedValue,
-                                               TCGv_i128 newValue, TCGArg memIndex)
+static inline void tcg_gen_atomic_cmpxchg_i128_unsafe(TCGv_i128 result, TCGv guestAddressLow, TCGv_i128 expectedValue,
+                                                      TCGv_i128 newValue, TCGArg memIndex)
 {
     TCGMemOp memop = tcg_canonicalize_memop(MO_64, 1, 0);
-
-    gen_helper_acquire_global_memory_lock(cpu_env);
 
     //  Load the actual value located at the address.
     tcg_gen_qemu_ld_i128(result, guestAddressLow, memIndex, memop & ~MO_SIGN);
@@ -99,19 +119,17 @@ static inline void tcg_gen_atomic_cmpxchg_i128(TCGv_i128 result, TCGv guestAddre
     //  We didn't jump to `fail`, meaning the 128-bit comparison succeeded.
 
     //  CAS success: store the new value.
-    tcg_gen_qemu_st_i128(newValue, guestAddressLow, memIndex, memop);
+    tcg_gen_qemu_st_i128_unsafe(newValue, guestAddressLow, memIndex, memop);
 
     gen_set_label(fail);
-
-    gen_helper_release_global_memory_lock(cpu_env);
 }
 
 //  'new_val' controls whether a value before or after the operation should be returned.
 static void do_atomic_op_i32(TCGv_i32 ret, TCGv addr, TCGv_i32 val, TCGArg idx, TCGMemOp memop, bool new_val,
                              void (*gen)(TCGv_i32, TCGv_i32, TCGv_i32))
 {
-    TCGv_i32 t1 = tcg_temp_new_i32();
-    TCGv_i32 t2 = tcg_temp_new_i32();
+    TCGv_i32 t1 = tcg_temp_local_new_i32_named("t1");
+    TCGv_i32 t2 = tcg_temp_local_new_i32_named("t2");
 
     memop = tcg_canonicalize_memop(memop, 0, 0);
 
@@ -131,8 +149,8 @@ static void do_atomic_op_i32(TCGv_i32 ret, TCGv addr, TCGv_i32 val, TCGArg idx, 
 static void do_atomic_op_i64(TCGv_i64 ret, TCGv addr, TCGv_i64 val, TCGArg idx, TCGMemOp memop, bool new_val,
                              void (*gen)(TCGv_i64, TCGv_i64, TCGv_i64))
 {
-    TCGv_i64 t1 = tcg_temp_new_i64();
-    TCGv_i64 t2 = tcg_temp_new_i64();
+    TCGv_i64 t1 = tcg_temp_local_new_i64_named("t1");
+    TCGv_i64 t2 = tcg_temp_local_new_i64_named("t2");
 
     memop = tcg_canonicalize_memop(memop, 1, 0);
 

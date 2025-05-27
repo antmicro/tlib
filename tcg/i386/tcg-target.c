@@ -526,9 +526,13 @@ static inline void tcg_out_mb(TCGContext *s, TCGArg a0)
        store-load ordering.  Experimentally, "lock orl $0,0(%esp)" is
        faster than "mfence", so don't bother with the sse insn.  */
     if(a0 & TCG_MO_ST_LD) {
+        //  todo: trying mfence, removeme
+        tcg_out8(s, 0x0f);
+        tcg_out8(s, 0xAE);
         tcg_out8(s, 0xf0);
-        tcg_out_modrm_offset(s, OPC_ARITH_EvIb, ARITH_OR, TCG_REG_ESP, 0);
-        tcg_out8(s, 0);
+        //  todo: tcg_out8(s, 0xf0);
+        //  todo: tcg_out_modrm_offset(s, OPC_ARITH_EvIb, ARITH_OR, TCG_REG_ESP, 0);
+        //  todo: tcg_out8(s, 0);
     }
 }
 

@@ -2009,7 +2009,7 @@ static void translate_s32c1i(DisasContext *dc, const OpcodeArg arg[], const uint
     tcg_gen_addi_i32(addr, arg[1].in, arg[2].imm);
     gen_load_store_alignment(dc, 2, addr, true);
     gen_check_atomctl(dc, addr);
-    tcg_gen_atomic_cmpxchg_i32(arg[0].out, addr, cpu_SR[SCOMPARE1], tmp, dc->cring, MO_TEUL);
+    tcg_gen_atomic_cmpxchg_i32_unsafe(arg[0].out, addr, cpu_SR[SCOMPARE1], tmp, dc->cring, MO_TEUL);
     tcg_temp_free(addr);
     tcg_temp_free(tmp);
 }
@@ -2038,7 +2038,7 @@ static void translate_s32ex(DisasContext *dc, const OpcodeArg arg[], const uint3
     gen_load_store_alignment(dc, 2, addr, true);
     tcg_gen_brcond_i32(TCG_COND_NE, addr, cpu_exclusive_addr, label);
     gen_check_exclusive(dc, addr, true);
-    tcg_gen_atomic_cmpxchg_i32(prev, cpu_exclusive_addr, cpu_exclusive_val, arg[0].in, dc->cring, MO_TEUL);
+    tcg_gen_atomic_cmpxchg_i32_unsafe(prev, cpu_exclusive_addr, cpu_exclusive_val, arg[0].in, dc->cring, MO_TEUL);
     tcg_gen_setcond_i32(TCG_COND_EQ, res, prev, cpu_exclusive_val);
     tcg_gen_movcond_i32(TCG_COND_EQ, cpu_exclusive_val, prev, cpu_exclusive_val, prev, cpu_exclusive_val);
     tcg_gen_movi_i32(cpu_exclusive_addr, -1);

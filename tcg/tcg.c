@@ -74,8 +74,30 @@ static TCGRegSet tcg_target_available_regs[2];
 static TCGRegSet tcg_target_call_clobber_regs;
 
 /* XXX: move that inside the context */
-uint16_t *gen_opc_ptr;
+TCGOpcodeEntry *gen_opc_ptr;
 TCGArg *gen_opparam_ptr;
+
+static inline void tcg_print_opcode_backtrace(TCGContext *s)
+{
+    TCGOpcodeEntry *entry = s->current_code;
+    if(entry == NULL) {
+        tlib_printf(LOG_LEVEL_WARNING, "%s: Current opcode not set", __func__);
+        return;
+    }
+
+#ifdef TCG_DEBUG_BACKTRACE
+    if(entry->backtrace_symbols == NULL) {
+        tlib_printf(LOG_LEVEL_WARNING, "%s: Opcode %x has no backtrace", __func__, entry->opcode);
+        return;
+    }
+
+    tlib_printf(LOG_LEVEL_ERROR, "Failed when processing opcode %x", entry->opcode);
+    for(int i = 0; i < entry->backtrace_entries; i++) {
+        char *backtrace_symbol = entry->backtrace_symbols[i];
+        tlib_printf(LOG_LEVEL_ERROR, "At %s", backtrace_symbol);
+    }
+#endif
+}
 
 static inline void tcg_out8(TCGContext *s, uint8_t v)
 {
@@ -223,7 +245,7 @@ static void tcg_pool_free(TCGContext *s)
 
 static TCGContext ctx;
 static TCGArg gen_opparam_buf[OPPARAM_BUF_SIZE];
-static uint16_t gen_opc_buf[OPC_BUF_SIZE];
+static TCGOpcodeEntry gen_opc_buf[OPC_BUF_SIZE];
 
 static uint16_t gen_insn_end_off[TCG_MAX_INSNS];
 static target_ulong gen_insn_data[TCG_MAX_INSNS][TARGET_INSN_START_WORDS];
@@ -287,12 +309,27 @@ void tcg_context_use_tlb(int value)
     tcg->ctx->use_tlb = !!value;
 }
 
+void tcg_free_backtraces(const TCGOpcodeEntry *gen_opc_buf)
+{
+#ifdef TCG_DEBUG_BACKTRACE
+    for(int i = 0; i < OPC_BUF_SIZE; i++) {
+        const TCGOpcodeEntry entry = gen_opc_buf[i];
+        if(entry.backtrace_symbols == NULL) {
+            continue;
+        }
+        //  Backtraces are allocated using normal `malloc`, so must be freed by `free`.
+        free(entry.backtrace_symbols);
+    }
+#endif
+}
+
 void tcg_dispose()
 {
     TCG_free(tcg_op_defs[0].args_ct);
     TCG_free(tcg_op_defs[0].sorted_args);
     tcg_pool_free(tcg->ctx);
     TCG_free(tcg->ctx->helpers);
+    tcg_free_backtraces(tcg->gen_opc_buf);
 }
 
 void tcg_prologue_init()
@@ -452,7 +489,7 @@ TCGv_i64 tcg_global_mem_new_i64(int reg, tcg_target_long offset, const char *nam
     return MAKE_TCGV_I64(idx);
 }
 
-static inline int tcg_temp_new_internal(TCGType type, int temp_local)
+static inline int tcg_temp_new_internal_named(TCGType type, int temp_local, const char *name)
 {
     TCGContext *s = tcg->ctx;
     TCGTemp *ts;
@@ -480,13 +517,13 @@ static inline int tcg_temp_new_internal(TCGType type, int temp_local)
             ts->type = TCG_TYPE_I32;
             ts->temp_allocated = 1;
             ts->temp_local = temp_local;
-            ts->name = NULL;
+            ts->name = name;
             ts++;
             ts->base_type = TCG_TYPE_I32;
             ts->type = TCG_TYPE_I32;
             ts->temp_allocated = 1;
             ts->temp_local = temp_local;
-            ts->name = NULL;
+            ts->name = name;
             s->nb_temps += 2;
         } else
 #endif
@@ -497,7 +534,7 @@ static inline int tcg_temp_new_internal(TCGType type, int temp_local)
             ts->type = type;
             ts->temp_allocated = 1;
             ts->temp_local = temp_local;
-            ts->name = NULL;
+            ts->name = name;
             s->nb_temps++;
         }
     }
@@ -505,20 +542,30 @@ static inline int tcg_temp_new_internal(TCGType type, int temp_local)
     return idx;
 }
 
-TCGv_i32 tcg_temp_new_internal_i32(int temp_local)
+TCGv_i32 tcg_temp_new_internal_i32_named(int temp_local, const char *name)
 {
     int idx;
 
-    idx = tcg_temp_new_internal(TCG_TYPE_I32, temp_local);
+    idx = tcg_temp_new_internal_named(TCG_TYPE_I32, temp_local, name);
     return MAKE_TCGV_I32(idx);
+}
+
+TCGv_i32 tcg_temp_new_internal_i32(int temp_local)
+{
+    return tcg_temp_new_internal_i32_named(temp_local, NULL);
+}
+
+TCGv_i64 tcg_temp_new_internal_i64_named(int temp_local, const char *name)
+{
+    int idx;
+
+    idx = tcg_temp_new_internal_named(TCG_TYPE_I64, temp_local, name);
+    return MAKE_TCGV_I64(idx);
 }
 
 TCGv_i64 tcg_temp_new_internal_i64(int temp_local)
 {
-    int idx;
-
-    idx = tcg_temp_new_internal(TCG_TYPE_I64, temp_local);
-    return MAKE_TCGV_I64(idx);
+    return tcg_temp_new_internal_i64_named(temp_local, NULL);
 }
 
 static inline void tcg_temp_free_internal(int idx)
@@ -555,36 +602,56 @@ void tcg_temp_free_i128(TCGv_i128 arg)
     tcg_temp_free_i64(arg.high);
 }
 
-TCGv_i32 tcg_const_i32(int32_t val)
+TCGv_i32 tcg_const_i32_named(int32_t val, const char *name)
 {
     TCGv_i32 t0;
-    t0 = tcg_temp_new_i32();
+    t0 = tcg_temp_new_i32_named(name);
     tcg_gen_movi_i32(t0, val);
+    return t0;
+}
+
+TCGv_i32 tcg_const_i32(int32_t val)
+{
+    return tcg_const_i32_named(val, NULL);
+}
+
+TCGv_i64 tcg_const_i64_named(int64_t val, const char *name)
+{
+    TCGv_i64 t0;
+    t0 = tcg_temp_new_i64_named(name);
+    tcg_gen_movi_i64(t0, val);
     return t0;
 }
 
 TCGv_i64 tcg_const_i64(int64_t val)
 {
-    TCGv_i64 t0;
-    t0 = tcg_temp_new_i64();
-    tcg_gen_movi_i64(t0, val);
+    return tcg_const_i64_named(val, NULL);
+}
+
+TCGv_i32 tcg_const_local_i32_named(int32_t val, const char *name)
+{
+    TCGv_i32 t0;
+    t0 = tcg_temp_local_new_i32_named(name);
+    tcg_gen_movi_i32(t0, val);
     return t0;
 }
 
 TCGv_i32 tcg_const_local_i32(int32_t val)
 {
-    TCGv_i32 t0;
-    t0 = tcg_temp_local_new_i32();
-    tcg_gen_movi_i32(t0, val);
+    return tcg_const_local_i32_named(val, NULL);
+}
+
+TCGv_i64 tcg_const_local_i64_named(int64_t val, const char *name)
+{
+    TCGv_i64 t0;
+    t0 = tcg_temp_local_new_i64_named(name);
+    tcg_gen_movi_i64(t0, val);
     return t0;
 }
 
 TCGv_i64 tcg_const_local_i64(int64_t val)
 {
-    TCGv_i64 t0;
-    t0 = tcg_temp_local_new_i64();
-    tcg_gen_movi_i64(t0, val);
-    return t0;
+    return tcg_const_local_i64_named(val, NULL);
 }
 
 void tcg_register_helper(void *func, const char *name)
@@ -636,7 +703,7 @@ void tcg_gen_callN(TCGContext *s, TCGv_ptr func, unsigned int flags, int sizemas
     }
 #endif /* TCG_TARGET_EXTEND_ARGS */
 
-    *gen_opc_ptr++ = INDEX_op_call;
+    *gen_opc_ptr++ = tcg_create_opcode_entry(INDEX_op_call);
     nparam = gen_opparam_ptr++;
 #if defined(TCG_TARGET_I386) && TCG_TARGET_REG_BITS < 64
     call_type = (flags & TCG_CALL_TYPE_MASK);
@@ -985,12 +1052,12 @@ void tcg_add_target_add_op_defs(const TCGTargetOpDef *tdefs)
 #ifdef USE_LIVENESS_ANALYSIS
 
 /* set a nop for an operation using 'nb_args' */
-static inline void tcg_set_nop(TCGContext *s, uint16_t *opc_ptr, TCGArg *args, int nb_args)
+static inline void tcg_set_nop(TCGContext *s, TCGOpcodeEntry *opc_ptr, TCGArg *args, int nb_args)
 {
     if(nb_args == 0) {
-        *opc_ptr = INDEX_op_nop;
+        *opc_ptr = tcg_create_opcode_entry(INDEX_op_nop);
     } else {
-        *opc_ptr = INDEX_op_nopn;
+        *opc_ptr = tcg_create_opcode_entry(INDEX_op_nopn);
         args[0] = nb_args;
         args[nb_args - 1] = nb_args;
     }
@@ -1049,7 +1116,7 @@ static void tcg_liveness_analysis(TCGContext *s)
     args = gen_opparam_ptr;
     op_index = nb_ops - 1;
     while(op_index >= 0) {
-        op = tcg->gen_opc_buf[op_index];
+        op = tcg->gen_opc_buf[op_index].opcode;
         def = &tcg_op_defs[op];
         switch(op) {
             case INDEX_op_call: {
@@ -1181,7 +1248,7 @@ static void tcg_liveness_analysis(TCGContext *s)
     }
 
     if(args != tcg->gen_opparam_buf) {
-        tcg_abort();
+        tlib_abortf("%s: %p should be %p. Missing %i args", __func__, args, tcg->gen_opparam_buf, args - tcg->gen_opparam_buf);
     }
 }
 #else
@@ -1405,8 +1472,15 @@ static void tcg_reg_alloc_mov(TCGContext *s, const TCGOpDef *def, const TCGArg *
             ots->val = ts->val;
             return;
         }
+    } else if(ts->val_type == TEMP_VAL_DEAD) {
+        tcg_print_opcode_backtrace(s);
+        tlib_abortf("%s: "
+                    "unexpected val_type `TEMP_VAL_DEAD` for TCGv '%s' def '%s'",
+                    __func__, ts->name ? ts->name : "unnamed", def->name);
     } else {
-        tcg_abort();
+        tcg_print_opcode_backtrace(s);
+        tlib_abortf("%s: unexpected val_type `%d` for TCGv '%s' def '%s'", __func__, ts->val_type,
+                    ts->name ? ts->name : "unnamed", def->name);
     }
     s->reg_to_temp[reg] = args[0];
     ots->reg = reg;
@@ -1459,6 +1533,11 @@ static void tcg_reg_alloc_op(TCGContext *s, const TCGOpDef *def, TCGOpcode opc, 
                 ts->mem_coherent = 0;
                 s->reg_to_temp[reg] = arg;
             }
+        }
+        if(ts->val_type != TEMP_VAL_REG) {
+            tcg_print_opcode_backtrace(s);
+            tlib_abortf("%s: TCGv '%s' must be in register at this point when allocating arg %d of `%s`", __func__,
+                        ts->name ? ts->name : "unnamed", k, def->name);
         }
         assert(ts->val_type == TEMP_VAL_REG);
         if(arg_ct->ct & TCG_CT_IALIAS) {
@@ -1613,7 +1692,8 @@ static int tcg_reg_alloc_call(TCGContext *s, const TCGOpDef *def, TCGOpcode opc,
     if(allocate_args) {
         /* XXX: if more than TCG_STATIC_CALL_ARGS_SIZE is needed,
            preallocate call stack */
-        tcg_abort();
+        tcg_print_opcode_backtrace(s);
+        tlib_abortf("%s: call stack size %i too large (>%i)", __func__, call_stack_size, TCG_STATIC_CALL_ARGS_SIZE);
     }
 
     stack_offset = TCG_TARGET_CALL_STACK_OFFSET;
@@ -1637,7 +1717,9 @@ static int tcg_reg_alloc_call(TCGContext *s, const TCGOpDef *def, TCGOpcode opc,
                 tcg_out_movi(s, ts->type, reg, ts->val);
                 tcg_out_st(s, ts->type, reg, TCG_REG_CALL_STACK, stack_offset);
             } else {
-                tcg_abort();
+                tcg_print_opcode_backtrace(s);
+                tlib_abortf("%s: unexpected val_type `%d` for TCGv '%s' def '%s'", __func__, ts->val_type,
+                            ts->name ? ts->name : "unnamed", def->name);
             }
         }
 #ifndef TCG_TARGET_STACK_GROWSUP
@@ -1782,7 +1864,8 @@ static inline int tcg_gen_code_common(TCGContext *s, uint8_t *gen_code_buf)
     num_insns = -1;
 
     for(;;) {
-        opc = tcg->gen_opc_buf[op_index];
+        s->current_code = &tcg->gen_opc_buf[op_index];
+        opc = s->current_code->opcode;
         def = &tcg_op_defs[opc];
         switch(opc) {
             case INDEX_op_mov_i32:

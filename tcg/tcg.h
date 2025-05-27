@@ -198,7 +198,7 @@ typedef enum TCGOpcode {
 #include "tcg-opc.h"
 #undef DEF
     NB_OPS,
-} TCGOpcode;
+} __attribute__((__packed__)) TCGOpcode;
 
 #define tcg_regset_clear(d)             (d) = 0
 #define tcg_regset_set(d, s)            (d) = (s)
@@ -500,6 +500,14 @@ typedef struct TCGHelperInfo {
     const char *name;
 } TCGHelperInfo;
 
+typedef struct TCGOpcodeEntry {
+    TCGOpcode opcode;
+#ifdef TCG_DEBUG_BACKTRACE
+    char **backtrace_symbols;
+    uint32_t backtrace_entries;
+#endif
+} TCGOpcodeEntry;
+
 typedef struct TCGContext TCGContext;
 
 struct TCGContext {
@@ -515,6 +523,7 @@ struct TCGContext {
 
     /* goto_tb support */
     uint8_t *code_buf;
+    TCGOpcodeEntry *current_code;
     uintptr_t *tb_next;
     uint16_t *tb_next_offset;
     uint16_t *tb_jmp_offset;
@@ -544,7 +553,7 @@ struct TCGContext {
     uint32_t *number_of_registered_cpus;
 };
 
-extern uint16_t *gen_opc_ptr;
+extern TCGOpcodeEntry *gen_opc_ptr;
 extern TCGArg *gen_opparam_ptr;
 
 /* pool based memory allocation */
@@ -557,7 +566,7 @@ void tcg_pool_delete(TCGContext *s);
 
 typedef struct tcg_t {
     TCGContext *ctx;
-    uint16_t *gen_opc_buf;
+    TCGOpcodeEntry *gen_opc_buf;
     TCGArg *gen_opparam_buf;
     uint8_t *code_gen_prologue;
     uint16_t *gen_insn_end_off;
@@ -612,13 +621,22 @@ void tcg_set_frame(TCGContext *s, int reg, tcg_target_long start, tcg_target_lon
 TCGv_i32 tcg_global_reg_new_i32(int reg, const char *name);
 TCGv_i32 tcg_global_mem_new_i32(int reg, tcg_target_long offset, const char *name);
 TCGv_i32 tcg_temp_new_internal_i32(int temp_local);
+TCGv_i64 tcg_temp_new_internal_i32_named(int temp_local, const char *name);
+static inline TCGv_i32 tcg_temp_new_i32_named(const char *name)
+{
+    return tcg_temp_new_internal_i32_named(0, name);
+}
 static inline TCGv_i32 tcg_temp_new_i32(void)
 {
-    return tcg_temp_new_internal_i32(0);
+    return tcg_temp_new_i32_named(NULL);
 }
 static inline TCGv_i32 tcg_temp_local_new_i32(void)
 {
     return tcg_temp_new_internal_i32(1);
+}
+static inline TCGv_i32 tcg_temp_local_new_i32_named(const char *name)
+{
+    return tcg_temp_new_internal_i32_named(1, name);
 }
 void tcg_temp_free_i32(TCGv_i32 arg);
 char *tcg_get_arg_str_i32(TCGContext *s, char *buf, int buf_size, TCGv_i32 arg);
@@ -626,13 +644,22 @@ char *tcg_get_arg_str_i32(TCGContext *s, char *buf, int buf_size, TCGv_i32 arg);
 TCGv_i64 tcg_global_reg_new_i64(int reg, const char *name);
 TCGv_i64 tcg_global_mem_new_i64(int reg, tcg_target_long offset, const char *name);
 TCGv_i64 tcg_temp_new_internal_i64(int temp_local);
+TCGv_i64 tcg_temp_new_internal_i64_named(int temp_local, const char *name);
+static inline TCGv_i64 tcg_temp_new_i64_named(const char *name)
+{
+    return tcg_temp_new_internal_i64_named(0, name);
+}
 static inline TCGv_i64 tcg_temp_new_i64(void)
 {
-    return tcg_temp_new_internal_i64(0);
+    return tcg_temp_new_i64_named(NULL);
 }
 static inline TCGv_i64 tcg_temp_local_new_i64(void)
 {
     return tcg_temp_new_internal_i64(1);
+}
+static inline TCGv_i64 tcg_temp_local_new_i64_named(const char *name)
+{
+    return tcg_temp_new_internal_i64_named(1, name);
 }
 void tcg_temp_free_i64(TCGv_i64 arg);
 char *tcg_get_arg_str_i64(TCGContext *s, char *buf, int buf_size, TCGv_i64 arg);
@@ -740,15 +767,19 @@ void tcg_add_target_add_op_defs(const TCGTargetOpDef *tdefs);
 
 #if HOST_LONG_BITS == 64
 
-#define tcg_temp_new_hostptr()       tcg_temp_new_i64()
-#define tcg_temp_local_new_hostptr() tcg_temp_local_new_i64()
-#define tcg_temp_free_hostptr(T)     tcg_temp_free_i64(T)
+#define tcg_temp_new_hostptr()           tcg_temp_new_i64()
+#define tcg_temp_new_hostptr_named       tcg_temp_new_i64_named
+#define tcg_temp_local_new_hostptr()     tcg_temp_local_new_i64()
+#define tcg_temp_local_new_hostptr_named tcg_temp_local_new_i64_named
+#define tcg_temp_free_hostptr(T)         tcg_temp_free_i64(T)
 
 #elif HOST_LONG_BITS == 32
 
-#define tcg_temp_new_hostptr()       tcg_temp_new_i32()
-#define tcg_temp_local_new_hostptr() tcg_temp_local_new_i32()
-#define tcg_temp_free_hostptr(T)     tcg_temp_free_i32(T)
+#define tcg_temp_new_hostptr()           tcg_temp_new_i32()
+#define tcg_temp_new_hostptr_named       tcg_temp_new_i32_named
+#define tcg_temp_local_new_hostptr()     tcg_temp_local_new_i32()
+#define tcg_temp_local_new_hostptr_named tcg_temp_local_new_i32_named
+#define tcg_temp_free_hostptr(T)         tcg_temp_free_i32(T)
 
 #else
 
@@ -760,7 +791,7 @@ void tcg_gen_callN(TCGContext *s, TCGv_ptr func, unsigned int flags, int sizemas
 
 void tcg_gen_shifti_i64(TCGv_i64 ret, TCGv_i64 arg1, int c, int right, int arith);
 
-TCGArg *tcg_optimize(TCGContext *s, uint16_t *tcg_opc_ptr, TCGArg *args, TCGOpDef *tcg_op_def);
+TCGArg *tcg_optimize(TCGContext *s, TCGOpcodeEntry *tcg_opc_ptr, TCGArg *args, TCGOpDef *tcg_op_def);
 
 /* only used for debugging purposes */
 void tcg_register_helper(void *func, const char *name);
@@ -769,9 +800,13 @@ void tcg_dump_ops(TCGContext *s, FILE *outfile);
 
 void dump_ops(const uint16_t *opc_buf, const TCGArg *opparam_buf);
 TCGv_i32 tcg_const_i32(int32_t val);
+TCGv_i32 tcg_const_i32_named(int32_t val, const char *name);
 TCGv_i64 tcg_const_i64(int64_t val);
+TCGv_i32 tcg_const_i64_named(int64_t val, const char *name);
 TCGv_i32 tcg_const_local_i32(int32_t val);
+TCGv_i32 tcg_const_local_i32_named(int32_t val, const char *name);
 TCGv_i64 tcg_const_local_i64(int64_t val);
+TCGv_i64 tcg_const_local_i64_named(int64_t val, const char *name);
 
 /* Test for whether to terminate the TB for using too many opcodes.  */
 static inline bool tcg_op_buf_full(void)
