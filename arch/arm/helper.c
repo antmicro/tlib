@@ -1352,9 +1352,9 @@ static void do_interrupt_v7m(CPUState *env)
 
             if(arm_feature(env, ARM_FEATURE_V8)) {
                 if(env->secure && (env->v7m.fpccr[env->secure] & ARM_FPCCR_TS_MASK) > 0) {
-                    for(int i = 0; i < 8; ++i) {
-                        v7m_push(env, env->vfp.regs[16 - i] >> 32);
-                        v7m_push(env, env->vfp.regs[16 - i]);
+                    for(int i = 15; i >= 8; --i) {
+                        v7m_push(env, env->vfp.regs[i] >> 32);
+                        v7m_push(env, env->vfp.regs[i]);
                     }
                 }
             }
@@ -1363,11 +1363,11 @@ static void do_interrupt_v7m(CPUState *env)
             uint32_t fpscr = vfp_get_fpscr(env);
             v7m_push(env, fpscr);
 
-            for(int i = 0; i < 8; ++i) {
+            for(int i = 7; i >= 0; i--) {
                 /* We need to swap low and high register parts, to pop them correctly on state restore.
                  * The state can be restored on excp exit, or by specific load instructions */
-                v7m_push(env, env->vfp.regs[8 - i] >> 32);
-                v7m_push(env, env->vfp.regs[8 - i]);
+                v7m_push(env, env->vfp.regs[i] >> 32);
+                v7m_push(env, env->vfp.regs[i]);
             }
             /* Set default values from FPDSCR to FPSCR in new context */
             vfp_set_fpscr(env, (fpscr & ~ARM_FPDSCR_VALUES_MASK) | (env->v7m.fpdscr[env->secure] & ARM_FPDSCR_VALUES_MASK));
