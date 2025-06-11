@@ -216,19 +216,30 @@ static int ensure_fp_extension(DisasContext *dc, int precision_bit)
     }
 }
 
-static int ensure_fp_extension_for_load_store(DisasContext *dc)
+static int ensure_fp_extension_for_load_store(DisasContext *dc, uint32_t opc)
 {
-    switch(extract64(dc->opcode, 12, 3)) {
-        case 1:
-            return ensure_additional_extension(dc, RISCV_FEATURE_ZFH);
-        case 2:
+    //  The FS/L W and D has compressed variants with a different way of encoding width,
+    //  so they have to be handled seperatly
+    switch(opc) {
+        case OPC_RISC_FSW:
+        case OPC_RISC_FLW:
             return ensure_extension(dc, RISCV_FEATURE_RVF);
-        case 3:
+        case OPC_RISC_FSD:
+        case OPC_RISC_FLD:
             return ensure_extension(dc, RISCV_FEATURE_RVD);
         default:
-            tlib_printf(LOG_LEVEL_ERROR, "Unknown floating point instruction encoding! PC: 0x%llx", dc->base.pc);
-            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
-            return false;
+            switch(extract64(dc->opcode, 12, 3)) {
+                case 1:
+                    return ensure_additional_extension(dc, RISCV_FEATURE_ZFH);
+                case 2:
+                    return ensure_extension(dc, RISCV_FEATURE_RVF);
+                case 3:
+                    return ensure_extension(dc, RISCV_FEATURE_RVD);
+                default:
+                    tlib_printf(LOG_LEVEL_ERROR, "Unknown floating point instruction encoding! PC: 0x%llx", dc->base.pc);
+                    kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+                    return false;
+            }
     }
 }
 
@@ -1558,7 +1569,7 @@ static void gen_store(DisasContext *dc, uint32_t opc, int rs1, int rs2, target_l
 
 static void gen_fp_load(DisasContext *dc, uint32_t opc, int rd, int rs1, target_long imm)
 {
-    if(!ensure_fp_extension_for_load_store(dc)) {
+    if(!ensure_fp_extension_for_load_store(dc, opc)) {
         return;
     }
 
@@ -1807,7 +1818,7 @@ static void gen_v_load(DisasContext *dc, uint32_t opc, uint32_t rest, uint32_t v
 
 static void gen_fp_store(DisasContext *dc, uint32_t opc, int rs1, int rs2, target_long imm)
 {
-    if(!ensure_fp_extension_for_load_store(dc)) {
+    if(!ensure_fp_extension_for_load_store(dc, opc)) {
         return;
     }
 
