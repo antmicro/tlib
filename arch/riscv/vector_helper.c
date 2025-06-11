@@ -395,23 +395,31 @@ void helper_vmsbc_vv(CPUState *env, uint32_t vd, int32_t vs2, int32_t vs1)
         uint8_t mask = ~(1 << (i & 0x7));
         switch(eew) {
             case 8: {
+                uint8_t a = ((uint8_t *)V(vs2))[i];
+                uint8_t b = ((uint8_t *)V(vs1))[i];
                 V(vd)[i >> 3] &= mask;
-                V(vd)[i >> 3] |= (((uint8_t *)V(vs2))[i] < ((uint8_t *)V(vs1))[i]) << (i & 0x7);
+                V(vd)[i >> 3] |= (a < b) << (i & 0x7);
                 break;
             }
             case 16: {
+                uint16_t a = ((uint16_t *)V(vs2))[i];
+                uint16_t b = ((uint16_t *)V(vs1))[i];
                 V(vd)[i >> 3] &= mask;
-                V(vd)[i >> 3] |= (((uint16_t *)V(vs2))[i] < ((uint16_t *)V(vs1))[i]) << (i & 0x7);
+                V(vd)[i >> 3] |= (a < b) << (i & 0x7);
                 break;
             }
             case 32: {
+                uint32_t a = ((uint32_t *)V(vs2))[i];
+                uint32_t b = ((uint32_t *)V(vs1))[i];
                 V(vd)[i >> 3] &= mask;
-                V(vd)[i >> 3] |= (((uint32_t *)V(vs2))[i] < ((uint32_t *)V(vs1))[i]) << (i & 0x7);
+                V(vd)[i >> 3] |= (a < b) << (i & 0x7);
                 break;
             }
             case 64: {
+                uint64_t a = ((uint64_t *)V(vs2))[i];
+                uint64_t b = ((uint64_t *)V(vs1))[i];
                 V(vd)[i >> 3] &= mask;
-                V(vd)[i >> 3] |= (((uint64_t *)V(vs2))[i] < ((uint64_t *)V(vs1))[i]) << (i & 0x7);
+                V(vd)[i >> 3] |= (a < b) << (i & 0x7);
                 break;
             }
             default:
@@ -627,23 +635,27 @@ void helper_vmsbc_vi(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
         uint8_t mask = ~(1 << (i & 0x7));
         switch(eew) {
             case 8: {
+                uint8_t a = ((uint8_t *)V(vs2))[i];
                 V(vd)[i >> 3] &= mask;
-                V(vd)[i >> 3] |= (((uint8_t *)V(vs2))[i] < (uint8_t)((int8_t)rs1)) << (i & 0x7);
+                V(vd)[i >> 3] |= ((a < (uint8_t)((int8_t)rs1))) << (i & 0x7);
                 break;
             }
             case 16: {
+                uint16_t a = ((uint16_t *)V(vs2))[i];
                 V(vd)[i >> 3] &= mask;
-                V(vd)[i >> 3] |= (((uint16_t *)V(vs2))[i] < (uint16_t)((int16_t)rs1)) << (i & 0x7);
+                V(vd)[i >> 3] |= ((a < (uint16_t)((int16_t)rs1))) << (i & 0x7);
                 break;
             }
             case 32: {
+                uint32_t a = ((uint32_t *)V(vs2))[i];
                 V(vd)[i >> 3] &= mask;
-                V(vd)[i >> 3] |= (((uint32_t *)V(vs2))[i] < (uint32_t)((int32_t)rs1)) << (i & 0x7);
+                V(vd)[i >> 3] |= ((a < (uint32_t)((int32_t)rs1))) << (i & 0x7);
                 break;
             }
             case 64: {
+                uint64_t a = ((uint64_t *)V(vs2))[i];
                 V(vd)[i >> 3] &= mask;
-                V(vd)[i >> 3] |= (((uint64_t *)V(vs2))[i] < (uint64_t)((int64_t)rs1)) << (i & 0x7);
+                V(vd)[i >> 3] |= ((a < (uint64_t)((int64_t)rs1))) << (i & 0x7);
                 break;
             }
             default:
