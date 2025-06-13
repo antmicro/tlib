@@ -253,3 +253,12 @@ target_link_libraries (tlib
     ${SOFTFLOAT3}
     tcg
     )
+
+# Make GDB's symbol lookup find the `cpu` symbol from the current library
+if(EXISTS "${CMAKE_ROOT}/Modules/CheckLinkerFlag.cmake")
+    include(CheckLinkerFlag)
+    check_linker_flag(C -Wl,-Bsymbolic LINKER_SUPPORTS_BSYMBOLIC)
+    if(LINKER_SUPPORTS_BSYMBOLIC)
+        target_link_options(tlib PUBLIC -Wl,-Bsymbolic)
+    endif()
+endif()
