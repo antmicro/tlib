@@ -189,6 +189,34 @@ int riscv_cpu_hw_interrupts_pending(CPUState *env)
                                                            : ctz64(enabled_interrupts);
 }
 
+/*
+ * This is called in `get_physical_address()` only in the cases where we return the physical address without changes
+ * such as when running in M-mode
+ *
+ * If the address is actually being translated then the check is performed separately
+ */
+static bool is_within_legal_address_space(target_ulong address, int access_type, int no_page_fault)
+{
+#if TARGET_LONG_BITS == 32
+    return true;
+#else
+    uint64_t mask = (UINT64_C(1) << TARGET_PHYS_ADDR_SPACE_BITS) - 1;
+    if((address & ~mask) == 0) {
+        return true;
+    }
+    const char *action = access_type == ACCESS_INST_FETCH ? "execute code" : "access memory";
+    if(!no_page_fault && access_type == ACCESS_INST_FETCH) {
+        tlib_abortf("Trying to %s from an illegal address outside of the physical memory address space: 0x%" PRIx64 "\n", action,
+                    address);
+    } else {
+        tlib_printf(LOG_LEVEL_WARNING,
+                    "Trying to %s from an illegal address outside of the physical memory address space: 0x%" PRIx64 "\n", action,
+                    address);
+    }
+    return false;
+#endif
+}
+
 /* get_physical_address - get the physical address for this virtual address
  *
  * Do a page table walk to obtain the physical address corresponding to a
@@ -215,6 +243,9 @@ static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int
     }
 
     if(mode == PRV_M) {
+        if(unlikely(!is_within_legal_address_space(address, access_type, no_page_fault))) {
+            return TRANSLATE_FAIL;
+        }
         *physical = address;
         *prot = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
         return TRANSLATE_SUCCESS;
@@ -254,6 +285,9 @@ static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int
                 ptesize = 8;
                 break;
             case VM_1_10_MBARE:
+                if(unlikely(!is_within_legal_address_space(address, access_type, no_page_fault))) {
+                    return TRANSLATE_FAIL;
+                }
                 *physical = addr;
                 *prot = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
                 return TRANSLATE_SUCCESS;
@@ -281,6 +315,9 @@ static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int
                 ptesize = 8;
                 break;
             case VM_1_09_MBARE:
+                if(unlikely(!is_within_legal_address_space(address, access_type, no_page_fault))) {
+                    return TRANSLATE_FAIL;
+                }
                 *physical = addr;
                 *prot = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
                 return TRANSLATE_SUCCESS;
