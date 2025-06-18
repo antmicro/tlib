@@ -370,8 +370,11 @@ static inline bool cpu_has_work(CPUState *env)
 
 static inline void cpu_pc_from_tb(CPUState *env, TranslationBlock *tb)
 {
-    env->regs[15] = tb->pc;
-    env->pc = tb->pc;
+    if(is_a64(env)) {
+        env->pc = tb->pc;
+    } else {
+        env->regs[15] = tb->pc;
+    }
 }
 
 static inline bool el2_and_hcr_el2_e2h_set(CPUState *env)
