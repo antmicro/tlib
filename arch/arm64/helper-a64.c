@@ -1094,7 +1094,7 @@ void HELPER(dc_zva)(CPUARMState *env, uint64_t vaddr_in)
     int prot;
     target_ulong page_size;
 
-    if(get_phys_addr(env, vaddr, ACCESS_DATA_STORE, mmu_idx, 0, false, &phys_addr, &prot, &page_size, blocklen) !=
+    if(get_phys_addr(env, vaddr, ACCESS_DATA_STORE, mmu_idx, ARM_GETPC(), false, &phys_addr, &prot, &page_size, blocklen) !=
        TRANSLATE_SUCCESS) {
         tlib_printf(LOG_LEVEL_DEBUG, "Incorrect virtual address in DC ZVA: 0x%" PRIx64, vaddr_in);
         return;
