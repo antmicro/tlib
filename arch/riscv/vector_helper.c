@@ -679,25 +679,25 @@ void helper_vmsbc_vim(CPUState *env, uint32_t vd, int32_t vs2, target_long rs1)
             case 8: {
                 uint8_t a = ((uint8_t *)V(vs2))[i];
                 V(vd)[i >> 3] &= mask;
-                V(vd)[i >> 3] |= (a < (uint8_t)rs1 || (borrow && a == (int8_t)rs1)) << (i & 0x7);
+                V(vd)[i >> 3] |= (a < (uint8_t)rs1 || (borrow && a == (uint8_t)rs1)) << (i & 0x7);
                 break;
             }
             case 16: {
                 uint16_t a = ((uint16_t *)V(vs2))[i];
                 V(vd)[i >> 3] &= mask;
-                V(vd)[i >> 3] |= (a < (uint16_t)rs1 || (borrow && a == (int16_t)rs1)) << (i & 0x7);
+                V(vd)[i >> 3] |= (a < (uint16_t)rs1 || (borrow && a == (uint16_t)rs1)) << (i & 0x7);
                 break;
             }
             case 32: {
                 uint32_t a = ((uint32_t *)V(vs2))[i];
                 V(vd)[i >> 3] &= mask;
-                V(vd)[i >> 3] |= (a < (uint32_t)rs1 || (borrow && a == (int32_t)rs1)) << (i & 0x7);
+                V(vd)[i >> 3] |= (a < (uint32_t)rs1 || (borrow && a == (uint32_t)rs1)) << (i & 0x7);
                 break;
             }
             case 64: {
                 uint64_t a = ((uint64_t *)V(vs2))[i];
                 V(vd)[i >> 3] &= mask;
-                V(vd)[i >> 3] |= (a < (uint64_t)rs1 || (borrow && a == (int64_t)rs1)) << (i & 0x7);
+                V(vd)[i >> 3] |= (a < (uint64_t)rs1 || (borrow && a == (uint64_t)rs1)) << (i & 0x7);
                 break;
             }
             default:
