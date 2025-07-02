@@ -642,6 +642,9 @@ static inline bool in_user_mode(CPUState *env)
 #define ARM_IWMMXT_wCGR2 10
 #define ARM_IWMMXT_wCGR3 11
 
+/*  This enum is used in Renode-infrastructure/src/Emulator/Cores/Arm/Arm.cs
+    Every change is this enum MUST be replicated in that file.
+*/
 enum arm_features {
     ARM_FEATURE_VFP,
     ARM_FEATURE_AUXCR,  /* ARM1026 Auxiliary control register.  */
