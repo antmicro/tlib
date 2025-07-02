@@ -346,18 +346,21 @@ void cpu_gen_code(CPUState *env, TranslationBlock *tb, int *gen_code_size_ptr, i
     *search_size_ptr = search_size;
 }
 
-/* If `skip_current_instruction` is true state will be restored to the NEXT instruction after the found instruction (if the found
- * instruction is not the last one in the block)
+/* If `skip_current_instruction` is true state will be retrieved for the NEXT instruction after the found instruction (if the
+ * found instruction is not the last one in the block)
  */
-static inline int cpu_restore_state_from_tb_ex(CPUState *env, TranslationBlock *tb, uintptr_t searched_pc,
-                                               bool skip_current_instruction)
+int cpu_get_data_for_pc(CPUState *env, TranslationBlock *tb, uintptr_t searched_pc, bool pc_is_host,
+                        target_ulong data[TARGET_INSN_START_WORDS], bool skip_current_instruction)
 {
-    target_ulong data[TARGET_INSN_START_WORDS] = { tb->pc };
+    memset(data, 0, sizeof(target_ulong) * TARGET_INSN_START_WORDS);
+    data[0] = tb->pc;
     uintptr_t host_pc = (uintptr_t)rw_ptr_to_rx(tb->tc_ptr);
     uint8_t *p = tb->tc_search;
     int i, j, num_insns = tb->icount;
 
-    if(searched_pc < host_pc) {
+#define CURRENT_PC (pc_is_host ? host_pc : data[0])
+
+    if(CURRENT_PC > searched_pc) {
         return -1;
     }
 
@@ -368,17 +371,29 @@ static inline int cpu_restore_state_from_tb_ex(CPUState *env, TranslationBlock *
             data[j] += decode_sleb128(&p);
         }
         host_pc += decode_sleb128(&p);
-        if(host_pc > searched_pc) {
+        if(CURRENT_PC > searched_pc) {
             if(skip_current_instruction) {
                 skip_current_instruction = false;
                 continue;
             }
 
-            restore_state_to_opc(env, tb, data);
             return i;
         }
     }
+
+#undef CURRENT_PC
     return -1;
+}
+
+static inline int cpu_restore_state_from_tb_ex(CPUState *env, TranslationBlock *tb, uintptr_t searched_pc,
+                                               bool skip_current_instructions)
+{
+    target_ulong data[TARGET_INSN_START_WORDS];
+    int insns = cpu_get_data_for_pc(env, tb, searched_pc, /* pc_is_host */ true, data, skip_current_instructions);
+    if(insns >= 0) {
+        restore_state_to_opc(env, tb, data);
+    }
+    return insns;
 }
 
 /* The cpu state corresponding to 'searched_pc' is restored.

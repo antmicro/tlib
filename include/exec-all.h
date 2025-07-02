@@ -63,6 +63,8 @@ void gen_exit_tb_no_chaining(TranslationBlock *);
 CPUBreakpoint *process_breakpoints(CPUState *env, target_ulong pc);
 
 void cpu_gen_code(CPUState *env, struct TranslationBlock *tb, int *gen_code_size_ptr, int *search_size_ptr);
+int cpu_get_data_for_pc(CPUState *env, TranslationBlock *tb, uintptr_t searched_pc, bool pc_is_host,
+                        target_ulong data[TARGET_INSN_START_WORDS], bool skip_current_instruction);
 int cpu_restore_state_from_tb(CPUState *env, struct TranslationBlock *tb, uintptr_t searched_pc);
 void cpu_restore_state(CPUState *env, void *retaddr);
 int cpu_restore_state_and_restore_instructions_count(CPUState *env, struct TranslationBlock *tb, uintptr_t searched_pc,
