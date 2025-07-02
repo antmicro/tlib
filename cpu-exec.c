@@ -125,8 +125,13 @@ void TLIB_NORETURN cpu_loop_exit(CPUState *env)
 {
     if(env->block_finished_hook_present) {
         target_ulong pc = CPU_PC(env);
-        //  TODO: here we would need to have the number of executed instructions, how?!
-        tlib_on_block_finished(pc, -1);
+        target_ulong data[TARGET_INSN_START_WORDS];
+        int executed_instructions =
+            cpu_get_data_for_pc(env, env->current_tb, pc, /* pc_is_host */ false, data, /* skip_current_instruction */ false);
+        /* PC points to the next instruction to execute, so if the exit happened on the last instruction
+         * it will point outside of the TB, so substitute the full icount in that case; otherwise decrement
+         * the count by one */
+        tlib_on_block_finished(pc, executed_instructions == -1 ? tb->icount : executed_instructions - 1);
     }
     cpu_loop_exit_without_hook(env);
 }
