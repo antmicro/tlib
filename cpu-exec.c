@@ -124,21 +124,22 @@ void TLIB_NORETURN cpu_loop_exit_without_hook(CPUState *env)
 void TLIB_NORETURN cpu_loop_exit(CPUState *env)
 {
     if(env->block_finished_hook_present) {
+        TranslationBlock *tb = env->current_tb;
         target_ulong pc = CPU_PC(env);
         target_ulong data[TARGET_INSN_START_WORDS];
         int executed_instructions =
-            cpu_get_data_for_pc(env, env->current_tb, pc, /* pc_is_host */ false, data, /* skip_current_instruction */ false);
+            cpu_get_data_for_pc(env, tb, pc, /* pc_is_host */ false, data, /* skip_current_instruction */ false);
         /* PC points to the next instruction to execute, so if the exit happened on the last instruction
          * it will point outside of the TB, so substitute the full icount in that case; otherwise decrement
          * the count by one */
-        tlib_on_block_finished(pc, executed_instructions == -1 ? tb->icount : executed_instructions - 1);
+        tlib_on_block_finished(tb->pc, executed_instructions == -1 ? tb->icount : executed_instructions - 1);
     }
     cpu_loop_exit_without_hook(env);
 }
 
 void TLIB_NORETURN cpu_loop_exit_restore(CPUState *cpu, uintptr_t pc, uint32_t call_hook)
 {
-    TranslationBlock *tb;
+    TranslationBlock *tb = NULL;
     uint32_t executed_instructions = 0;
     if(pc) {
         tb = tb_find_pc(pc);
@@ -148,7 +149,7 @@ void TLIB_NORETURN cpu_loop_exit_restore(CPUState *cpu, uintptr_t pc, uint32_t c
         executed_instructions = cpu_restore_state_and_restore_instructions_count(cpu, tb, pc, true);
     }
     if(call_hook && cpu->block_finished_hook_present) {
-        tlib_on_block_finished(CPU_PC(cpu), executed_instructions);
+        tlib_on_block_finished(tb ? tb->pc : CPU_PC(cpu), executed_instructions);
     }
 
     cpu_loop_exit_without_hook(cpu);
