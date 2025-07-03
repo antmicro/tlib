@@ -12,11 +12,9 @@
 #if TARGET_LONG_BITS == 64
 #define TARGET_RISCV64
 #define TARGET_PHYS_ADDR_SPACE_BITS 56
-#define TARGET_VIRT_ADDR_SPACE_BITS 39
 #elif TARGET_LONG_BITS == 32
 #define TARGET_RISCV32
 #define TARGET_PHYS_ADDR_SPACE_BITS 34
-#define TARGET_VIRT_ADDR_SPACE_BITS 32
 #else
 #error "Target arch can be only 32-bit or 64-bit."
 #endif

@@ -37,15 +37,6 @@
    cpus we emulate at the system level.  */
 #define TARGET_PHYS_ADDR_SPACE_BITS 62
 
-/* Note that the PPC environment architecture talks about 80 bit virtual
-   addresses, with segmentation.  Obviously that's not all visible to a
-   single process, which is all we're concerned with here.  */
-#ifdef TARGET_ABI32
-#define TARGET_VIRT_ADDR_SPACE_BITS 32
-#else
-#define TARGET_VIRT_ADDR_SPACE_BITS 64
-#endif
-
 #define TARGET_PAGE_BITS_16M 24
 
 #elif TARGET_LONG_BITS == 32
@@ -64,7 +55,6 @@
 #endif /* defined(TARGET_PPCEMB) */
 
 #define TARGET_PHYS_ADDR_SPACE_BITS 36
-#define TARGET_VIRT_ADDR_SPACE_BITS 32
 
 #else
 #error "Target arch can be only 32-bit or 64-bit"

@@ -736,7 +736,6 @@ static inline int arm_feature(const CPUState *env, int feature)
 #define TARGET_PAGE_BITS 10
 
 #define TARGET_PHYS_ADDR_SPACE_BITS 32
-#define TARGET_VIRT_ADDR_SPACE_BITS 32
 
 /* MMU modes definitions */
 
