@@ -210,6 +210,14 @@ static inline void tcg_out_ret(TCGContext *s, int reg)
     tcg_out32(s, 0xd65f0000 | (reg << 5));
 }
 
+static inline void tcg_out_b_cond(TCGContext *s, int cond, tcg_target_ulong offset)
+{
+    //  Offset is encoded as offset/4
+    offset = offset >> 2;
+    //  Offset needs to be masked to 19-bits
+    tcg_out32(s, 0x54000000 | ((0x7FFFF & offset) << 5) | (tcg_cond_to_arm_cond[cond] << 0));
+}
+
 static inline void tcg_out_b_noaddr(TCGContext *s)
 {
     //  This sets up a unconditional branch to an adress that will be emited later
@@ -229,6 +237,7 @@ static inline void tcg_out_b_cond_noaddr(TCGContext *s)
 
 //  Value used for addend when nothing extra is needed by the reloc
 #define TCG_UNUSED_CONSTANT 31337
+static inline void tcg_out_movi64(TCGContext *s, int reg1, tcg_target_long imm);
 static inline void tcg_out_goto_label(TCGContext *s, int cond, int label_index)
 {
     tcg_debug_assert(label_index < TCG_MAX_LABELS);
@@ -237,19 +246,26 @@ static inline void tcg_out_goto_label(TCGContext *s, int cond, int label_index)
 
     if(l->has_value) {
         //  Label has a target address so we just branch to it
+        //  Because we don't know if the label was created targeting the rw or rx buffer we have to check
+        if(is_ptr_in_rw_buf((void *)l->u.value)) {
+            l->u.value = (tcg_target_ulong)rw_ptr_to_rx((void *)l->u.value);
+        }
         if(cond == COND_AL) {
             //  Unconditional branch
-            tcg_out_movi(s, TCG_TYPE_PTR, TCG_TMP_REG, (tcg_target_long)rw_ptr_to_rx((void *)l->u.value));
+            tcg_out_movi(s, TCG_TYPE_PTR, TCG_TMP_REG, l->u.value);
             tcg_out_br(s, TCG_TMP_REG);
         } else {
             //  Conditional branch, takes 19-bit PC-relative offset
             int offset = l->u.value - (tcg_target_long)s->code_ptr;
-            if(abs(offset) > 0x7FFFF) {
-                tcg_abortf("Conditional branches further than %u not supported yet", 0x7FFFF);
+            if((abs(offset) >> 2) > 0x7FFFF) {
+                //  Branch target is too far away for a direct branch
+                //  So we use a unconditional branch, whith a inverted conditonal to jump over it
+                tcg_out_b_cond(s, tcg_invert_cond(cond),
+                               24);  //  24 becase we want to jump over 4 moves (for a 64-bit load immediate) and one branch
+                tcg_out_movi64(s, TCG_TMP_REG, l->u.value);
+                tcg_out_br(s, TCG_TMP_REG);
             } else {
-                //  Offset needs to be masked to 19-bits
-                offset = offset >> 2;
-                tcg_out32(s, 0x54000000 | ((0x7FFFF & offset) << 5) | (cond << 0));
+                tcg_out_b_cond(s, cond, offset);
             }
         }
     } else {
@@ -262,7 +278,7 @@ static inline void tcg_out_goto_label(TCGContext *s, int cond, int label_index)
             tcg_out_b_noaddr(s);
         } else {
             tcg_out_reloc(s, s->code_ptr, R_AARCH64_CONDBR19, label_index,
-                          cond);  //  Reloc needs to set the condition bits correctly
+                          tcg_cond_to_arm_cond[cond]);  //  Reloc needs to set the condition bits correctly
             tcg_out_b_cond_noaddr(s);
         }
     }
@@ -897,6 +913,54 @@ static inline void tcg_out_setcond_imm(TCGContext *s, int bits, int reg_dest, in
     tcg_out_csinc(s, bits, reg_dest, TCG_REG_RZR, TCG_REG_RZR, tcg_invert_cond(cond));
 }
 
+//  Emits a compare and swap instruction, optionally with aquire and/or release memory ordering
+static inline void tcg_out_compare_and_swap(TCGContext *s, int bits, int reg_expected, int reg_val, int reg_addr, bool acquire,
+                                            bool release)
+{
+    switch(bits) {
+        case 32:
+            tcg_out32(s,
+                      0x88a07c00 | (acquire << 22) | (reg_expected << 16) | (release << 15) | (reg_addr) << 5 | (reg_val << 0));
+            break;
+        case 64:
+            tcg_out32(s,
+                      0xc8a07c00 | (acquire << 22) | (reg_expected << 16) | (release << 15) | (reg_addr) << 5 | (reg_val << 0));
+            break;
+        default:
+            tcg_abortf("tcg_out_compare_and_swap called with unsupported %i bits", bits);
+            break;
+    }
+}
+
+//  Emits a compare and swap with seq-const memory ordering
+static inline void tcg_out_atomic_compare_and_swap(TCGContext *s, int bits, int reg_expected, int reg_val, int reg_addr)
+{
+    tcg_out_compare_and_swap(s, bits, reg_expected, reg_val, reg_addr, true, true);
+}
+
+//  Emits a fetch and add instruction (LDADD), optionally with aquire and/or release memory ordering
+static inline void tcg_out_fetch_and_add(TCGContext *s, int bits, int reg_dest, int reg_addr, int reg_val, bool acquire,
+                                         bool release)
+{
+    switch(bits) {
+        case 32:
+            tcg_out32(s, 0xb8200000 | (acquire << 23) | (release << 22) | (reg_val << 16) | (reg_addr << 5) | (reg_dest << 0));
+            break;
+        case 64:
+            tcg_out32(s, 0xf8200000 | (acquire << 23) | (release << 22) | (reg_val << 16) | (reg_addr << 5) | (reg_dest << 0));
+            break;
+        default:
+            tcg_abortf("tcg_out_fetch_and_add called with unsupported %i bits", bits);
+            break;
+    }
+}
+
+//  Emits a fetch and add with seq-const memory ordering
+static inline void tcg_out_atomic_fetch_and_add(TCGContext *s, int bits, int reg_dest, int reg_addr, int reg_val)
+{
+    tcg_out_fetch_and_add(s, bits, reg_dest, reg_addr, reg_val, true, true);
+}
+
 //  qemu_st/ld loads and stores to and from GUEST addresses, not host ones
 static inline void tcg_out_qemu_st(TCGContext *s, int bits, int reg_data, int reg_addr, int mem_index)
 {
@@ -1246,7 +1310,7 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
                 //  Second arg is a register
                 tcg_out_cmp(s, 32, args[0], args[1]);
             }
-            tcg_out_goto_label(s, tcg_cond_to_arm_cond[args[2]], args[3]);
+            tcg_out_goto_label(s, args[2], args[3]);
             break;
         case INDEX_op_brcond_i64:
             if(const_args[1]) {
@@ -1256,7 +1320,7 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
                 //  Second arg is a register
                 tcg_out_cmp(s, 64, args[0], args[1]);
             }
-            tcg_out_goto_label(s, tcg_cond_to_arm_cond[args[2]], args[3]);
+            tcg_out_goto_label(s, args[2], args[3]);
             break;
         case INDEX_op_brcond2_i32:
             tcg_abortf("op_brcond2_i32 not implemented");
@@ -1346,6 +1410,29 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
             break;
         case INDEX_op_sub2_i32:
             tcg_abortf("op_sub2_i32 not implemented");
+            break;
+        case INDEX_op_atomic_compare_and_swap_intrinsic_i32:
+            //  TCG does not behave correctly if the value in an input register is overwritten, so we use a temporary for the
+            //  expected value which will be overwritten in the case of a failure
+            tcg_out_mov(s, TCG_TYPE_I32, TCG_TMP_REG, args[1]);
+            tcg_out_atomic_compare_and_swap(s, 32, TCG_TMP_REG, args[3], args[2]);
+            tcg_out_mov(s, TCG_TYPE_I32, args[0], TCG_TMP_REG);
+            break;
+        case INDEX_op_atomic_compare_and_swap_intrinsic_i64:
+            //  TCG does not behave correctly if the value in an input register is overwritten, so we use a temporary for the
+            //  expected value which will be overwritten in the case of a failure
+            tcg_out_mov(s, TCG_TYPE_I64, TCG_TMP_REG, args[1]);
+            tcg_out_atomic_compare_and_swap(s, 64, TCG_TMP_REG, args[3], args[2]);
+            tcg_out_mov(s, TCG_TYPE_I64, args[0], TCG_TMP_REG);
+            break;
+        case INDEX_op_atomic_compare_and_swap_intrinsic_i128:
+            tcg_abortf("op_atomic_compare_and_swap_instrinsic_128 not implemented");
+            break;
+        case INDEX_op_atomic_fetch_add_intrinsic_i32:
+            tcg_out_atomic_fetch_and_add(s, 32, args[0], args[1], args[2]);
+            break;
+        case INDEX_op_atomic_fetch_add_intrinsic_i64:
+            tcg_out_atomic_fetch_and_add(s, 64, args[0], args[1], args[2]);
             break;
         default:
             tcg_abortf("TCGOpcode %u not implemented", opc);
@@ -1477,6 +1564,13 @@ static const TCGTargetOpDef arm_op_defs[] = {
     { INDEX_op_sub2_i32, { "r", "r", "r", "r", "r", "r" } },
     { INDEX_op_brcond2_i32, { "r", "r", "r", "r" } },
     { INDEX_op_setcond2_i32, { "r", "r", "r", "r", "r" } },
+
+    { INDEX_op_atomic_fetch_add_intrinsic_i32, { "r", "r", "r" } },
+    { INDEX_op_atomic_fetch_add_intrinsic_i64, { "r", "r", "r" } },
+
+    { INDEX_op_atomic_compare_and_swap_intrinsic_i32, { "r", "r", "r", "r" } },
+    { INDEX_op_atomic_compare_and_swap_intrinsic_i64, { "r", "r", "r", "r" } },
+    { INDEX_op_atomic_compare_and_swap_intrinsic_i128, { "r", "r", "r", "r", "r", "r", "r" } },
 
     //  { -1 } indicates the end of the list
     { -1 },
