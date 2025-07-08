@@ -3895,7 +3895,6 @@ static inline void tcg_gen_clzi_i64(TCGv_i64 ret, TCGv_i64 arg1, uint64_t arg2)
 #pragma GCC diagnostic ignored "-Wunused-function"
 #endif
 
-#if TCG_TARGET_HAS_atomic_fetch_add_intrinsic_i32
 /*
  * Atomically adds `toAdd` to the value located at `address` in host memory.
  * The original value located at `address`, before the addition, is returned in `ret`.
@@ -3905,9 +3904,7 @@ static void tcg_gen_atomic_fetch_add_intrinsic_i32(TCGv_i32 ret, TCGv_ptr hostAd
     tcg_gen_atomic_intrinsic_op_i32(INDEX_op_atomic_fetch_add_intrinsic_i32, ret, hostAddress, toAdd);
     tcg_gen_ext32s_i64(ret, ret);
 }
-#endif
 
-#if TCG_TARGET_HAS_atomic_fetch_add_intrinsic_i64
 /*
  * Atomically adds `toAdd` to the value located at `address` in host memory.
  * The original value located at `address`, before the addition, is returned in `ret`.
@@ -3916,9 +3913,7 @@ static void tcg_gen_atomic_fetch_add_intrinsic_i64(TCGv_i64 ret, TCGv_ptr hostAd
 {
     tcg_gen_atomic_intrinsic_op_i64(INDEX_op_atomic_fetch_add_intrinsic_i64, ret, hostAddress, toAdd);
 }
-#endif
 
-#if TCG_TARGET_HAS_atomic_compare_and_swap_intrinsic_i32
 /*
  * Atomically compares the expected value in `expected` with the value
  * located at `hostAddress` in memory. If they are equal, `newValue` is written
@@ -3929,9 +3924,7 @@ static void tcg_gen_atomic_compare_and_swap_intrinsic_i32(TCGv_i32 actual, TCGv_
 {
     tcg_gen_atomic_intrinsic_op4_i32(INDEX_op_atomic_compare_and_swap_intrinsic_i32, actual, expected, hostAddress, newValue);
 }
-#endif
 
-#if TCG_TARGET_HAS_atomic_compare_and_swap_intrinsic_i64
 /*
  * Atomically compares the expected value in `expected` with the value
  * located at `hostAddress` in memory. If they are equal, `newValue` is written
@@ -3942,9 +3935,7 @@ static void tcg_gen_atomic_compare_and_swap_intrinsic_i64(TCGv_i64 actual, TCGv_
 {
     tcg_gen_atomic_intrinsic_op4_i64(INDEX_op_atomic_compare_and_swap_intrinsic_i64, actual, expected, hostAddress, newValue);
 }
-#endif
 
-#if TCG_TARGET_HAS_atomic_compare_and_swap_intrinsic_i128
 /*
  * Atomically compares the expected value in `expectedHigh:expectedLow` with the value
  * located at `hostAddress` in memory. If they are equal, `newValueHigh:newValueLow` is written
@@ -3955,7 +3946,6 @@ static void tcg_gen_atomic_compare_and_swap_intrinsic_i128(TCGv_i128 actual, TCG
 {
     tcg_gen_atomic_intrinsic_op4_i128(INDEX_op_atomic_compare_and_swap_intrinsic_i128, actual, expected, hostAddress, newValue);
 }
-#endif
 
 #ifdef __llvm__
 #pragma clang diagnostic pop

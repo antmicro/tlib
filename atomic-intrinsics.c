@@ -181,14 +181,7 @@ void tcg_try_gen_atomic_compare_and_swap_intrinsic_i32(TCGv_i32 actual, TCGv_i32
                                                   fallbackLabel, 32);
 }
 #else
-/*
- * Always use the fallback, since the target doesn't have the intrinsic implemented.
- */
-void tcg_try_gen_atomic_compare_and_swap_intrinsic_i32(TCGv_i32 actual, TCGv_i32 expected, TCGv_ptr guestAddress,
-                                                       TCGv_i32 newValue, uint32_t memIndex, int fallbackLabel)
-{
-    tcg_gen_br(fallbackLabel);
-}
+#error "32-bit atomic compare and swap instrinsic is nessesary for tcg to function properly"
 #endif
 
 #if TCG_TARGET_HAS_atomic_compare_and_swap_intrinsic_i64
