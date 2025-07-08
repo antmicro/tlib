@@ -325,9 +325,19 @@ static inline void tcg_out_ldp(TCGContext *s, int reg1, int reg2, int reg_base, 
     tcg_out32(s, 0xa9400000 | (((offset / 8) & 0x7f) << 15) | (reg2 << 10) | (reg_base << 5) | (reg1 << 0));
 }
 
-static inline void tcg_out_mov(TCGContext *s, TCGType type, TCGReg ret, TCGReg arg)
+static inline void tcg_out_mov(TCGContext *s, TCGType type, TCGReg dest, TCGReg source)
 {
-    tcg_out32(s, 0xaa000000 | (arg << 16) | (0b11111 << 5) | (ret << 0));
+    switch(type) {
+        case TCG_TYPE_I32:
+            tcg_out32(s, 0x2a000000 | (source << 16) | (0b11111 << 5) | (dest << 0));
+            break;
+        case TCG_TYPE_I64:
+            tcg_out32(s, 0xaa000000 | (source << 16) | (0b11111 << 5) | (dest << 0));
+            break;
+        default:
+            tlib_abortf("tcg_out_mov called for unsupported TCGType: %u", type);
+            break;
+    }
 }
 
 static const int SHIFT_0 = 0b00;
