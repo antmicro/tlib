@@ -472,6 +472,9 @@ EXC_VOID_2(tlib_invalidate_translation_blocks, uintptr_t, start, uintptr_t, end)
 
 uint64_t tlib_translate_to_physical_address(uint64_t address, uint32_t access_type)
 {
+    if(address > TARGET_ULONG_MAX) {
+        return (uint64_t)-1;
+    }
     uint64_t ret = virt_to_phys(address, access_type, 1);
     if(ret == TARGET_ULONG_MAX) {
         ret = (uint64_t)-1;
