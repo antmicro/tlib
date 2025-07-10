@@ -301,7 +301,7 @@ static inline void tcg_out_calli(TCGContext *s, tcg_target_ulong addr)
 
 //  Emit a memory barrier, a0 contains info about the type of memory barrier requested
 static const int MB_SY = 0b1111;  //  Full system barrier
-static inline void tcg_out_mb(TCGContext *s, TCGArg a0)
+static inline void tcg_out_mb(TCGContext *s, TCGArg barrier_type)
 {
     //  Even if a weaker barrier might suffice, for now just always emit the strongest, full system barrier
     tcg_out32(s, 0xd50330bf | (MB_SY << 8));
@@ -1000,6 +1000,10 @@ static inline void tcg_out_qemu_st(TCGContext *s, int bits, int reg_data, int re
         default:
             tcg_abortf("tcg_out_qemu_st called with incorrect #%i bits as argument", bits);
     }
+    //  Emit a memory barrier to make sure the store is observable on other cores before continueing
+    //  Needed to make sure atomic instructions using this works correctly
+    //  ST-LD barrier because we only need the store to be visible to future loads
+    tcg_out_mb(s, TCG_MO_ST_LD);
 }
 
 static inline void tcg_out_qemu_ld(TCGContext *s, int bits, bool sign_extend, int reg_data, int reg_addr, int mem_index)
