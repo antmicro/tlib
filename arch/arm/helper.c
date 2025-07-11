@@ -3940,7 +3940,7 @@ void HELPER(v8m_blxns)(CPUState *env, uint32_t addr, uint32_t link)
     /* Only switch to Non-Secure if bit[0] of target addr is 0 */
     if((addr & 1) == 0) {
         if(link) {
-            v7m_push(env, env->regs[15] + 2);
+            v7m_push(env, env->regs[15]);
             /* According to docs "some processor state information" is pushed here
              * the ARM pseudocode specifies exactly:
              * """
