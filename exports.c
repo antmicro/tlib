@@ -265,7 +265,7 @@ int32_t tlib_atomic_memory_state_init(uintptr_t atomic_memory_state_ptr, int32_t
 EXC_INT_2(int32_t, tlib_atomic_memory_state_init, uintptr_t, atomic_memory_state_ptr, int32_t, atomic_id)
 
 /* Must be called after tlib_atomic_memory_state_init */
-int32_t tlib_store_table_init(uintptr_t store_table_ptr, uint8_t store_table_bits)
+int32_t tlib_store_table_init(uintptr_t store_table_ptr, uint8_t store_table_bits, int32_t after_deserialization)
 {
     tlib_assert(cpu->atomic_id != -1);
     //  The size of a single table entry is 8 bytes,
@@ -275,13 +275,13 @@ int32_t tlib_store_table_init(uintptr_t store_table_ptr, uint8_t store_table_bit
 
     cpu->store_table_bits = store_table_bits;
     cpu->store_table = (store_table_entry_t *)store_table_ptr;
-    initialize_store_table(cpu->store_table, store_table_bits);
+    initialize_store_table(cpu->store_table, cpu->store_table_bits, !!after_deserialization);
 
     //  Use the same id as the atomic memory state, since hst behaves similarly.
     return cpu->atomic_id;
 }
 
-EXC_INT_2(int32_t, tlib_store_table_init, uintptr_t, store_table_ptr, uint64_t, store_table_bits)
+EXC_INT_3(int32_t, tlib_store_table_init, uintptr_t, store_table_ptr, uint64_t, store_table_bits, int32_t, after_deserialization)
 
 void tlib_dispose()
 {

@@ -45,17 +45,39 @@ static void calculate_hst_mask(const uint8_t store_table_bits)
     hst_guest_address_mask = interior_mask & alignment_mask;
 }
 
-void initialize_store_table(store_table_entry_t *store_table, uint8_t store_table_bits)
+void initialize_store_table(store_table_entry_t *store_table, uint8_t store_table_bits, bool after_deserialization)
 {
     calculate_hst_mask(store_table_bits);
 
     tlib_printf(LOG_LEVEL_DEBUG, "%s: initializing with ptr 0x%016llx", __func__, store_table);
     tlib_assert(hst_table_entries_count != 0);
+    bool all_entries_unlocked = true;
     /* Initialize store table. */
-    static const store_table_entry_t defaultEntry = { .last_accessed_by_core_id = HST_NO_CORE, .lock = HST_UNLOCKED };
     for(uint64_t i = 0; i < hst_table_entries_count; i++) {
-        store_table[i] = defaultEntry;
+        if(after_deserialization) {
+            /*
+             * Every entry must already be unlocked when deserializing, because
+             * we assume that when serializing the current instruction gets to
+             * finish executing, meaning it _should_ have been able to release
+             * its store table lock. If the lock was never released, something
+             * has gone wrong.
+             */
+            uint32_t locked_by_cpu_id = store_table[i].lock;
+            if(unlikely(locked_by_cpu_id != HST_UNLOCKED)) {
+                tlib_printf(LOG_LEVEL_WARNING,
+                            "%s: serialized store table entry at offset 0x%x contains dangling lock for cpu %u", __func__, i,
+                            locked_by_cpu_id);
+                all_entries_unlocked = false;
+            }
+        } else {
+            /*
+             * Initialize a new entry from scratch.
+             */
+            store_table[i].last_accessed_by_core_id = HST_NO_CORE;
+            store_table[i].lock = HST_UNLOCKED;
+        }
     }
+    tlib_assert(all_entries_unlocked);
 }
 
 /* Hashes `guest_address` and places the result in `hashed_address`. */
