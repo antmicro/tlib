@@ -14744,10 +14744,13 @@ int gen_intermediate_code(CPUState *env, DisasContextBase *base)
 
 uint32_t gen_intermediate_code_epilogue(CPUState *env, DisasContextBase *base)
 {
+    uint32_t flags = !env->aarch64 << 1;
     if(env->aarch64) {
         aarch64_tr_tb_stop(base, env);
     } else {
         arm_tr_tb_stop(base, env);
+        /* The Thumb flag is only valid in AArch32 state. */
+        flags |= env->thumb;
     }
-    return (!env->aarch64 << 1) | env->thumb;
+    return flags;
 }
