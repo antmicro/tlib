@@ -265,7 +265,7 @@ static inline void cpu_get_tb_cpu_state(CPUState *env, target_ulong *pc, target_
 {
     *pc = env->pc;
     *cs_base = 0;
-    *flags = 0;  //  necessary to avoid compiler warning
+    *flags = cpu_mmu_index(env);
 }
 
 static inline bool cpu_has_work(CPUState *env)
