@@ -27,6 +27,7 @@
 
 #include "cpu.h"
 #include "system_registers.h"
+#include "tcg-mo.h"
 #include "ttable.h"
 #include "bit_helper.h"
 
@@ -9164,6 +9165,7 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
     TCGv_i64 tmp64;
     int op;
     int op1, op4;
+    int sz;
     int shiftop;
     int conds;
     int logic_cc;
@@ -9354,30 +9356,81 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     tcg_gen_addi_i32(tmp, tmp, s->base.pc);
                     store_reg(s, 15, tmp);
                 } else {
-                    /* Load/store exclusive byte/halfword/doubleword.  */
-                    ARCH(7);
-                    op = (insn >> 4) & 0x3;
-                    if(op == 2) {
+                    if(insn & (1 << 7)) {
+                        /* Load-acquire / Store-release.  */
+                        /* LDAB/LDAH/LDA/LDAEXB/LDAEXH/LDAEX/STLB/STLH/STL/STLEXB/STLEXH/STLEX  */
                         ARCH(8);
-                        /* LDA(EX)/STL(EX) (and variants -B,-H)
-                           LDAEX is LDREX + sync memory barrier, so might require a translation block to be finished
-                           For LDA (and EX) we don't implement the memory barrier. This is fine in simple single-CPU
-                           scenarios but might cause problems if used with multiple CPUs.
-                         */
-                        if(((insn >> 6) & 1) == 0) {
-                            /* LDA/STL (and variants -B,-H) stub
-                               They are likely just Load/Store + memory barrier
-                             */
-                        }
+                    } else {
+                        /* Load/store exclusive byte/half/dual.  */
+                        /* LDREXB/LDREXH/STREXB/STREXH  */
+                        ARCH(7);
                     }
+
+                    sz = (insn >> 4) & 0x3;
                     addr = tcg_temp_local_new();
                     load_reg_var(s, addr, rn);
-                    if(insn & (1 << 20)) {
-                        gen_load_exclusive(s, rs, rd, addr, op);
+
+                    if(insn & (1 << 6)) {
+                        /* Exclusive variant.  */
+                        if(insn & (1 << 20)) {
+                            /* LDREXB/LDREXH/LDAEXB/LDAEXH/LDAEX  */
+                            gen_load_exclusive(s, rs, rd, addr, sz);
+                        } else {
+                            /* STREXB/STREXH/STLEXB/STLEXH/STLEX  */
+                            gen_store_exclusive(s, rm, rs, rd, addr, sz);
+                        }
                     } else {
-                        gen_store_exclusive(s, rm, rs, rd, addr, op);
+                        MMUMode mode = context_to_mmu_mode(s);
+                        if(insn & (1 << 20)) {
+                            /* Load.  */
+                            /* LDAB/LDAH/LDA  */
+                            switch(sz) {
+                                case 0:
+                                    tmp = gen_ld8u(addr, mode.index);
+                                    break;
+                                case 1:
+                                    tmp = gen_ld16u(addr, mode.index);
+                                    break;
+                                case 2:
+                                    tmp = gen_ld32(addr, mode.index);
+                                    break;
+                                default:
+                                    tcg_temp_free_i32(addr);
+                                    goto illegal_op;
+                            }
+                            store_reg(s, rs, tmp);
+                        } else {
+                            /* Store.  */
+                            /* STLB/STLH/STL  */
+                            tmp = load_reg(s, rs);
+                            switch(sz) {
+                                case 0:
+                                    gen_st8(tmp, addr, mode.index);
+                                    break;
+                                case 1:
+                                    gen_st16(tmp, addr, mode.index);
+                                    break;
+                                case 2:
+                                    gen_st32(tmp, addr, mode.index);
+                                    break;
+                                default:
+                                    tcg_temp_free_i32(addr);
+                                    goto illegal_op;
+                            }
+                        }
                     }
-                    tcg_temp_free(addr);
+                    if(insn & (1 << 7)) {
+                        if(insn & (1 << 20)) {
+                            /* Load-acquire.  */
+                            /* LDAB/LDAH/LDA/LDAEXB/LDAEXH/LDAEX  */
+                            tcg_gen_mb(TCG_BAR_LDAQ);
+                        } else {
+                            /* Store-release.  */
+                            /* STLB/STLH/STL/STLEXB/STLEXH/STLEX  */
+                            tcg_gen_mb(TCG_BAR_STRL);
+                        }
+                    }
+                    tcg_temp_free_i32(addr);
                 }
             } else {
                 /* Load/store multiple, RFE, SRS.  */
