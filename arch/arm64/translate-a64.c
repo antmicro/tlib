@@ -14694,11 +14694,6 @@ void setup_disas_context(DisasContextBase *base, CPUState *env)
 {
     DisasContext *dc = (DisasContext *)base;
 
-    //  Zero arch-specific DisasContext fields. Init functions don't always initialize all of them.
-    void *arch_specific_dc_ptr = (uint8_t *)dc + sizeof(DisasContextBase);
-    size_t arch_specific_dc_size = sizeof(DisasContext) - sizeof(DisasContextBase);
-    memset(arch_specific_dc_ptr, 0, arch_specific_dc_size);
-
     if(env->aarch64) {
         aarch64_tr_init_disas_context(base, env);
         aarch64_tr_tb_start(base, env);

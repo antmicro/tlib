@@ -162,7 +162,7 @@ static inline uint32_t get_max_tb_instruction_count(CPUState *env)
 
 static void cpu_gen_code_inner(CPUState *env, TranslationBlock *tb)
 {
-    DisasContext dcc;
+    DisasContext dcc = {};
     CPUBreakpoint *bp;
     DisasContextBase *dc = (DisasContextBase *)&dcc;
 
