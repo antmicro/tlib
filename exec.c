@@ -995,7 +995,7 @@ void tb_link_page(TranslationBlock *tb, tb_page_addr_t phys_page1, tb_page_addr_
     mmap_lock();
 
     /* add in the page list */
-    tb_alloc_page(tb, 0, phys_page1 & (TARGET_PAGE_MASK | IO_MEM_EXECUTABLE_IO));
+    tb_alloc_page(tb, 0, phys_page1);
     if(phys_page2 != -1) {
         tb_alloc_page(tb, 1, phys_page2);
     } else {

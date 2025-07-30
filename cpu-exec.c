@@ -173,7 +173,7 @@ static TranslationBlock *tb_find_slow(CPUState *env, target_ulong pc, target_ulo
     /* tb_phys_hash_func expects the physical PC to be passed.
      * `phys_page1` will not be the physical PC if it resides in an `ArrayMemory` peripheral
      * (see logic in `get_page_addr_code`) */
-    h = tb_phys_hash_func((phys_page1 & TARGET_PAGE_MASK) | (pc & ~TARGET_PAGE_MASK));
+    h = tb_phys_hash_func(phys_page1 | (pc & ~TARGET_PAGE_MASK));
     ptb1 = &tb_phys_hash[h];
 
     if(unlikely(env->tb_cache_disabled)) {
@@ -185,7 +185,7 @@ static TranslationBlock *tb_find_slow(CPUState *env, target_ulong pc, target_ulo
         if(!tb) {
             goto not_found;
         }
-        if(tb->pc == pc && tb->page_addr[0] == (phys_page1 & TARGET_PAGE_MASK) && tb->cs_base == cs_base && tb->flags == flags) {
+        if(tb->pc == pc && tb->page_addr[0] == phys_page1 && tb->cs_base == cs_base && tb->flags == flags) {
             if(tb->icount <= max_icount) {
                 /* check next page if needed */
                 if(tb->page_addr[1] != -1) {
