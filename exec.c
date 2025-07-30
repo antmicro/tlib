@@ -300,7 +300,7 @@ void unmap_page(target_phys_addr_t address)
     tlb_flush_page(cpu, address, /* from_generated: */ false);
 }
 
-static void tlb_protect_code(ram_addr_t ram_addr, bool is_mapped);
+static void tlb_protect_code(ram_addr_t ram_addr);
 static void tlb_unprotect_code_phys(CPUState *env, ram_addr_t ram_addr, target_ulong vaddr);
 #define mmap_lock() \
     do {            \
@@ -968,10 +968,8 @@ static inline void tb_invalidate_phys_page_fast(tb_page_addr_t start, int len)
 static inline void tb_alloc_page(TranslationBlock *tb, unsigned int n, tb_page_addr_t page_addr)
 {
     PageDesc *p;
-    bool is_mapped;
     bool page_already_protected;
 
-    is_mapped = !(page_addr & IO_MEM_EXECUTABLE_IO);
     page_addr &= ~IO_MEM_EXECUTABLE_IO;
 
     tb->page_addr[n] = page_addr;
@@ -985,7 +983,7 @@ static inline void tb_alloc_page(TranslationBlock *tb, unsigned int n, tb_page_a
        protected. So we handle the case where only the first TB is
        allocated in a physical page */
     if(!page_already_protected) {
-        tlb_protect_code(page_addr, is_mapped);
+        tlb_protect_code(page_addr);
     }
 }
 
@@ -1457,21 +1455,23 @@ static inline void tlb_set_dirty(CPUState *env, target_ulong vaddr)
 }
 
 /* update the TLBs so that writes to code can be detected */
-static void tlb_protect_code(ram_addr_t ram_addr, bool is_mapped)
+static void tlb_protect_code(ram_addr_t ram_addr)
 {
     uintptr_t start1;
     int i;
     PhysPageDesc *p;
+    bool is_mapped = true;
 
     p = phys_page_find(ram_addr >> TARGET_PAGE_BITS);
     if(p != NULL) {
         p->flags.dirty = false;
+        is_mapped = !p->flags.executable_io_mem;
     }
 
     if(is_mapped) {
-        start1 = (uintptr_t)get_ram_ptr(ram_addr & TARGET_PAGE_MASK);
+        start1 = (uintptr_t)get_ram_ptr(ram_addr);
     } else {
-        start1 = ram_addr & TARGET_PAGE_MASK;
+        start1 = ram_addr;
     }
 
     int mmu_idx;
