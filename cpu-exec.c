@@ -109,8 +109,7 @@ target_ulong virt_to_phys(target_ulong virtual, uint32_t access_type, uint32_t n
             return -1;
         }
     }
-    physical |= (virtual & ~TARGET_PAGE_MASK);
-    return physical;
+    return (physical & TARGET_PAGE_MASK) | (virtual & ~TARGET_PAGE_MASK);
 }
 
 int tb_invalidated_flag;
