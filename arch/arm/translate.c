@@ -9549,55 +9549,129 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
             }
             break;
         case 5:
-
             op = (insn >> 21) & 0xf;
-            if(op == 6) {
-                /* Halfword pack.  */
-                tmp = load_reg(s, rn);
-                tmp2 = load_reg(s, rm);
-                shift = ((insn >> 10) & 0x1c) | ((insn >> 6) & 0x3);
-                if(insn & (1 << 5)) {
-                    /* pkhtb */
-                    if(shift == 0) {
-                        shift = 31;
-                    }
-                    tcg_gen_sari_i32(tmp2, tmp2, shift);
-                    tcg_gen_andi_i32(tmp, tmp, 0xffff0000);
-                    tcg_gen_ext16u_i32(tmp2, tmp2);
-                } else {
-                    /* pkhbt */
-                    if(shift) {
-                        tcg_gen_shli_i32(tmp2, tmp2, shift);
-                    }
-                    tcg_gen_ext16u_i32(tmp, tmp);
-                    tcg_gen_andi_i32(tmp2, tmp2, 0xffff0000);
-                }
-                tcg_gen_or_i32(tmp, tmp, tmp2);
-                tcg_temp_free_i32(tmp2);
-                store_reg(s, rd, tmp);
-            } else {
-                /* Data processing register constant shift.  */
-                if(rn == 15) {
-                    tmp = tcg_temp_new_i32();
-                    tcg_gen_movi_i32(tmp, 0);
-                } else {
-                    tmp = load_reg(s, rn);
-                }
-                tmp2 = load_reg(s, rm);
+            shiftop = (insn >> 4) & 3;
+            shift = ((insn >> 6) & 3) | ((insn >> 10) & 0x1c);
+            conds = (insn & (1 << 20)) != 0;
+            logic_cc = (conds && thumb2_logic_op(op));
 
-                shiftop = (insn >> 4) & 3;
-                shift = ((insn >> 6) & 3) | ((insn >> 10) & 0x1c);
-                conds = (insn & (1 << 20)) != 0;
-                logic_cc = (conds && thumb2_logic_op(op));
-                gen_arm_shift_im(tmp2, shiftop, shift, logic_cc);
-                if(gen_thumb2_data_op(s, op, conds, 0, tmp, tmp2)) {
+            if(op == 2) {
+                //  Wide shift, shift and conditional instructions
+                uint8_t op0 = (insn >> 15) & 0x1;
+                uint8_t op1 = (insn >> 12) & 0x3;
+
+                if(op0 == 0 && rm != 0xd && rm != 0xf) {
+                    tmp = load_reg(s, rn);
+                    tmp2 = load_reg(s, rm);
+                    gen_arm_shift_im(tmp2, shiftop, shift, logic_cc);
+
+                    if(rn == 0xf) {
+                        //  MOV, MOVS
+                        tcg_temp_free_i32(tmp);
+
+                        if(logic_cc) {
+                            gen_logic_CC(tmp2);
+                        }
+
+                        store_reg(s, rd, tmp2);
+                    } else {
+                        //  ORR, ORRS
+                        if(gen_thumb2_data_op(s, 2, conds, 0, tmp, tmp2)) {
+                            goto illegal_op;
+                        }
+
+                        tcg_temp_free_i32(tmp2);
+                        store_reg(s, rd, tmp);
+                    }
+                } else if(conds && op0 == 1 && rm != 0xd) {
+                    uint8_t fcond = (insn >> 4) & 0xf;
+                    int cond_true_label = gen_new_label();
+                    int end_label = gen_new_label();
+
+                    gen_test_cc(fcond, cond_true_label);
+                    tmp2 = load_reg(s, rm);
+
+                    switch(op1) {
+                        case 0:
+                            //  CSEL
+                            store_reg(s, rd, tmp2);
+                            break;
+                        case 1:
+                            //  CSINC
+                            tcg_gen_addi_i32(tmp2, tmp2, 1);
+                            store_reg(s, rd, tmp2);
+                            break;
+                        case 2:
+                            //  CSINV
+                            tcg_gen_not_i32(tmp2, tmp2);
+                            store_reg(s, rd, tmp2);
+                            break;
+                        case 3:
+                            //  CSNEG
+                            tcg_gen_not_i32(tmp2, tmp2);
+                            tcg_gen_addi_i32(tmp2, tmp2, 1);
+                            store_reg(s, rd, tmp2);
+                            break;
+                    }
+
+                    tcg_gen_br(end_label);
+                    gen_set_label(cond_true_label);
+
+                    tmp = load_reg(s, rn);
+                    store_reg(s, rd, tmp);
+                    gen_set_label(end_label);
+                } else {
+                    //  TODO: The following ARMv8.1-M MVE extension instructions should be handled here:
+                    //  ASRL, LSLL, LSRL, SQSHLL, SRSHRL, UQSHLL, URSHRL, SQSHL
+                    //  SRSHR, UQSHL, URSHR, SQRSHR, SQRSHRL, UQRSHL, UQRSHLL
                     goto illegal_op;
                 }
-                tcg_temp_free_i32(tmp2);
-                if(rd != 15) {
+            } else {
+                //  Shifted register instructions
+                if(op == 6) {
+                    /* Halfword pack.  */
+                    tmp = load_reg(s, rn);
+                    tmp2 = load_reg(s, rm);
+                    shift = ((insn >> 10) & 0x1c) | ((insn >> 6) & 0x3);
+                    if(insn & (1 << 5)) {
+                        /* pkhtb */
+                        if(shift == 0) {
+                            shift = 31;
+                        }
+                        tcg_gen_sari_i32(tmp2, tmp2, shift);
+                        tcg_gen_andi_i32(tmp, tmp, 0xffff0000);
+                        tcg_gen_ext16u_i32(tmp2, tmp2);
+                    } else {
+                        /* pkhbt */
+                        if(shift) {
+                            tcg_gen_shli_i32(tmp2, tmp2, shift);
+                        }
+                        tcg_gen_ext16u_i32(tmp, tmp);
+                        tcg_gen_andi_i32(tmp2, tmp2, 0xffff0000);
+                    }
+                    tcg_gen_or_i32(tmp, tmp, tmp2);
+                    tcg_temp_free_i32(tmp2);
                     store_reg(s, rd, tmp);
                 } else {
-                    tcg_temp_free_i32(tmp);
+                    /* Data processing register constant shift.  */
+                    if(rn == 15) {
+                        tmp = tcg_temp_new_i32();
+                        tcg_gen_movi_i32(tmp, 0);
+                    } else {
+                        tmp = load_reg(s, rn);
+                    }
+                    tmp2 = load_reg(s, rm);
+
+                    gen_arm_shift_im(tmp2, shiftop, shift, logic_cc);
+                    if(gen_thumb2_data_op(s, op, conds, 0, tmp, tmp2)) {
+                        goto illegal_op;
+                    }
+                    tcg_temp_free_i32(tmp2);
+                    if(rd != 15) {
+                        store_reg(s, rd, tmp);
+                    } else {
+                        tcg_temp_free_i32(tmp);
+                    }
                 }
             }
             break;
