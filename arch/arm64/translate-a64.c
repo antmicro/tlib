@@ -14692,8 +14692,6 @@ static void aarch64_tr_tb_stop(DisasContextBase *dcbase, CPUState *cpu)
 
 void setup_disas_context(DisasContextBase *base, CPUState *env)
 {
-    DisasContext *dc = (DisasContext *)base;
-
     if(env->aarch64) {
         aarch64_tr_init_disas_context(base, env);
         aarch64_tr_tb_start(base, env);
