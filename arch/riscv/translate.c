@@ -434,25 +434,27 @@ static inline void gen_clmulx(TCGv source1, TCGv source2, int rs1, int from, int
     tcg_temp_free(t1);
 }
 
-static inline void gen_ctzx(TCGv source1, long long unsigned int mask)
+static inline void gen_ctzx(TCGv source1, int width)
 {
-    TCGv t0, t1;
-    t0 = tcg_temp_local_new();
-    t1 = tcg_temp_local_new();
+    TCGv t0, i;
+    t0 = tcg_temp_new();
+    i = tcg_temp_local_new();
     int finish = gen_new_label();
+    int loop = gen_new_label();
 
-    tcg_gen_movi_tl(t0, 0);
-    for(int i = 0; i < TARGET_LONG_BITS; i++) {
-        tcg_gen_movi_tl(t1, mask);
-        tcg_gen_nor_tl(t1, source1, t1);
-        tcg_gen_brcondi_tl(TCG_COND_EQ, t1, 0, finish);
-        tcg_gen_add_tl(t0, t0, t1);
-        tcg_gen_shri_tl(source1, source1, 1);
-    }
+    tcg_gen_movi_tl(i, 0);
+
+    gen_set_label(loop);
+    tcg_gen_andi_tl(t0, source1, 1);
+    tcg_gen_brcondi_tl(TCG_COND_EQ, t0, 1, finish);
+    tcg_gen_shri_tl(source1, source1, 1);
+    tcg_gen_addi_tl(i, i, 1);
+    tcg_gen_brcondi_tl(TCG_COND_LT, i, width, loop);
+
     gen_set_label(finish);
-    tcg_gen_mov_tl(source1, t0);
+    tcg_gen_mov_tl(source1, i);
     tcg_temp_free(t0);
-    tcg_temp_free(t1);
+    tcg_temp_free(i);
 }
 
 static inline void get_set_gpr_imm(int reg_num_dst, target_ulong value)
@@ -1139,7 +1141,7 @@ static void gen_arith_bitmanip(DisasContext *dc, int rd, int rs1, target_long im
             if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
                 return;
             }
-            gen_ctzx(source1, 0xFFFFFFFE);
+            gen_ctzx(source1, TARGET_LONG_BITS);
             break;
         case OPC_RISC_CPOP:
             if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
@@ -1208,7 +1210,7 @@ static void gen_arith_bitmanip(DisasContext *dc, int rd, int rs1, target_long im
             if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
                 return;
             }
-            gen_ctzx(source1, 0xFFFFFFFFFFFFFFFE);
+            gen_ctzx(source1, 32);
             break;
         case OPC_RISC_CPOPW:
             if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
