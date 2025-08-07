@@ -415,29 +415,38 @@ static inline void gen_cpopx(TCGv source1, int length)
 
 static inline void gen_clmulx(TCGv source1, TCGv source2, int rs1, int from, int to, int shift_right)
 {
-    TCGv t0, t1;
+    TCGv t0, t1, i;
+    int next_bit, loop;
     t0 = tcg_temp_local_new();
     t1 = tcg_temp_local_new();
+    i = tcg_temp_local_new();
+    next_bit = gen_new_label();
+    loop = gen_new_label();
 
     tcg_gen_movi_tl(source1, 0);
-    for(int i = from; i < to; i++) {
-        int next_bit = gen_new_label();
-        tcg_gen_shri_tl(t0, source2, i);
-        tcg_gen_andi_tl(t0, t0, 1);
-        tcg_gen_brcondi_tl(TCG_COND_NE, t0, 1, next_bit);
+    tcg_gen_movi_tl(i, from);
 
-        if(shift_right) {
-            tcg_gen_shri_tl(t1, rs1, to - i);
-        } else {
-            tcg_gen_shli_tl(t1, rs1, i);
-        }
-        tcg_gen_xor_tl(source1, source1, t1);
+    gen_set_label(loop);
+    tcg_gen_shri_tl(t0, source2, i);
+    tcg_gen_andi_tl(t0, t0, 1);
+    tcg_gen_brcondi_tl(TCG_COND_NE, t0, 1, next_bit);
 
-        gen_set_label(next_bit);
+    if(shift_right) {
+        tcg_gen_movi_tl(t0, to);
+        tcg_gen_sub_tl(t0, t0, i);
+        tcg_gen_shr_tl(t1, rs1, t0);
+    } else {
+        tcg_gen_shl_tl(t1, rs1, i);
     }
+    tcg_gen_xor_tl(source1, source1, t1);
+
+    gen_set_label(next_bit);
+    tcg_gen_addi_tl(i, i, 1);
+    tcg_gen_brcondi_tl(TCG_COND_LT, i, to, loop);
 
     tcg_temp_free(t0);
     tcg_temp_free(t1);
+    tcg_temp_free(i);
 }
 
 static inline void gen_ctzx(TCGv source1, int width)
