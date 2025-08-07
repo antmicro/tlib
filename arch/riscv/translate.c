@@ -392,19 +392,25 @@ static inline void gen_orcb(TCGv source1, int max_byte_index)
 
 static inline void gen_cpopx(TCGv source1, int length)
 {
-    TCGv t0 = tcg_temp_new();
-    TCGv t1 = tcg_temp_new();
+    TCGv t0 = tcg_temp_local_new();
+    TCGv t1 = tcg_temp_local_new();
+    TCGv i = tcg_temp_local_new();
+    int loop = gen_new_label();
 
     tcg_gen_movi_tl(t0, 0);
-    for(int i = 0; i < length; i++) {
-        tcg_gen_andi_tl(t1, source1, 1);
-        tcg_gen_add_tl(t0, t0, t1);
-        tcg_gen_shri_tl(source1, source1, 1);
-    }
+    tcg_gen_movi_tl(i, 0);
+
+    gen_set_label(loop);
+    tcg_gen_andi_tl(t1, source1, 1);
+    tcg_gen_add_tl(t0, t0, t1);
+    tcg_gen_shri_tl(source1, source1, 1);
+    tcg_gen_addi_tl(i, i, 1);
+    tcg_gen_brcondi_tl(TCG_COND_LT, i, length, loop);
     tcg_gen_mov_tl(source1, t0);
 
     tcg_temp_free(t0);
     tcg_temp_free(t1);
+    tcg_temp_free(i);
 }
 
 static inline void gen_clmulx(TCGv source1, TCGv source2, int rs1, int from, int to, int shift_right)
