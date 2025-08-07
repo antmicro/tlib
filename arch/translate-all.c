@@ -217,6 +217,9 @@ static void cpu_gen_code_inner(CPUState *env, TranslationBlock *tb)
         if(dc->is_jmp != DISAS_NEXT) {
             break;
         }
+        if((gen_opc_ptr - tcg->gen_opc_buf) >= OPC_BUF_SIZE) {
+            tlib_abortf("TCG op buffer overrun detected at PC %08X", dc->pc);
+        }
         if((gen_opc_ptr - tcg->gen_opc_buf) >= OPC_MAX_SIZE) {
             break;
         }
