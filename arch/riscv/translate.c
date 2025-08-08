@@ -413,7 +413,7 @@ static inline void gen_cpopx(TCGv source1, int length)
     tcg_temp_free(i);
 }
 
-static inline void gen_clmulx(TCGv source1, TCGv source2, int rs1, int from, int to, int shift_right)
+static inline void gen_clmulx(TCGv source1, TCGv source2, int from, int to, int shift_right)
 {
     TCGv t0, t1, i;
     int next_bit, loop;
@@ -434,9 +434,9 @@ static inline void gen_clmulx(TCGv source1, TCGv source2, int rs1, int from, int
     if(shift_right) {
         tcg_gen_movi_tl(t0, to);
         tcg_gen_sub_tl(t0, t0, i);
-        tcg_gen_shr_tl(t1, rs1, t0);
+        tcg_gen_shr_tl(t1, source1, t0);
     } else {
-        tcg_gen_shl_tl(t1, rs1, i);
+        tcg_gen_shl_tl(t1, source1, i);
     }
     tcg_gen_xor_tl(source1, source1, t1);
 
@@ -1033,19 +1033,19 @@ static void gen_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
             if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBC)) {
                 return;
             }
-            gen_clmulx(source1, source2, rs1, 0, TARGET_LONG_BITS - 1, 0);
+            gen_clmulx(source1, source2, 0, TARGET_LONG_BITS - 1, 0);
             break;
         case OPC_RISC_CLMULR:
             if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBC)) {
                 return;
             }
-            gen_clmulx(source1, source2, rs1, 0, TARGET_LONG_BITS - 1, 1);
+            gen_clmulx(source1, source2, 0, TARGET_LONG_BITS - 1, 1);
             break;
         case OPC_RISC_CLMULH:
             if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBC)) {
                 return;
             }
-            gen_clmulx(source1, source2, rs1, 1, TARGET_LONG_BITS, 1);
+            gen_clmulx(source1, source2, 1, TARGET_LONG_BITS, 1);
             break;
         default:
             kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
