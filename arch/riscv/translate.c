@@ -595,6 +595,13 @@ static void gen_fsgnj(DisasContext *dc, uint32_t rd, uint32_t rs1, uint32_t rs2,
     tcg_temp_free(t0);
 }
 
+#define SEXT_RESULT_IF_W(res)            \
+    do {                                 \
+        if(opc & (1 << 3)) {             \
+            tcg_gen_ext32s_tl(res, res); \
+        }                                \
+    } while(0)
+
 static void gen_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
 {
     TCGv source1, source2, cond1, cond2, zeroreg, resultopt1;
@@ -606,14 +613,17 @@ static void gen_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
     switch(opc) {
         CASE_OP_32_64(OPC_RISC_ADD)
             : tcg_gen_add_tl(source1, source1, source2);
+        SEXT_RESULT_IF_W(source1);
         break;
         CASE_OP_32_64(OPC_RISC_SUB)
             : tcg_gen_sub_tl(source1, source1, source2);
+        SEXT_RESULT_IF_W(source1);
         break;
 #if defined(TARGET_RISCV64)
         case OPC_RISC_SLLW:
             tcg_gen_andi_tl(source2, source2, 0x1F);
             tcg_gen_shl_tl(source1, source1, source2);
+            tcg_gen_ext32s_tl(source1, source1);
             break;
 #endif
         case OPC_RISC_SLL:
@@ -635,6 +645,7 @@ static void gen_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
             tcg_gen_ext32u_tl(source1, source1);
             tcg_gen_andi_tl(source2, source2, 0x1F);
             tcg_gen_shr_tl(source1, source1, source2);
+            tcg_gen_ext32s_tl(source1, source1);
             break;
 #endif
         case OPC_RISC_SRL:
@@ -648,8 +659,8 @@ static void gen_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
             tcg_gen_ext32s_tl(source1, source1);
             tcg_gen_andi_tl(source2, source2, 0x1F);
             tcg_gen_sar_tl(source1, source1, source2);
+            tcg_gen_ext32s_tl(source1, source1);
             break;
-            /* fall through to SRA */
 #endif
         case OPC_RISC_SRA:
             tcg_gen_andi_tl(source2, source2, TARGET_LONG_BITS - 1);
@@ -663,6 +674,7 @@ static void gen_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
             break;
             CASE_OP_32_64(OPC_RISC_MUL)
                 : tcg_gen_mul_tl(source1, source1, source2);
+            SEXT_RESULT_IF_W(source1);
             break;
         case OPC_RISC_MULH:
             tcg_gen_muls2_tl(source2, source1, source1, source2);
@@ -701,6 +713,7 @@ static void gen_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
             tcg_gen_movi_tl(resultopt1, (target_ulong)1);
             tcg_gen_movcond_tl(TCG_COND_EQ, source2, cond1, zeroreg, source2, resultopt1);
             tcg_gen_div_tl(source1, source1, source2);
+            SEXT_RESULT_IF_W(source1);
 
             tcg_temp_free(cond1);
             tcg_temp_free(cond2);
@@ -725,6 +738,7 @@ static void gen_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
             tcg_gen_movi_tl(resultopt1, (target_ulong)1);
             tcg_gen_movcond_tl(TCG_COND_EQ, source2, cond1, zeroreg, source2, resultopt1);
             tcg_gen_divu_tl(source1, source1, source2);
+            SEXT_RESULT_IF_W(source1);
 
             tcg_temp_free(cond1);
             tcg_temp_free(zeroreg);
@@ -754,6 +768,7 @@ static void gen_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
             tcg_gen_rem_tl(resultopt1, source1, source2);
             /* if div by zero, just return the original dividend */
             tcg_gen_movcond_tl(TCG_COND_EQ, source1, cond1, zeroreg, resultopt1, source1);
+            SEXT_RESULT_IF_W(source1);
 
             tcg_temp_free(cond1);
             tcg_temp_free(cond2);
@@ -778,6 +793,7 @@ static void gen_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
             tcg_gen_remu_tl(resultopt1, source1, source2);
             /* if div by zero, just return the original dividend */
             tcg_gen_movcond_tl(TCG_COND_EQ, source1, cond1, zeroreg, resultopt1, source1);
+            SEXT_RESULT_IF_W(source1);
 
             tcg_temp_free(cond1);
             tcg_temp_free(zeroreg);
@@ -923,7 +939,7 @@ static void gen_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
             tcg_gen_rotl_i64(cond1, cond1, rs2);
             tcg_gen_rotl_i64(source1, source1, rs2);
             tcg_gen_or_i64(source1, source1, cond1);
-            //  Sign extension is added at the end of this function
+            tcg_gen_ext32s_tl(source1, source1);
             tcg_temp_free(cond1);
             break;
 
@@ -943,7 +959,7 @@ static void gen_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
             tcg_gen_shr_i64(source1, source1, rs2);
             tcg_gen_shri_i64(cond1, cond1, 32);
             tcg_gen_or_i64(source1, source1, cond1);
-            //  Sign extension is added at the end of this function
+            tcg_gen_ext32s_tl(source1, source1);
             tcg_temp_free(cond1);
             break;
 
@@ -1037,10 +1053,6 @@ static void gen_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
             break;
     }
 
-    if(opc & 0x8) { /* sign extend for W instructions */
-        tcg_gen_ext32s_tl(source1, source1);
-    }
-
     gen_set_gpr(rd, source1);
     tcg_temp_free(source1);
     tcg_temp_free(source2);
@@ -1116,6 +1128,7 @@ static void gen_arith_bitmanip(DisasContext *dc, int rd, int rs1, target_long im
                 return;
             }
             tcg_gen_clzi_i32(source1, source1, 32);
+            tcg_gen_ext32s_i64(source1, source1);
             break;
         case OPC_RISC_RORI:
             if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
@@ -1131,6 +1144,7 @@ static void gen_arith_bitmanip(DisasContext *dc, int rd, int rs1, target_long im
             tcg_gen_rotri_i64(t0, source1, (imm & BITMANIP_SHAMT_MASK));
             tcg_gen_rotri_i64(source1, source1, 32 + (imm & BITMANIP_SHAMT_MASK));
             tcg_gen_or_i64(source1, source1, t0);
+            tcg_gen_ext32s_i64(source1, source1);
             tcg_temp_free(t0);
             break;
         case OPC_RISC_SLLI_UW:
@@ -1296,6 +1310,7 @@ static void gen_arith_imm(DisasContext *dc, uint32_t opc, int rd, int rs1, targe
         case OPC_RISC_ADDIW:
 #endif
             tcg_gen_addi_tl(source1, source1, imm);
+            SEXT_RESULT_IF_W(source1);
             break;
         case OPC_RISC_SLTI:
             tcg_gen_setcondi_tl(TCG_COND_LT, source1, source1, imm);
@@ -1327,6 +1342,7 @@ static void gen_arith_imm(DisasContext *dc, uint32_t opc, int rd, int rs1, targe
             } else {
                 tcg_gen_shli_tl(source1, source1, imm);
             }
+            SEXT_RESULT_IF_W(source1);
             break;
 #if defined(TARGET_RISCV64)
         case OPC_RISC_SHIFT_RIGHT_IW:
@@ -1346,21 +1362,19 @@ static void gen_arith_imm(DisasContext *dc, uint32_t opc, int rd, int rs1, targe
 #endif
                     /* SRAI[W] */
                     tcg_gen_sari_tl(source1, source1, (imm ^ 0x400) + extra_shamt);
+                    SEXT_RESULT_IF_W(source1);
                 } else {
                     gen_arith_bitmanip(dc, rd, rs1, imm, source1);
                 }
             } else {
                 /* SRLI[W] */
                 tcg_gen_shri_tl(source1, source1, imm + extra_shamt);
+                SEXT_RESULT_IF_W(source1);
             }
             break;
         default:
             kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
             break;
-    }
-
-    if(opc & 0x8) { /* sign-extend for W instructions */
-        tcg_gen_ext32s_tl(source1, source1);
     }
 
     gen_set_gpr(rd, source1);
