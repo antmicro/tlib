@@ -923,21 +923,20 @@ static void gen_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
             if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
                 return;
             }
-#if defined(TARGET_RISCV32)
-            tcg_gen_rotl_tl(source1, rs1, (rs2 & 0xF));
-#elif defined(TARGET_RISCV64)
-            tcg_gen_rotl_tl(source1, rs1, (rs2 & 0x1F));
-#endif
+            cond1 = tcg_temp_new();
+            tcg_gen_andi_tl(cond1, source2, TARGET_LONG_BITS - 1);
+            tcg_gen_rotl_tl(source1, source1, cond1);
+            tcg_temp_free(cond1);
             break;
         case OPC_RISC_ROLW:
             if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
                 return;
             }
             cond1 = tcg_temp_new_i64();
-            tcg_gen_shli_tl(cond1, rs1, 32);
+            tcg_gen_shli_tl(cond1, source1, 32);
             tcg_gen_shri_tl(source1, cond1, 32);
-            tcg_gen_rotl_i64(cond1, cond1, rs2);
-            tcg_gen_rotl_i64(source1, source1, rs2);
+            tcg_gen_rotl_i64(cond1, cond1, source2);
+            tcg_gen_rotl_i64(source1, source1, source2);
             tcg_gen_or_i64(source1, source1, cond1);
             tcg_gen_ext32s_tl(source1, source1);
             tcg_temp_free(cond1);
@@ -947,16 +946,16 @@ static void gen_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
             if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
                 return;
             }
-            tcg_gen_rotr_tl(source1, rs1, rs2);
+            tcg_gen_rotr_tl(source1, source1, source2);
             break;
         case OPC_RISC_RORW:
             if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
                 return;
             }
             cond1 = tcg_temp_new_i64();
-            tcg_gen_shli_tl(source1, rs1, 32);
-            tcg_gen_rotr_i64(cond1, source1, rs2);
-            tcg_gen_shr_i64(source1, source1, rs2);
+            tcg_gen_shli_tl(source1, source1, 32);
+            tcg_gen_rotr_i64(cond1, source1, source2);
+            tcg_gen_shr_i64(source1, source1, source2);
             tcg_gen_shri_i64(cond1, cond1, 32);
             tcg_gen_or_i64(source1, source1, cond1);
             tcg_gen_ext32s_tl(source1, source1);
