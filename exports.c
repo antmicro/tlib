@@ -463,12 +463,16 @@ uint32_t tlib_is_range_mapped(uint64_t start, uint64_t end)
 
 EXC_INT_2(uint32_t, tlib_is_range_mapped, uint64_t, start, uint64_t, end)
 
-void tlib_invalidate_translation_blocks(uintptr_t start, uintptr_t end)
+void tlib_invalidate_translation_blocks(uintptr_t *regions, uint64_t num_regions)
 {
-    tb_invalidate_phys_page_range_checked(start, end, 0, 0);
+    for(size_t regionIdx = 0; regionIdx < 2 * num_regions; regionIdx += 2) {
+        uint64_t start = regions[regionIdx];
+        uint64_t end = regions[regionIdx + 1];
+        tb_invalidate_phys_page_range_checked(start, end, 0, 0);
+    }
 }
 
-EXC_VOID_2(tlib_invalidate_translation_blocks, uintptr_t, start, uintptr_t, end)
+EXC_VOID_2(tlib_invalidate_translation_blocks, uintptr_t *, regions, uint64_t, num_regions)
 
 uint64_t tlib_translate_to_physical_address(uint64_t address, uint32_t access_type)
 {
