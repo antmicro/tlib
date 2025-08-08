@@ -397,6 +397,16 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
                 /* MPRV is read-only 0 if U-mode is not supported, so disallow setting it */
                 val_to_write = set_field(val_to_write, MSTATUS_MPRV, 0);
             }
+            //  Big endian data access is not supported so warn if the guest trie
+            //  to set any of the control bits for it
+            target_ulong big_endian_mode_mask = MSTATUS_UBE;
+#ifdef TARGET_RISCV64
+            big_endian_mode_mask |= MSTATUS_MBE | MSTATUS_SBE;
+#endif
+            if(val_to_write & big_endian_mode_mask) {
+                tlib_printf(LOG_LEVEL_WARNING, "Big endian data access is not supported, writes to MSTATUS.MBE/SBE/UBE are ignored");
+            }
+
             mstatus = (mstatus & ~mask) | (val_to_write & mask);
 
             int dirty = (mstatus & MSTATUS_FS) == MSTATUS_FS;
@@ -409,6 +419,22 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
                 env->mcause = set_field(env->mcause, MCAUSE_MPP, get_field(env->mstatus, MSTATUS_MPP));
                 env->mcause = set_field(env->mcause, MCAUSE_MPIE, get_field(env->mstatus, MSTATUS_MPIE));
             }
+            break;
+        }
+        case CSR_MSTATUSH: {
+#ifdef TARGET_RISCV32
+            //  CSR was added in priv 1.12
+            if(env->privilege_architecture < RISCV_PRIV1_12) {
+                helper_raise_illegal_instruction(env);
+            }
+            //  All fields hardwired to zero in the current implementation
+            if(val_to_write & (MSTATUSH_MBE | MSTATUSH_SBE)){
+                tlib_printf(LOG_LEVEL_WARNING, "Big endian data access is not supported, writes to MSTATUSH.MBE/SBE are ignored");
+            }
+#else
+            //  This CSR only exists on RV32
+            helper_raise_illegal_instruction(env);
+#endif
             break;
         }
         case CSR_MIP: {
@@ -879,6 +905,19 @@ static inline target_ulong csr_read_helper(CPUState *env, target_ulong csrno)
             return env->sscratch;
         case CSR_MSTATUS:
             return env->mstatus;
+        case CSR_MSTATUSH:
+#ifdef TARGET_RISCV32
+            // CSR was added in priv 1.12
+            if(env->privilege_architecture < RISCV_PRIV1_12) {
+                helper_raise_illegal_instruction(env);
+            }
+            //  Since mixed-endian mode is not supported in renode, both bits with meaning here are hardwired to 0
+            return 0;
+#else
+            //  This CSR is only present on RV32
+            helper_raise_illegal_instruction(env);
+#endif
+            break;
         case CSR_MIP:
             /* MIP is hardwired to zero in CLIC mode */
             return cpu_in_clic_mode(env) ? 0 : env->mip;

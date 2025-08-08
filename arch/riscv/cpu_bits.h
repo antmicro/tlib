@@ -54,6 +54,7 @@
 #define CSR_MTVEC         0x305
 #define CSR_MCOUNTEREN    0x306
 #define CSR_MTVT          0x307 /* unratified as of 2024-06; smclic extension */
+#define CSR_MSTATUSH      0x310 /* since: priv-1.12, RV32 only*/
 #define CSR_MENVCFG       0x30a
 #define CSR_MENVCFGH      0x31a
 #define CSR_MCOUNTINHIBIT 0x320 /* since: priv-1.11 */
@@ -291,7 +292,8 @@
 #define MSTATUS_MIE  0x00000008
 #define MSTATUS_UPIE 0x00000010
 #define MSTATUS_SPIE 0x00000020
-#define MSTATUS_HPIE 0x00000040
+#define MSTATUS_HPIE 0x00000040 /* until: priv-1.9.1 */
+#define MSTATUS_UBE  0x00000040 /* since: priv-1.11 */
 #define MSTATUS_MPIE 0x00000080
 #define MSTATUS_SPP  0x00000100
 #define MSTATUS_VS   0x00000600 /* vec-1.0-rc1 */
@@ -314,6 +316,8 @@
 
 #define MSTATUS64_UXL 0x0000000300000000ULL
 #define MSTATUS64_SXL 0x0000000C00000000ULL
+#define MSTATUS64_SBE 0x0000001000000000ULL
+#define MSTATUS64_MBE 0x0000002000000000ULL
 
 #define MSTATUS32_SD 0x80000000
 #define MSTATUS64_SD 0x8000000000000000ULL
@@ -324,7 +328,13 @@
 #define MSTATUS_UXL MSTATUS64_UXL
 #define MSTATUS_SXL MSTATUS64_SXL
 #define MSTATUS_SD  MSTATUS64_SD
+#define MSTATUS_SBE MSTATUS64_SBE
+#define MSTATUS_MBE MSTATUS64_MBE
 #endif
+
+/* mstatush bits */
+#define MSTATUSH_SBE   0x00000010
+#define MSTATUSH_MBE   0x00000020
 
 /* mcause bits */
 #define MCAUSE_EXCCODE 0x00000fff
