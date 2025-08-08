@@ -167,6 +167,7 @@ static void cpu_gen_code_inner(CPUState *env, TranslationBlock *tb)
     DisasContextBase *dc = (DisasContextBase *)&dcc;
 
     uint32_t max_tb_icount = get_max_tb_instruction_count(env);
+    uint16_t *opc_start_ptr = gen_opc_ptr;
 
     tb->icount = 0;
     tb->was_cut = false;
@@ -220,6 +221,12 @@ static void cpu_gen_code_inner(CPUState *env, TranslationBlock *tb)
         if((gen_opc_ptr - tcg->gen_opc_buf) >= OPC_BUF_SIZE) {
             tlib_abortf("TCG op buffer overrun detected at PC %08X", dc->pc);
         }
+        int ops_for_instr = gen_opc_ptr - opc_start_ptr;
+        if(ops_for_instr > MAX_OP_PER_INSTR) {
+            tlib_abortf("Guest instruction at %08X expanded to too many TCG ops (%d > %d)", dc->pc, ops_for_instr,
+                        MAX_OP_PER_INSTR);
+        }
+        opc_start_ptr = gen_opc_ptr;
         if((gen_opc_ptr - tcg->gen_opc_buf) >= OPC_MAX_SIZE) {
             break;
         }
