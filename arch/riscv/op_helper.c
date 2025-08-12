@@ -478,6 +478,13 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
             break;
         case CSR_MHPMEVENT3 ... CSR_MHPMEVENT31:
             break; /* Stubbed implementation */
+#ifdef TARGET_RISCV32
+        case CSR_MHPMEVENT3H ... CSR_MHPMEVENT31H:
+            if(!riscv_has_additional_ext(env, RISCV_FEATURE_SSCOFPMF)) {
+                goto unhandled_csr_write;
+            }
+            break; /* Stubbed implementation */
+#endif
         case CSR_SSTATUS: {
             target_ulong s = env->mstatus;
             target_ulong mask = SSTATUS_SIE | SSTATUS_SPIE | SSTATUS_UIE | SSTATUS_UPIE | SSTATUS_SPP | SSTATUS_FS | SSTATUS_XS |
@@ -807,6 +814,13 @@ static inline target_ulong csr_read_helper(CPUState *env, target_ulong csrno)
             return env->mscounteren;
         case CSR_MHPMEVENT3 ... CSR_MHPMEVENT31:
             return 0; /* Stubbed implementation */
+#ifdef TARGET_RISCV32
+        case CSR_MHPMEVENT3H ... CSR_MHPMEVENT31H:
+            if(!riscv_has_additional_ext(env, RISCV_FEATURE_SSCOFPMF)) {
+                goto unhandled_csr_read;
+            }
+            return 0; /* Stubbed implementation */
+#endif
         case CSR_SSTATUS: {
             target_ulong mask = SSTATUS_SIE | SSTATUS_SPIE | SSTATUS_UIE | SSTATUS_UPIE | SSTATUS_SPP | SSTATUS_FS | SSTATUS_XS |
                                 SSTATUS_SUM | SSTATUS_SD;
@@ -913,6 +927,11 @@ static inline target_ulong csr_read_helper(CPUState *env, target_ulong csrno)
             return env->vtype;
         case CSR_VLENB:
             return env->vlenb;
+        case CSR_SCOUNTOVF:
+            if(!riscv_has_additional_ext(env, RISCV_FEATURE_SSCOFPMF)) {
+                goto unhandled_csr_read;
+            }
+            return 0; /* stubbed implementation */
         case CSR_SINTSTATUS:
             return env->mintstatus & SINTSTATUS_MASK;
         case CSR_MINTSTATUS:

@@ -132,6 +132,7 @@ void tlib_allow_additional_feature(uint32_t feature)
             tlib_allow_additional_feature(RISCV_FEATURE_ZVE32F);
             break;
         case RISCV_FEATURE_SMEPMP:
+        case RISCV_FEATURE_SSCOFPMF:
             tlib_allow_additional_feature(RISCV_FEATURE_ZICSR);
             break;
         case RISCV_FEATURE_ZBA:
