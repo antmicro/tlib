@@ -413,40 +413,42 @@ static inline void gen_cpopx(TCGv source1, int length)
     tcg_temp_free(i);
 }
 
-static inline void gen_clmulx(TCGv source1, TCGv source2, int from, int to, int shift_right)
+static inline void gen_clmulx(TCGv source1, TCGv source2, int width, int reversed, int high_bits)
 {
-    TCGv t0, t1, i;
+    TCGv t0, i, result;
     int next_bit, loop;
     t0 = tcg_temp_local_new();
-    t1 = tcg_temp_local_new();
     i = tcg_temp_local_new();
+    result = tcg_temp_local_new();
     next_bit = gen_new_label();
     loop = gen_new_label();
 
-    tcg_gen_movi_tl(source1, 0);
-    tcg_gen_movi_tl(i, from);
+    tcg_gen_movi_tl(result, 0);
+    tcg_gen_movi_tl(i, high_bits - reversed);
 
     gen_set_label(loop);
-    tcg_gen_shri_tl(t0, source2, i);
+    tcg_gen_shr_tl(t0, source2, i);
     tcg_gen_andi_tl(t0, t0, 1);
     tcg_gen_brcondi_tl(TCG_COND_NE, t0, 1, next_bit);
 
-    if(shift_right) {
-        tcg_gen_movi_tl(t0, to);
+    if(high_bits) {
+        tcg_gen_movi_tl(t0, width - reversed);
         tcg_gen_sub_tl(t0, t0, i);
-        tcg_gen_shr_tl(t1, source1, t0);
+        tcg_gen_shr_tl(t0, source1, t0);
     } else {
-        tcg_gen_shl_tl(t1, source1, i);
+        tcg_gen_shl_tl(t0, source1, i);
     }
-    tcg_gen_xor_tl(source1, source1, t1);
+    tcg_gen_xor_tl(result, result, t0);
 
     gen_set_label(next_bit);
     tcg_gen_addi_tl(i, i, 1);
-    tcg_gen_brcondi_tl(TCG_COND_LT, i, to, loop);
+    tcg_gen_brcondi_tl(TCG_COND_LT, i, width, loop);
+
+    tcg_gen_mov_tl(source1, result);
 
     tcg_temp_free(t0);
-    tcg_temp_free(t1);
     tcg_temp_free(i);
+    tcg_temp_free(result);
 }
 
 static inline void gen_ctzx(TCGv source1, int width)
@@ -1033,19 +1035,19 @@ static void gen_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
             if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBC)) {
                 return;
             }
-            gen_clmulx(source1, source2, 0, TARGET_LONG_BITS - 1, 0);
+            gen_clmulx(source1, source2, TARGET_LONG_BITS, 0, 0);
             break;
         case OPC_RISC_CLMULR:
             if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBC)) {
                 return;
             }
-            gen_clmulx(source1, source2, 0, TARGET_LONG_BITS - 1, 1);
+            gen_clmulx(source1, source2, TARGET_LONG_BITS, 1, 1);
             break;
         case OPC_RISC_CLMULH:
             if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBC)) {
                 return;
             }
-            gen_clmulx(source1, source2, 1, TARGET_LONG_BITS, 1);
+            gen_clmulx(source1, source2, TARGET_LONG_BITS, 0, 1);
             break;
         default:
             kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
