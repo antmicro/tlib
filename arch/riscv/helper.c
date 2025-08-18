@@ -165,10 +165,11 @@ int riscv_cpu_hw_interrupts_pending(CPUState *env)
     switch(priv) {
         /* Disable interrupts for lower privileges, if interrupt is not delegated it is for higher level */
         case PRV_M:
-            pending_interrupts &= ~((IRQ_SS | IRQ_ST | IRQ_SE) & env->mideleg); /* fall through */
+            pending_interrupts &= ~((IRQ_SS | IRQ_ST | IRQ_SE | env->custom_interrupts) & env->mideleg); /* fall through */
         case PRV_S:
             /* For future use, extension N not implemented yet */
-            pending_interrupts &= ~((IRQ_US | IRQ_UT | IRQ_UE) & env->mideleg & env->sideleg); /* fall through */
+            pending_interrupts &=
+                ~((IRQ_US | IRQ_UT | IRQ_UE | env->custom_interrupts) & env->mideleg & env->sideleg); /* fall through */
         case PRV_U:
             break;
     }

@@ -198,6 +198,12 @@ struct CPUState {
     //  bitmap keeping information about CSRs that have custom external implementation
     uint64_t custom_csrs[CSRS_SLOTS];
 
+    //  bitmap holding installed custom local interrupts, encoded the same way as the bits in `mie` and `mip`.
+    target_ulong custom_interrupts;
+    //  bitmap holding which installed custom local interrupts can be triggered by writing to `mip` and `sip`
+    target_ulong mip_triggered_custom_interrupts;
+    target_ulong sip_triggered_custom_interrupts;
+
     /*
        Supported CSR validation levels:
      * 0 - (CSR_VALIDATION_NONE): no validation

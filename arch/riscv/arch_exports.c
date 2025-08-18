@@ -228,6 +228,38 @@ void tlib_enter_wfi()
 
 EXC_VOID_0(tlib_enter_wfi)
 
+int32_t tlib_install_custom_interrupt(uint8_t id, bool mip_trigger, bool sip_trigger)
+{
+#if defined(TARGET_RISCV64)
+    tlib_assert(id < 64);
+#else
+    tlib_assert(id < 32);
+#endif
+    target_ulong bit = ((target_ulong)1) << id;
+
+    target_ulong all_ints = IRQ_MS | IRQ_MT | IRQ_ME | IRQ_SS | IRQ_ST | IRQ_SE;
+    if(all_ints & bit) {
+        //  Don't install a custom interrupt with the same id as a standard one
+        tlib_printf(LOG_LEVEL_ERROR, "Custom interrupt with id: %d has the same id as a standard one", id);
+        return -1;
+    }
+    if(cpu->custom_interrupts & bit) {
+        tlib_printf(LOG_LEVEL_WARNING, "Custom interrupt with id: %d is already registered", id);
+    }
+
+    cpu->custom_interrupts |= bit;
+    if(mip_trigger) {
+        cpu->mip_triggered_custom_interrupts |= bit;
+    }
+    if(sip_trigger) {
+        cpu->sip_triggered_custom_interrupts |= bit;
+    }
+
+    return 0;
+}
+
+EXC_INT_3(int32_t, tlib_install_custom_interrupt, uint8_t, id, bool, m_trigger, bool, s_trigger)
+
 void tlib_set_csr_validation_level(uint32_t value)
 {
     switch(value) {

@@ -417,7 +417,8 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
             if(cpu_in_clic_mode(env)) {
                 break;
             }
-            target_ulong mask = IRQ_SS | IRQ_ST | IRQ_SE;
+            target_ulong custom_interrupts_mask = env->custom_interrupts & env->mip_triggered_custom_interrupts;
+            target_ulong mask = IRQ_SS | IRQ_ST | IRQ_SE | custom_interrupts_mask;
             pthread_mutex_lock(&env->mip_lock);
             env->mip = (env->mip & ~mask) | (val_to_write & mask);
             pthread_mutex_unlock(&env->mip_lock);
@@ -503,7 +504,8 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
             }
             target_ulong deleg = env->mideleg;
             target_ulong s = env->mip;
-            target_ulong mask = IRQ_US | IRQ_SS | IRQ_UT | IRQ_ST | IRQ_UE | IRQ_SE;
+            target_ulong custom_interrupts_mask = env->custom_interrupts & env->sip_triggered_custom_interrupts;
+            target_ulong mask = IRQ_US | IRQ_SS | IRQ_UT | IRQ_ST | IRQ_UE | IRQ_SE | custom_interrupts_mask;
             pthread_mutex_lock(&env->mip_lock);
             env->mip = (s & ~mask) | ((val_to_write & deleg) & mask);
             pthread_mutex_unlock(&env->mip_lock);
@@ -520,7 +522,7 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
             }
             target_ulong deleg = env->mideleg;
             target_ulong s = env->mie;
-            target_ulong mask = IRQ_US | IRQ_SS | IRQ_UT | IRQ_ST | IRQ_UE | IRQ_SE;
+            target_ulong mask = IRQ_US | IRQ_SS | IRQ_UT | IRQ_ST | IRQ_UE | IRQ_SE | env->custom_interrupts;
             env->mie = (s & ~mask) | ((val_to_write & deleg) & mask);
             break;
         }
@@ -843,7 +845,7 @@ static inline target_ulong csr_read_helper(CPUState *env, target_ulong csrno)
             if(cpu_in_clic_mode(env)) {
                 return 0;
             }
-            target_ulong mask = IRQ_US | IRQ_SS | IRQ_UT | IRQ_ST | IRQ_UE | IRQ_SE;
+            target_ulong mask = IRQ_US | IRQ_SS | IRQ_UT | IRQ_ST | IRQ_UE | IRQ_SE | env->custom_interrupts;
             return env->mip & env->mideleg & mask;
         }
         case CSR_SIE: {
@@ -851,7 +853,7 @@ static inline target_ulong csr_read_helper(CPUState *env, target_ulong csrno)
             if(cpu_in_clic_mode(env)) {
                 return 0;
             }
-            target_ulong mask = IRQ_US | IRQ_SS | IRQ_UT | IRQ_ST | IRQ_UE | IRQ_SE;
+            target_ulong mask = IRQ_US | IRQ_SS | IRQ_UT | IRQ_ST | IRQ_UE | IRQ_SE | env->custom_interrupts;
             return env->mie & env->mideleg & mask;
         }
         case CSR_SEPC:
