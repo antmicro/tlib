@@ -213,9 +213,9 @@ static inline uint32_t clmulr32(uint32_t val1, uint32_t val2)
 {
     uint32_t result = 0u;
     int i;
-    for(i = 0; i < 31; ++i) {
+    for(i = 0; i < 32; ++i) {
         if((val2 >> i) & 1) {
-            result ^= (uint64_t)val1 >> (31 - i);
+            result ^= (uint32_t)val1 >> (32 - i - 1);
         }
     }
     return result;
@@ -225,9 +225,9 @@ static inline uint64_t clmulr64(uint64_t val1, uint64_t val2)
 {
     uint64_t result = 0u;
     int i;
-    for(i = 0; i < 63; ++i) {
+    for(i = 0; i < 64; ++i) {
         if((val2 >> i) & 1) {
-            result ^= (uint64_t)val1 >> (63 - i);
+            result ^= (uint64_t)val1 >> (64 - i - 1);
         }
     }
     return result;
