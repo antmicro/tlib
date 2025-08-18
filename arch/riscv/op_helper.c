@@ -504,7 +504,13 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
             target_ulong deleg = env->mideleg;
             target_ulong s = env->mip;
             target_ulong mask = IRQ_US | IRQ_SS | IRQ_UT | IRQ_ST | IRQ_UE | IRQ_SE;
+            pthread_mutex_lock(&env->mip_lock);
             env->mip = (s & ~mask) | ((val_to_write & deleg) & mask);
+            pthread_mutex_unlock(&env->mip_lock);
+            tlib_mip_changed(env->mip);
+            if(env->mip != 0) {
+                set_interrupt_pending(env, CPU_INTERRUPT_HARD);
+            }
             break;
         }
         case CSR_SIE: {
