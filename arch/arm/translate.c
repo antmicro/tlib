@@ -176,6 +176,13 @@ static void store_reg(DisasContext *s, int reg, TCGv var)
         tcg_gen_andi_i32(var, var, ~1);
         s->base.is_jmp = DISAS_JUMP;
     }
+#ifdef TARGET_PROTO_ARM_M
+    if(reg == SP_32) {
+        //  bits [1:0] of SP are WI or SBZP
+        tcg_gen_andi_i32(var, var, ~3);
+    }
+#endif
+
     if(unlikely(s->base.guest_profile) && reg == SP_32) {
         //  Store old SP
         TCGv oldsp = tcg_temp_new_i32();

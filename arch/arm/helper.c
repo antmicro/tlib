@@ -2873,6 +2873,10 @@ void HELPER(set_cp15_32bit)(CPUState *env, uint32_t insn, uint32_t val)
 
 void HELPER(set_r13_banked)(CPUState *env, uint32_t mode, uint32_t val)
 {
+#ifdef TARGET_PROTO_ARM_M
+    //  bits [1:0] of SP are WI or SBZP
+    val &= 0xFFFFFFFC;
+#endif
     if((env->uncached_cpsr & CPSR_M) == mode) {
         env->regs[13] = val;
     } else {
@@ -3017,6 +3021,8 @@ void HELPER(v7m_msr)(CPUState *env, uint32_t reg, uint32_t val)
             xpsr_write(env, val, 0x0600fc00);
             break;
         case 8: /* MSP */
+            //  bits [1:0] of SP are WI or SBZP
+            val &= 0xFFFFFFFC;
             if(!in_privileged_mode(env)) {
                 return;
             } else if(env->v7m.process_sp) {
@@ -3026,9 +3032,12 @@ void HELPER(v7m_msr)(CPUState *env, uint32_t reg, uint32_t val)
             }
             break;
         case NON_SECURE_REG(8): /* MSP_NS */
-            env->v7m.other_ss_msp = val;
+            //  bits [1:0] of SP are WI or SBZP
+            env->v7m.other_ss_msp = val & 0xFFFFFFFC;
             break;
         case 9: /* PSP */
+            //  bits [1:0] of SP are WI or SBZP
+            val &= 0xFFFFFFFC;
             if(env->v7m.process_sp) {
                 env->regs[13] = val;
             } else {
@@ -3036,7 +3045,8 @@ void HELPER(v7m_msr)(CPUState *env, uint32_t reg, uint32_t val)
             }
             break;
         case NON_SECURE_REG(9): /* PSP_NS */
-            env->v7m.other_ss_psp = val;
+            //  bits [1:0] of SP are WI or SBZP
+            env->v7m.other_ss_psp = val & 0xFFFFFFFC;
             break;
         case NON_SECURE_REG(10):
         case 10: /* MSPLIM - armv8-m specific */
@@ -3104,6 +3114,8 @@ void HELPER(v7m_msr)(CPUState *env, uint32_t reg, uint32_t val)
             }
             break;
         case NON_SECURE_REG(24): /* SP_NS */
+            //  bits [1:0] of SP are WI or SBZP
+            val &= 0xFFFFFFFC;
             if(env->v7m.process_sp) {
                 env->v7m.other_ss_psp = val;
             } else {

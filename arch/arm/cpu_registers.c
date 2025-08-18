@@ -179,6 +179,9 @@ void tlib_set_register_value_32_with_security(int reg_number, uint32_t value, bo
         } else {
             value &= ~ARM_CONTROL_SFPA_MASK;
         }
+    } else if(reg_number == SP_32 || reg_number == OtherSP_32) {
+        //  bits [1:0] of SP are WI or SBZP
+        value &= 0xFFFFFFFC;
     }
 #endif
 

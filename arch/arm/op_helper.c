@@ -258,6 +258,10 @@ uint32_t HELPER(get_user_reg)(uint32_t regno)
 void HELPER(set_user_reg)(uint32_t regno, uint32_t val)
 {
     if(regno == 13) {
+#ifdef TARGET_PROTO_ARM_M
+        //  bits [1:0] of SP are WI or SBZP
+        val &= 0xFFFFFFFC;
+#endif
         env->banked_r13[0] = val;
     } else if(regno == 14) {
         env->banked_r14[0] = val;
