@@ -393,6 +393,17 @@ WRITE_FUNCTION(64, ats1, {
     }
 });
 
+/* We want to keep everything except BASEADRESS and ENABLEELx */
+#define IMP_XTCMREGIONR_MASK 0x1FFC
+
+WRITE_FUNCTION(64, tcm_region, {
+    uint32_t current_address = value >> 13;
+
+    *sysreg_field_ptr(env, info) &= IMP_XTCMREGIONR_MASK;
+    *sysreg_field_ptr(env, info) |= value & ~IMP_XTCMREGIONR_MASK;
+    tlib_on_tcm_mapping_update(info->op2, current_address);
+});
+
 /* PMSAv8 accessors */
 #define PRSELR_REGION_MASK 0xFF
 #define RW_FUNCTIONS_PMSAv8(width)                                                                                            \
@@ -2036,10 +2047,9 @@ ARMCPRegInfo cortex_r52_regs[] =
     // The params are:  name                 cp, op1, crn, crm, op2, el, extra_type, ...
     ARM32_CP_REG_DEFINE(CPUACTLR,            15,   0,   0,  15,   0,  1, RW) // CPU Auxiliary Control Register
 
-    // Below 3 fields should be RW, they are RO only because our implementation is incomplete
-    ARM32_CP_REG_DEFINE(IMP_ATCMREGIONR,     15,   0,   9,   1,   0,  1, RO, FIELD(cp15.tcm_region[0])) // TCM Region Register A
-    ARM32_CP_REG_DEFINE(IMP_BTCMREGIONR,     15,   0,   9,   1,   1,  1, RO, FIELD(cp15.tcm_region[1])) // TCM Region Register B
-    ARM32_CP_REG_DEFINE(IMP_CTCMREGIONR,     15,   0,   9,   1,   2,  1, RO, FIELD(cp15.tcm_region[2])) // TCM Region Register C
+    ARM32_CP_REG_DEFINE(IMP_ATCMREGIONR,     15,   0,   9,   1,   0,  1, RW, FIELD(cp15.tcm_region[0]), WRITEFN(tcm_region)) // TCM Region Register A
+    ARM32_CP_REG_DEFINE(IMP_BTCMREGIONR,     15,   0,   9,   1,   1,  1, RW, FIELD(cp15.tcm_region[1]), WRITEFN(tcm_region)) // TCM Region Register B
+    ARM32_CP_REG_DEFINE(IMP_CTCMREGIONR,     15,   0,   9,   1,   2,  1, RW, FIELD(cp15.tcm_region[2]), WRITEFN(tcm_region)) // TCM Region Register C
     ARM32_CP_REG_DEFINE(IMP_CSCTLR,          15,   1,   9,   1,   0,  1, RW) // Cache Segregation Control Register
     ARM32_CP_REG_DEFINE(IMP_BPCTLR,          15,   1,   9,   1,   1,  1, RW) // Branch Predictor Control Register
     ARM32_CP_REG_DEFINE(IMP_MEMPROTCLR,      15,   1,   9,   1,   2,  1, RW) // Memory Protection Control Register
