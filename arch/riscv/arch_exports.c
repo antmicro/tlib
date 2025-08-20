@@ -47,6 +47,15 @@ void tlib_set_mip_bit(uint32_t position, uint32_t value)
     pthread_mutex_unlock(&cpu->mip_lock);
 }
 
+void handle_interrupt(CPUState *env, int mask);
+void tlib_raise_interrupt(uint32_t exception)
+{
+    tlib_set_mip_bit(exception, 1);
+    env->exception_index = exception;
+    cpu_interrupt(cpu, CPU_INTERRUPT_HARD);
+}
+EXC_VOID_1(tlib_raise_interrupt, uint32_t, exception)
+
 EXC_VOID_2(tlib_set_mip_bit, uint32_t, position, uint32_t, value)
 
 void tlib_set_clic_interrupt_state(int32_t intno, uint32_t vectored, uint32_t level, uint32_t mode)
