@@ -787,12 +787,16 @@ void arm_gen_test_cc(int cc, int label)
     arm_free_cc(&cmp);
 }
 
+static inline void gen_set_condexec_unconditional(DisasContext *s)
+{
+    uint32_t val = (s->condexec_cond << 4) | (s->condexec_mask >> 1);
+    store_cpu_field_constant(val, condexec_bits);
+}
+
 void gen_set_condexec(DisasContext *s)
 {
     if(s->condexec_mask) {
-        uint32_t val = (s->condexec_cond << 4) | (s->condexec_mask >> 1);
-
-        store_cpu_field_constant(val, condexec_bits);
+        gen_set_condexec_unconditional(s);
     }
 }
 
@@ -9583,7 +9587,8 @@ void thumb_tr_translate_insn(DisasContextBase *dcbase, CPUState *env)
     }
 
     /* Advance the Thumb condexec condition.  */
-    if(dc->condexec_mask) {
+    bool was_in_it_block = dc->condexec_mask;
+    if(was_in_it_block) {
         dc->condexec_cond = ((dc->condexec_cond & 0xe) | ((dc->condexec_mask >> 4) & 1));
         dc->condexec_mask = (dc->condexec_mask << 1) & 0x1f;
         if(dc->condexec_mask == 0) {
@@ -9602,6 +9607,11 @@ void thumb_tr_translate_insn(DisasContextBase *dcbase, CPUState *env)
     }
 
     arm_post_translate_insn(dc);
+    //  Clear condexec_bits upon leaving IT block
+    //  to avoid using state from the middle of IT block in next translation block.
+    if(was_in_it_block && !dc->condexec_mask) {
+        gen_set_condexec_unconditional(dc);
+    }
 
     /* Thumb is a variable-length ISA.  Stop translation when the next insn
      * will touch a new page.  This ensures that prefetch aborts occur at
