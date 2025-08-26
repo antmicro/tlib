@@ -1789,6 +1789,7 @@ void cpu_physical_memory_rw(target_phys_addr_t addr, uint8_t *buf, int len, int 
                     /* 64 bit write access */
                     val = ldq_p(buf);
                     tlib_write_quad_word(addr1, val, cpustate);
+                    l = 8;
                 } else if(l >= 4 && ((addr1 & 3) == 0)) {
                     /* 32 bit write access */
                     val = ldl_p(buf);
