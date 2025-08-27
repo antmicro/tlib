@@ -500,11 +500,17 @@ typedef struct TCGHelperInfo {
     const char *name;
 } TCGHelperInfo;
 
+#define TCG_TRACE_MAX_SIZE 20
+
+typedef struct TCGBacktrace {
+    void *return_addresses[TCG_TRACE_MAX_SIZE];
+    uint32_t address_count;
+} TCGBacktrace;
+
 typedef struct TCGOpcodeEntry {
     TCGOpcode opcode;
 #ifdef TCG_DEBUG_BACKTRACE
-    char **backtrace_symbols;
-    uint32_t backtrace_entries;
+    TCGBacktrace backtrace;
 #endif
 } TCGOpcodeEntry;
 

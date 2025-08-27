@@ -86,16 +86,26 @@ static inline void tcg_print_opcode_backtrace(TCGContext *s)
         return;
     }
 
-    if(entry->backtrace_symbols == NULL) {
+    TCGBacktrace backtrace = entry->backtrace;
+    if(backtrace.address_count == 0) {
         tlib_printf(LOG_LEVEL_WARNING, "%s: Opcode %x has no backtrace", __func__, entry->opcode);
         return;
     }
 
-    tlib_printf(LOG_LEVEL_ERROR, "Failed when processing opcode %x", entry->opcode);
-    for(int i = 0; i < entry->backtrace_entries; i++) {
-        char *backtrace_symbol = entry->backtrace_symbols[i];
-        tlib_printf(LOG_LEVEL_ERROR, "At %s", backtrace_symbol);
+    char **backtrace_functions = backtrace_symbols(backtrace.return_addresses, backtrace.address_count);
+    if(unlikely(backtrace_functions == NULL)) {
+        tlib_printf(LOG_LEVEL_ERROR, "%s: failed to identify symbol names", __func__);
+        return;
     }
+
+    tlib_printf(LOG_LEVEL_ERROR, "Failed when processing opcode %x", entry->opcode);
+    for(int i = 0; i < backtrace.address_count; i++) {
+        tlib_printf(LOG_LEVEL_ERROR, "At %s", backtrace_functions[i]);
+    }
+
+    free(backtrace_functions);
+#else
+    tlib_printf(LOG_LEVEL_WARNING, "TCG debug backtrace not enabled. Recompile with TCG_DEBUG_BACKTRACE to enable");
 #endif
 }
 
@@ -309,27 +319,12 @@ void tcg_context_use_tlb(int value)
     tcg->ctx->use_tlb = !!value;
 }
 
-void tcg_free_backtraces(const TCGOpcodeEntry *gen_opc_buf)
-{
-#ifdef TCG_DEBUG_BACKTRACE
-    for(int i = 0; i < OPC_BUF_SIZE; i++) {
-        const TCGOpcodeEntry entry = gen_opc_buf[i];
-        if(entry.backtrace_symbols == NULL) {
-            continue;
-        }
-        //  Backtraces are allocated using normal `malloc`, so must be freed by `free`.
-        free(entry.backtrace_symbols);
-    }
-#endif
-}
-
 void tcg_dispose()
 {
     TCG_free(tcg_op_defs[0].args_ct);
     TCG_free(tcg_op_defs[0].sorted_args);
     tcg_pool_free(tcg->ctx);
     TCG_free(tcg->ctx->helpers);
-    tcg_free_backtraces(tcg->gen_opc_buf);
 }
 
 void tcg_prologue_init()
@@ -1712,6 +1707,7 @@ static int tcg_reg_alloc_call(TCGContext *s, const TCGOpDef *def, TCGOpcode opc,
                 /* XXX: sign extend ? */
                 tcg_out_movi(s, ts->type, reg, ts->val);
             } else {
+                tcg_print_opcode_backtrace(s);
                 tcg_abort();
             }
             tcg_regset_set_reg(allocated_regs, reg);

@@ -202,15 +202,8 @@ static inline TCGOpcodeEntry tcg_create_opcode_entry(const TCGOpcode opcode)
 {
     TCGOpcodeEntry entry = { .opcode = opcode };
 #if defined(TCG_DEBUG_BACKTRACE) && DEBUG && !defined(_WIN32)
-#define TRACE_MAX_SIZE 20
-    void *backtrace_buffer[TRACE_MAX_SIZE];
-    const uint32_t buffer_entries = backtrace(backtrace_buffer, TRACE_MAX_SIZE);
-    entry.backtrace_entries = buffer_entries;
-    char **backtrace_functions = backtrace_symbols(backtrace_buffer, buffer_entries);
-    if(unlikely(backtrace_functions == NULL)) {
-        tlib_printf(LOG_LEVEL_ERROR, "%s: failed to collect backtrace", __func__);
-    }
-    entry.backtrace_symbols = backtrace_functions;
+    const uint32_t buffer_entries = backtrace(entry.backtrace.return_addresses, TCG_TRACE_MAX_SIZE);
+    entry.backtrace.address_count = buffer_entries;
 #endif
     return entry;
 }
