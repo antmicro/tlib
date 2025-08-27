@@ -201,7 +201,7 @@ static inline void tcg_request_block_interrupt_check()
 static inline TCGOpcodeEntry tcg_create_opcode_entry(const TCGOpcode opcode)
 {
     TCGOpcodeEntry entry = { .opcode = opcode };
-#if defined(TCG_DEBUG_BACKTRACE) && DEBUG && !defined(_WIN32)
+#if defined(TCG_OPCODE_BACKTRACE) && DEBUG && !defined(_WIN32)
     const uint32_t buffer_entries = backtrace(entry.backtrace.return_addresses, TCG_TRACE_MAX_SIZE);
     entry.backtrace.address_count = buffer_entries;
 #endif

@@ -79,7 +79,7 @@ TCGArg *gen_opparam_ptr;
 
 static inline void tcg_print_opcode_backtrace(TCGContext *s)
 {
-#ifdef TCG_DEBUG_BACKTRACE
+#ifdef TCG_OPCODE_BACKTRACE
     TCGOpcodeEntry *entry = s->current_code;
     if(entry == NULL) {
         tlib_printf(LOG_LEVEL_WARNING, "%s: Current opcode not set", __func__);
@@ -105,7 +105,7 @@ static inline void tcg_print_opcode_backtrace(TCGContext *s)
 
     free(backtrace_functions);
 #else
-    tlib_printf(LOG_LEVEL_WARNING, "TCG debug backtrace not enabled. Recompile with TCG_DEBUG_BACKTRACE to enable");
+    tlib_printf(LOG_LEVEL_WARNING, "TCG opcode backtrace not enabled. Recompile with TCG_OPCODE_BACKTRACE to enable");
 #endif
 }
 

@@ -509,7 +509,7 @@ typedef struct TCGBacktrace {
 
 typedef struct TCGOpcodeEntry {
     TCGOpcode opcode;
-#ifdef TCG_DEBUG_BACKTRACE
+#ifdef TCG_OPCODE_BACKTRACE
     TCGBacktrace backtrace;
 #endif
 } TCGOpcodeEntry;
