@@ -6,6 +6,18 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(DEBUG_DEF "-DDEBUG -DDEBUG_ON -g3")
 endif()
 
+if(TCG_OPCODE_BACKTRACE)
+    if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+        message(FATAL_ERROR "Cannot use TCG_OPCODE_BACKTRACE without Debug configuration")
+    endif()
+
+    add_definitions(-DTCG_OPCODE_BACKTRACE)
+
+    # Don't cache this variable, so the user can
+    # repeatedly toggle it on/off by providing/omitting it.
+    set(TCG_OPCODE_BACKTRACE OFF CACHE BOOL "Enable TCG opcode backtrace" FORCE)
+endif()
+
 if(NOT DEFINED HOST_ARCH)
     message(STATUS "'HOST_ARCH' isn't set; analyzing the CPU (${CMAKE_SYSTEM_PROCESSOR})...")
     if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "(AMD64|amd64|86)")
