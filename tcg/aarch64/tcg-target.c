@@ -26,6 +26,12 @@
 #include "tlib/include/infrastructure.h"
 #include "tlib/tcg/additional.h"
 #include "tlib/tcg/tcg.h"
+
+#if defined(__linux__)
+#include <sys/auxv.h>
+#include <asm/hwcap.h>
+#endif
+
 //  Order registers get picked in
 static const int tcg_target_reg_alloc_order[] = {
     TCG_REG_R8,  TCG_REG_R9,  TCG_REG_R10, TCG_REG_R11, TCG_REG_R12, TCG_REG_R13, TCG_REG_R14, TCG_REG_R15, TCG_REG_R16,
@@ -112,6 +118,24 @@ static int target_parse_constraint(TCGArgConstraint *ct, const char **pct_str)
             tcg_regset_reset_reg(ct->u.regs, TCG_REG_R0);
             tcg_regset_reset_reg(ct->u.regs, TCG_REG_R1);
             tcg_regset_reset_reg(ct->u.regs, TCG_REG_R2);
+            break;
+        case 'x':
+            //  Registers to be used with atomic operations might need up to two extra scratch register
+            //  for the cases where they are implemented with LD/STX Loops
+            ct->ct |= TCG_CT_REG;
+            tcg_regset_set(ct->u.regs, (1L << TCG_TARGET_GP_REGS) - 1);
+            tcg_regset_reset_reg(ct->u.regs, TCG_REG_R0);
+            tcg_regset_reset_reg(ct->u.regs, TCG_REG_R1);
+            break;
+        case 'c':
+            //  Registers to be used with atomic compare and swap operations might need up to 4 scratch registers
+            //  for the cases where they are implemented with LD/STX Loops
+            ct->ct |= TCG_CT_REG;
+            tcg_regset_set(ct->u.regs, (1L << TCG_TARGET_GP_REGS) - 1);
+            tcg_regset_reset_reg(ct->u.regs, TCG_REG_R0);
+            tcg_regset_reset_reg(ct->u.regs, TCG_REG_R1);
+            tcg_regset_reset_reg(ct->u.regs, TCG_REG_R2);
+            tcg_regset_reset_reg(ct->u.regs, TCG_REG_R3);
             break;
         default:
             tcg_abortf("Constraint %c not implemented", ct_str[0]);
@@ -210,12 +234,28 @@ static inline void tcg_out_ret(TCGContext *s, int reg)
     tcg_out32(s, 0xd65f0000 | (reg << 5));
 }
 
-static inline void tcg_out_b_cond(TCGContext *s, int cond, tcg_target_ulong offset)
+static inline void tcg_out_b_cond(TCGContext *s, int cond, tcg_target_long offset)
 {
     //  Offset is encoded as offset/4
     offset = offset >> 2;
     //  Offset needs to be masked to 19-bits
     tcg_out32(s, 0x54000000 | ((0x7FFFF & offset) << 5) | (tcg_cond_to_arm_cond[cond] << 0));
+}
+
+static inline void tcg_out_compare_branch_non_zero(TCGContext *s, int bits, int reg_value, tcg_target_long offset)
+{
+    offset = offset >> 2;
+    switch(bits) {
+        case 32:
+            tcg_out32(s, 0x35000000 | ((offset & 0x7FFFF) << 5) | (reg_value << 0));
+            break;
+        case 64:
+            tcg_out32(s, 0xB5000000 | ((offset & 0x7FFFF) << 5) | (reg_value << 0));
+            break;
+        default:
+            tlib_abortf("tcg_out_compare_branch_non_zero called for unsupported width: %d", bits);
+            break;
+    }
 }
 
 static inline void tcg_out_b_noaddr(TCGContext *s)
@@ -923,6 +963,61 @@ static inline void tcg_out_setcond_imm(TCGContext *s, int bits, int reg_dest, in
     tcg_out_csinc(s, bits, reg_dest, TCG_REG_RZR, TCG_REG_RZR, tcg_invert_cond(cond));
 }
 
+static inline bool has_host_atomics()
+{
+#if defined(__linux__)
+    return !!(getauxval(AT_HWCAP) & HWCAP_ATOMICS);
+#elif defined(__APPLE__)
+    //  All arm macs support host atomics
+    return true;
+#else
+#error "Only arm64 linux and macOS are supported"
+#endif
+}
+
+//  Emits a load exclusive (LDXR) instruction, optionally with aquire memory ordering (LDAXR)
+static inline void tcg_out_load_exclusive(TCGContext *s, int bits, int reg_dest, int reg_addr, bool acquire)
+{
+    switch(bits) {
+        case 32:
+            tcg_out32(s, 0x885F7C00 | (acquire << 15) | (reg_addr << 5) | (reg_dest << 0));
+            break;
+        case 64:
+            tcg_out32(s, 0xC85F7C00 | (acquire << 15) | (reg_addr << 5) | (reg_dest << 0));
+            break;
+        default:
+            tcg_abortf("tcg_out_load_exclusive called with unsupported %i bits", bits);
+    }
+}
+
+//  Emits a store excluse (STXR) instruction, optionally with release memory ordering (STLXR)
+static inline void tcg_out_store_exclusive(TCGContext *s, int bits, int reg_result, int reg_val, int reg_addr, bool release)
+{
+    switch(bits) {
+        case 32:
+            tcg_out32(s, 0x88007C00 | (reg_result << 16) | (release << 15) | (reg_addr << 5) | (reg_val << 0));
+            break;
+        case 64:
+            tcg_out32(s, 0xC8007C00 | (reg_result << 16) | (release << 15) | (reg_addr << 5) | (reg_val << 0));
+            break;
+        default:
+            tcg_abortf("tcg_out_store_exclusive called with unsupported %i bits", bits);
+    }
+}
+
+static inline TCGType width_to_tcg_type(int bits)
+{
+    switch(bits) {
+        case 32:
+            return TCG_TYPE_I32;
+        case 64:
+            return TCG_TYPE_I64;
+        default:
+            tlib_abortf("width_to_tcg_type called on unsupported width %i", bits);
+            __builtin_unreachable();
+    }
+}
+
 //  Emits a compare and swap instruction, optionally with aquire and/or release memory ordering
 static inline void tcg_out_compare_and_swap(TCGContext *s, int bits, int reg_expected, int reg_val, int reg_addr, bool acquire,
                                             bool release)
@@ -942,10 +1037,56 @@ static inline void tcg_out_compare_and_swap(TCGContext *s, int bits, int reg_exp
     }
 }
 
+static inline void tcg_out_emulated_atomic_compare_and_swap(TCGContext *s, int bits, int reg_expected, int reg_val, int reg_addr)
+{
+    //  Move the address, value, and the original expected value into scratch registers
+    tcg_out_mov(s, width_to_tcg_type(bits), TCG_REG_R0, reg_val);
+    tcg_out_mov(s, TCG_TYPE_I64, TCG_REG_R1, reg_addr);
+    tcg_out_mov(s, width_to_tcg_type(bits), TCG_REG_R2, reg_expected);
+    //  Address for the start of the loop
+    uint8_t *start = s->code_ptr;
+    //  Load the value from memory
+    tcg_out_load_exclusive(s, bits, reg_expected, TCG_REG_R1, /* acquire: */ true);
+    //  compare the read (reg_expected) and original expected value (TCG_REG_R2)
+    tcg_out_cmp(s, bits, TCG_REG_R2, reg_expected);
+    //  If the values don't match branch over to the end.
+    //  Offset of 12, since each instruction is 4 bytes, and we need to branch over this instruction, the store, and the loop
+    //  branch
+    tcg_out_b_cond(s, TCG_COND_NE, 12);
+    //  Attempt to write back the value
+    tcg_out_store_exclusive(s, bits, TCG_REG_R3, TCG_REG_R0, TCG_REG_R1, /* release: */ true);
+    //  If it fails, retry until it works
+    //  Arm forward progress guarantee that we can't livelock here
+    tcg_out_compare_branch_non_zero(s, bits, TCG_REG_R3, start - s->code_ptr);
+}
+
 //  Emits a compare and swap with seq-const memory ordering
 static inline void tcg_out_atomic_compare_and_swap(TCGContext *s, int bits, int reg_expected, int reg_val, int reg_addr)
 {
-    tcg_out_compare_and_swap(s, bits, reg_expected, reg_val, reg_addr, true, true);
+    if(has_host_atomics()) {
+        tcg_out_compare_and_swap(s, bits, reg_expected, reg_val, reg_addr, /* acquire: */ true, /* release: */ true);
+    } else {
+        //  If the core does not have native compare and swap a fallback using a Load/Store Exclusive loop is needed
+        tcg_out_emulated_atomic_compare_and_swap(s, bits, reg_expected, reg_val, reg_addr);
+    }
+}
+
+static inline void tcg_out_emulated_atomic_fetch_and_add(TCGContext *s, int bits, int reg_dest, int reg_addr, int reg_val)
+{
+    //  Move the address and value into a scratch register, in case reg_dest overlaps with any of them
+    tcg_out_mov(s, TCG_TYPE_I64, TCG_REG_R1, reg_addr);
+    tcg_out_mov(s, width_to_tcg_type(bits), TCG_REG_R0, reg_val);
+    //  Address for the start of the loop
+    uint8_t *start = s->code_ptr;
+    //  Load the original value from memory
+    tcg_out_load_exclusive(s, bits, reg_dest, TCG_REG_R1, true);
+    //  Perform the add
+    tcg_out_add_reg(s, bits, TCG_TMP_REG, reg_dest, TCG_REG_R0);
+    //  Attempt to write back the value, putting the resulting status value in TCG_TMP_REG
+    tcg_out_store_exclusive(s, bits, TCG_TMP_REG, TCG_TMP_REG, TCG_REG_R1, true);
+    //  If it fails, retry until it works
+    //  Arm forward progress guarantee that we can't livelock here
+    tcg_out_compare_branch_non_zero(s, bits, TCG_TMP_REG, start - s->code_ptr);
 }
 
 //  Emits a fetch and add instruction (LDADD), optionally with aquire and/or release memory ordering
@@ -968,7 +1109,12 @@ static inline void tcg_out_fetch_and_add(TCGContext *s, int bits, int reg_dest, 
 //  Emits a fetch and add with seq-const memory ordering
 static inline void tcg_out_atomic_fetch_and_add(TCGContext *s, int bits, int reg_dest, int reg_addr, int reg_val)
 {
-    tcg_out_fetch_and_add(s, bits, reg_dest, reg_addr, reg_val, true, true);
+    if(has_host_atomics()) {
+        tcg_out_fetch_and_add(s, bits, reg_dest, reg_addr, reg_val, /* acquire : */ true, /* release: */ true);
+    } else {
+        //  If the core does not have native fetch and add a fallback using a Load/Store Exclusive loop is needed
+        tcg_out_emulated_atomic_fetch_and_add(s, bits, reg_dest, reg_addr, reg_val);
+    }
 }
 
 //  qemu_st/ld loads and stores to and from GUEST addresses, not host ones
@@ -1579,11 +1725,11 @@ static const TCGTargetOpDef arm_op_defs[] = {
     { INDEX_op_brcond2_i32, { "r", "r", "r", "r" } },
     { INDEX_op_setcond2_i32, { "r", "r", "r", "r", "r" } },
 
-    { INDEX_op_atomic_fetch_add_intrinsic_i32, { "r", "r", "r" } },
-    { INDEX_op_atomic_fetch_add_intrinsic_i64, { "r", "r", "r" } },
+    { INDEX_op_atomic_fetch_add_intrinsic_i32, { "x", "x", "x" } },
+    { INDEX_op_atomic_fetch_add_intrinsic_i64, { "x", "x", "x" } },
 
-    { INDEX_op_atomic_compare_and_swap_intrinsic_i32, { "r", "r", "r", "r" } },
-    { INDEX_op_atomic_compare_and_swap_intrinsic_i64, { "r", "r", "r", "r" } },
+    { INDEX_op_atomic_compare_and_swap_intrinsic_i32, { "c", "c", "c", "c" } },
+    { INDEX_op_atomic_compare_and_swap_intrinsic_i64, { "c", "c", "c", "c" } },
     { INDEX_op_atomic_compare_and_swap_intrinsic_i128, { "r", "r", "r", "r", "r", "r", "r" } },
 
     //  { -1 } indicates the end of the list
