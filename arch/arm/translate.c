@@ -4095,13 +4095,18 @@ static inline uint32_t pack_condexec(DisasContext *s)
     return (s->condexec_cond << 4) | (s->condexec_mask >> 1);
 }
 
+static inline void gen_set_condexec_unconditional(DisasContext *s)
+{
+    uint32_t val = pack_condexec(s);
+    TCGv tmp = tcg_temp_new_i32();
+    tcg_gen_movi_i32(tmp, val);
+    store_cpu_field(tmp, condexec_bits);
+}
+
 static inline void gen_set_condexec(DisasContext *s)
 {
     if(s->condexec_mask) {
-        uint32_t val = pack_condexec(s);
-        TCGv tmp = tcg_temp_new_i32();
-        tcg_gen_movi_i32(tmp, val);
-        store_cpu_field(tmp, condexec_bits);
+        gen_set_condexec_unconditional(s);
     }
 }
 
@@ -11420,6 +11425,7 @@ int gen_breakpoint(DisasContextBase *base, CPUBreakpoint *bp)
 int gen_intermediate_code(CPUState *env, DisasContextBase *base)
 {
     DisasContext *dc = (DisasContext *)base;
+    bool was_in_it_block = dc->thumb && dc->condexec_mask;
 
     base->tb->size += disas_insn(env, (DisasContext *)base);
 
@@ -11427,6 +11433,13 @@ int gen_intermediate_code(CPUState *env, DisasContextBase *base)
         gen_set_label(dc->condlabel);
         dc->condjmp = 0;
     }
+
+    //  Clear condexec_bits upon leaving IT block
+    //  to avoid using state from the middle of IT block in next translation block.
+    if(was_in_it_block && !dc->condexec_mask) {
+        gen_set_condexec_unconditional(dc);
+    }
+
     if((base->pc - (base->tb->pc & TARGET_PAGE_MASK)) >= TARGET_PAGE_SIZE) {
         return 0;
     }
