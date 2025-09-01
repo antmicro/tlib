@@ -333,8 +333,7 @@ uint32_t has_custom_csr(CPUState *env, uint64_t id)
  */
 inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ulong csrno)
 {
-    uint64_t delegable_ints = IRQ_SS | IRQ_ST | IRQ_SE | (1 << IRQ_X_COP) |
-                              ~((1 << 12) - 1);  //  all local interrupts are delegable as well
+    uint64_t delegable_ints = IRQ_SS | IRQ_ST | IRQ_SE | ~((1 << 12) - 1);  //  all local interrupts are delegable as well
     uint64_t all_ints = delegable_ints | IRQ_MS | IRQ_MT | IRQ_ME;
 
     csrno = priv_version_csr_filter(env, csrno);
