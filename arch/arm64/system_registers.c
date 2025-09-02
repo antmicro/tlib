@@ -819,6 +819,7 @@ ARMCPRegInfo aarch32_registers[] = {
     ARM32_CP_REG_DEFINE(MAIR1,            15,   0,  10,   2,   1,   1, RW, FIELD(cp15.mair1_ns))  // Memory Attribute Indirection Register 1
     ARM32_CP_REG_DEFINE(MIDR,             15,   0,   0,   0,   0,   1, RO, READFN(midr))  // Main ID Register
     ARM32_CP_REG_DEFINE(MPIDR,            15,   0,   0,   0,   5,   1, RO, READFN(mpidr_el1))  // Multiprocessor Affinity RegisterAArch32 System Registers
+    ARM32_CP_REG_DEFINE(MIDR_ALIAS,             15,   0,   0,   0,   7,   1, RO, READFN(midr))  // Alias of Main ID Register
     ARM32_CP_REG_DEFINE(NSACR,            15,   0,   1,   1,   2,   1, RW, FIELD(cp15.nsacr), RESETVALUE(0xC00))  // Non-Secure Access Control Register
     ARM32_CP_REG_DEFINE(PAR_32,           15,   0,   7,   4,   0,   1, RW, FIELD(cp15.par_ns))  // Physical Address Register
     ARM32_CP_REG_DEFINE(PMCCFILTR,        15,   0,  14,  15,   7,   0, RW, FIELD(cp15.pmccfiltr_el0))  // Performance Monitors Cycle Count Filter Register
