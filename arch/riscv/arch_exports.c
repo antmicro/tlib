@@ -213,7 +213,7 @@ uint64_t tlib_install_custom_instruction(uint64_t mask, uint64_t pattern, uint64
 
 EXC_INT_3(uint64_t, tlib_install_custom_instruction, uint64_t, mask, uint64_t, pattern, uint64_t, length)
 
-int32_t tlib_install_custom_csr(uint64_t id)
+int32_t tlib_install_custom_csr(uint16_t id)
 {
     if(id > MAX_CSR_ID) {
         return -1;
@@ -227,7 +227,7 @@ int32_t tlib_install_custom_csr(uint64_t id)
     return 0;
 }
 
-EXC_INT_1(int32_t, tlib_install_custom_csr, uint64_t, id)
+EXC_INT_1(int32_t, tlib_install_custom_csr, uint16_t, id)
 
 void helper_wfi(CPUState *env);
 void tlib_enter_wfi()
