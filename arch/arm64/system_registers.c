@@ -404,6 +404,9 @@ WRITE_FUNCTION(64, tcm_region, {
     tlib_on_tcm_mapping_update(info->op2, current_address);
 });
 
+ACCESS_FUNCTION(rndr, isar_feature_aa64_rndr(&env->arm_core_config.isar) ? CP_ACCESS_OK : CP_ACCESS_TRAP);
+READ_FUNCTION(64, rndr, (nzcv_write(env, 0), tlib_get_random_ulong()));
+
 /* PMSAv8 accessors */
 #define PRSELR_REGION_MASK 0xFF
 #define RW_FUNCTIONS_PMSAv8(width)                                                                                            \
@@ -1557,8 +1560,8 @@ ARMCPRegInfo aarch64_registers[] = {
     ARM64_CP_REG_DEFINE(RMR_EL1,                 3,   0,  12,   0,   2,  1, RW)
     ARM64_CP_REG_DEFINE(RMR_EL2,                 3,   4,  12,   0,   2,  2, RW)
     ARM64_CP_REG_DEFINE(RMR_EL3,                 3,   6,  12,   0,   2,  3, RW)
-    ARM64_CP_REG_DEFINE(RNDR,                    3,   3,   2,   4,   0,  0, RO)
-    ARM64_CP_REG_DEFINE(RNDRRS,                  3,   3,   2,   4,   1,  0, RO)
+    ARM64_CP_REG_DEFINE(RNDR,                    3,   3,   2,   4,   0,  0, RO, ACCESSFN(rndr), READFN(rndr))
+    ARM64_CP_REG_DEFINE(RNDRRS,                  3,   3,   2,   4,   1,  0, RO, ACCESSFN(rndr), READFN(rndr))
     // TODO: Only one of RVBAR_ELx should be present -- the one for the highest available EL.
     ARM64_CP_REG_DEFINE(RVBAR_EL1,               3,   0,  12,   0,   1,  1, RO, FIELD(cp15.rvbar))
     ARM64_CP_REG_DEFINE(RVBAR_EL2,               3,   4,  12,   0,   1,  2, RO, FIELD(cp15.rvbar))

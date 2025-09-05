@@ -21,3 +21,5 @@ void tlib_on_execution_mode_changed(uint32_t el, uint32_t is_secure);
 void tlib_handle_psci_call(void);
 
 void tlib_on_tcm_mapping_update(int32_t index, uint64_t new_address);
+
+uint64_t tlib_get_random_ulong(void);
