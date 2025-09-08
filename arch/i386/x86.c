@@ -18,69 +18,74 @@
  * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 #include <stdint.h>
+#include "cpu.h"
 #include "infrastructure.h"
 #include "arch_callbacks.h"
 
 #ifdef TARGET_I386
 
-int cpu_is_bsp(void *env)
+#define APIC_BSP       (1 << 8)
+#define x2APIC_ENABLED (1 << 10)
+#define xAPIC_ENABLED  (1 << 11)
+#define APIC_BASE      (0xffffff << 12)
+
+int cpu_is_bsp(CPUState *env)
 {
-    tlib_printf(LOG_LEVEL_WARNING, "%s(...)", __FUNCTION__);
-    return 0;
+    return env->apic_state & APIC_BSP;
 }
 
-uint64_t cpu_get_apic_base(void *s)
+uint64_t cpu_get_apic_base(CPUState *env)
 {
-    tlib_printf(LOG_LEVEL_WARNING, "%s(...)", __FUNCTION__);
-    return 0;
+    return env->apic_state;
 }
 
-void apic_init_reset(void *s)
+void apic_init_reset(CPUState *env)
+{
+    env->apic_state = (0xFEE00 << 12) | xAPIC_ENABLED;
+}
+
+void cpu_smm_update(CPUState *env)
 {
     tlib_printf(LOG_LEVEL_WARNING, "%s(...)", __FUNCTION__);
 }
 
-void cpu_smm_update(void *env)
-{
-    tlib_printf(LOG_LEVEL_WARNING, "%s(...)", __FUNCTION__);
-}
-
-void cpu_set_ferr(void *s)
+void cpu_set_ferr(CPUState *env)
 {
     tlib_printf(LOG_LEVEL_WARNING, "%s(...)", __FUNCTION__);
 }
 
 //  task priority register
-void cpu_set_apic_tpr(void *s, uint8_t val)
+void cpu_set_apic_tpr(CPUState *env, uint8_t val)
 {
     tlib_printf(LOG_LEVEL_WARNING, "%s(%X)", __FUNCTION__, val);
 }
 
-void cpu_set_apic_base(void *d, uint64_t val)
+void cpu_set_apic_base(CPUState *env, uint64_t val)
 {
-    tlib_printf(LOG_LEVEL_WARNING, "%s(%X) is currently not supported", __FUNCTION__, val);
+    env->apic_state = val;
+    tlib_set_apic_base_value(val);
 }
 
-int cpu_get_pic_interrupt(void *env)
+int cpu_get_pic_interrupt(CPUState *env)
 {
     return tlib_get_pending_interrupt();
 }
 
 //  task priority register
-uint8_t cpu_get_apic_tpr(void *d)
+uint8_t cpu_get_apic_tpr(CPUState *env)
 {
     tlib_printf(LOG_LEVEL_WARNING, "%s(...)", __FUNCTION__);
     return 0;
 }
 
-void apic_sipi(void *s)
+void apic_sipi(CPUState *env)
 {
     tlib_printf(LOG_LEVEL_WARNING, "%s(...)", __FUNCTION__);
 }
 
-uint64_t cpu_get_tsc(void *env)
+uint64_t cpu_get_tsc(CPUState *env)
 {
-    return tlib_get_instruction_count();
+    return tlib_get_total_elapsed_cycles() + env->tsc_offset;
 }
 
 #endif

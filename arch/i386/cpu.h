@@ -271,12 +271,12 @@
 #define MCM_ADDR_MEM     3 /* memory address */
 #define MCM_ADDR_GENERIC 7 /* generic */
 
-#define MSR_IA32_TSC             0x10
-#define MSR_IA32_APICBASE        0x1b
-#define MSR_IA32_APICBASE_BSP    (1 << 8)
-#define MSR_IA32_APICBASE_ENABLE (1 << 11)
-#define MSR_IA32_APICBASE_BASE   (0xfffff << 12)
-#define MSR_IA32_TSCDEADLINE     0x6e0
+#define MSR_IA32_TIME_STAMP_COUNTER 0x10
+#define MSR_IA32_APICBASE           0x1b
+#define MSR_IA32_APICBASE_BSP       (1 << 8)
+#define MSR_IA32_APICBASE_ENABLE    (1 << 11)
+#define MSR_IA32_APICBASE_BASE      (0xfffff << 12)
+#define MSR_IA32_TSCDEADLINE        0x6e0
 
 #define MSR_MTRRcap                  0xfe
 #define MSR_MTRRcap_VCNT             8
@@ -320,7 +320,53 @@
 #define MSR_MC0_STATUS 0x401
 #define MSR_MC0_ADDR   0x402
 #define MSR_MC0_MISC   0x403
-#define MSR_ICR        0x830
+
+#define MSR_IA32_X2APIC_BEGIN       0x800
+#define MSR_IA32_X2APIC_APICID      0x802
+#define MSR_IA32_X2APIC_VERSION     0x803
+#define MSR_IA32_X2APIC_TPR         0x808
+#define MSR_IA32_X2APIC_PPR         0x80A
+#define MSR_IA32_X2APIC_EOI         0x80B
+#define MSR_IA32_X2APIC_LDR         0x80D
+#define MSR_IA32_X2APIC_SIVR        0x80F
+#define MSR_IA32_X2APIC_ISR0        0x810
+#define MSR_IA32_X2APIC_ISR1        0x811
+#define MSR_IA32_X2APIC_ISR2        0x812
+#define MSR_IA32_X2APIC_ISR3        0x813
+#define MSR_IA32_X2APIC_ISR4        0x814
+#define MSR_IA32_X2APIC_ISR5        0x815
+#define MSR_IA32_X2APIC_ISR6        0x816
+#define MSR_IA32_X2APIC_ISR7        0x817
+#define MSR_IA32_X2APIC_TMR0        0x818
+#define MSR_IA32_X2APIC_TMR1        0x819
+#define MSR_IA32_X2APIC_TMR2        0x81A
+#define MSR_IA32_X2APIC_TMR3        0x81B
+#define MSR_IA32_X2APIC_TMR4        0x81C
+#define MSR_IA32_X2APIC_TMR5        0x81D
+#define MSR_IA32_X2APIC_TMR6        0x81E
+#define MSR_IA32_X2APIC_TMR7        0x81F
+#define MSR_IA32_X2APIC_IRR0        0x820
+#define MSR_IA32_X2APIC_IRR1        0x821
+#define MSR_IA32_X2APIC_IRR2        0x822
+#define MSR_IA32_X2APIC_IRR3        0x823
+#define MSR_IA32_X2APIC_IRR4        0x824
+#define MSR_IA32_X2APIC_IRR5        0x825
+#define MSR_IA32_X2APIC_IRR6        0x826
+#define MSR_IA32_X2APIC_IRR7        0x827
+#define MSR_IA32_X2APIC_ESR         0x828
+#define MSR_IA32_X2APIC_LVT_CMCI    0x82F
+#define MSR_IA32_X2APIC_ICR         0x830
+#define MSR_IA32_X2APIC_LVT_TIMER   0x832
+#define MSR_IA32_X2APIC_LVT_THERMAL 0x833
+#define MSR_IA32_X2APIC_LVT_PMI     0x834
+#define MSR_IA32_X2APIC_LVT_LINT0   0x835
+#define MSR_IA32_X2APIC_LVT_LINT1   0x836
+#define MSR_IA32_X2APIC_LVT_ERROR   0x837
+#define MSR_IA32_X2APIC_INIT_COUNT  0x838
+#define MSR_IA32_X2APIC_CUR_COUNT   0x839
+#define MSR_IA32_X2APIC_DIV_CONF    0x83E
+#define MSR_IA32_X2APIC_SELF_IPI    0x83F
+#define MSR_IA32_X2APIC_END         0x8FF
 
 #define MSR_EFER 0xc0000080
 
@@ -375,28 +421,29 @@
 #define CPUID_IA64    (1 << 30)
 #define CPUID_PBE     (1 << 31)
 
-#define CPUID_EXT_SSE3       (1 << 0)
-#define CPUID_EXT_DTES64     (1 << 2)
-#define CPUID_EXT_MONITOR    (1 << 3)
-#define CPUID_EXT_DSCPL      (1 << 4)
-#define CPUID_EXT_VMX        (1 << 5)
-#define CPUID_EXT_SMX        (1 << 6)
-#define CPUID_EXT_EST        (1 << 7)
-#define CPUID_EXT_TM2        (1 << 8)
-#define CPUID_EXT_SSSE3      (1 << 9)
-#define CPUID_EXT_CID        (1 << 10)
-#define CPUID_EXT_CX16       (1 << 13)
-#define CPUID_EXT_XTPR       (1 << 14)
-#define CPUID_EXT_PDCM       (1 << 15)
-#define CPUID_EXT_DCA        (1 << 18)
-#define CPUID_EXT_SSE41      (1 << 19)
-#define CPUID_EXT_SSE42      (1 << 20)
-#define CPUID_EXT_X2APIC     (1 << 21)
-#define CPUID_EXT_MOVBE      (1 << 22)
-#define CPUID_EXT_POPCNT     (1 << 23)
-#define CPUID_EXT_XSAVE      (1 << 26)
-#define CPUID_EXT_OSXSAVE    (1 << 27)
-#define CPUID_EXT_HYPERVISOR (1 << 31)
+#define CPUID_EXT_SSE3         (1 << 0)
+#define CPUID_EXT_DTES64       (1 << 2)
+#define CPUID_EXT_MONITOR      (1 << 3)
+#define CPUID_EXT_DSCPL        (1 << 4)
+#define CPUID_EXT_VMX          (1 << 5)
+#define CPUID_EXT_SMX          (1 << 6)
+#define CPUID_EXT_EST          (1 << 7)
+#define CPUID_EXT_TM2          (1 << 8)
+#define CPUID_EXT_SSSE3        (1 << 9)
+#define CPUID_EXT_CID          (1 << 10)
+#define CPUID_EXT_CX16         (1 << 13)
+#define CPUID_EXT_XTPR         (1 << 14)
+#define CPUID_EXT_PDCM         (1 << 15)
+#define CPUID_EXT_DCA          (1 << 18)
+#define CPUID_EXT_SSE41        (1 << 19)
+#define CPUID_EXT_SSE42        (1 << 20)
+#define CPUID_EXT_X2APIC       (1 << 21)
+#define CPUID_EXT_MOVBE        (1 << 22)
+#define CPUID_EXT_POPCNT       (1 << 23)
+#define CPUID_EXT_TSC_DEADLINE (1 << 24)
+#define CPUID_EXT_XSAVE        (1 << 26)
+#define CPUID_EXT_OSXSAVE      (1 << 27)
+#define CPUID_EXT_HYPERVISOR   (1 << 31)
 
 #define CPUID_EXT2_SYSCALL  (1 << 11)
 #define CPUID_EXT2_MP       (1 << 19)
@@ -470,8 +517,9 @@
 #define EXCP_SYSCALL                             \
     0x100 /* only happens in user only emulation \
              for syscall instruction */
-#define LAPIC_ICR_LOW  0xfee00300
-#define LAPIC_ICR_HIGH 0xfee00310
+#define LAPIC_BASE_ADDR 0xfee00000
+#define LAPIC_ICR_LOW   (LAPIC_BASE_ADDR + 0x300)
+#define LAPIC_ICR_HIGH  (LAPIC_BASE_ADDR + 0x310)
 
 /* i386-specific interrupt pending bits.  */
 #define CPU_INTERRUPT_SMI  CPU_INTERRUPT_TGT_EXT_2
@@ -799,9 +847,8 @@ typedef struct CPUState {
         CPUBreakpoint *cpu_breakpoint[4];
     }; /* breakpoints for dr[0..3] */
 
-    /* in order to simplify APIC support, we leave this pointer to the
-       user */
-    void *apic_state;
+    //  IA32_APIC_BASE register value
+    uint64_t apic_state;
 
 } CPUState;
 

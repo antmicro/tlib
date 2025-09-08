@@ -34,3 +34,7 @@ DEFAULT_VOID_HANDLER2(void tlib_write_double_word_to_port, uint16_t address, uin
 DEFAULT_INT_HANDLER1(int32_t tlib_get_pending_interrupt, void)
 
 DEFAULT_INT_HANDLER1(uint64_t tlib_get_instruction_count, void)
+
+DEFAULT_VOID_HANDLER1(void tlib_set_tsc_deadline_value, uint64_t value);
+
+DEFAULT_VOID_HANDLER1(void tlib_set_apic_base_value, uint64_t value);

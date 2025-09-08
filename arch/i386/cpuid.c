@@ -422,7 +422,8 @@ static x86_def_t builtin_x86_defs[] = {
                     CPUID_HT | CPUID_TM | CPUID_PBE,
      /* Some CPUs got no CPUID_SEP */
         .ext_features = CPUID_EXT_SSE3 | CPUID_EXT_MONITOR | CPUID_EXT_SSSE3 | CPUID_EXT_DSCPL | CPUID_EXT_EST | CPUID_EXT_TM2 |
-                        CPUID_EXT_XTPR, .ext2_features = (PPRO_FEATURES & EXT2_FEATURE_MASK) | CPUID_EXT2_NX | CPUID_EXT2_LM | CPUID_EXT2_SYSCALL,
+                        CPUID_EXT_XTPR | CPUID_EXT_X2APIC | CPUID_EXT_TSC_DEADLINE,
+     .ext2_features = (PPRO_FEATURES & EXT2_FEATURE_MASK) | CPUID_EXT2_NX | CPUID_EXT2_LM | CPUID_EXT2_SYSCALL,
      .ext3_features = CPUID_EXT3_LAHF_LM,
      .xlevel = 0x8000000A,
      .model_id = "Virtual x86_64 CPU",
@@ -740,6 +741,22 @@ void cpu_x86_cpuid(CPUState *env, uint32_t index, uint32_t count, uint32_t *eax,
             *ebx = 0x42004200;
             *ecx = 0x02008140;
             *edx = 0;
+            break;
+        case 0x80000007:
+            /* Processor Power Management Information and RAS Capabilities */
+            *eax = 0;
+            *ebx = 0;
+            *ecx = 0;
+
+            if(env->cpuid_ext_features & CPUID_EXT_TSC_DEADLINE) {
+                //  Bit 8 - Invariant TSC
+                //  This feature is not implemented
+                //  when software enable this feature
+                //  TSC deadline mode will be using same timer
+                *edx = 0x00000100;
+            } else {
+                *edx = 0;
+            }
             break;
         case 0x80000008:
             /* virtual & phys address size in low 2 bytes. */

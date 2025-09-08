@@ -95,6 +95,7 @@ uint64_t tlib_host_ptr_to_guest_offset(void *ptr);
 int32_t tlib_mmu_fault_external_handler(uint64_t addr, int32_t access_type, uint64_t window_id, int32_t first_try);
 void tlib_invalidate_tb_in_other_cpus(uintptr_t start, uintptr_t end);
 void tlib_update_instruction_counter(int32_t value);
+uint64_t tlib_get_total_elapsed_cycles(void);
 uint32_t tlib_get_mp_index(void);
 
 void *tlib_malloc(size_t size);

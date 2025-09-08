@@ -14,3 +14,10 @@ void tlib_set_cs_descriptor(uint32_t selector, uint32_t base, uint32_t limit, ui
 }
 
 EXC_VOID_4(tlib_set_cs_descriptor, uint32_t, selector, uint32_t, base, uint32_t, limit, uint32_t, flags)
+
+uint64_t tlib_get_apic_base()
+{
+    return cpu_get_apic_base(env);
+}
+
+EXC_VALUE_0(uint64_t, tlib_get_apic_base, 0)

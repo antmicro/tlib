@@ -745,6 +745,7 @@ int cpu_init(const char *cpu_model)
     }
     mce_init(cpu);
     cpu_reset(cpu);
+    apic_init_reset(env);
     return 0;
 }
 
@@ -755,13 +756,13 @@ void do_cpu_init(CPUState *env)
     cpu_reset(env);
     set_interrupt_pending(env, sipi);
     env->pat = pat;
-    apic_init_reset(env->apic_state);
+    apic_init_reset(env);
     env->wfi = !cpu_is_bsp(env);
 }
 
 void do_cpu_sipi(CPUState *env)
 {
-    apic_sipi(env->apic_state);
+    apic_sipi(env);
 }
 
 void tlib_arch_dispose() { }

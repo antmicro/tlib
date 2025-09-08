@@ -2852,7 +2852,7 @@ target_ulong helper_read_crN(int reg)
             break;
         case 8:
             if(!(env->hflags2 & HF2_VINTR_MASK)) {
-                val = cpu_get_apic_tpr(env->apic_state);
+                val = cpu_get_apic_tpr(env);
             } else {
                 val = env->v_tpr;
             }
@@ -2876,7 +2876,7 @@ void helper_write_crN(int reg, target_ulong t0)
             break;
         case 8:
             if(!(env->hflags2 & HF2_VINTR_MASK)) {
-                cpu_set_apic_tpr(env->apic_state, t0);
+                cpu_set_apic_tpr(env, t0);
             }
             env->v_tpr = t0 & 0x0f;
             break;
@@ -2935,8 +2935,7 @@ void helper_rdtsc(void)
         raise_exception(EXCP0D_GPF);
     }
     helper_svm_check_intercept_param(SVM_EXIT_RDTSC, 0);
-
-    val = cpu_get_tsc(env) + env->tsc_offset;
+    val = cpu_get_tsc(env);
     EAX = (uint32_t)(val);
     EDX = (uint32_t)(val >> 32);
 }
@@ -2976,8 +2975,11 @@ void helper_wrmsr(void)
         case MSR_IA32_SYSENTER_EIP:
             env->sysenter_eip = val;
             break;
+        case MSR_IA32_TIME_STAMP_COUNTER:
+            tlib_printf(LOG_LEVEL_WARNING, "Overriding TSC value is unsupported");
+            break;
         case MSR_IA32_APICBASE:
-            cpu_set_apic_base(env->apic_state, val);
+            cpu_set_apic_base(env, val);
             break;
         case MSR_EFER: {
             uint64_t update_mask;
@@ -3085,10 +3087,28 @@ void helper_wrmsr(void)
         case MSR_IA32_MISC_ENABLE:
             env->msr_ia32_misc_enable = val;
             break;
-        case MSR_ICR:
-            //  firstly set high part, after setting lower, the IPI is sent
-            tlib_write_double_word(LAPIC_ICR_HIGH, (uint32_t)(val >> 32), 0);
-            tlib_write_double_word(LAPIC_ICR_LOW, (uint32_t)val, 0);
+        case MSR_IA32_TSCDEADLINE:
+            if((env->cpuid_ext_features & CPUID_EXT_TSC_DEADLINE) == 0) {
+                raise_exception_err(EXCP0D_GPF, 0);
+                break;
+            }
+
+            env->tsc_deadline = val;
+            tlib_set_tsc_deadline_value(env->tsc_deadline);
+            break;
+        case MSR_IA32_X2APIC_BEGIN ... MSR_IA32_X2APIC_END:
+            if((env->cpuid_ext_features & CPUID_EXT_X2APIC) == 0) {
+                raise_exception_err(EXCP0D_GPF, 0);
+                break;
+            }
+
+            if((uint32_t)ECX == MSR_IA32_X2APIC_ICR) {
+                //  firstly set high part, after setting lower, the IPI is sent
+                tlib_write_double_word(LAPIC_ICR_HIGH, (uint32_t)(val >> 32), 0);
+                tlib_write_double_word(LAPIC_ICR_LOW, (uint32_t)val, 0);
+            } else {
+                tlib_write_double_word(LAPIC_BASE_ADDR + (((uint32_t)ECX - MSR_IA32_X2APIC_BEGIN) << 4), (uint32_t)val, 0);
+            }
             break;
         default:
             if((uint32_t)ECX >= MSR_MC0_CTL && (uint32_t)ECX < MSR_MC0_CTL + (4 * env->mcg_cap & 0xff)) {
@@ -3119,8 +3139,11 @@ void helper_rdmsr(void)
         case MSR_IA32_SYSENTER_EIP:
             val = env->sysenter_eip;
             break;
+        case MSR_IA32_TIME_STAMP_COUNTER:
+            val = cpu_get_tsc(env);
+            break;
         case MSR_IA32_APICBASE:
-            val = cpu_get_apic_base(env->apic_state);
+            val = cpu_get_apic_base(env);
             break;
         case MSR_EFER:
             val = env->efer;
@@ -3226,6 +3249,26 @@ void helper_rdmsr(void)
             break;
         case MSR_IA32_MISC_ENABLE:
             val = env->msr_ia32_misc_enable;
+            break;
+        case MSR_IA32_TSCDEADLINE:
+            if((env->cpuid_ext_features & CPUID_EXT_TSC_DEADLINE) == 0) {
+                raise_exception_err(EXCP0D_GPF, 0);
+                break;
+            }
+
+            val = env->tsc_deadline;
+            break;
+        case MSR_IA32_X2APIC_BEGIN ... MSR_IA32_X2APIC_END:
+            if((env->cpuid_ext_features & CPUID_EXT_X2APIC) == 0) {
+                raise_exception_err(EXCP0D_GPF, 0);
+                break;
+            }
+
+            if((uint32_t)ECX == MSR_IA32_X2APIC_ICR) {
+                val = (tlib_read_double_word(LAPIC_ICR_HIGH, 0) << 32) | tlib_read_double_word(LAPIC_ICR_LOW, 0);
+            } else {
+                val = tlib_read_double_word(LAPIC_BASE_ADDR + (((uint32_t)ECX - MSR_IA32_X2APIC_BEGIN) << 4), 0);
+            }
             break;
         default:
             if((uint32_t)ECX >= MSR_MC0_CTL && (uint32_t)ECX < MSR_MC0_CTL + (4 * env->mcg_cap & 0xff)) {
