@@ -35,6 +35,13 @@ uint32_t tlib_get_hart_id()
 
 EXC_INT_0(uint32_t, tlib_get_hart_id)
 
+uint32_t tlib_get_current_priv()
+{
+    return cpu->priv;
+}
+
+EXC_INT_0(uint32_t, tlib_get_current_priv)
+
 void tlib_set_mip_bit(uint32_t position, uint32_t value)
 {
     pthread_mutex_lock(&cpu->mip_lock);
