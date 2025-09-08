@@ -726,3 +726,8 @@ void HELPER(handle_post_gpr_access_hook)(uint32_t register_index, uint32_t isWri
 {
     tlib_handle_post_gpr_access_hook(register_index, isWrite);
 }
+
+void HELPER(handle_pre_stack_access_hook)(uint64_t address, uint32_t width, uint32_t isWrite)
+{
+    tlib_handle_pre_stack_access_hook(address, width, isWrite);
+}

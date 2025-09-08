@@ -260,6 +260,7 @@ enum {
     FUNCT5_AMOCAS = 0x05,
 };
 
+#define MASK_FUNCT3(op) extract32(op, 12, 3)
 enum {
     FUNCT3_WORD = 0x2,
     FUNCT3_DOUBLEWORD = 0x3,

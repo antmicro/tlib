@@ -375,6 +375,48 @@ static inline void gen_set_gpr(int reg_num_dst, TCGv t)
     try_run_gpr_access_hook(reg_num_dst, 1);
 }
 
+static inline uint32_t opc_to_width(uint32_t opc)
+{
+    switch(opc) {
+        case OPC_RISC_SB:
+        case OPC_RISC_LB:
+        case OPC_RISC_LBU:
+            return 8;
+        case OPC_RISC_SH:
+        case OPC_RISC_LH:
+        case OPC_RISC_LHU:
+        case OPC_RISC_FLH:
+        case OPC_RISC_FSH:
+            return 16;
+        case OPC_RISC_SW:
+        case OPC_RISC_LW:
+        case OPC_RISC_LWU:
+        case OPC_RISC_FLW:
+        case OPC_RISC_FSW:
+            return 32;
+        case OPC_RISC_SD:
+        case OPC_RISC_LD:
+        case OPC_RISC_FLD:
+        case OPC_RISC_FSD:
+            return 64;
+        default:
+            tlib_printf(LOG_LEVEL_WARNING, "opc_to_width called on unsopported opc %x", opc);
+            return 0;
+    }
+}
+
+static inline void try_run_pre_stack_access_hook(TCGv addr, uint32_t width, bool is_write)
+{
+    //  Don't fire the hook is the function was passed an invalide width
+    if(unlikely(env->is_pre_stack_access_hook_enabled) && width > 0) {
+        TCGv_i32 width_tmp = tcg_const_i32(width);
+        TCGv_i32 is_write_tmp = tcg_const_i32(is_write);
+        gen_helper_handle_pre_stack_access_hook(addr, width_tmp, is_write_tmp);
+        tcg_temp_free_i32(width_tmp);
+        tcg_temp_free_i32(is_write_tmp);
+    }
+}
+
 static inline void gen_orcb(TCGv source1, int max_byte_index)
 {
     target_ulong byte_mask = 0xff;
@@ -1530,9 +1572,12 @@ static void gen_load(DisasContext *dc, uint32_t opc, int rd, int rs1, target_lon
 
     tcg_gen_addi_tl(t0, t0, imm);
 
+    if(rs1 == 2) {
+        try_run_pre_stack_access_hook(t0, opc_to_width(opc), false);
+    }
+
     gen_sync_pc(dc);
     switch(opc) {
-
         case OPC_RISC_LB:
             tcg_gen_qemu_ld8s(t1, t0, dc->base.mem_idx);
             gen_set_gpr(rd, t1);
@@ -1580,6 +1625,10 @@ static void gen_store(DisasContext *dc, uint32_t opc, int rs1, int rs2, target_l
     tcg_gen_addi_tl(t0, t0, imm);
     gen_get_gpr(dat, rs2);
 
+    if(rs1 == 2) {
+        try_run_pre_stack_access_hook(t0, opc_to_width(opc), true);
+    }
+
     switch(opc) {
         case OPC_RISC_SB:
             tcg_gen_qemu_st8(dat, t0, dc->base.mem_idx);
@@ -1624,6 +1673,10 @@ static void gen_fp_load(DisasContext *dc, uint32_t opc, int rd, int rs1, target_
     gen_set_label(fp_ok);
     gen_get_gpr(t0, rs1);
     tcg_gen_addi_tl(t0, t0, imm);
+
+    if(rs1 == 2) {
+        try_run_pre_stack_access_hook(t0, opc_to_width(opc), false);
+    }
 
     TCGv destination = tcg_temp_new();
     switch(opc) {
@@ -1874,6 +1927,8 @@ static void gen_fp_store(DisasContext *dc, uint32_t opc, int rs1, int rs2, targe
     gen_set_label(fp_ok);
     gen_get_gpr(t0, rs1);
     tcg_gen_addi_tl(t0, t0, imm);
+
+    try_run_pre_stack_access_hook(t0, opc_to_width(opc), true);
 
     switch(opc) {
         case OPC_RISC_FSH:
@@ -2438,6 +2493,26 @@ static void gen_atomic(CPUState *env, DisasContext *dc, uint32_t opc, int rd, in
     gen_get_gpr(source1, rs1);
     gen_get_gpr(source2, rs2);
     gen_get_gpr(result, rd);
+
+    if(rs1 == 2) {
+        //  LR is the only pure read atomic instruciton
+        bool is_write = MASK_FUNCT5(opc) != FUNCT5_LR;
+        switch(MASK_FUNCT3(opc)) {
+            case FUNCT3_WORD:
+                try_run_pre_stack_access_hook(source1, 32, is_write);
+                break;
+            case FUNCT3_DOUBLEWORD:
+                try_run_pre_stack_access_hook(source1, 64, is_write);
+                break;
+            case FUNCT3_QUADWORD:
+                try_run_pre_stack_access_hook(source1, 128, is_write);
+                break;
+            default:
+                //  Can only happen if the instruction is malformed somehow
+                //  so it will throw an illegal instruction exception later
+                break;
+        }
+    }
 
     int done = gen_new_label();
 

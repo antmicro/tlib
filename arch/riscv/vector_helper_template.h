@@ -16,6 +16,8 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
+#include "arch_callbacks.h"
+
 #define DATA_SIZE (1 << SHIFT)
 
 #ifdef MASKED
@@ -189,7 +191,6 @@ static inline DATA_STYPE glue(rem_, BITS)(DATA_STYPE dividend, DATA_STYPE diviso
 }
 
 #endif
-
 void glue(glue(helper_vle, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t nf)
 {
     //  This implementation handles both vle*.v and vlseg*.v instructions.
@@ -202,6 +203,9 @@ void glue(glue(helper_vle, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t 
     for(int ei = env->vstart; ei < env->vl; ++ei) {
         for(int fi = 0; fi < nfields; ++fi) {
             if(IS_ELEMENT_ACTIVE(ei)) {
+                if(unlikely((env->is_pre_stack_access_hook_enabled && rs1 == 2))) {
+                    tlib_handle_pre_stack_access_hook(src_addr, sizeof(DATA_TYPE) * 8, false);
+                }
                 ((DATA_TYPE *)V(vd + (fi << emul)))[ei] = glue(ld, USUFFIX)(src_addr);
             }
             src_addr += sizeof(DATA_TYPE);
@@ -223,9 +227,15 @@ void glue(glue(glue(helper_vle, BITS), ff), POSTFIX)(CPUState *env, uint32_t vd,
             if(IS_ELEMENT_ACTIVE(ei)) {
                 DATA_TYPE *destination = &(((DATA_TYPE *)V(vd + (fi << emul)))[ei]);
                 if(ei == 0) {
+                    if(unlikely((env->is_pre_stack_access_hook_enabled && rs1 == 2))) {
+                        tlib_handle_pre_stack_access_hook(src_addr, sizeof(DATA_TYPE) * 8, false);
+                    }
                     *destination = glue(ld, USUFFIX)(src_addr);
                 } else {
                     int memory_access_fail = 0;
+                    if(unlikely((env->is_pre_stack_access_hook_enabled && rs1 == 2))) {
+                        tlib_handle_pre_stack_access_hook(src_addr, sizeof(DATA_TYPE) * 8, false);
+                    }
                     *destination = glue(glue(ld, USUFFIX), _graceful)(src_addr, &memory_access_fail);
                     if(memory_access_fail) {
                         env->vl = ei;
@@ -253,6 +263,9 @@ void glue(glue(helper_vlse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t
     for(int ei = env->vstart; ei < env->vl; ++ei) {
         if(IS_ELEMENT_ACTIVE(ei)) {
             for(int fi = 0; fi < nfields; ++fi) {
+                if(unlikely((env->is_pre_stack_access_hook_enabled && rs1 == 2))) {
+                    tlib_handle_pre_stack_access_hook(src_addr, sizeof(DATA_TYPE) * 8, false);
+                }
                 ((DATA_TYPE *)V(vd + (fi << emul)))[ei] = glue(ld, USUFFIX)(src_addr + fi * sizeof(DATA_TYPE));
             }
         }
@@ -281,6 +294,9 @@ void glue(glue(helper_vlxei, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_
         for(int fi = 0; fi <= nf; ++fi) {
             int fi_offset = fi << dst_shift;
             target_ulong addr = src_addr + (target_ulong)offsets[ei] + fi_offset;
+            if(unlikely((env->is_pre_stack_access_hook_enabled && rs1 == 2))) {
+                tlib_handle_pre_stack_access_hook(addr, dst_eew, false);
+            }
             switch(dst_eew) {
                 case 8:
                     ((uint8_t *)V(vd + fi_offset))[ei] = ldub(addr);
@@ -315,6 +331,9 @@ void glue(glue(helper_vse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t 
     for(int ei = env->vstart; ei < env->vl; ++ei) {
         for(int fi = 0; fi < nfields; ++fi) {
             if(IS_ELEMENT_ACTIVE(ei)) {
+                if(unlikely((env->is_pre_stack_access_hook_enabled && rs1 == 2))) {
+                    tlib_handle_pre_stack_access_hook(dest_addr, sizeof(DATA_TYPE) * 8, true);
+                }
                 glue(st, SUFFIX)(dest_addr, ((DATA_TYPE *)V(vd + (fi << emul)))[ei]);
             }
             dest_addr += sizeof(DATA_TYPE);
@@ -334,6 +353,9 @@ void glue(glue(helper_vsse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t
     target_long offset = env->gpr[rs2];
     for(int ei = env->vstart; ei < env->vl; ++ei) {
         if(IS_ELEMENT_ACTIVE(ei)) {
+            if(unlikely((env->is_pre_stack_access_hook_enabled && rs1 == 2))) {
+                tlib_handle_pre_stack_access_hook(dest_addr, sizeof(DATA_TYPE) * nfields * 8, true);
+            }
             for(int fi = 0; fi < nfields; ++fi) {
                 glue(st, SUFFIX)(dest_addr + fi * sizeof(DATA_TYPE), ((DATA_TYPE *)V(vd + (fi << emul)))[ei]);
             }
@@ -356,6 +378,9 @@ void glue(glue(helper_vsxei, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_
         TEST_MASK(ei)
         env->vstart = ei;
         for(int fi = 0; fi <= nf; ++fi) {
+            if(unlikely((env->is_pre_stack_access_hook_enabled && rs1 == 2))) {
+                tlib_handle_pre_stack_access_hook(src_addr + (target_ulong)offsets[ei], dst_eew, true);
+            }
             switch(dst_eew) {
                 case 8:
                     stb(src_addr + (target_ulong)offsets[ei] + (fi << 0), V(vd + (fi << SHIFT))[ei]);
@@ -431,6 +456,9 @@ void helper_vl_wr(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t nf)
     uint8_t *v = V(vd);
     uint8_t nfield = nf + 1;
     target_ulong src_addr = env->gpr[rs1];
+    if(unlikely((env->is_pre_stack_access_hook_enabled && rs1 == 2))) {
+        tlib_handle_pre_stack_access_hook(src_addr, env->vlenb * nfield * 8, false);
+    }
     for(int i = 0; i < env->vlenb * nfield; ++i) {
         env->vstart = i;
         v[i] = ldub(src_addr + i);
@@ -442,6 +470,9 @@ void helper_vs_wr(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t nf)
     uint8_t *v = V(vd);
     uint8_t nfield = nf + 1;
     target_ulong src_addr = env->gpr[rs1];
+    if(unlikely((env->is_pre_stack_access_hook_enabled && rs1 == 2))) {
+        tlib_handle_pre_stack_access_hook(src_addr, env->vlenb * nfield * 8, true);
+    }
     for(int i = 0; i < env->vlenb * nfield; ++i) {
         env->vstart = i;
         stb(src_addr + i, v[i]);
@@ -452,6 +483,9 @@ void helper_vlm(CPUState *env, uint32_t vd, uint32_t rs1)
 {
     uint8_t *v = V(vd);
     target_ulong src_addr = env->gpr[rs1];
+    if(unlikely((env->is_pre_stack_access_hook_enabled && rs1 == 2))) {
+        tlib_handle_pre_stack_access_hook(src_addr, ((env->vl + 7) / 8) * 8, false);
+    }
     for(int i = env->vstart; i < (env->vl + 7) / 8; ++i) {
         env->vstart = i;
         v[i] = ldub(src_addr + i);
@@ -462,6 +496,9 @@ void helper_vsm(CPUState *env, uint32_t vd, uint32_t rs1)
 {
     uint8_t *v = V(vd);
     target_ulong src_addr = env->gpr[rs1];
+    if(unlikely((env->is_pre_stack_access_hook_enabled && rs1 == 2))) {
+        tlib_handle_pre_stack_access_hook(src_addr, ((env->vl + 7) / 8) * 8, true);
+    }
     for(int i = env->vstart; i < (env->vl + 7) / 8; ++i) {
         env->vstart = i;
         stb(src_addr + i, v[i]);

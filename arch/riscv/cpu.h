@@ -240,6 +240,8 @@ struct CPUState {
     uint32_t clic_interrupt_level;
     uint32_t clic_interrupt_priv;
 
+    bool is_pre_stack_access_hook_enabled;
+
     CPU_COMMON
 
     int8_t are_post_opcode_execution_hooks_enabled;

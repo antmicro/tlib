@@ -269,6 +269,16 @@ int32_t tlib_install_custom_interrupt(uint8_t id, bool mip_trigger, bool sip_tri
 
 EXC_INT_3(int32_t, tlib_install_custom_interrupt, uint8_t, id, bool, m_trigger, bool, s_trigger)
 
+void tlib_enable_pre_stack_access_hook(bool enable)
+{
+    if(cpu->is_pre_stack_access_hook_enabled != enable) {
+        cpu->is_pre_stack_access_hook_enabled = enable;
+        tb_flush(env);
+    }
+}
+
+EXC_VOID_1(tlib_enable_pre_stack_access_hook, bool, enable)
+
 void tlib_set_csr_validation_level(uint32_t value)
 {
     switch(value) {
