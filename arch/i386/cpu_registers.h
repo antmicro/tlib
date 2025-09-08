@@ -3,9 +3,9 @@
 typedef enum {
 #ifdef TARGET_X86_64
     RAX_64 = 0,
-    RCX_64 = 2,
-    RDX_64 = 3,
-    RBX_64 = 1,
+    RCX_64 = 1,
+    RDX_64 = 2,
+    RBX_64 = 3,
     RSP_64 = 4,
     RBP_64 = 5,
     RSI_64 = 6,
