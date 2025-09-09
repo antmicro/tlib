@@ -566,6 +566,8 @@
     {                                                                                                \
         const target_ulong eew = env->vsew;                                                          \
         ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                         \
+        if(env->vl == 0)                                                                             \
+            return;                                                                                  \
         if(V_IDX_INVALID(vs2) || env->vstart != 0) {                                                 \
             raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                               \
         }                                                                                            \
@@ -607,6 +609,8 @@
     {                                                                                                          \
         const target_ulong eew = env->vsew;                                                                    \
         ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                                   \
+        if(env->vl == 0)                                                                                       \
+            return;                                                                                            \
         if(V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1) || env->vstart != 0) {                \
             raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                         \
         }                                                                                                      \
