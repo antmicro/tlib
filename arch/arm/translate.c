@@ -9249,6 +9249,56 @@ static int do_vldst_il(DisasContext *s, arg_vldst_il *a, MVEGenLdStIlFn *fn, int
     return TRANS_STATUS_SUCCESS;
 }
 
+static int do_ldst(DisasContext *s, arg_vldr_vstr *a, MVEGenLdStFn *fn, unsigned msize)
+{
+    TCGv_i32 addr;
+    uint32_t offset;
+
+    if(!mve_check_qreg_bank(a->qd) || !fn) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+
+    /* CONSTRAINED UNPREDICTABLE: we choose to UNDEF */
+    if(a->rn == 15 || (a->rn == 13 && a->w)) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    gen_helper_fp_lsp(cpu_env);
+
+    offset = a->imm << msize;
+    if(!a->a) {
+        offset = -offset;
+    }
+    addr = load_reg(s, a->rn);
+    if(a->p) {
+        tcg_gen_addi_i32(addr, addr, offset);
+    }
+
+    TCGv_ptr ptr = mve_qreg_ptr(a->qd);
+    fn(cpu_env, ptr, addr);
+    tcg_temp_free_ptr(ptr);
+
+    /*
+     * Writeback always happens after the last beat of the insn,
+     * regardless of predication
+     */
+    if(a->w) {
+        if(!a->p) {
+            tcg_gen_addi_i32(addr, addr, offset);
+        }
+        store_reg(s, a->rn, addr);
+    } else {
+        tcg_temp_free_i32(addr);
+    }
+
+    mve_update_eci(s);
+    return TRANS_STATUS_SUCCESS;
+}
+
 /* This macro is just to make the arrays more compact in these functions */
 #define F(OP) glue(gen_mve_, OP)
 
@@ -9272,6 +9322,37 @@ static int trans_vld4(DisasContext *s, uint32_t insn)
     return TRANS_STATUS_SUCCESS;
 }
 
+#undef F
+
+/* This macro is just to make the arrays more compact in these functions */
+#define F(OP) glue(gen_helper_mve_, OP)
+
+static int trans_vldr_vstr(DisasContext *s, arg_vldr_vstr *a)
+{
+    static MVEGenLdStFn *const ldst_fns[4][2] = {
+        { NULL, NULL },
+        { NULL, NULL },
+        { NULL, NULL },
+        { NULL, NULL }
+    };
+    return do_ldst(s, a, ldst_fns[a->size][a->l], a->size);
+}
+
+#define DO_VLDST_WIDE_NARROW(OP, SLD, ULD, ST, MSIZE)              \
+    static int glue(trans_, OP)(DisasContext *s, arg_vldr_vstr *a) \
+    {                                                              \
+        static MVEGenLdStFn *const ldst_fns[2][2] = {              \
+            { NULL, NULL },                                        \
+            { NULL, NULL },                                        \
+        };                                                         \
+        return do_ldst(s, a, ldst_fns[a->u][a->l], MSIZE);         \
+    }
+
+DO_VLDST_WIDE_NARROW(vldstb_h, vldrb_sh, vldrb_uh, vstrb_h, 1)
+DO_VLDST_WIDE_NARROW(vldstb_w, vldrb_sw, vldrb_uw, vstrb_w, 1)
+DO_VLDST_WIDE_NARROW(vldsth_w, vldrh_sw, vldrh_uw, vstrh_w, 2)
+
+#undef DO_VLDST_WIDE_NARROW
 #undef F
 
 #endif
@@ -10104,6 +10185,42 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                 if(is_insn_vld4(insn)) {
                     ARCH(MVE);
                     return trans_vld4(s, insn);
+                }
+                /* Vector load/store (widening loads/narrowing stores) (encoding T1 & T2) */
+                if(is_insn_vldst(insn)) {
+                    ARCH(MVE);
+                    uint32_t p = extract32(insn, 24, 1);
+                    uint32_t w = extract32(insn, 21, 1);
+                    uint32_t size = extract32(insn, 7, 2);
+                    arg_vldr_vstr a;
+
+                    mve_extract_vldst_wn(&a, insn);
+
+                    /*
+                     * P == 0 && W == 0 is related encodings
+                     * SIZE == 0b11 is related encodings
+                     */
+                    if(p != 0 && w != 0 && size != 3) {
+                        /* Encoding: 0 => T1 ; 1 => T2 */
+                        uint32_t enc = extract32(insn, 19, 1);
+
+                        if(enc == 0) {
+                            if(size == 1) {
+                                return trans_vldstb_h(s, &a);
+                            }
+                            if(size == 2) {
+                                return trans_vldstb_w(s, &a);
+                            }
+                        } else {
+                            return trans_vldsth_w(s, &a);
+                        }
+                    }
+                }
+                if(is_insn_vldr_vstr(insn)) {
+                    ARCH(MVE);
+                    arg_vldr_vstr a;
+                    mve_extract_vldr_vstr(&a, insn);
+                    return trans_vldr_vstr(s, &a);
                 }
             }
 #endif

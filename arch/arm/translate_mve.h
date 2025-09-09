@@ -19,7 +19,25 @@
 
 #pragma once
 
+typedef void MVEGenLdStFn(TCGv_ptr, TCGv_ptr, TCGv_i32);
 typedef void MVEGenLdStIlFn(DisasContext *, uint32_t, TCGv_i32);
+
+/*
+ * Arguments of stores/loads:
+ * VSTRB, VSTRH, VSTRW, VLDRB, VLDRH, VLDRW
+ */
+typedef struct {
+    int rn;
+    int qd;
+    int imm;
+    int p;
+    int a;
+    int w;
+    int size;
+    /* Used to tell store/load apart */
+    int l;
+    int u;
+} arg_vldr_vstr;
 
 /*
  * Arguments of (de)interleaving stores/loads:
@@ -46,9 +64,60 @@ void gen_mve_vld41w(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld42w(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld43w(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 
+/*
+ * Vector load/store register (encodings T5, T6, T7)
+ * VLDRB, VLDRH, VLDRW, VSTRB, VSTRH, VSTRW
+ */
+static inline bool is_insn_vldst(uint32_t insn)
+{
+    return (insn & 0xEE401E00) == 0xEC000E00;
+}
+
+static inline bool is_insn_vldr_vstr(uint32_t insn)
+{
+    if((insn & 0xFE001E00) == 0xEC001E00) {
+        uint32_t p = extract32(insn, 24, 1);
+        uint32_t w = extract32(insn, 21, 1);
+
+        /* P == 0 && W == 0 is related encodings */
+
+        return (p == 0 && w == 1) || p == 1;
+    }
+
+    return false;
+}
+
 static inline bool is_insn_vld4(uint32_t insn)
 {
     return (insn & 0xFF901E01) == 0xFC901E01;
+}
+
+/* Extract arguments of loads/stores */
+static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
+{
+    a->rn = extract32(insn, 16, 4);
+    a->l = extract32(insn, 20, 1);
+    a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    a->u = 0;
+    a->imm = extract32(insn, 0, 7);
+    a->p = extract32(insn, 24, 1);
+    a->a = extract32(insn, 23, 1);
+    a->w = extract32(insn, 21, 1);
+    a->size = extract32(insn, 7, 2);
+}
+
+/* Extract arguments of widening/narrowing loads/stores */
+static void mve_extract_vldst_wn(arg_vldr_vstr *a, uint32_t insn)
+{
+    a->rn = extract32(insn, 16, 3);
+    a->l = extract32(insn, 20, 1);
+    a->qd = extract32(insn, 13, 3);
+    a->u = extract32(insn, 28, 1);
+    a->imm = extract32(insn, 0, 7);
+    a->p = extract32(insn, 24, 1);
+    a->a = extract32(insn, 23, 1);
+    a->w = extract32(insn, 21, 1);
+    a->size = extract32(insn, 7, 2);
 }
 
 /* Extract arguments of (de)interleaving stores/loads */
