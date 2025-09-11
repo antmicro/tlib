@@ -184,6 +184,8 @@ add_definitions (
     -Wno-unused-parameter
     -Wno-sign-compare
 
+    -fwrapv
+
     -DHOST_BITS_${HOST_WORD_SIZE}
     -DHOST_${HOST_ARCH_U}=1
     -DHOST_LONG_BITS=${HOST_WORD_SIZE}
