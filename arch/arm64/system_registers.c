@@ -2049,8 +2049,6 @@ ARMCPRegInfo cortex_a78_regs[] = {
 ARMCPRegInfo cortex_r52_regs[] =
 {
     // The params are:  name                 cp, op1, crn, crm, op2, el, extra_type, ...
-    ARM32_CP_REG_DEFINE(CPUACTLR,            15,   0,   0,  15,   0,  1, RW) // CPU Auxiliary Control Register
-
     ARM32_CP_REG_DEFINE(IMP_ATCMREGIONR,     15,   0,   9,   1,   0,  1, RW, FIELD(cp15.tcm_region[0]), WRITEFN(tcm_region)) // TCM Region Register A
     ARM32_CP_REG_DEFINE(IMP_BTCMREGIONR,     15,   0,   9,   1,   1,  1, RW, FIELD(cp15.tcm_region[1]), WRITEFN(tcm_region)) // TCM Region Register B
     ARM32_CP_REG_DEFINE(IMP_CTCMREGIONR,     15,   0,   9,   1,   2,  1, RW, FIELD(cp15.tcm_region[2]), WRITEFN(tcm_region)) // TCM Region Register C
@@ -2082,6 +2080,9 @@ ARMCPRegInfo cortex_r52_regs[] =
     ARM32_CP_REG_DEFINE(IMP_CDBGDR1,         15,   3,  15,   0,   1,  2, RO) // Cache Debug Data Register 1
     ARM32_CP_REG_DEFINE(IMP_TESTR0,          15,   4,  15,   0,   0,  1, RO) // Test Register 0
     ARM32_CP_REG_DEFINE(IMP_TESTR1,          15,   4,  15,   0,   1,  1, WO) // This register is only for testing
+
+    // The params are:        name           cp, op1, crm,  el, extra_type, ...
+    ARM32_CP_64BIT_REG_DEFINE(CPUACTLR,      15,   0,  15,  1,  RW) // CPU Auxiliary Control Register
 };
 
 ARMCPRegInfo mpu_registers[] = {
