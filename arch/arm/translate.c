@@ -9330,22 +9330,22 @@ static int trans_vld4(DisasContext *s, uint32_t insn)
 static int trans_vldr_vstr(DisasContext *s, arg_vldr_vstr *a)
 {
     static MVEGenLdStFn *const ldst_fns[4][2] = {
-        { NULL, F(vldrb) },
-        { NULL, F(vldrh) },
-        { NULL, F(vldrw) },
-        { NULL, NULL     }
+        { F(vstrb), F(vldrb) },
+        { F(vstrh), F(vldrh) },
+        { F(vstrw), F(vldrw) },
+        { NULL,     NULL     }
     };
     return do_ldst(s, a, ldst_fns[a->size][a->l], a->size);
 }
 
-#define DO_VLDST_WIDE_NARROW(OP, SLD, ULD, ST, MSIZE)              \
-    static int glue(trans_, OP)(DisasContext *s, arg_vldr_vstr *a) \
-    {                                                              \
-        static MVEGenLdStFn *const ldst_fns[2][2] = {              \
-            { NULL, F(SLD) },                                      \
-            { NULL, F(ULD) },                                      \
-        };                                                         \
-        return do_ldst(s, a, ldst_fns[a->u][a->l], MSIZE);         \
+#define DO_VLDST_WIDE_NARROW(OP, SLD, ULD, ST, MSIZE)                \
+    static int glue(trans_, OP)(DisasContext * s, arg_vldr_vstr * a) \
+    {                                                                \
+        static MVEGenLdStFn *const ldst_fns[2][2] = {                \
+            { F(ST), F(SLD) },                                       \
+            { NULL,  F(ULD) },                                        \
+        };                                                           \
+        return do_ldst(s, a, ldst_fns[a->u][a->l], MSIZE);           \
     }
 
 DO_VLDST_WIDE_NARROW(vldstb_h, vldrb_sh, vldrb_uh, vstrb_h, 1)

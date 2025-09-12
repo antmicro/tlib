@@ -179,6 +179,32 @@ DO_VLDR(vldrb_uw, uint32_t, 1, 4, ldb)
 DO_VLDR(vldrh_sw, int32_t, 2, 4, ldw)
 DO_VLDR(vldrh_uw, uint32_t, 2, 4, ldw)
 
+#define DO_VSTR(OP, TYPE, MSIZE, ESIZE, ST_TYPE)                                  \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vd, uint32_t addr)          \
+    {                                                                             \
+        TYPE *d = vd;                                                             \
+        uint16_t mask = mve_element_mask(env);                                    \
+        unsigned e;                                                               \
+        for(e = 0; e < (16 / ESIZE); e++) {                                       \
+            if(mask & 1) {                                                        \
+                __inner_##ST_TYPE##_mmu(addr, d[e], cpu_mmu_index(env), GETPC()); \
+            }                                                                     \
+            addr += MSIZE;                                                        \
+            mask >>= ESIZE;                                                       \
+        }                                                                         \
+        mve_advance_vpt(env);                                                     \
+    }
+
+DO_VSTR(vstrb, uint8_t, 1, 1, stb)
+DO_VSTR(vstrh, uint16_t, 2, 2, stw)
+DO_VSTR(vstrw, uint32_t, 4, 4, stl)
+
+/* Narrowing stores, interpret as: store half-word in a byte */
+DO_VSTR(vstrb_h, int16_t, 1, 2, stb)
+DO_VSTR(vstrb_w, int32_t, 1, 4, stb)
+DO_VSTR(vstrh_w, int32_t, 2, 4, stw)
+
+#undef DO_VSTR
 #undef DO_VLDR
 
 #define DO_VLD4B(OP, O1, O2, O3, O4)                                          \

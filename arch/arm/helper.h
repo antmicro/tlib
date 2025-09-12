@@ -515,6 +515,13 @@ DEF_HELPER_3(mve_vldrb_uh, void, env, ptr, i32)
 DEF_HELPER_3(mve_vldrb_uw, void, env, ptr, i32)
 DEF_HELPER_3(mve_vldrh_sw, void, env, ptr, i32)
 DEF_HELPER_3(mve_vldrh_uw, void, env, ptr, i32)
+
+DEF_HELPER_3(mve_vstrb, void, env, ptr, i32)
+DEF_HELPER_3(mve_vstrh, void, env, ptr, i32)
+DEF_HELPER_3(mve_vstrw, void, env, ptr, i32)
+DEF_HELPER_3(mve_vstrb_h, void, env, ptr, i32)
+DEF_HELPER_3(mve_vstrb_w, void, env, ptr, i32)
+DEF_HELPER_3(mve_vstrh_w, void, env, ptr, i32)
 #endif
 
 #include "def-helper.h"
