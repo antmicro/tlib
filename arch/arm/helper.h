@@ -505,4 +505,16 @@ DEF_HELPER_2(get_cp_reg64, i64, env, ptr)
 DEF_HELPER_3(pmu_update_event_counters, void, env, int, i32)
 DEF_HELPER_1(pmu_count_instructions_cycles, void, i32)
 
+#ifdef TARGET_PROTO_ARM_M
+DEF_HELPER_3(mve_vldrb, void, env, ptr, i32)
+DEF_HELPER_3(mve_vldrh, void, env, ptr, i32)
+DEF_HELPER_3(mve_vldrw, void, env, ptr, i32)
+DEF_HELPER_3(mve_vldrb_sh, void, env, ptr, i32)
+DEF_HELPER_3(mve_vldrb_sw, void, env, ptr, i32)
+DEF_HELPER_3(mve_vldrb_uh, void, env, ptr, i32)
+DEF_HELPER_3(mve_vldrb_uw, void, env, ptr, i32)
+DEF_HELPER_3(mve_vldrh_sw, void, env, ptr, i32)
+DEF_HELPER_3(mve_vldrh_uw, void, env, ptr, i32)
+#endif
+
 #include "def-helper.h"

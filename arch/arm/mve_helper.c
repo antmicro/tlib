@@ -138,6 +138,49 @@ static void mve_advance_vpt(CPUState *env)
     env->v7m.vpr = vpr;
 }
 
+/* For loads, predicated lanes are zeroed instead of keeping their old values */
+#define DO_VLDR(OP, TYPE, ESIZE, MSIZE, LD_TYPE)                                                 \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vd, uint32_t addr)                         \
+    {                                                                                            \
+        TYPE *d = vd;                                                                            \
+        uint16_t mask = mve_element_mask(env);                                                   \
+        uint16_t eci_mask = mve_eci_mask(env);                                                   \
+        unsigned e;                                                                              \
+        /*                                                                                       \
+         * R_SXTM allows the dest reg to become UNKNOWN for abandoned                            \
+         * beats so we don't care if we update part of the dest and                              \
+         * then take an exception.                                                               \
+         */                                                                                      \
+        for(e = 0; e < (16 / ESIZE); e++) {                                                      \
+            if(eci_mask & 1) {                                                                   \
+                if(mask & 1) {                                                                   \
+                    d[e] = __inner_##LD_TYPE##_err_mmu(addr, cpu_mmu_index(env), NULL, GETPC()); \
+                } else {                                                                         \
+                    d[e] = 0;                                                                    \
+                }                                                                                \
+            }                                                                                    \
+            addr += MSIZE;                                                                       \
+            mask >>= ESIZE;                                                                      \
+            eci_mask >>= ESIZE;                                                                  \
+        }                                                                                        \
+        mve_advance_vpt(env);                                                                    \
+    }
+
+DO_VLDR(vldrb, uint8_t, 1, 1, ldb)
+DO_VLDR(vldrh, uint16_t, 2, 2, ldw)
+DO_VLDR(vldrw, uint32_t, 4, 4, ldl)
+
+//  TODO(MVE): Signed loads won't work. They need to have the sign bit retained.
+/* Widening loads, interpret as: load a byte to signed half-word */
+DO_VLDR(vldrb_sh, int16_t, 1, 2, ldb)
+DO_VLDR(vldrb_sw, int32_t, 1, 4, ldb)
+DO_VLDR(vldrb_uh, uint16_t, 1, 2, ldb)
+DO_VLDR(vldrb_uw, uint32_t, 1, 4, ldb)
+DO_VLDR(vldrh_sw, int32_t, 2, 4, ldw)
+DO_VLDR(vldrh_uw, uint32_t, 2, 4, ldw)
+
+#undef DO_VLDR
+
 #define DO_VLD4B(OP, O1, O2, O3, O4)                                          \
     void glue(gen_mve_, OP)(DisasContext * s, uint32_t qnindx, TCGv_i32 base) \
     {                                                                         \

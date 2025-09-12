@@ -9330,10 +9330,10 @@ static int trans_vld4(DisasContext *s, uint32_t insn)
 static int trans_vldr_vstr(DisasContext *s, arg_vldr_vstr *a)
 {
     static MVEGenLdStFn *const ldst_fns[4][2] = {
-        { NULL, NULL },
-        { NULL, NULL },
-        { NULL, NULL },
-        { NULL, NULL }
+        { NULL, F(vldrb) },
+        { NULL, F(vldrh) },
+        { NULL, F(vldrw) },
+        { NULL, NULL     }
     };
     return do_ldst(s, a, ldst_fns[a->size][a->l], a->size);
 }
@@ -9342,8 +9342,8 @@ static int trans_vldr_vstr(DisasContext *s, arg_vldr_vstr *a)
     static int glue(trans_, OP)(DisasContext *s, arg_vldr_vstr *a) \
     {                                                              \
         static MVEGenLdStFn *const ldst_fns[2][2] = {              \
-            { NULL, NULL },                                        \
-            { NULL, NULL },                                        \
+            { NULL, F(SLD) },                                      \
+            { NULL, F(ULD) },                                      \
         };                                                         \
         return do_ldst(s, a, ldst_fns[a->u][a->l], MSIZE);         \
     }
