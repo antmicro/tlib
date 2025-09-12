@@ -137,6 +137,29 @@ void tlib_register_tcm_region(uint32_t address, uint64_t size, uint64_t region_i
 
 EXC_VOID_3(tlib_register_tcm_region, uint32_t, address, uint64_t, size, uint64_t, index)
 
+void tlib_enable_tcm_region(uint64_t region_index, uint32_t el01_enabled, uint32_t el2_enabled)
+{
+    bool flush_tlb = false;
+
+    bool el01_enabled_current = cpu->cp15.tcm_region[region_index] & 1;
+    if(el01_enabled_current != (el01_enabled > 0)) {
+        cpu->cp15.tcm_region[region_index] = deposit64(cpu->cp15.tcm_region[region_index], 0, 1, el01_enabled > 0);
+        flush_tlb = true;
+    }
+
+    bool el2_enabled_current = cpu->cp15.tcm_region[region_index] & 2;
+    if(el2_enabled_current != (el2_enabled > 0)) {
+        cpu->cp15.tcm_region[region_index] = deposit64(cpu->cp15.tcm_region[region_index], 1, 1, el2_enabled > 0);
+        flush_tlb = true;
+    }
+
+    if(flush_tlb) {
+        tlb_flush(env, 1, true);
+    }
+}
+
+EXC_VOID_3(tlib_enable_tcm_region, uint64_t, region_index, uint32_t, el01_enabled, uint32_t, el2_enabled);
+
 void tlib_set_gic_cpu_register_interface_version(uint32_t iface_version)
 {
     env->arm_core_config.gic_cpu_interface_version = iface_version;
