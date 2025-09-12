@@ -1152,7 +1152,8 @@ static void gen_arith_bitmanip(DisasContext *dc, int rd, int rs1, target_long im
             if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBA)) {
                 return;
             }
-            tcg_gen_shli_tl(source1, source1, (imm & BITMANIP_SHAMT_MASK));
+            tcg_gen_andi_i64(source1, source1, 0xFFFFFFFF);
+            tcg_gen_shli_i64(source1, source1, (imm & BITMANIP_SHAMT_MASK));
             break;
         case OPC_RISC_REV8_32:
             if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
@@ -1343,7 +1344,9 @@ static void gen_arith_imm(DisasContext *dc, uint32_t opc, int rd, int rs1, targe
             } else {
                 tcg_gen_shli_tl(source1, source1, imm);
             }
-            SEXT_RESULT_IF_W(source1);
+            if(MASK_OP_ARITH_IMM_ZB_5_12_SHAMT(dc->opcode) != OPC_RISC_SLLI_UW) {
+                SEXT_RESULT_IF_W(source1);
+            }
             break;
 #if defined(TARGET_RISCV64)
         case OPC_RISC_SHIFT_RIGHT_IW:
