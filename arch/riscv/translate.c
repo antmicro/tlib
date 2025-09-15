@@ -4832,9 +4832,9 @@ static void gen_v_opfvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
             break;
         case RISC_V_FUNCT_FREDSUM:
             if(vm) {
-                gen_helper_vfredsum_vs(cpu_env, t_vd, t_vs2, t_vs1);
+                gen_helper_vfredusum_vs(cpu_env, t_vd, t_vs2, t_vs1);
             } else {
-                gen_helper_vfredsum_vs_m(cpu_env, t_vd, t_vs2, t_vs1);
+                gen_helper_vfredusum_vs_m(cpu_env, t_vd, t_vs2, t_vs1);
             }
             break;
         case RISC_V_FUNCT_FSUB:
@@ -4846,9 +4846,9 @@ static void gen_v_opfvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
             break;
         case RISC_V_FUNCT_FREDOSUM:
             if(vm) {
-                gen_helper_vfredsum_vs(cpu_env, t_vd, t_vs2, t_vs1);
+                gen_helper_vfredosum_vs(cpu_env, t_vd, t_vs2, t_vs1);
             } else {
-                gen_helper_vfredsum_vs_m(cpu_env, t_vd, t_vs2, t_vs1);
+                gen_helper_vfredosum_vs_m(cpu_env, t_vd, t_vs2, t_vs1);
             }
             break;
         case RISC_V_FUNCT_FMIN:
@@ -5203,9 +5203,9 @@ static void gen_v_opfvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
             break;
         case RISC_V_FUNCT_FWREDSUM:
             if(vm) {
-                gen_helper_vfwredsum_vs(cpu_env, t_vd, t_vs2, t_vs1);
+                gen_helper_vfwredusum_vs(cpu_env, t_vd, t_vs2, t_vs1);
             } else {
-                gen_helper_vfwredsum_vs_m(cpu_env, t_vd, t_vs2, t_vs1);
+                gen_helper_vfwredusum_vs_m(cpu_env, t_vd, t_vs2, t_vs1);
             }
             break;
         case RISC_V_FUNCT_FWSUB:
@@ -5217,9 +5217,9 @@ static void gen_v_opfvv(DisasContext *dc, uint8_t funct6, int vd, int vs1, int v
             break;
         case RISC_V_FUNCT_FWREDOSUM:
             if(vm) {
-                gen_helper_vfwredsum_vs(cpu_env, t_vd, t_vs2, t_vs1);
+                gen_helper_vfwredosum_vs(cpu_env, t_vd, t_vs2, t_vs1);
             } else {
-                gen_helper_vfwredsum_vs_m(cpu_env, t_vd, t_vs2, t_vs1);
+                gen_helper_vfwredosum_vs_m(cpu_env, t_vd, t_vs2, t_vs1);
             }
             break;
         case RISC_V_FUNCT_FWADDW:

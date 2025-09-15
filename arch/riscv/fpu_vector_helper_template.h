@@ -594,6 +594,7 @@
                     break;                                                                           \
             }                                                                                        \
         }                                                                                            \
+        MAYBE_CANONICALIZE_NAN                                                                       \
         switch(eew) {                                                                                \
             case 32:                                                                                 \
                 ((float32 *)V(vd))[0] = acc;                                                         \
@@ -631,6 +632,7 @@
                     break;                                                                                     \
             }                                                                                                  \
         }                                                                                                      \
+        MAYBE_CANONICALIZE_NAN                                                                                 \
         switch(eew) {                                                                                          \
             case 32:                                                                                           \
                 ((float64 *)V(vd))[0] = acc;                                                                   \
@@ -741,6 +743,8 @@ void glue(helper_vfslide1down, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2,
     }
 #endif
 }
+
+#define MAYBE_CANONICALIZE_NAN
 
 VFOP_VVV(vfadd_vv, helper_fadd)
 VFOP_VVX(vfadd_vf, helper_fadd)
@@ -987,12 +991,37 @@ VFOP_VW_FF(vfncvt_rod_ff_w, VFOP_FNCVT_ROD_FF)
 
 #define VFOP_FADD_s(ENV, A, B) helper_fadd_s(ENV, A, B, ENV->frm)
 #define VFOP_FADD_d(ENV, A, B) helper_fadd_d(ENV, A, B, ENV->frm)
-VFOP_RED_VVV(vfredsum_vs, VFOP_FADD)
 
+VFOP_RED_VVV(vfredosum_vs, VFOP_FADD)
 VFOP_RED_VVV(vfredmax_vs, helper_fmax)
 VFOP_RED_VVV(vfredmin_vs, helper_fmin)
 
-VFOP_RED_WVV(vfwredsum_vs, VFOP_FADD)
+VFOP_RED_WVV(vfwredosum_vs, VFOP_FADD)
+
+#undef MAYBE_CANONICALIZE_NAN
+#define MAYBE_CANONICALIZE_NAN             \
+    switch(eew) {                          \
+        case 32:                           \
+            if(float32_is_any_nan(acc)) {  \
+                acc = float32_default_nan; \
+            }                              \
+            break;                         \
+        case 64:                           \
+            if(float64_is_any_nan(acc)) {  \
+                acc = float64_default_nan; \
+            }                              \
+            break;                         \
+    }
+
+VFOP_RED_VVV(vfredusum_vs, VFOP_FADD)
+#undef MAYBE_CANONICALIZE_NAN
+
+#define MAYBE_CANONICALIZE_NAN     \
+    if(float64_is_any_nan(acc)) {  \
+        acc = float64_default_nan; \
+    }
+VFOP_RED_WVV(vfwredusum_vs, VFOP_FADD)
+#undef MAYBE_CANONICALIZE_NAN
 
 #undef MS_MASK
 #undef MS_TEST_MASK
