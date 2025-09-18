@@ -434,6 +434,9 @@ typedef struct CPUState {
          */
         float_status fp_status;
         float_status standard_fp_status;
+        /* fp_status equivalent for float16 instruction */
+        float_status fp_status_f16;
+        float_status standard_fp_status_f16;
 #ifdef TARGET_PROTO_ARM_M
         int32_t fpu_interrupt_irq_number;
 #endif
