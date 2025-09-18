@@ -138,6 +138,69 @@ static void mve_advance_vpt(CPUState *env)
     env->v7m.vpr = vpr;
 }
 
+/*
+ * The mergemask(D, R, M) macro performs the operation "*D = R" but
+ * storing only the bytes which correspond to 1 bits in M,
+ * leaving other bytes in *D unchanged. We use _Generic
+ * to select the correct implementation based on the type of D.
+ */
+
+static void mergemask_ub(uint8_t *d, uint8_t r, uint16_t mask)
+{
+    if(mask & 1) {
+        *d = r;
+    }
+}
+
+static void mergemask_sb(int8_t *d, int8_t r, uint16_t mask)
+{
+    mergemask_ub((uint8_t *)d, r, mask);
+}
+
+static void mergemask_uh(uint16_t *d, uint16_t r, uint16_t mask)
+{
+    uint16_t bmask = expand_pred_b(mask);
+    *d = (*d & ~bmask) | (r & bmask);
+}
+
+static void mergemask_sh(int16_t *d, int16_t r, uint16_t mask)
+{
+    mergemask_uh((uint16_t *)d, r, mask);
+}
+
+static void mergemask_uw(uint32_t *d, uint32_t r, uint16_t mask)
+{
+    uint32_t bmask = expand_pred_b(mask);
+    *d = (*d & ~bmask) | (r & bmask);
+}
+
+static void mergemask_sw(int32_t *d, int32_t r, uint16_t mask)
+{
+    mergemask_uw((uint32_t *)d, r, mask);
+}
+
+static void mergemask_uq(uint64_t *d, uint64_t r, uint16_t mask)
+{
+    uint64_t bmask = expand_pred_b(mask);
+    *d = (*d & ~bmask) | (r & bmask);
+}
+
+static void mergemask_sq(int64_t *d, int64_t r, uint16_t mask)
+{
+    mergemask_uq((uint64_t *)d, r, mask);
+}
+
+#define mergemask(D, R, M)        \
+    _Generic(D,                   \
+        uint8_t *: mergemask_ub,  \
+        int8_t *: mergemask_sb,   \
+        uint16_t *: mergemask_uh, \
+        int16_t *: mergemask_sh,  \
+        uint32_t *: mergemask_uw, \
+        int32_t *: mergemask_sw,  \
+        uint64_t *: mergemask_uq, \
+        int64_t *: mergemask_sq)(D, R, M)
+
 /* For loads, predicated lanes are zeroed instead of keeping their old values */
 #define DO_VLDR(OP, TYPE, ESIZE, MSIZE, LD_TYPE)                                                 \
     void HELPER(glue(mve_, OP))(CPUState * env, void *vd, uint32_t addr)                         \
