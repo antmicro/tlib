@@ -10222,6 +10222,42 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     mve_extract_vldr_vstr(&a, insn);
                     return trans_vldr_vstr(s, &a);
                 }
+                if(is_insn_vadd_fp(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op_fp(&a, insn);
+                    return trans_vadd_fp(s, &a);
+                }
+                if(is_insn_vadd_fp_scalar(insn)) {
+                    ARCH(MVE);
+                    arg_2scalar a;
+                    mve_extract_2op_fp_scalar(&a, insn);
+                    return trans_vadd_fp_scalar(s, &a);
+                }
+                if(is_insn_vsub_fp(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op_fp(&a, insn);
+                    return trans_vsub_fp(s, &a);
+                }
+                if(is_insn_vsub_fp_scalar(insn)) {
+                    ARCH(MVE);
+                    arg_2scalar a;
+                    mve_extract_2op_fp_scalar(&a, insn);
+                    return trans_vsub_fp_scalar(s, &a);
+                }
+                if(is_insn_vmul_fp(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op_fp(&a, insn);
+                    return trans_vmul_fp(s, &a);
+                }
+                if(is_insn_vmul_fp_scalar(insn)) {
+                    ARCH(MVE);
+                    arg_2scalar a;
+                    mve_extract_2op_fp_scalar(&a, insn);
+                    return trans_vmul_fp_scalar(s, &a);
+                }
             }
 #endif
             if(((insn >> 24) & 3) == 3) {

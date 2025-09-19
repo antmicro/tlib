@@ -87,6 +87,38 @@ static inline bool is_insn_vldr_vstr(uint32_t insn)
     return false;
 }
 
+static inline bool is_insn_vadd_fp(uint32_t insn)
+{
+    return (insn & 0xFFA11F51) == 0xEF000D40;
+}
+
+static inline bool is_insn_vadd_fp_scalar(uint32_t insn)
+{
+    return (insn & 0xEFB11F70) == 0xEE300F40;
+}
+
+static inline bool is_insn_vsub_fp(uint32_t insn)
+{
+    return (insn & 0xFFA11F51) == 0xEF200D40;
+}
+
+static inline bool is_insn_vsub_fp_scalar(uint32_t insn)
+{
+    return (insn & 0xEFB11F70) == 0xEE301F40;
+}
+
+/* VMUL (floating-point) T1 */
+static inline bool is_insn_vmul_fp(uint32_t insn)
+{
+    return (insn & 0xFFAF1F51) == 0xFF000D50;
+}
+
+/* VMUL (floating-point) T2 */
+static inline bool is_insn_vmul_fp_scalar(uint32_t insn)
+{
+    return (insn & 0xEFB11F70) == 0xEE310E60;
+}
+
 static inline bool is_insn_vld4(uint32_t insn)
 {
     return (insn & 0xFF901E01) == 0xFC901E01;
