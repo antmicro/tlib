@@ -21,6 +21,7 @@
 
 typedef void MVEGenLdStFn(TCGv_ptr, TCGv_ptr, TCGv_i32);
 typedef void MVEGenLdStIlFn(DisasContext *, uint32_t, TCGv_i32);
+typedef void MVEGenTwoOpScalarFn(TCGv_ptr, TCGv_ptr, TCGv_ptr, TCGv_i32);
 
 /*
  * Arguments of stores/loads:
@@ -160,4 +161,13 @@ static void extract_arg_vldst_il(arg_vldst_il *a, uint32_t insn)
     a->size = extract32(insn, 7, 2);
     a->pat = extract32(insn, 5, 2);
     a->w = extract32(insn, 21, 1);
+}
+
+/* Extract arguments of 2-operand scalar floating-point */
+static void mve_extract_2op_fp_scalar(arg_2scalar *a, uint32_t insn)
+{
+    a->size = extract32(insn, 28, 1);
+    a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    a->qn = deposit32(extract32(insn, 17, 3), 3, 29, extract32(insn, 7, 1));
+    a->rm = extract32(insn, 0, 4);
 }

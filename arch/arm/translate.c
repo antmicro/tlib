@@ -9299,6 +9299,36 @@ static int do_ldst(DisasContext *s, arg_vldr_vstr *a, MVEGenLdStFn *fn, unsigned
     return TRANS_STATUS_SUCCESS;
 }
 
+static int do_2op_scalar(DisasContext *s, arg_2scalar *a, MVEGenTwoOpScalarFn fn)
+{
+    TCGv_ptr qd, qn;
+    TCGv_i32 rm;
+
+    if(!mve_check_qreg_bank(a->qd | a->qn) || !fn) {
+        return false;
+    }
+    if(a->rm == 13 || a->rm == 15) {
+        /* UNPREDICTABLE */
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    gen_helper_fp_lsp(cpu_env);
+
+    qd = mve_qreg_ptr(a->qd);
+    qn = mve_qreg_ptr(a->qn);
+    rm = load_reg(s, a->rm);
+    fn(cpu_env, qd, qn, rm);
+    tcg_temp_free_ptr(qd);
+    tcg_temp_free_ptr(qn);
+    tcg_temp_free_ptr(rm);
+
+    mve_update_eci(s);
+    return TRANS_STATUS_SUCCESS;
+}
+
 /* This macro is just to make the arrays more compact in these functions */
 #define F(OP) glue(gen_mve_, OP)
 
@@ -9354,6 +9384,18 @@ DO_VLDST_WIDE_NARROW(vldsth_w, vldrh_sw, vldrh_uw, vstrh_w, 2)
 
 #undef DO_VLDST_WIDE_NARROW
 #undef F
+
+#define DO_TRANS_2OP_FP_SCALAR(INSN, FN)                     \
+    static int trans_##INSN(DisasContext *s, arg_2scalar *a) \
+    {                                                        \
+        static MVEGenTwoOpScalarFn *const fns[] = {          \
+            gen_helper_mve_##FN##s,                          \
+            NULL,                                            \
+        };                                                   \
+        return do_2op_scalar(s, a, fns[a->size]);            \
+    }
+
+#undef DO_TRANS_2OP_FP_SCALAR
 
 #endif
 
