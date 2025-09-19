@@ -9395,6 +9395,10 @@ DO_VLDST_WIDE_NARROW(vldsth_w, vldrh_sw, vldrh_uw, vstrh_w, 2)
         return do_2op_scalar(s, a, fns[a->size]);            \
     }
 
+DO_TRANS_2OP_FP_SCALAR(vadd_fp_scalar, vfadd_scalar)
+DO_TRANS_2OP_FP_SCALAR(vsub_fp_scalar, vfsub_scalar)
+DO_TRANS_2OP_FP_SCALAR(vmul_fp_scalar, vfmul_scalar)
+
 #undef DO_TRANS_2OP_FP_SCALAR
 
 #endif

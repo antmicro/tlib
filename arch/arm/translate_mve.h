@@ -52,6 +52,14 @@ typedef struct {
     int w;
 } arg_vldst_il;
 
+/* Arguments of 2 operand scalar instructions */
+typedef struct {
+    int qd;
+    int qn;
+    int rm;
+    int size;
+} arg_2scalar;
+
 void gen_mve_vld40b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld41b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld42b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
