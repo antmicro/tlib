@@ -526,6 +526,10 @@ DEF_HELPER_3(mve_vstrh_w, void, env, ptr, i32)
 DEF_HELPER_4(mve_vfmul_scalars, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vfadd_scalars, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vfsub_scalars, void, env, ptr, ptr, i32)
+
+DEF_HELPER_4(mve_vfadds, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vfsubs, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vfmuls, void, env, ptr, ptr, ptr)
 #endif
 
 #include "def-helper.h"
