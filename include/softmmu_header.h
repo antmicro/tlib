@@ -65,13 +65,14 @@
 
 #if ACCESS_TYPE == (NB_MMU_MODES + 1)
 #define ADDR_READ addr_code
+#define IS_INS_FETCH
 #else
 #define ADDR_READ addr_read
 #endif
 
 /* generic load/store macros */
 
-static inline RES_TYPE glue(glue(glue(ld, USUFFIX), _err), MEMSUFFIX)(target_ulong ptr, int *err)
+static inline RES_TYPE glue(glue(glue(glue(ld, USUFFIX), _err), MEMSUFFIX), _inner)(target_ulong ptr, int *err, void *retaddr)
 {
     int page_index;
     RES_TYPE res;
@@ -83,7 +84,7 @@ static inline RES_TYPE glue(glue(glue(ld, USUFFIX), _err), MEMSUFFIX)(target_ulo
     page_index = (addr >> TARGET_PAGE_BITS) & (CPU_TLB_SIZE - 1);
     mmu_idx = CPU_MMU_INDEX;
     if(unlikely(env->tlb_table[mmu_idx][page_index].ADDR_READ != (addr & (TARGET_PAGE_MASK | (DATA_SIZE - 1))))) {
-        res = glue(glue(glue(__ld, SUFFIX), _err), MMUSUFFIX)(addr, mmu_idx, err);
+        res = glue(glue(glue(__inner_ld, SUFFIX), _err), MMUSUFFIX)(addr, mmu_idx, err, retaddr);
     } else {
         physaddr = addr + env->tlb_table[mmu_idx][page_index].addend;
         res = glue(glue(ld, USUFFIX), _raw)(physaddr);
@@ -91,9 +92,31 @@ static inline RES_TYPE glue(glue(glue(ld, USUFFIX), _err), MEMSUFFIX)(target_ulo
     return res;
 }
 
+static inline RES_TYPE glue(glue(glue(ld, USUFFIX), _err), MEMSUFFIX)(target_ulong ptr, int *err)
+{
+#ifdef IS_INS_FETCH
+    //  Instruction fetch loads can't fault
+    return glue(glue(glue(glue(ld, USUFFIX), _err), MEMSUFFIX), _inner)(ptr, err, NULL);
+#else
+    void *retaddr = GETPC();
+    return glue(glue(glue(glue(ld, USUFFIX), _err), MEMSUFFIX), _inner)(ptr, err, retaddr);
+#endif
+}
+
+static inline RES_TYPE glue(glue(glue(ld, USUFFIX), MEMSUFFIX), _inner)(target_ulong ptr, void *retaddr)
+{
+    return glue(glue(glue(glue(ld, USUFFIX), _err), MEMSUFFIX), _inner)(ptr, NULL, retaddr);
+}
+
 static inline RES_TYPE glue(glue(ld, USUFFIX), MEMSUFFIX)(target_ulong ptr)
 {
-    return glue(glue(glue(ld, USUFFIX), _err), MEMSUFFIX)(ptr, NULL);
+#ifdef IS_INS_FETCH
+    //  Instruction fetch loads can't fault
+    return glue(glue(glue(ld, USUFFIX), MEMSUFFIX), _inner)(ptr, NULL);
+#else
+    void *retaddr = GETPC();
+    return glue(glue(glue(ld, USUFFIX), MEMSUFFIX), _inner)(ptr, retaddr);
+#endif
 }
 
 #if DATA_SIZE <= 2
@@ -208,3 +231,4 @@ static inline void glue(stfl, MEMSUFFIX)(target_ulong ptr, float32 v)
 #undef CPU_MMU_INDEX
 #undef MMUSUFFIX
 #undef ADDR_READ
+#undef IS_INS_FETCH
