@@ -193,6 +193,7 @@ static inline DATA_STYPE glue(rem_, BITS)(DATA_STYPE dividend, DATA_STYPE diviso
 #endif
 void glue(glue(helper_vle, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t nf)
 {
+    void *retaddr = GETPC();
     //  This implementation handles both vle*.v and vlseg*.v instructions.
     const target_ulong emul = EMUL(SHIFT);
     const target_ulong nfields = nf + 1;
@@ -206,7 +207,7 @@ void glue(glue(helper_vle, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t 
                 if(unlikely((env->is_pre_stack_access_hook_enabled && rs1 == 2))) {
                     tlib_handle_pre_stack_access_hook(src_addr, sizeof(DATA_TYPE) * 8, false);
                 }
-                ((DATA_TYPE *)V(vd + (fi << emul)))[ei] = glue(ld, USUFFIX)(src_addr);
+                ((DATA_TYPE *)V(vd + (fi << emul)))[ei] = glue(glue(ld, USUFFIX), _data_inner)(src_addr, retaddr);
             }
             src_addr += sizeof(DATA_TYPE);
         }
@@ -215,6 +216,7 @@ void glue(glue(helper_vle, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t 
 
 void glue(glue(glue(helper_vle, BITS), ff), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t nf)
 {
+    void *retaddr = GETPC();
     const target_ulong emul = EMUL(SHIFT);
     const target_ulong nfields = nf + 1;
     if(emul == RESERVED_EMUL || V_IDX_INVALID_EMUL(vd, emul) || V_INVALID_NF(vd, nf, emul)) {
@@ -230,7 +232,7 @@ void glue(glue(glue(helper_vle, BITS), ff), POSTFIX)(CPUState *env, uint32_t vd,
                     if(unlikely((env->is_pre_stack_access_hook_enabled && rs1 == 2))) {
                         tlib_handle_pre_stack_access_hook(src_addr, sizeof(DATA_TYPE) * 8, false);
                     }
-                    *destination = glue(ld, USUFFIX)(src_addr);
+                    *destination = glue(glue(ld, USUFFIX), _data_inner)(src_addr, retaddr);
                 } else {
                     int memory_access_fail = 0;
                     if(unlikely((env->is_pre_stack_access_hook_enabled && rs1 == 2))) {
@@ -251,6 +253,7 @@ void glue(glue(glue(helper_vle, BITS), ff), POSTFIX)(CPUState *env, uint32_t vd,
 
 void glue(glue(helper_vlse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t rs2, uint32_t nf)
 {
+    void *retaddr = GETPC();
     //  This implementation handles both vlse*.v and vlsseg*.v instructions.
     const target_ulong emul = EMUL(SHIFT);
     const target_ulong nfields = nf + 1;
@@ -266,7 +269,8 @@ void glue(glue(helper_vlse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t
                 if(unlikely((env->is_pre_stack_access_hook_enabled && rs1 == 2))) {
                     tlib_handle_pre_stack_access_hook(src_addr, sizeof(DATA_TYPE) * 8, false);
                 }
-                ((DATA_TYPE *)V(vd + (fi << emul)))[ei] = glue(ld, USUFFIX)(src_addr + fi * sizeof(DATA_TYPE));
+                ((DATA_TYPE *)V(vd + (fi << emul)))[ei] =
+                    glue(glue(ld, USUFFIX), _data_inner)(src_addr + fi * sizeof(DATA_TYPE), retaddr);
             }
         }
         src_addr += offset;
@@ -275,6 +279,7 @@ void glue(glue(helper_vlse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t
 
 void glue(glue(helper_vlxei, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t vs2, uint32_t nf)
 {
+    void *retaddr = GETPC();
     //  vd  has EEW=SEW, EMUL=LMUL
     //  vs2 has EEW encoded in the instruction with EMUL=(EEW/SEW)*LMUL
     const target_ulong data_emul = EMUL(SEW());
@@ -299,16 +304,16 @@ void glue(glue(helper_vlxei, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_
             }
             switch(dst_eew) {
                 case 8:
-                    ((uint8_t *)V(vd + fi_offset))[ei] = ldub(addr);
+                    ((uint8_t *)V(vd + fi_offset))[ei] = ldub_data_inner(addr, retaddr);
                     break;
                 case 16:
-                    ((uint16_t *)V(vd + fi_offset))[ei] = lduw(addr);
+                    ((uint16_t *)V(vd + fi_offset))[ei] = lduw_data_inner(addr, retaddr);
                     break;
                 case 32:
-                    ((uint32_t *)V(vd + fi_offset))[ei] = ldl(addr);
+                    ((uint32_t *)V(vd + fi_offset))[ei] = ldl_data_inner(addr, retaddr);
                     break;
                 case 64:
-                    ((uint64_t *)V(vd + fi_offset))[ei] = ldq(addr);
+                    ((uint64_t *)V(vd + fi_offset))[ei] = ldq_data_inner(addr, retaddr);
                     break;
                 default:
                     raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
@@ -320,6 +325,7 @@ void glue(glue(helper_vlxei, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_
 
 void glue(glue(helper_vse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t nf)
 {
+    void *retaddr = GETPC();
     //  This implementation handles both vse*.v and vsseg*.v instructions.
     const target_ulong emul = EMUL(SHIFT);
     const target_ulong nfields = nf + 1;
@@ -334,7 +340,7 @@ void glue(glue(helper_vse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t 
                 if(unlikely((env->is_pre_stack_access_hook_enabled && rs1 == 2))) {
                     tlib_handle_pre_stack_access_hook(dest_addr, sizeof(DATA_TYPE) * 8, true);
                 }
-                glue(st, SUFFIX)(dest_addr, ((DATA_TYPE *)V(vd + (fi << emul)))[ei]);
+                glue(glue(st, SUFFIX), _data_inner)(dest_addr, ((DATA_TYPE *)V(vd + (fi << emul)))[ei], retaddr);
             }
             dest_addr += sizeof(DATA_TYPE);
         }
@@ -343,6 +349,7 @@ void glue(glue(helper_vse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t 
 
 void glue(glue(helper_vsse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t rs2, uint32_t nf)
 {
+    void *retaddr = GETPC();
     //  This implementation handles both vsse*.v and vssseg*.v instructions.
     const target_ulong emul = EMUL(SHIFT);
     const target_ulong nfields = nf + 1;
@@ -357,7 +364,8 @@ void glue(glue(helper_vsse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t
                 tlib_handle_pre_stack_access_hook(dest_addr, sizeof(DATA_TYPE) * nfields * 8, true);
             }
             for(int fi = 0; fi < nfields; ++fi) {
-                glue(st, SUFFIX)(dest_addr + fi * sizeof(DATA_TYPE), ((DATA_TYPE *)V(vd + (fi << emul)))[ei]);
+                glue(glue(st, SUFFIX), _data_inner)(dest_addr + fi * sizeof(DATA_TYPE), ((DATA_TYPE *)V(vd + (fi << emul)))[ei],
+                                                    retaddr);
             }
         }
         dest_addr += offset;
@@ -366,6 +374,7 @@ void glue(glue(helper_vsse, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t
 
 void glue(glue(helper_vsxei, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t vs2, uint32_t nf)
 {
+    void *retaddr = GETPC();
     const target_ulong emul = EMUL(SHIFT);
     if(emul == RESERVED_EMUL || V_IDX_INVALID(vd) || V_IDX_INVALID_EMUL(vs2, emul) || V_INVALID_NF(vd, nf, emul)) {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
@@ -383,16 +392,19 @@ void glue(glue(helper_vsxei, BITS), POSTFIX)(CPUState *env, uint32_t vd, uint32_
             }
             switch(dst_eew) {
                 case 8:
-                    stb(src_addr + (target_ulong)offsets[ei] + (fi << 0), V(vd + (fi << SHIFT))[ei]);
+                    stb_data_inner(src_addr + (target_ulong)offsets[ei] + (fi << 0), V(vd + (fi << SHIFT))[ei], retaddr);
                     break;
                 case 16:
-                    stw(src_addr + (target_ulong)offsets[ei] + (fi << 1), ((uint16_t *)V(vd + (fi << SHIFT)))[ei]);
+                    stw_data_inner(src_addr + (target_ulong)offsets[ei] + (fi << 1), ((uint16_t *)V(vd + (fi << SHIFT)))[ei],
+                                   retaddr);
                     break;
                 case 32:
-                    stl(src_addr + (target_ulong)offsets[ei] + (fi << 2), ((uint32_t *)V(vd + (fi << SHIFT)))[ei]);
+                    stl_data_inner(src_addr + (target_ulong)offsets[ei] + (fi << 2), ((uint32_t *)V(vd + (fi << SHIFT)))[ei],
+                                   retaddr);
                     break;
                 case 64:
-                    stq(src_addr + (target_ulong)offsets[ei] + (fi << 3), ((uint64_t *)V(vd + (fi << SHIFT)))[ei]);
+                    stq_data_inner(src_addr + (target_ulong)offsets[ei] + (fi << 3), ((uint64_t *)V(vd + (fi << SHIFT)))[ei],
+                                   retaddr);
                     break;
                 default:
                     raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
