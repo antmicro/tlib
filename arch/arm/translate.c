@@ -9329,6 +9329,39 @@ static int do_2op_scalar(DisasContext *s, arg_2scalar *a, MVEGenTwoOpScalarFn fn
     return TRANS_STATUS_SUCCESS;
 }
 
+static int do_2op_vec(DisasContext *s, arg_2op *a, MVEGenTwoOpFn fn, GVecGen3Fn *vecfn)
+{
+    TCGv_ptr qd, qn, qm;
+
+    if(!mve_check_qreg_bank(a->qd | a->qn | a->qm) || !fn) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    gen_helper_fp_lsp(cpu_env);
+
+    if(vecfn && mve_no_predication(s)) {
+        vecfn(a->size, mve_qreg_offset(a->qd), mve_qreg_offset(a->qn), mve_qreg_offset(a->qm), 16, 16);
+    } else {
+        qd = mve_qreg_ptr(a->qd);
+        qn = mve_qreg_ptr(a->qn);
+        qm = mve_qreg_ptr(a->qm);
+        fn(cpu_env, qd, qn, qm);
+        tcg_temp_free_ptr(qm);
+        tcg_temp_free_ptr(qn);
+        tcg_temp_free_ptr(qd);
+    }
+    mve_update_eci(s);
+    return TRANS_STATUS_SUCCESS;
+}
+
+static int do_2op(DisasContext *s, arg_2op *a, MVEGenTwoOpFn *fn)
+{
+    return do_2op_vec(s, a, fn, NULL);
+}
+
 /* This macro is just to make the arrays more compact in these functions */
 #define F(OP) glue(gen_mve_, OP)
 
@@ -9385,6 +9418,20 @@ DO_VLDST_WIDE_NARROW(vldsth_w, vldrh_sw, vldrh_uw, vstrh_w, 2)
 #undef DO_VLDST_WIDE_NARROW
 #undef F
 
+#define DO_TRANS_2OP_FP(INSN, FN)                                \
+    static int glue(trans_, INSN)(DisasContext * s, arg_2op * a) \
+    {                                                            \
+        static MVEGenTwoOpFn *const fns[] = {                    \
+            gen_helper_mve_##FN##s,                              \
+            NULL,                                                \
+        };                                                       \
+        return do_2op(s, a, fns[a->size]);                       \
+    }
+
+DO_TRANS_2OP_FP(vadd_fp, vfadd)
+DO_TRANS_2OP_FP(vsub_fp, vfsub)
+DO_TRANS_2OP_FP(vmul_fp, vfmul)
+
 #define DO_TRANS_2OP_FP_SCALAR(INSN, FN)                     \
     static int trans_##INSN(DisasContext *s, arg_2scalar *a) \
     {                                                        \
@@ -9400,6 +9447,7 @@ DO_TRANS_2OP_FP_SCALAR(vsub_fp_scalar, vfsub_scalar)
 DO_TRANS_2OP_FP_SCALAR(vmul_fp_scalar, vfmul_scalar)
 
 #undef DO_TRANS_2OP_FP_SCALAR
+#undef DO_TRANS_2OP_FP
 
 #endif
 

@@ -22,6 +22,9 @@
 typedef void MVEGenLdStFn(TCGv_ptr, TCGv_ptr, TCGv_i32);
 typedef void MVEGenLdStIlFn(DisasContext *, uint32_t, TCGv_i32);
 typedef void MVEGenTwoOpScalarFn(TCGv_ptr, TCGv_ptr, TCGv_ptr, TCGv_i32);
+typedef void MVEGenTwoOpFn(TCGv_ptr, TCGv_ptr, TCGv_ptr, TCGv_ptr);
+/* Note that the gvec expanders operate on offsets + sizes.  */
+typedef void GVecGen3Fn(unsigned, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
 
 /*
  * Arguments of stores/loads:
@@ -51,6 +54,14 @@ typedef struct {
     int pat;
     int w;
 } arg_vldst_il;
+
+/* Arguments of 2 operand scalar instructions */
+typedef struct {
+    int qd;
+    int qm;
+    int qn;
+    int size;
+} arg_2op;
 
 /* Arguments of 2 operand scalar instructions */
 typedef struct {
@@ -178,4 +189,13 @@ static void mve_extract_2op_fp_scalar(arg_2scalar *a, uint32_t insn)
     a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
     a->qn = deposit32(extract32(insn, 17, 3), 3, 29, extract32(insn, 7, 1));
     a->rm = extract32(insn, 0, 4);
+}
+
+/* Extract arguments of 2 operand floating operations */
+static void mve_extract_2op_fp(arg_2op *a, uint32_t insn)
+{
+    a->size = extract32(insn, 20, 1);
+    a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    a->qn = deposit32(extract32(insn, 17, 3), 3, 29, extract32(insn, 7, 1));
+    a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));
 }
