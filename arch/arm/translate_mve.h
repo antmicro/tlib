@@ -71,6 +71,14 @@ typedef struct {
     int size;
 } arg_2scalar;
 
+/* Arguments of VDUP instruction */
+typedef struct {
+    int qd;
+    int rt;
+    /* See comment in trans function */
+    int size;
+} arg_vdup;
+
 void gen_mve_vld40b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld41b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld42b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
@@ -149,6 +157,11 @@ static inline bool is_insn_vfmas_scalar(uint32_t insn)
     return (insn & 0xEFB11F70) == 0xEE311E40;
 }
 
+static inline bool is_insn_vdup(uint32_t insn)
+{
+    return (insn & 0xFFB10F50) == 0xEEA00B10;
+}
+
 static inline bool is_insn_vld4(uint32_t insn)
 {
     return (insn & 0xFF901E01) == 0xFC901E01;
@@ -208,4 +221,12 @@ static void mve_extract_2op_fp(arg_2op *a, uint32_t insn)
     a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
     a->qn = deposit32(extract32(insn, 17, 3), 3, 29, extract32(insn, 7, 1));
     a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));
+}
+
+/* Extract arguments for VDUP instruction */
+static void mve_extract_vdup(arg_vdup *a, uint32_t insn)
+{
+    a->size = deposit32(extract32(insn, 22, 1), 1, 31, extract32(insn, 5, 1));
+    a->qd = deposit32(extract32(insn, 17, 3), 3, 29, extract32(insn, 7, 1));
+    a->rt = extract32(insn, 12, 4);
 }

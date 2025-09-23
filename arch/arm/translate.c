@@ -9452,6 +9452,53 @@ DO_TRANS_2OP_FP_SCALAR(vfmas_scalar, vfmas_scalar)
 #undef DO_TRANS_2OP_FP_SCALAR
 #undef DO_TRANS_2OP_FP
 
+static int trans_vdup(DisasContext *s, arg_vdup *a)
+{
+    TCGv_ptr qd;
+    TCGv_i32 rt;
+
+    if(!mve_check_qreg_bank(a->qd)) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    if(a->rt == 13 || a->rt == 15) {
+        /* UNPREDICTABLE, we choose to bail out */
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    gen_helper_fp_lsp(cpu_env);
+
+    /*
+     * We have to do a conversion between the encoded size and
+     * our representation of size. See definition of size in ARM ARM.
+     */
+    if(a->size == 0) {
+        a->size = MO_32;
+    } else if(a->size == 1) {
+        a->size = MO_16;
+    } else if(a->size == 2) {
+        a->size = MO_8;
+    } else {
+        /* b == 1 && e == 1 is UNDEFINED */
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+
+    rt = load_reg(s, a->rt);
+    if(mve_no_predication(s)) {
+        tcg_gen_gvec_dup_i32(a->size, mve_qreg_offset(a->qd), 16, 16, rt);
+    } else {
+        qd = mve_qreg_ptr(a->qd);
+        tcg_gen_dup_i32(a->size, rt, rt);
+        gen_helper_mve_vdup(cpu_env, qd, rt);
+        tcg_temp_free_ptr(qd);
+    }
+    tcg_temp_free_i32(rt);
+    mve_update_eci(s);
+    return TRANS_STATUS_SUCCESS;
+}
+
 #endif
 
 /* Translate a 32-bit thumb instruction.  Returns nonzero if the instruction
@@ -10366,6 +10413,12 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_2scalar a;
                     mve_extract_2op_fp_scalar(&a, insn);
                     return trans_vfmas_scalar(s, &a);
+                }
+                if(is_insn_vdup(insn)) {
+                    ARCH(MVE);
+                    arg_vdup a;
+                    mve_extract_vdup(&a, insn);
+                    return trans_vdup(s, &a);
                 }
             }
 #endif

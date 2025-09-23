@@ -523,6 +523,8 @@ DEF_HELPER_3(mve_vstrb_h, void, env, ptr, i32)
 DEF_HELPER_3(mve_vstrb_w, void, env, ptr, i32)
 DEF_HELPER_3(mve_vstrh_w, void, env, ptr, i32)
 
+DEF_HELPER_3(mve_vdup, void, env, ptr, i32)
+
 DEF_HELPER_4(mve_vfmul_scalars, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vfadd_scalars, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vfsub_scalars, void, env, ptr, ptr, i32)
