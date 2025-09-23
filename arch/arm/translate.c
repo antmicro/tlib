@@ -9142,6 +9142,7 @@ static int gen_thumb2_data_op(DisasContext *s, int op, int conds, uint32_t shift
 
 #ifdef TARGET_PROTO_ARM_M
 #include "translate_mve.h"
+#include "tcg-op-gvec.h"
 
 static bool mve_check_qreg_bank(int qmask)
 {

@@ -4096,6 +4096,7 @@ static void tcg_gen_atomic_compare_and_swap_intrinsic_i128(TCGv_i128 actual, TCG
 #endif
 
 void tcg_gen_mov_vec(TCGv_vec, TCGv_vec);
+void tcg_gen_dup_i32(unsigned vece, TCGv_i32, TCGv_i32);
 void tcg_gen_dup_i32_vec(unsigned vece, TCGv_vec, TCGv_i32);
 void tcg_gen_dup_i64_vec(unsigned vece, TCGv_vec, TCGv_i64);
 void tcg_gen_dup_mem_vec(unsigned vece, TCGv_vec, TCGv_ptr, tcg_target_long);
