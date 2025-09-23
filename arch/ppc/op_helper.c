@@ -216,11 +216,12 @@ static inline target_ulong addr_add(target_ulong addr, target_long arg)
 
 void helper_lmw(target_ulong addr, uint32_t reg)
 {
+    void *retaddr = GETPC();
     for(; reg < 32; reg++) {
         if(msr_le) {
-            env->gpr[reg] = bswap32(ldl(addr));
+            env->gpr[reg] = bswap32(ldl_data_inner(addr, retaddr));
         } else {
-            env->gpr[reg] = ldl(addr);
+            env->gpr[reg] = ldl_data_inner(addr, retaddr);
         }
         addr = addr_add(addr, 4);
     }
@@ -241,16 +242,17 @@ void helper_stmw(target_ulong addr, uint32_t reg)
 
 void helper_lsw(target_ulong addr, uint32_t nb, uint32_t reg)
 {
+    void *retaddr = GETPC();
     int sh;
     for(; nb > 3; nb -= 4) {
-        env->gpr[reg] = ldl(addr);
+        env->gpr[reg] = ldl_data_inner(addr, retaddr);
         reg = (reg + 1) % 32;
         addr = addr_add(addr, 4);
     }
     if(unlikely(nb > 0)) {
         env->gpr[reg] = 0;
         for(sh = 24; nb > 0; nb--, sh -= 8) {
-            env->gpr[reg] |= ldub(addr) << sh;
+            env->gpr[reg] |= ldub_data_inner(addr, retaddr) << sh;
             addr = addr_add(addr, 1);
         }
     }
