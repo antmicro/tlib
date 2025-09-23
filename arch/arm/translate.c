@@ -9445,6 +9445,8 @@ DO_TRANS_2OP_FP(vmul_fp, vfmul)
 DO_TRANS_2OP_FP_SCALAR(vadd_fp_scalar, vfadd_scalar)
 DO_TRANS_2OP_FP_SCALAR(vsub_fp_scalar, vfsub_scalar)
 DO_TRANS_2OP_FP_SCALAR(vmul_fp_scalar, vfmul_scalar)
+DO_TRANS_2OP_FP_SCALAR(vfma_scalar, vfma_scalar)
+DO_TRANS_2OP_FP_SCALAR(vfmas_scalar, vfmas_scalar)
 
 #undef DO_TRANS_2OP_FP_SCALAR
 #undef DO_TRANS_2OP_FP
@@ -10351,6 +10353,18 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_2scalar a;
                     mve_extract_2op_fp_scalar(&a, insn);
                     return trans_vmul_fp_scalar(s, &a);
+                }
+                if(is_insn_vfma_scalar(insn)) {
+                    ARCH(MVE);
+                    arg_2scalar a;
+                    mve_extract_2op_fp_scalar(&a, insn);
+                    return trans_vfma_scalar(s, &a);
+                }
+                if(is_insn_vfmas_scalar(insn)) {
+                    ARCH(MVE);
+                    arg_2scalar a;
+                    mve_extract_2op_fp_scalar(&a, insn);
+                    return trans_vfmas_scalar(s, &a);
                 }
             }
 #endif

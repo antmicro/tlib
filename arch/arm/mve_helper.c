@@ -429,6 +429,39 @@ DO_2OP_FP(vfadds, 4, float32, float32_add)
 DO_2OP_FP(vfsubs, 4, float32, float32_sub)
 DO_2OP_FP(vfmuls, 4, float32, float32_mul)
 
+#define DO_2OP_FP_ACC_SCALAR(OP, ESIZE, TYPE, FN)                                \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vn, uint32_t rm) \
+    {                                                                            \
+        TYPE *d = vd, *n = vn;                                                   \
+        TYPE r, m = rm;                                                          \
+        uint16_t mask = mve_element_mask(env);                                   \
+        unsigned e;                                                              \
+        float_status *fpst;                                                      \
+        float_status scratch_fpst;                                               \
+        for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                        \
+            if((mask & MAKE_64BIT_MASK(0, ESIZE)) == 0) {                        \
+                continue;                                                        \
+            }                                                                    \
+            fpst = ESIZE == 2 ? &env->vfp.fp_status_f16 : &env->vfp.fp_status;   \
+            if(!(mask & 1)) {                                                    \
+                /* We need the result but without updating flags */              \
+                scratch_fpst = *fpst;                                            \
+                fpst = &scratch_fpst;                                            \
+            }                                                                    \
+            r = FN(n[e], m, d[e], 0, fpst);                                      \
+            mergemask(&d[e], r, mask);                                           \
+        }                                                                        \
+        mve_advance_vpt(env);                                                    \
+    }
+
+/* VFMAS is vector * vector + scalar, so swap op2 and op3 */
+#define DO_VFMAS_SCALARS(N, M, D, F, S) float32_muladd(N, D, M, F, S)
+
+DO_2OP_FP_ACC_SCALAR(vfma_scalars, 4, float32, float32_muladd)
+DO_2OP_FP_ACC_SCALAR(vfmas_scalars, 4, float32, DO_VFMAS_SCALARS)
+
+#undef DO_2OP_FP_ACC_SCALAR
+#undef DO_VFMAS_SCALARS
 #undef DO_2OP_FP
 
 #endif

@@ -139,6 +139,16 @@ static inline bool is_insn_vmul_fp_scalar(uint32_t insn)
     return (insn & 0xEFB11F70) == 0xEE310E60;
 }
 
+static inline bool is_insn_vfma_scalar(uint32_t insn)
+{
+    return (insn & 0xEFB11F70) == 0xEE310E40;
+}
+
+static inline bool is_insn_vfmas_scalar(uint32_t insn)
+{
+    return (insn & 0xEFB11F70) == 0xEE311E40;
+}
+
 static inline bool is_insn_vld4(uint32_t insn)
 {
     return (insn & 0xFF901E01) == 0xFC901E01;
