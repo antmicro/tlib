@@ -269,7 +269,9 @@ typedef enum {
 
 #if TARGET_LONG_BITS == 64
 #define RA RA_64
+#define SP SP_64
 #endif
 #if TARGET_LONG_BITS == 32
 #define RA RA_32
+#define SP SP_32
 #endif

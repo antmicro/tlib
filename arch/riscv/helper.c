@@ -722,12 +722,12 @@ void HELPER(handle_post_opcode_execution_hook)(uint32_t id, uint64_t pc)
     tlib_handle_post_opcode_execution_hook(id, pc);
 }
 
-void HELPER(handle_post_gpr_access_hook)(uint32_t register_index, uint32_t isWrite)
+void HELPER(handle_post_gpr_access_hook)(uint32_t register_index, uint32_t is_write)
 {
-    tlib_handle_post_gpr_access_hook(register_index, isWrite);
+    tlib_handle_post_gpr_access_hook(register_index, is_write);
 }
 
-void HELPER(handle_pre_stack_access_hook)(uint64_t address, uint32_t width, uint32_t isWrite)
+void HELPER(handle_pre_stack_access_hook)(uint64_t address, uint32_t width, uint32_t is_write)
 {
-    tlib_handle_pre_stack_access_hook(address, width, isWrite);
+    tlib_handle_pre_stack_access_hook(address, width, is_write);
 }

@@ -400,7 +400,7 @@ static inline uint32_t opc_to_width(uint32_t opc)
         case OPC_RISC_FSD:
             return 64;
         default:
-            tlib_printf(LOG_LEVEL_WARNING, "opc_to_width called on unsopported opc %x", opc);
+            tlib_printf(LOG_LEVEL_WARNING, "opc_to_width called on unsupported opcode %x", opc);
             return 0;
     }
 }
@@ -1572,7 +1572,7 @@ static void gen_load(DisasContext *dc, uint32_t opc, int rd, int rs1, target_lon
 
     tcg_gen_addi_tl(t0, t0, imm);
 
-    if(rs1 == 2) {
+    if(rs1 == SP) {
         try_run_pre_stack_access_hook(t0, opc_to_width(opc), false);
     }
 
@@ -1625,7 +1625,7 @@ static void gen_store(DisasContext *dc, uint32_t opc, int rs1, int rs2, target_l
     tcg_gen_addi_tl(t0, t0, imm);
     gen_get_gpr(dat, rs2);
 
-    if(rs1 == 2) {
+    if(rs1 == SP) {
         try_run_pre_stack_access_hook(t0, opc_to_width(opc), true);
     }
 
@@ -1674,7 +1674,7 @@ static void gen_fp_load(DisasContext *dc, uint32_t opc, int rd, int rs1, target_
     gen_get_gpr(t0, rs1);
     tcg_gen_addi_tl(t0, t0, imm);
 
-    if(rs1 == 2) {
+    if(rs1 == SP) {
         try_run_pre_stack_access_hook(t0, opc_to_width(opc), false);
     }
 
@@ -2494,7 +2494,7 @@ static void gen_atomic(CPUState *env, DisasContext *dc, uint32_t opc, int rd, in
     gen_get_gpr(source2, rs2);
     gen_get_gpr(result, rd);
 
-    if(rs1 == 2) {
+    if(rs1 == SP) {
         //  LR is the only pure read atomic instruciton
         bool is_write = MASK_FUNCT5(opc) != FUNCT5_LR;
         switch(MASK_FUNCT3(opc)) {

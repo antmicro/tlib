@@ -11,7 +11,7 @@ void tlib_mip_changed(uint64_t value);
 
 int32_t tlib_handle_custom_instruction(uint64_t id, uint64_t opcode);
 void tlib_handle_post_opcode_execution_hook(uint32_t id, uint64_t pc);
-void tlib_handle_post_gpr_access_hook(uint32_t register_index, uint32_t isWrite);
-void tlib_handle_pre_stack_access_hook(uint64_t address, uint32_t width, uint32_t isWrite);
+void tlib_handle_post_gpr_access_hook(uint32_t register_index, uint32_t is_write);
+void tlib_handle_pre_stack_access_hook(uint64_t address, uint32_t width, uint32_t is_write);
 void tlib_clic_clear_edge_interrupt(void);
 void tlib_clic_acknowledge_interrupt(void);
