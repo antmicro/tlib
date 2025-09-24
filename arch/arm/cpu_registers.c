@@ -69,6 +69,47 @@ uint32_t *get_reg_pointer_32(int reg)
     return get_reg_pointer_32_with_security(reg, cpu->secure);
 }
 
+#if defined(TARGET_ARM32) && defined(TARGET_PROTO_ARM_M)
+static uint32_t *sp_resolver(int reg)
+{
+    bool in_secure_state = cpu->secure;
+
+    switch(reg) {
+        case MSPS_32:
+            if(in_secure_state) {
+                return pointer_msp(env);
+            } else {
+                return &(cpu->v7m.other_ss_msp);
+            }
+
+        case PSPS_32:
+            if(in_secure_state) {
+                return pointer_psp(env);
+            } else {
+                return &(cpu->v7m.other_ss_psp);
+            }
+
+        case MSPNS_32:
+            if(in_secure_state) {
+                return &(cpu->v7m.other_ss_msp);
+            } else {
+                return pointer_msp(env);
+            }
+
+        case PSPNS_32:
+            if(in_secure_state) {
+                return &(cpu->v7m.other_ss_psp);
+            } else {
+                return pointer_psp(env);
+            }
+
+        default:
+            tlib_abortf("Attempted to access an undefined SP register number %d detected", reg);
+            __builtin_unreachable();
+    }
+}
+#endif
+
 uint32_t *get_reg_pointer_32_with_security(int reg, bool is_secure)
 {
     switch(reg) {
@@ -111,6 +152,15 @@ uint32_t *get_reg_pointer_32_with_security(int reg, bool is_secure)
                 return &(d_reg_ref->l.lower);
             }
         }
+
+        case MSPCURR_32:
+            return pointer_msp(env);
+        case PSPCURR_32:
+            return pointer_psp(env);
+        //  For the following is_secure doesn't influence which register state we'll access as the target security state is
+        //  already encoded in the register name itself.
+        case MSPS_32 ... PSPNS_32:
+            return sp_resolver(reg);
 
 #endif
         default:
@@ -227,7 +277,7 @@ void tlib_set_register_value_32_with_security(int reg_number, uint32_t value, bo
             }
             value &= ~(ARM_CONTROL_SFPA_MASK | ARM_CONTROL_FPCA_MASK);
         }
-    } else if(reg_number == SP_32 || reg_number == OtherSP_32) {
+    } else if(reg_number == SP_32 || reg_number == OtherSP_32 || (reg_number >= MSPCURR_32 && reg_number <= PSPNS_32)) {
         //  bits [1:0] of SP are WI or SBZP
         value &= 0xFFFFFFFC;
     }

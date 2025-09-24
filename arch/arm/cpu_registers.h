@@ -108,6 +108,12 @@ typedef enum {
     S_29_32 = 104,
     S_30_32 = 105,
     S_31_32 = 106,
+    MSPCURR_32 = 107,
+    PSPCURR_32 = 108,
+    MSPS_32 = 109,
+    PSPS_32 = 110,
+    MSPNS_32 = 111,
+    PSPNS_32 = 112,
 #endif
 #ifdef TARGET_ARM64
     R_0_32 = 0,
