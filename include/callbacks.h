@@ -66,6 +66,14 @@
         return 0;                                                  \
     }
 
+#define DEFAULT_INT_HANDLER3(NAME, PARAM1, PARAM2, PARAM3) \
+    NAME(PARAM1, PARAM2, PARAM3) __attribute__((weak));    \
+                                                           \
+    NAME(PARAM1, PARAM2, PARAM3)                           \
+    {                                                      \
+        return 0;                                          \
+    }
+
 #define DEFAULT_PTR_HANDLER1(NAME, PARAM1) \
     NAME(PARAM1) __attribute__((weak));    \
                                            \

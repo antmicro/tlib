@@ -176,6 +176,7 @@ struct CPUState {
     /* physical memory protection */
     pmp_table_t pmp_state;
     target_ulong pmp_addr_mask;
+    bool use_external_pmp;
 
     float_status fp_status;
 

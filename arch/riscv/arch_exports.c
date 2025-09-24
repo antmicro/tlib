@@ -443,6 +443,16 @@ void tlib_set_pmpaddr_bits(uint32_t number_of_bits)
 
 EXC_VOID_1(tlib_set_pmpaddr_bits, uint32_t, number_of_bits)
 
+void tlib_enable_external_pmp(bool value)
+{
+    if(value != cpu->use_external_pmp) {
+        cpu->use_external_pmp = value;
+        tlb_flush(cpu, /* flush_global: */ 1, /* from_generated_code: */ false);
+    }
+}
+
+EXC_VOID_1(tlib_enable_external_pmp, bool, value)
+
 static bool check_vector_register_number(uint32_t regn)
 {
     if(regn >= 32) {

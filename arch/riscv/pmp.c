@@ -26,6 +26,7 @@
  */
 
 #include "cpu.h"
+#include "arch_callbacks.h"
 
 #ifdef DEBUG_PMP
 #define PMP_DEBUG(fmt, ...)                                       \
@@ -271,6 +272,10 @@ int pmp_find_overlapping(CPUState *env, target_ulong addr, target_ulong size, in
     addr &= cpu->pmp_addr_mask;
     uint8_t a_field;
 
+    if(unlikely(env->use_external_pmp)) {
+        return tlib_extpmp_find_overlapping(addr, size, starting_index);
+    }
+
     for(i = starting_index; i < MAX_RISCV_PMPS; i++) {
         a_field = pmp_get_a_field(env->pmp_state.pmp[i].cfg_reg);
         if(a_field == PMP_AMATCH_OFF) {
@@ -369,6 +374,10 @@ int pmp_get_access(CPUState *env, target_ulong addr, target_ulong size, int acce
     target_ulong e = 0;
     addr &= cpu->pmp_addr_mask;
 
+    if(unlikely(env->use_external_pmp)) {
+        return tlib_extpmp_get_access(addr, size, access_type);
+    }
+
     /*
      * According to the RISC-V Privileged Architecture Specification (ch. 3.6),
      * to calculate the effective accessing mode during loads and stores,
@@ -449,6 +458,10 @@ void pmpcfg_csr_write(CPUState *env, uint32_t reg_index, target_ulong val)
     uint8_t cfg_val;
     uint32_t base_offset = reg_index * sizeof(target_ulong);
 
+    if(unlikely(env->use_external_pmp)) {
+        return tlib_extpmp_cfg_csr_write(reg_index, val);
+    }
+
     PMP_DEBUG("hart " TARGET_FMT_ld " writes: reg%d, val: 0x" TARGET_FMT_lx, env->mhartid, reg_index, val);
 
 #if defined(TARGET_RISCV64)
@@ -482,6 +495,10 @@ target_ulong pmpcfg_csr_read(CPUState *env, uint32_t reg_index)
     uint8_t val = 0;
     uint32_t base_offset = reg_index * sizeof(target_ulong);
 
+    if(unlikely(env->use_external_pmp)) {
+        return tlib_extpmp_cfg_csr_read(reg_index);
+    }
+
 #if defined(TARGET_RISCV64)
     //  for RV64 only even pmpcfg registers are used
     //  see a comment in pmpcfg_csr_write for details
@@ -503,6 +520,10 @@ target_ulong pmpcfg_csr_read(CPUState *env, uint32_t reg_index)
  */
 void pmpaddr_csr_write(CPUState *env, uint32_t addr_index, target_ulong val)
 {
+    if(unlikely(env->use_external_pmp)) {
+        return tlib_extpmp_address_csr_write(addr_index, val);
+    }
+
     PMP_DEBUG("hart " TARGET_FMT_ld " writes: addr%d, val: 0x" TARGET_FMT_lx, env->mhartid, addr_index, val);
 
     if(addr_index < MAX_RISCV_PMPS) {
@@ -522,6 +543,10 @@ void pmpaddr_csr_write(CPUState *env, uint32_t addr_index, target_ulong val)
  */
 target_ulong pmpaddr_csr_read(CPUState *env, uint32_t addr_index)
 {
+    if(unlikely(env->use_external_pmp)) {
+        return tlib_extpmp_address_csr_read(addr_index);
+    }
+
     PMP_DEBUG("hart " TARGET_FMT_ld "  reads: addr%d, val: 0x" TARGET_FMT_lx, env->mhartid, addr_index,
               env->pmp_state.pmp[addr_index].addr_reg);
     if(addr_index < MAX_RISCV_PMPS) {
@@ -534,6 +559,10 @@ target_ulong pmpaddr_csr_read(CPUState *env, uint32_t addr_index)
 
 bool pmp_is_any_region_locked(CPUState *env)
 {
+    if(unlikely(env->use_external_pmp)) {
+        return tlib_extpmp_is_any_region_locked();
+    }
+
     for(int i = 0; i < MAX_RISCV_PMPS; i++) {
         if(pmp_is_locked(env, i)) {
             return true;

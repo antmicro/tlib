@@ -30,3 +30,11 @@ DEFAULT_VOID_HANDLER2(void tlib_handle_post_gpr_access_hook, uint32_t register_i
 DEFAULT_VOID_HANDLER3(void tlib_handle_pre_stack_access_hook, uint64_t address, uint32_t width, uint32_t is_write)
 DEFAULT_VOID_HANDLER1(void tlib_clic_clear_edge_interrupt, void)
 DEFAULT_VOID_HANDLER1(void tlib_clic_acknowledge_interrupt, void)
+
+DEFAULT_VOID_HANDLER2(void tlib_extpmp_cfg_csr_write, uint32_t register_index, uint64_t value)
+DEFAULT_INT_HANDLER1(uint64_t tlib_extpmp_cfg_csr_read, uint32_t register_index)
+DEFAULT_VOID_HANDLER2(void tlib_extpmp_address_csr_write, uint32_t register_index, uint64_t value)
+DEFAULT_INT_HANDLER1(uint64_t tlib_extpmp_address_csr_read, uint32_t register_index)
+DEFAULT_INT_HANDLER1(int32_t tlib_extpmp_is_any_region_locked, void)
+DEFAULT_INT_HANDLER3(int32_t tlib_extpmp_find_overlapping, uint64_t addr, uint64_t size, int32_t starting_index)
+DEFAULT_INT_HANDLER3(int32_t tlib_extpmp_get_access, uint64_t addr, uint64_t size, int32_t access_type)
