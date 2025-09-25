@@ -506,6 +506,8 @@ DEF_HELPER_3(pmu_update_event_counters, void, env, int, i32)
 DEF_HELPER_1(pmu_count_instructions_cycles, void, i32)
 
 #ifdef TARGET_PROTO_ARM_M
+DEF_HELPER_2(mve_vctp, void, env, i32)
+
 DEF_HELPER_3(mve_vldrb, void, env, ptr, i32)
 DEF_HELPER_3(mve_vldrh, void, env, ptr, i32)
 DEF_HELPER_3(mve_vldrw, void, env, ptr, i32)

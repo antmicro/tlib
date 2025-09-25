@@ -79,6 +79,12 @@ typedef struct {
     int size;
 } arg_vdup;
 
+/* Arguments of VCTP instruction */
+typedef struct {
+    int rn;
+    int size;
+} arg_vctp;
+
 void gen_mve_vld40b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld41b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld42b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
@@ -162,6 +168,12 @@ static inline bool is_insn_vdup(uint32_t insn)
     return (insn & 0xFFB10F50) == 0xEEA00B10;
 }
 
+static inline bool is_insn_vctp(uint32_t insn)
+{
+    /* Rn == 0b1111 is related-encoding */
+    return extract32(insn, 16, 4) != 15 && (insn & 0xFFC0F801) == 0xF000E801;
+}
+
 static inline bool is_insn_vld4(uint32_t insn)
 {
     return (insn & 0xFF901E01) == 0xFC901E01;
@@ -229,4 +241,11 @@ static void mve_extract_vdup(arg_vdup *a, uint32_t insn)
     a->size = deposit32(extract32(insn, 22, 1), 1, 31, extract32(insn, 5, 1));
     a->qd = deposit32(extract32(insn, 17, 3), 3, 29, extract32(insn, 7, 1));
     a->rt = extract32(insn, 12, 4);
+}
+
+/* Extract arguments of VCTP instruction */
+static void mve_extract_vctp(arg_vctp *a, uint32_t insn)
+{
+    a->size = extract32(insn, 20, 2);
+    a->rn = extract32(insn, 16, 4);
 }

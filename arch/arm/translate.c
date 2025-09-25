@@ -9499,6 +9499,49 @@ static int trans_vdup(DisasContext *s, arg_vdup *a)
     return TRANS_STATUS_SUCCESS;
 }
 
+static int trans_vctp(DisasContext *s, arg_vctp *a)
+{
+    /* This insn is itself predicated and is subject to beatwise execution */
+    TCGv_i32 rn_shifted, masklen;
+
+    if(a->rn == 13) {
+        /*
+         * rn == 15 is related encodings,
+         * rn == 13 is UNPREDICTABLE, we choose to bail out
+         */
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    gen_helper_fp_lsp(cpu_env);
+
+    /*
+     * We pre-calculate the mask length here to avoid having
+     * to have multiple helpers specialized for size.
+     * We pass the helper "rn <= (1 << (4 - size)) ? (rn << size) : 16".
+     */
+    rn_shifted = tcg_temp_new_i32();
+    masklen = load_reg(s, a->rn);
+    tcg_gen_shli_i32(rn_shifted, masklen, a->size);
+
+    TCGv_i32 c2 = tcg_const_i32(1 << (4 - a->size));
+    TCGv_i32 v2 = tcg_const_i32(16);
+    tcg_gen_movcond_i32(TCG_COND_LEU, masklen, masklen, c2, rn_shifted, v2);
+    tcg_temp_free_i32(c2);
+    tcg_temp_free_i32(v2);
+    tcg_temp_free_i32(rn_shifted);
+
+    gen_helper_mve_vctp(cpu_env, masklen);
+    tcg_temp_free_i32(masklen);
+    //  TODO(MVE): We may want to use a different method here or drop it entirely.
+    /* This insn updates predication bits */
+    s->base.is_jmp = EXIT_TB_NO_JUMP;
+    mve_update_eci(s);
+    return TRANS_STATUS_SUCCESS;
+}
+
 #endif
 
 /* Translate a 32-bit thumb instruction.  Returns nonzero if the instruction
@@ -10463,6 +10506,14 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
         case 9:
         case 10:
         case 11:
+#ifdef TARGET_PROTO_ARM_M
+            if(is_insn_vctp(insn)) {
+                ARCH(MVE);
+                arg_vctp a;
+                mve_extract_vctp(&a, insn);
+                return trans_vctp(s, &a);
+            }
+#endif
             if(is_insn_wls(insn)) {
                 ARCH(8);
                 return trans_wls(s, insn);
