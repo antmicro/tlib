@@ -728,12 +728,11 @@ void tlib_flush_page(uint64_t address)
 
 EXC_VOID_1(tlib_flush_page, uint64_t, address)
 
-void tlib_flush_tlb(void)
+void tlib_flush_tlb(bool from_cpu_thread)
 {
-    tlb_flush(cpu, 1, false);
+    tlb_flush(cpu, /* flush_global: */ 1, /* from_generated_code: */ from_cpu_thread);
 }
-
-EXC_VOID_0(tlib_flush_tlb)
+EXC_VOID_1(tlib_flush_tlb, bool, from_cpu_thread)
 
 #define DEFINE_DEFAULT_REGISTER_ACCESSORS(WIDTH)                 \
     uint64_t tlib_get_register_value(int reg_number)             \
