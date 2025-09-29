@@ -3263,6 +3263,11 @@ uint32_t HELPER(vfp_get_vpr_p0)(CPUState *env)
 
     return p0;
 }
+
+void HELPER(vfp_set_vpr_p0)(CPUState *env, uint32_t val)
+{
+    env->v7m.vpr = val & __REGISTER_V7M_VPR_P0_MASK;
+}
 #endif
 
 /* Convert vfp exception flags to target form.  */
