@@ -95,6 +95,10 @@ DEF_HELPER_2(set_user_reg, void, i32, i32)
 DEF_HELPER_1(vfp_get_fpscr, i32, env)
 DEF_HELPER_2(vfp_set_fpscr, void, env, i32)
 
+#ifdef TARGET_PROTO_ARM_M
+DEF_HELPER_1(vfp_get_vpr_p0, i32, env)
+#endif
+
 DEF_HELPER_3(vfp_adds, f32, f32, f32, ptr)
 DEF_HELPER_3(vfp_addd, f64, f64, f64, ptr)
 DEF_HELPER_3(vfp_subs, f32, f32, f32, ptr)

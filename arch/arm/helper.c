@@ -3255,6 +3255,14 @@ void vfp_trigger_exception()
         tlib_nvic_set_pending_irq(16 + cpu->vfp.fpu_interrupt_irq_number);
     }
 }
+
+uint32_t HELPER(vfp_get_vpr_p0)(CPUState *env)
+{
+    uint32_t p0;
+    p0 = env->v7m.vpr & __REGISTER_V7M_VPR_P0_MASK;
+
+    return p0;
+}
 #endif
 
 /* Convert vfp exception flags to target form.  */

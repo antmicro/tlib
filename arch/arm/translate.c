@@ -3193,6 +3193,18 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                                     }
                                     tmp = load_cpu_field(vfp.xregs[rn]);
                                     break;
+#ifdef TARGET_PROTO_ARM_M
+                                case ARM_VFP_P0:
+                                    /*
+                                     * Access to P0 is only permitted if MVE is implemented.
+                                     * If it's not this becomes UNPREDICTABLE, we choose to bail out.
+                                     */
+                                    ARCH(MVE);
+                                    tmp = tcg_temp_new_i32();
+                                    gen_helper_vfp_get_vpr_p0(tmp, cpu_env);
+                                    break;
+                                    //  TODO(MVE): Add ARM_VFP_VPR
+#endif
                                 default:
                                     return 1;
                             }

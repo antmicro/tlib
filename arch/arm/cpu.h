@@ -55,6 +55,9 @@
 #define EXCP_INVSTATE       18 /* INVSTATE usage fault */
 #define EXCP_SECURE         19 /* TrustZone Secure fault */
 
+/* These ones are M-profile only */
+#define ARM_VFP_P0 13
+
 #define ARMV7M_EXCP_RESET    1
 #define ARMV7M_EXCP_NMI      2
 #define ARMV7M_EXCP_HARD     3
