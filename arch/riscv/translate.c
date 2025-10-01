@@ -6203,6 +6203,20 @@ static int disas_insn(CPUState *env, DisasContext *dc)
     //  Syncing opcode allows to fill mtval with opcode value when it caused exception.
     gen_sync_pc(dc);
 
+    if(unlikely(env->are_pre_opcode_execution_hooks_enabled)) {
+        for(int index = 0; index < env->pre_opcode_execution_hooks_count; index++) {
+            opcode_hook_mask_t opcode_def = env->pre_opcode_execution_hook_masks[index];
+            if((dc->opcode & opcode_def.mask) == opcode_def.value) {
+                TCGv_i32 hook_id = tcg_const_i32(index);
+                TCGv_i64 opcode = tcg_const_i64(dc->opcode);
+                gen_helper_handle_pre_opcode_execution_hook(hook_id, cpu_pc, opcode);
+                tcg_temp_free_i32(hook_id);
+                tcg_temp_free_i64(opcode);
+                break;
+            }
+        }
+    }
+
     if(is_compressed) {
         decode_RV32_64C(env, dc);
     } else {

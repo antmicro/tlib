@@ -722,6 +722,11 @@ void HELPER(handle_post_opcode_execution_hook)(uint32_t id, uint64_t pc, uint64_
     tlib_handle_post_opcode_execution_hook(id, pc, opcode);
 }
 
+void HELPER(handle_pre_opcode_execution_hook)(uint32_t id, uint64_t pc, uint64_t opcode)
+{
+    tlib_handle_pre_opcode_execution_hook(id, pc, opcode);
+}
+
 void HELPER(handle_post_gpr_access_hook)(uint32_t register_index, uint32_t is_write)
 {
     tlib_handle_post_gpr_access_hook(register_index, is_write);

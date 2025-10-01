@@ -27,6 +27,7 @@ void tlib_set_vector(uint32_t regn, uint32_t idx, uint64_t value);
 uint32_t tlib_get_whole_vector(uint32_t regn, uint8_t *bytes);
 uint32_t tlib_set_whole_vector(uint32_t regn, uint8_t *bytes);
 uint32_t tlib_install_post_opcode_execution_hook(uint64_t mask, uint64_t value);
+uint32_t tlib_install_pre_opcode_execution_hook(uint64_t mask, uint64_t value);
 void tlib_enable_post_opcode_execution_hooks(uint32_t value);
 void tlib_enable_post_gpr_access_hooks(uint32_t value);
 void tlib_enable_post_gpr_access_hook_on(uint32_t register_index, uint32_t value);

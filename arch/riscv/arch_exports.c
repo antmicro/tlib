@@ -575,6 +575,32 @@ void tlib_enable_post_opcode_execution_hooks(uint32_t value)
 
 EXC_VOID_1(tlib_enable_post_opcode_execution_hooks, uint32_t, value)
 
+uint32_t tlib_install_pre_opcode_execution_hook(uint64_t mask, uint64_t value)
+{
+    if(env->pre_opcode_execution_hooks_count == CPU_HOOKS_MASKS_LIMIT) {
+        tlib_printf(
+            LOG_LEVEL_WARNING,
+            "Cannot install another pre opcode execution hook, the maximum number of %d hooks have already been installed",
+            CPU_HOOKS_MASKS_LIMIT);
+        return -1u;
+    }
+
+    uint8_t mask_index = env->pre_opcode_execution_hooks_count++;
+    env->pre_opcode_execution_hook_masks[mask_index] =
+        (opcode_hook_mask_t) { .mask = (target_ulong)mask, .value = (target_ulong)value };
+    return mask_index;
+}
+
+EXC_INT_2(uint32_t, tlib_install_pre_opcode_execution_hook, uint64_t, mask, uint64_t, value)
+
+void tlib_enable_pre_opcode_execution_hooks(uint32_t value)
+{
+    env->are_pre_opcode_execution_hooks_enabled = !!value;
+    tb_flush(env);
+}
+
+EXC_VOID_1(tlib_enable_pre_opcode_execution_hooks, uint32_t, value)
+
 void tlib_enable_post_gpr_access_hooks(uint32_t value)
 {
     env->are_post_gpr_access_hooks_enabled = !!value;

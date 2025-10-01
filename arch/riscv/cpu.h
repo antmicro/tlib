@@ -248,6 +248,10 @@ struct CPUState {
     int32_t post_opcode_execution_hooks_count;
     opcode_hook_mask_t post_opcode_execution_hook_masks[CPU_HOOKS_MASKS_LIMIT];
 
+    int8_t are_pre_opcode_execution_hooks_enabled;
+    int32_t pre_opcode_execution_hooks_count;
+    opcode_hook_mask_t pre_opcode_execution_hook_masks[CPU_HOOKS_MASKS_LIMIT];
+
     int8_t are_post_gpr_access_hooks_enabled;
     uint32_t post_gpr_access_hook_mask;
 };
