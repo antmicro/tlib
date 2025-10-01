@@ -9567,6 +9567,20 @@ static int trans_vctp(DisasContext *s, arg_vctp *a)
     return TRANS_STATUS_SUCCESS;
 }
 
+static inline int trans_vpst(DisasContext *s, arg_vpst *a)
+{
+    /* mask == 0 is related encodings */
+
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    gen_helper_fp_lsp(cpu_env);
+    gen_mve_vpst(s, a->mask);
+
+    return TRANS_STATUS_SUCCESS;
+}
+
 #endif
 
 /* Translate a 32-bit thumb instruction.  Returns nonzero if the instruction
@@ -10487,6 +10501,12 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_vdup a;
                     mve_extract_vdup(&a, insn);
                     return trans_vdup(s, &a);
+                }
+                if(is_insn_vpst(insn)) {
+                    ARCH(MVE);
+                    arg_vpst a;
+                    mve_extract_vpst(&a, insn);
+                    return trans_vpst(s, &a);
                 }
             }
 #endif

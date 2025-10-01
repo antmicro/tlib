@@ -85,6 +85,11 @@ typedef struct {
     int size;
 } arg_vctp;
 
+/* Arguments of VPST instruction */
+typedef struct {
+    int mask;
+} arg_vpst;
+
 void gen_mve_vld40b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld41b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld42b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
@@ -97,6 +102,7 @@ void gen_mve_vld40w(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld41w(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld42w(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld43w(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vpst(DisasContext *s, uint32_t mask);
 
 /*
  * Vector load/store register (encodings T5, T6, T7)
@@ -174,6 +180,12 @@ static inline bool is_insn_vctp(uint32_t insn)
     return extract32(insn, 16, 4) != 15 && (insn & 0xFFC0F801) == 0xF000E801;
 }
 
+static inline bool is_insn_vpst(uint32_t insn)
+{
+    uint32_t mask = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    return mask != 0 && (insn & 0xFFB10F5F) == 0xFE310F4D;
+}
+
 static inline bool is_insn_vld4(uint32_t insn)
 {
     return (insn & 0xFF901E01) == 0xFC901E01;
@@ -248,4 +260,10 @@ static void mve_extract_vctp(arg_vctp *a, uint32_t insn)
 {
     a->size = extract32(insn, 20, 2);
     a->rn = extract32(insn, 16, 4);
+}
+
+/* Extract arguments of VPST instruction */
+static void mve_extract_vpst(arg_vpst *a, uint32_t insn)
+{
+    a->mask = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
 }

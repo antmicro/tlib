@@ -500,4 +500,39 @@ void HELPER(mve_vctp)(CPUState *env, uint32_t masklen)
     mve_advance_vpt(env);
 }
 
+void gen_mve_vpst(DisasContext *s, uint32_t mask)
+{
+    /*
+     * Set the VPR mask fields. We take advantage of MASK01 and MASK23
+     * being adjacent fields in the register.
+     *
+     * Updating the masks is not predicated, but it is subject to beat-wise
+     * execution, and the mask is updated on the odd-numbered beats.
+     * So if PSR.ECI says we should skip beat 1, we mustn't update the
+     * 01 mask field.
+     */
+    TCGv_i32 vpr = load_cpu_field(v7m.vpr);
+    TCGv_i32 m = tcg_temp_new_i32();
+
+    switch(s->eci) {
+        case ECI_NONE:
+        case ECI_A0:
+            tcg_gen_movi_i32(m, mask | (mask << 4));
+            tcg_gen_deposit_i32(vpr, vpr, m, __REGISTER_V7M_VPR_MASK01_START,
+                                __REGISTER_V7M_VPR_MASK01_WIDTH + __REGISTER_V7M_VPR_MASK23_WIDTH);
+            break;
+        case ECI_A0A1:
+        case ECI_A0A1A2:
+        case ECI_A0A1A2B0:
+            /* Update only the 23 mask field */
+            tcg_gen_movi_i32(m, mask);
+            tcg_gen_deposit_i32(vpr, vpr, m, __REGISTER_V7M_VPR_MASK23_START, __REGISTER_V7M_VPR_MASK23_WIDTH);
+            break;
+        default:
+            g_assert_not_reached();
+    }
+    tcg_temp_free_i32(m);
+    store_cpu_field(vpr, v7m.vpr);
+}
+
 #endif
