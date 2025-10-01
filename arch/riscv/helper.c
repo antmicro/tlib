@@ -717,9 +717,9 @@ uint32_t HELPER(handle_custom_instruction)(uint64_t id, uint64_t opcode)
     return tlib_handle_custom_instruction(id, opcode);
 }
 
-void HELPER(handle_post_opcode_execution_hook)(uint32_t id, uint64_t pc)
+void HELPER(handle_post_opcode_execution_hook)(uint32_t id, uint64_t pc, uint64_t opcode)
 {
-    tlib_handle_post_opcode_execution_hook(id, pc);
+    tlib_handle_post_opcode_execution_hook(id, pc, opcode);
 }
 
 void HELPER(handle_post_gpr_access_hook)(uint32_t register_index, uint32_t is_write)

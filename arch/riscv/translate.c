@@ -6215,8 +6215,10 @@ static int disas_insn(CPUState *env, DisasContext *dc)
             if((dc->opcode & opcode_def.mask) == opcode_def.value) {
                 gen_sync_pc(dc);
                 TCGv_i32 hook_id = tcg_const_i32(index);
-                gen_helper_handle_post_opcode_execution_hook(hook_id, cpu_pc);
+                TCGv_i64 opcode = tcg_const_i64(dc->opcode);
+                gen_helper_handle_post_opcode_execution_hook(hook_id, cpu_pc, opcode);
                 tcg_temp_free_i32(hook_id);
+                tcg_temp_free_i64(opcode);
                 break;
             }
         }

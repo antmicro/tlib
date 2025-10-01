@@ -21,7 +21,7 @@
 
 DEFAULT_INT_HANDLER1(uint64_t tlib_get_cpu_time, void)
 DEFAULT_INT_HANDLER2(int32_t tlib_handle_custom_instruction, uint64_t id, uint64_t opcode)
-DEFAULT_VOID_HANDLER2(void tlib_handle_post_opcode_execution_hook, uint32_t id, uint64_t pc)
+DEFAULT_VOID_HANDLER3(void tlib_handle_post_opcode_execution_hook, uint32_t id, uint64_t pc, uint64_t opcode)
 DEFAULT_VOID_HANDLER1(void tlib_mip_changed, uint64_t value)
 DEFAULT_INT_HANDLER1(uint64_t tlib_read_csr, uint64_t csr)
 DEFAULT_VOID_HANDLER2(void tlib_write_csr, uint64_t csr, uint64_t value)
