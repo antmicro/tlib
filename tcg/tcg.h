@@ -531,8 +531,8 @@ struct TCGContext {
     uint8_t *code_buf;
     TCGOpcodeEntry *current_code;
     uintptr_t *tb_next;
-    uint16_t *tb_next_offset;
-    uint16_t *tb_jmp_offset;
+    uint32_t *tb_next_offset;
+    uint32_t *tb_jmp_offset;
 
     /* liveness analysis */
     uint16_t *op_dead_args; /* for each operation, each bit tells if the

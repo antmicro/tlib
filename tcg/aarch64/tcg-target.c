@@ -1198,9 +1198,13 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc, const TCGArg *args, 
             break;
         case INDEX_op_goto_tb:
             if(s->tb_jmp_offset) {
+                //  Direct branches only support 26-bit offset
+                uint32_t offset = s->code_ptr - s->code_buf;
+                tlib_assert(offset < (1 << 26));
+
                 //  Direct jump
                 //  The branch target will be written later during tb linking
-                s->tb_jmp_offset[args[0]] = s->code_ptr - s->code_buf;
+                s->tb_jmp_offset[args[0]] = offset;
                 tcg_out_b_noaddr(s);
 
             } else {

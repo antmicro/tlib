@@ -139,8 +139,8 @@ struct TranslationBlock {
 
     /* the following data are used to directly call another TB from
        the code of this one. */
-    uint16_t tb_next_offset[2]; /* offset of original jump target */
-    uint16_t tb_jmp_offset[2];  /* offset of jump instruction */
+    uint32_t tb_next_offset[2]; /* offset of original jump target */
+    uint32_t tb_jmp_offset[2];  /* offset of jump instruction */
     /* list of TBs jumping to this one. This is a circular list using
        the two least significant bits of the pointers to tell what is
        the next pointer: 0 = jmp_next[0], 1 = jmp_next[1], 2 =
