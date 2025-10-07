@@ -171,6 +171,11 @@ uintptr_t HELPER(translate_page_aligned_address_and_fill_tlb_u128)(target_ulong 
     return translate_page_aligned_address_and_fill_tlb_u128(addr, mmu_idx, access, return_address);
 }
 
+void HELPER(abort_message)(void *message)
+{
+    tlib_abortf("%s", (const char *)message);
+}
+
 void HELPER(var_log)(target_ulong v)
 {
     tlib_printf(LOG_LEVEL_INFO, "Var Log: 0x" TARGET_FMT_lx, v);
