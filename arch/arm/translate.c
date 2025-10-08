@@ -9171,7 +9171,6 @@ static int gen_thumb2_data_op(DisasContext *s, int op, int conds, uint32_t shift
 }
 
 #include "translate_lob.h"
-#include "translate_mve.h"
 
 /* Translate a 32-bit thumb instruction.  Returns nonzero if the instruction
    is not legal.  */
@@ -9996,10 +9995,7 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
             op1 = (insn >> 21) & 0xf;
             op4 = (insn >> 6) & 0x7;
 
-            if(arm_feature(env, ARM_FEATURE_V8) && is_insn_vstrw(insn)) {
-                ARCH(MVE);
-                return trans_vstrw(s, insn);
-            } else if(((insn >> 24) & 3) == 3) {
+            if(((insn >> 24) & 3) == 3) {
                 /* Translate into the equivalent ARM encoding.  */
                 insn = (insn & 0xe2ffffff) | ((insn & (1 << 28)) >> 4) | (1 << 28);
                 if(disas_neon_data_insn(env, s, insn)) {
