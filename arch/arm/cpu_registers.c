@@ -75,6 +75,8 @@ uint32_t *get_reg_pointer_32_with_security(int reg, bool is_secure)
             return &(cpu->v7m.primask[is_secure]);
         case FAULTMASK_32:
             return &(cpu->v7m.faultmask[is_secure]);
+        case FPSCR_32:
+            return &(cpu->vfp.xregs[ARM_VFP_FPSCR]);
 #endif
         default:
             return NULL;

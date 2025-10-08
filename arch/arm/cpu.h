@@ -669,8 +669,9 @@ enum arm_features {
     ARM_FEATURE_VAPA,    /* cp15 VA to PA lookups */
     ARM_FEATURE_ARM_DIV, /* divide supported in ARM encoding */
     ARM_FEATURE_VFP4,    /* VFPv4 (implies that NEON is v2) */
+    ARM_FEATURE_VFP5,
     ARM_FEATURE_GENERIC_TIMER,
-    ARM_FEATURE_V8, /* implies PMSAv8 MPU */
+    ARM_FEATURE_V8, /* implies PMSAv8 MPU and VFP5 if a FPU is present*/
     ARM_FEATURE_PMSA,
     ARM_FEATURE_MVE,
     ARM_FEATURE_CBAR_RO, /* has cp15 CBAR and it is read-only */

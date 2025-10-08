@@ -282,6 +282,7 @@ static void cpu_reset_model_id(CPUState *env, uint32_t id)
             //  TODO: We don't yet implement the DSP (although it is available in our arm64).
             //        It should be added when available
             //  TODO: Remove FPU from non-f variant CPUs
+            set_feature(env, ARM_FEATURE_VFP5);
             set_feature(env, ARM_FEATURE_VFP4);
             set_feature(env, ARM_FEATURE_VFP3);
             set_feature(env, ARM_FEATURE_VFP);
