@@ -29,6 +29,11 @@
                                                                     \
     NAME(PARAM1, PARAM2, PARAM3, PARAM4) { }
 
+#define DEFAULT_VOID_HANDLER5(NAME, PARAM1, PARAM2, PARAM3, PARAM4, PARAM5) \
+    NAME(PARAM1, PARAM2, PARAM3, PARAM4, PARAM5) __attribute__((weak));     \
+                                                                            \
+    NAME(PARAM1, PARAM2, PARAM3, PARAM4, PARAM5) { }
+
 #define DEFAULT_INT_HANDLER1(NAME, PARAM1) \
     NAME(PARAM1) __attribute__((weak));    \
                                            \
@@ -87,7 +92,7 @@ void tlib_on_interrupt_end(uint64_t exception_index);
 void tlib_profiler_announce_stack_change(uint64_t current_address, uint64_t current_return_address,
                                          uint64_t current_instructions_count, int32_t is_frame_add);
 void tlib_profiler_announce_context_change(uint64_t context_id);
-void tlib_on_memory_access(uint64_t pc, uint32_t operation, uint64_t addr, uint64_t value);
+void tlib_on_memory_access(uint64_t pc, uint32_t operation, uint64_t addr, uint32_t width, uint64_t value);
 void tlib_profiler_announce_stack_pointer_change(uint64_t address, uint64_t old_stack_pointer, uint64_t stack_pointer,
                                                  uint64_t current_instructions_count);
 void tlib_on_memory_access_event_enabled(int32_t value);
