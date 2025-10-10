@@ -1261,7 +1261,7 @@ void cpu_abort(CPUState *env, const char *fmt, ...)
     tlib_abort(s);
 }
 
-int get_external_mmu_phys_addr(CPUState *env, uint32_t address, int access_type, target_phys_addr_t *phys_ptr, int *prot,
+int get_external_mmu_phys_addr(CPUState *env, uint64_t address, int access_type, target_phys_addr_t *phys_ptr, int *prot,
                                int no_page_fault)
 {
     bool found = false;
