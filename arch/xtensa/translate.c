@@ -1562,7 +1562,7 @@ static void translate_l32ex(DisasContext *dc, const OpcodeArg arg[], const uint3
 
 static void translate_ldst(DisasContext *dc, const OpcodeArg arg[], const uint32_t par[])
 {
-    TCGv_i32 addr = tcg_temp_new_i32();
+    TCGv_i32 addr = tcg_temp_local_new_i32();
 
     gen_sync_pc(dc);
     tcg_gen_addi_i32(addr, arg[1].in, arg[2].imm);
@@ -2016,7 +2016,7 @@ static void translate_s32c1i(DisasContext *dc, const OpcodeArg arg[], const uint
 
 static void translate_s32e(DisasContext *dc, const OpcodeArg arg[], const uint32_t par[])
 {
-    TCGv_i32 addr = tcg_temp_new_i32();
+    TCGv_i32 addr = tcg_temp_local_new_i32();
 
     gen_sync_pc(dc);
     tcg_gen_addi_i32(addr, arg[1].in, arg[2].imm);
@@ -2027,7 +2027,7 @@ static void translate_s32e(DisasContext *dc, const OpcodeArg arg[], const uint32
 
 static void translate_s32ex(DisasContext *dc, const OpcodeArg arg[], const uint32_t par[])
 {
-    TCGv_i32 prev = tcg_temp_new_i32();
+    TCGv_i32 prev = tcg_temp_local_new_i32();
     TCGv_i32 addr = tcg_temp_local_new_i32();
     TCGv_i32 res = tcg_temp_local_new_i32();
     int label = gen_new_label();
@@ -6457,18 +6457,18 @@ static inline void get_f32_o1_i3(const OpcodeArg *arg, OpcodeArg *arg32, int o0,
 {
     if((i0 >= 0 && arg[i0].num_bits == 64) || (o0 >= 0 && arg[o0].num_bits == 64)) {
         if(o0 >= 0) {
-            arg32[o0].out = tcg_temp_new_i32();
+            arg32[o0].out = tcg_temp_local_new_i32();
         }
         if(i0 >= 0) {
-            arg32[i0].in = tcg_temp_new_i32();
+            arg32[i0].in = tcg_temp_local_new_i32();
             tcg_gen_extrl_i64_i32(arg32[i0].in, arg[i0].in);
         }
         if(i1 >= 0) {
-            arg32[i1].in = tcg_temp_new_i32();
+            arg32[i1].in = tcg_temp_local_new_i32();
             tcg_gen_extrl_i64_i32(arg32[i1].in, arg[i1].in);
         }
         if(i2 >= 0) {
-            arg32[i2].in = tcg_temp_new_i32();
+            arg32[i2].in = tcg_temp_local_new_i32();
             tcg_gen_extrl_i64_i32(arg32[i2].in, arg[i2].in);
         }
     } else {
@@ -6728,7 +6728,7 @@ static void translate_ftoi_s(DisasContext *dc, const OpcodeArg arg[], const uint
 
 static void translate_ldsti(DisasContext *dc, const OpcodeArg arg[], const uint32_t par[])
 {
-    TCGv_i32 addr = tcg_temp_new_i32();
+    TCGv_i32 addr = tcg_temp_local_new_i32();
 
     gen_sync_pc(dc);
     tcg_gen_addi_i32(addr, arg[1].in, arg[2].imm);
@@ -6746,7 +6746,7 @@ static void translate_ldsti(DisasContext *dc, const OpcodeArg arg[], const uint3
 
 static void translate_ldstx(DisasContext *dc, const OpcodeArg arg[], const uint32_t par[])
 {
-    TCGv_i32 addr = tcg_temp_new_i32();
+    TCGv_i32 addr = tcg_temp_local_new_i32();
 
     gen_sync_pc(dc);
     tcg_gen_add_i32(addr, arg[1].in, arg[2].in);
@@ -7200,7 +7200,7 @@ static void translate_ldsti_d(DisasContext *dc, const OpcodeArg arg[], const uin
 
     gen_sync_pc(dc);
     if(par[1]) {
-        addr = tcg_temp_new_i32();
+        addr = tcg_temp_local_new_i32();
         tcg_gen_addi_i32(addr, arg[1].in, arg[2].imm);
     } else {
         addr = arg[1].in;
@@ -7230,7 +7230,7 @@ static void translate_ldsti_s(DisasContext *dc, const OpcodeArg arg[], const uin
 
     gen_sync_pc(dc);
     if(par[1]) {
-        addr = tcg_temp_new_i32();
+        addr = tcg_temp_local_new_i32();
         tcg_gen_addi_i32(addr, arg[1].in, arg[2].imm);
     } else {
         addr = arg[1].in;
@@ -7263,7 +7263,7 @@ static void translate_ldstx_d(DisasContext *dc, const OpcodeArg arg[], const uin
 
     gen_sync_pc(dc);
     if(par[1]) {
-        addr = tcg_temp_new_i32();
+        addr = tcg_temp_local_new_i32();
         tcg_gen_add_i32(addr, arg[1].in, arg[2].in);
     } else {
         addr = arg[1].in;
@@ -7293,7 +7293,7 @@ static void translate_ldstx_s(DisasContext *dc, const OpcodeArg arg[], const uin
 
     gen_sync_pc(dc);
     if(par[1]) {
-        addr = tcg_temp_new_i32();
+        addr = tcg_temp_local_new_i32();
         tcg_gen_add_i32(addr, arg[1].in, arg[2].in);
     } else {
         addr = arg[1].in;

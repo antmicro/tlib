@@ -96,15 +96,15 @@ static inline void mve_gen_vstrw_ir(DisasContext *s, uint32_t insn)
     //  Read first 64 bits from memory representing MVE registers and store them
     uint32_t mve_reg_offset_front = mve_get_reg128_offset(mve_reg_idx, 0);
     TCGv_i64 addr_front = mve_gen_vstrw_addr_ir(s, insn);
-    TCGv_i32 value_front = tcg_temp_new_i64();
+    TCGv_i32 value_front = tcg_temp_local_new_i64();
     tcg_gen_ld_i64(value_front, cpu_env, mve_reg_offset_front);
     gen_st64(value_front, addr_front, context_to_mmu_index(s));
 
     //  Store remaining 64 bits, we have to increase target address by 8 bytes.
     uint32_t mve_reg_offset_back = mve_get_reg128_offset(mve_reg_idx, 1);
-    TCGv_i64 addr_back = tcg_temp_new_i64();
+    TCGv_i64 addr_back = tcg_temp_local_new_i64();
     tcg_gen_addi_i64(addr_back, addr_front, 8);
-    TCGv_i32 value_back = tcg_temp_new_i64();
+    TCGv_i32 value_back = tcg_temp_local_new_i64();
     tcg_gen_ld_i64(value_back, cpu_env, mve_reg_offset_back);
     gen_st64(value_back, addr_back, context_to_mmu_index(s));
 

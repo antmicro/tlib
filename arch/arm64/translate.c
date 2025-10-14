@@ -280,7 +280,7 @@ void load_reg_var(DisasContext *s, TCGv_i32 var, int reg)
  */
 TCGv_i32 add_reg_for_lit(DisasContext *s, int reg, int ofs)
 {
-    TCGv_i32 tmp = tcg_temp_new_i32();
+    TCGv_i32 tmp = tcg_temp_local_new_i32();
 
     if(reg == 15) {
         tcg_gen_movi_i32(tmp, (read_pc(s) & ~3) + ofs);
@@ -979,7 +979,7 @@ MemOp pow2_align(unsigned i)
 
 static TCGv gen_aa32_addr(DisasContext *s, TCGv_i32 a32, MemOp op)
 {
-    TCGv addr = tcg_temp_new();
+    TCGv addr = tcg_temp_local_new();
     tcg_gen_extu_i32_tl(addr, a32);
 
     /* Not needed for user-mode BE32, where we use MO_BE instead.  */
@@ -5123,7 +5123,7 @@ static void gen_srs(DisasContext *s, uint32_t mode, uint32_t amode, bool writeba
         return;
     }
 
-    addr = tcg_temp_new_i32();
+    addr = tcg_temp_local_new_i32();
     /* get_r13_banked() will raise an exception if called from System mode */
     gen_set_condexec(s);
     gen_set_pc_im(s->pc_curr);
@@ -8055,7 +8055,7 @@ static bool op_stm(DisasContext *s, arg_ldst_block *a, int min_n)
         if(user && i != 15) {
             //  If we are in User or System mode here, the behaviour could be CONSTRAINED UNPREDICTABLE
             //  However, in our implementation, this is a valid instruction (as Zephyr expects this)
-            tmp = tcg_temp_new_i32();
+            tmp = tcg_temp_local_new_i32();
             gen_helper_get_user_reg(tmp, cpu_env, tcg_constant_i32(i));
         } else {
             tmp = load_reg(s, i);

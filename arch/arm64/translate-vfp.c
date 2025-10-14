@@ -1082,7 +1082,7 @@ static bool trans_VLDR_VSTR_hp(DisasContext *s, arg_VLDR_VSTR_sp *a)
 
     /* For thumb, use of PC is UNPREDICTABLE.  */
     addr = add_reg_for_lit(s, a->rn, offset);
-    tmp = tcg_temp_new_i32();
+    tmp = tcg_temp_local_new_i32();
     if(a->l) {
         gen_aa32_ld_i32(s, tmp, addr, get_mem_index(s), MO_UW | MO_ALIGN);
         vfp_store_reg32(tmp, a->vd);
@@ -1116,7 +1116,7 @@ static bool trans_VLDR_VSTR_sp(DisasContext *s, arg_VLDR_VSTR_sp *a)
 
     /* For thumb, use of PC is UNPREDICTABLE.  */
     addr = add_reg_for_lit(s, a->rn, offset);
-    tmp = tcg_temp_new_i32();
+    tmp = tcg_temp_local_new_i32();
     if(a->l) {
         gen_aa32_ld_i32(s, tmp, addr, get_mem_index(s), MO_UL | MO_ALIGN);
         vfp_store_reg32(tmp, a->vd);
@@ -1157,7 +1157,7 @@ static bool trans_VLDR_VSTR_dp(DisasContext *s, arg_VLDR_VSTR_dp *a)
 
     /* For thumb, use of PC is UNPREDICTABLE.  */
     addr = add_reg_for_lit(s, a->rn, offset);
-    tmp = tcg_temp_new_i64();
+    tmp = tcg_temp_local_new_i64();
     if(a->l) {
         gen_aa32_ld_i64(s, tmp, addr, get_mem_index(s), MO_UQ | MO_ALIGN_4);
         vfp_store_reg64(tmp, a->vd);
@@ -1221,7 +1221,7 @@ static bool trans_VLDM_VSTM_sp(DisasContext *s, arg_VLDM_VSTM_sp *a)
     }
 
     offset = 4;
-    tmp = tcg_temp_new_i32();
+    tmp = tcg_temp_local_new_i32();
     for(i = 0; i < n; i++) {
         if(a->l) {
             /* load */
@@ -1307,7 +1307,7 @@ static bool trans_VLDM_VSTM_dp(DisasContext *s, arg_VLDM_VSTM_dp *a)
     }
 
     offset = 8;
-    tmp = tcg_temp_new_i64();
+    tmp = tcg_temp_local_new_i64();
     for(i = 0; i < n; i++) {
         if(a->l) {
             /* load */

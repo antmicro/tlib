@@ -7742,19 +7742,19 @@ void setup_disas_context(DisasContextBase *base, CPUState *env)
     dc->flags = dc->base.tb->flags;
     dc->jmp_opt = !(dc->tf || (dc->base.tb->flags & HF_INHIBIT_IRQ_MASK));
 
-    cpu_T[0] = tcg_temp_new();
-    cpu_T[1] = tcg_temp_new();
-    cpu_A0 = tcg_temp_new();
-    cpu_T3 = tcg_temp_new();
+    cpu_T[0] = tcg_temp_local_new();
+    cpu_T[1] = tcg_temp_local_new();
+    cpu_A0 = tcg_temp_local_new();
+    cpu_T3 = tcg_temp_local_new();
 
-    cpu_tmp0 = tcg_temp_new();
-    cpu_tmp1_i64 = tcg_temp_new_i64();
-    cpu_tmp2_i32 = tcg_temp_new_i32();
-    cpu_tmp3_i32 = tcg_temp_new_i32();
-    cpu_tmp4 = tcg_temp_new();
-    cpu_tmp5 = tcg_temp_new();
-    cpu_ptr0 = tcg_temp_new_ptr();
-    cpu_ptr1 = tcg_temp_new_ptr();
+    cpu_tmp0 = tcg_temp_local_new();
+    cpu_tmp1_i64 = tcg_temp_local_new_i64();
+    cpu_tmp2_i32 = tcg_temp_local_new_i32();
+    cpu_tmp3_i32 = tcg_temp_local_new_i32();
+    cpu_tmp4 = tcg_temp_local_new();
+    cpu_tmp5 = tcg_temp_local_new();
+    cpu_ptr0 = tcg_temp_local_new_ptr();
+    cpu_ptr1 = tcg_temp_local_new_ptr();
 }
 
 int gen_breakpoint(DisasContextBase *base, CPUBreakpoint *bp)

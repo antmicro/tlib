@@ -478,8 +478,8 @@ static bool trans_VLDST_multiple(DisasContext *s, arg_VLDST_multiple *a)
         size = 3;
     }
 
-    tmp64 = tcg_temp_new_i64();
-    addr = tcg_temp_new_i32();
+    tmp64 = tcg_temp_local_new_i64();
+    addr = tcg_temp_local_new_i32();
     load_reg_var(s, addr, a->rn);
 
     mop = endian | size | align;

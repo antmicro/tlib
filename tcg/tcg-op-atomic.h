@@ -35,8 +35,8 @@ static inline void tcg_gen_atomic_cmpxchg_i32(TCGv_i32 retv, TCGv addr, TCGv_i32
 {
     memop = tcg_canonicalize_memop(memop, 0, 0);
 
-    TCGv_i32 t1 = tcg_temp_new_i32();
-    TCGv_i32 t2 = tcg_temp_new_i32();
+    TCGv_i32 t1 = tcg_temp_local_new_i32();
+    TCGv_i32 t2 = tcg_temp_local_new_i32();
 
     tcg_gen_ext_i32(t2, cmpv, memop & MO_SIZE);
 
@@ -60,8 +60,8 @@ static inline void tcg_gen_atomic_cmpxchg_i64(TCGv_i64 retv, TCGv addr, TCGv_i64
 {
     memop = tcg_canonicalize_memop(memop, 1, 0);
 
-    TCGv_i64 t1 = tcg_temp_new_i64();
-    TCGv_i64 t2 = tcg_temp_new_i64();
+    TCGv_i64 t1 = tcg_temp_local_new_i64();
+    TCGv_i64 t2 = tcg_temp_local_new_i64();
 
     tcg_gen_ext_i64(t2, cmpv, memop & MO_SIZE);
 
@@ -110,8 +110,8 @@ static inline void tcg_gen_atomic_cmpxchg_i128(TCGv_i128 result, TCGv guestAddre
 static void do_atomic_op_i32(TCGv_i32 ret, TCGv addr, TCGv_i32 val, TCGArg idx, TCGMemOp memop, bool new_val,
                              void (*gen)(TCGv_i32, TCGv_i32, TCGv_i32))
 {
-    TCGv_i32 t1 = tcg_temp_new_i32();
-    TCGv_i32 t2 = tcg_temp_new_i32();
+    TCGv_i32 t1 = tcg_temp_local_new_i32();
+    TCGv_i32 t2 = tcg_temp_local_new_i32();
 
     memop = tcg_canonicalize_memop(memop, 0, 0);
 
@@ -131,8 +131,8 @@ static void do_atomic_op_i32(TCGv_i32 ret, TCGv addr, TCGv_i32 val, TCGArg idx, 
 static void do_atomic_op_i64(TCGv_i64 ret, TCGv addr, TCGv_i64 val, TCGArg idx, TCGMemOp memop, bool new_val,
                              void (*gen)(TCGv_i64, TCGv_i64, TCGv_i64))
 {
-    TCGv_i64 t1 = tcg_temp_new_i64();
-    TCGv_i64 t2 = tcg_temp_new_i64();
+    TCGv_i64 t1 = tcg_temp_local_new_i64();
+    TCGv_i64 t2 = tcg_temp_local_new_i64();
 
     memop = tcg_canonicalize_memop(memop, 1, 0);
 

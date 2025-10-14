@@ -1619,8 +1619,8 @@ static void gen_store(DisasContext *dc, uint32_t opc, int rs1, int rs2, target_l
 {
     gen_sync_pc(dc);
 
-    TCGv t0 = tcg_temp_new();
-    TCGv dat = tcg_temp_new();
+    TCGv t0 = tcg_temp_local_new();
+    TCGv dat = tcg_temp_local_new();
     gen_get_gpr(t0, rs1);
     tcg_gen_addi_tl(t0, t0, imm);
     gen_get_gpr(dat, rs2);
@@ -1910,8 +1910,8 @@ static void gen_fp_store(DisasContext *dc, uint32_t opc, int rs1, int rs2, targe
         return;
     }
 
-    TCGv t0 = tcg_temp_new();
-    TCGv t1 = tcg_temp_new();
+    TCGv t0 = tcg_temp_local_new();
+    TCGv t1 = tcg_temp_local_new();
     int fp_ok = gen_new_label();
     int done = gen_new_label();
 

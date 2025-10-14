@@ -2438,7 +2438,7 @@ static inline void gen_qemu_st16(DisasContext *s, TCGv arg1, TCGv arg2)
 {
     gen_sync_pc(s);
     if(unlikely(s->le_mode)) {
-        TCGv t0 = tcg_temp_new();
+        TCGv t0 = tcg_temp_local_new();
         tcg_gen_ext16u_tl(t0, arg1);
         tcg_gen_bswap16_tl(t0, t0);
         tcg_gen_qemu_st16(t0, arg2, s->base.mem_idx);
@@ -2452,7 +2452,7 @@ static inline void gen_qemu_st32(DisasContext *s, TCGv arg1, TCGv arg2)
 {
     gen_sync_pc(s);
     if(unlikely(s->le_mode)) {
-        TCGv t0 = tcg_temp_new();
+        TCGv t0 = tcg_temp_local_new();
         tcg_gen_ext32u_tl(t0, arg1);
         tcg_gen_bswap32_tl(t0, t0);
         tcg_gen_qemu_st32(t0, arg2, s->base.mem_idx);
@@ -2466,7 +2466,7 @@ static inline void gen_qemu_st64(DisasContext *s, TCGv_i64 arg1, TCGv arg2)
 {
     gen_sync_pc(s);
     if(unlikely(s->le_mode)) {
-        TCGv_i64 t0 = tcg_temp_new_i64();
+        TCGv_i64 t0 = tcg_temp_local_new_i64();
         tcg_gen_bswap64_i64(t0, arg1);
         tcg_gen_qemu_st64(t0, arg2, s->base.mem_idx);
         tcg_temp_free_i64(t0);
@@ -2624,7 +2624,7 @@ static void gen_lq(DisasContext *s)
         TCGv EA;                                        \
         gen_sync_pc(s);                                 \
         gen_set_access_type(s, ACCESS_INT);             \
-        EA = tcg_temp_new();                            \
+        EA = tcg_temp_local_new();                      \
         gen_addr_imm_index(s, EA, 0);                   \
         gen_qemu_##stop(s, cpu_gpr[rS(s->opcode)], EA); \
         tcg_temp_free(EA);                              \
@@ -2640,7 +2640,7 @@ static void gen_lq(DisasContext *s)
             return;                                           \
         }                                                     \
         gen_set_access_type(s, ACCESS_INT);                   \
-        EA = tcg_temp_new();                                  \
+        EA = tcg_temp_local_new();                            \
         if(type == PPC_64B)                                   \
             gen_addr_imm_index(s, EA, 0x03);                  \
         else                                                  \
@@ -2660,7 +2660,7 @@ static void gen_lq(DisasContext *s)
             return;                                           \
         }                                                     \
         gen_set_access_type(s, ACCESS_INT);                   \
-        EA = tcg_temp_new();                                  \
+        EA = tcg_temp_local_new();                            \
         gen_addr_reg_index(s, EA);                            \
         gen_qemu_##stop(s, cpu_gpr[rS(s->opcode)], EA);       \
         tcg_gen_mov_tl(cpu_gpr[rA(s->opcode)], EA);           \
@@ -2673,7 +2673,7 @@ static void gen_lq(DisasContext *s)
         TCGv EA;                                        \
         gen_sync_pc(s);                                 \
         gen_set_access_type(s, ACCESS_INT);             \
-        EA = tcg_temp_new();                            \
+        EA = tcg_temp_local_new();                      \
         gen_addr_reg_index(s, EA);                      \
         gen_qemu_##stop(s, cpu_gpr[rS(s->opcode)], EA); \
         tcg_temp_free(EA);                              \
@@ -2717,7 +2717,7 @@ static void gen_std(DisasContext *s)
             return;
         }
         gen_set_access_type(s, ACCESS_INT);
-        EA = tcg_temp_new();
+        EA = tcg_temp_local_new();
         gen_addr_imm_index(s, EA, 0x03);
         gen_qemu_st64(s, cpu_gpr[rs], EA);
         gen_addr_add(s, EA, EA, 8);
@@ -2732,7 +2732,7 @@ static void gen_std(DisasContext *s)
             }
         }
         gen_set_access_type(s, ACCESS_INT);
-        EA = tcg_temp_new();
+        EA = tcg_temp_local_new();
         gen_addr_imm_index(s, EA, 0x03);
         gen_qemu_st64(s, cpu_gpr[rs], EA);
         if(Rc(s->opcode)) {
@@ -2767,7 +2767,7 @@ GEN_LDX(lwbr, ld32ur, 0x16, 0x10, PPC_INTEGER);
 static inline void gen_qemu_st16r(DisasContext *s, TCGv arg1, TCGv arg2)
 {
     if(likely(!s->le_mode)) {
-        TCGv t0 = tcg_temp_new();
+        TCGv t0 = tcg_temp_local_new();
         tcg_gen_ext16u_tl(t0, arg1);
         tcg_gen_bswap16_tl(t0, t0);
         tcg_gen_qemu_st16(t0, arg2, s->base.mem_idx);
@@ -2782,7 +2782,7 @@ GEN_STX(sthbr, st16r, 0x16, 0x1C, PPC_INTEGER);
 static inline void gen_qemu_st32r(DisasContext *s, TCGv arg1, TCGv arg2)
 {
     if(likely(!s->le_mode)) {
-        TCGv t0 = tcg_temp_new();
+        TCGv t0 = tcg_temp_local_new();
         tcg_gen_ext32u_tl(t0, arg1);
         tcg_gen_bswap32_tl(t0, t0);
         tcg_gen_qemu_st32(t0, arg2, s->base.mem_idx);
@@ -3130,7 +3130,7 @@ GEN_LDFS(lfs, ld32fs, 0x10, PPC_FLOAT);
             return;                                     \
         }                                               \
         gen_set_access_type(s, ACCESS_FLOAT);           \
-        EA = tcg_temp_new();                            \
+        EA = tcg_temp_local_new();                      \
         gen_addr_imm_index(s, EA, 0);                   \
         gen_qemu_##stop(s, cpu_fpr[rS(s->opcode)], EA); \
         tcg_temp_free(EA);                              \
@@ -3149,7 +3149,7 @@ GEN_LDFS(lfs, ld32fs, 0x10, PPC_FLOAT);
             return;                                           \
         }                                                     \
         gen_set_access_type(s, ACCESS_FLOAT);                 \
-        EA = tcg_temp_new();                                  \
+        EA = tcg_temp_local_new();                            \
         gen_addr_imm_index(s, EA, 0);                         \
         gen_qemu_##stop(s, cpu_fpr[rS(s->opcode)], EA);       \
         tcg_gen_mov_tl(cpu_gpr[rA(s->opcode)], EA);           \
@@ -3169,7 +3169,7 @@ GEN_LDFS(lfs, ld32fs, 0x10, PPC_FLOAT);
             return;                                           \
         }                                                     \
         gen_set_access_type(s, ACCESS_FLOAT);                 \
-        EA = tcg_temp_new();                                  \
+        EA = tcg_temp_local_new();                            \
         gen_addr_reg_index(s, EA);                            \
         gen_qemu_##stop(s, cpu_fpr[rS(s->opcode)], EA);       \
         tcg_gen_mov_tl(cpu_gpr[rA(s->opcode)], EA);           \
@@ -3185,7 +3185,7 @@ GEN_LDFS(lfs, ld32fs, 0x10, PPC_FLOAT);
             return;                                     \
         }                                               \
         gen_set_access_type(s, ACCESS_FLOAT);           \
-        EA = tcg_temp_new();                            \
+        EA = tcg_temp_local_new();                      \
         gen_addr_reg_index(s, EA);                      \
         gen_qemu_##stop(s, cpu_fpr[rS(s->opcode)], EA); \
         tcg_temp_free(EA);                              \
@@ -3200,7 +3200,7 @@ GEN_LDFS(lfs, ld32fs, 0x10, PPC_FLOAT);
 static inline void gen_qemu_st32fs(DisasContext *s, TCGv_i64 arg1, TCGv arg2)
 {
     TCGv_i32 t0 = tcg_temp_new_i32();
-    TCGv t1 = tcg_temp_new();
+    TCGv t1 = tcg_temp_local_new();
     gen_helper_float64_to_float32(t0, arg1);
     tcg_gen_extu_i32_tl(t1, t0);
     tcg_temp_free_i32(t0);
@@ -3216,8 +3216,9 @@ GEN_STFS(stfs, st32fs, 0x14, PPC_FLOAT);
 /* Optional: */
 static inline void gen_qemu_st32fiw(DisasContext *s, TCGv_i64 arg1, TCGv arg2)
 {
-    TCGv t0 = tcg_temp_new();
-    tcg_gen_trunc_i64_tl(t0, arg1), gen_qemu_st32(s, t0, arg2);
+    TCGv t0 = tcg_temp_local_new();
+    tcg_gen_trunc_i64_tl(t0, arg1);
+    gen_qemu_st32(s, t0, arg2);
     tcg_temp_free(t0);
 }
 /* stfiwx */
@@ -3313,7 +3314,7 @@ static inline void gen_bcond(DisasContext *s, int type)
     l1 = gen_new_label();
     if((bo & 0x4) == 0) {
         /* Decrement and test CTR */
-        TCGv temp = tcg_temp_new();
+        TCGv temp = tcg_temp_local_new();
         if(unlikely(type == BCOND_CTR)) {
             gen_inval_exception(s, POWERPC_EXCP_INVAL_INVAL);
             return;
@@ -3776,10 +3777,10 @@ static void gen_dcbi(DisasContext *s)
         gen_inval_exception(s, POWERPC_EXCP_PRIV_OPC);
         return;
     }
-    EA = tcg_temp_new();
+    EA = tcg_temp_local_new();
     gen_set_access_type(s, ACCESS_CACHE);
     gen_addr_reg_index(s, EA);
-    val = tcg_temp_new();
+    val = tcg_temp_local_new();
     /* XXX: specification says this should be treated as a store by the MMU */
     gen_qemu_ld8u(s, val, EA);
     gen_qemu_st8(s, val, EA);
@@ -4140,7 +4141,7 @@ static void gen_ecowx(DisasContext *s)
     TCGv t0;
     /* Should check EAR[E] ! */
     gen_set_access_type(s, ACCESS_EXT);
-    t0 = tcg_temp_new();
+    t0 = tcg_temp_local_new();
     gen_addr_reg_index(s, t0);
     gen_check_align(s, t0, 0x03);
     gen_qemu_st32(s, cpu_gpr[rD(s->opcode)], t0);
@@ -5037,7 +5038,7 @@ static void gen_stfq(DisasContext *s)
     int rd = rD(s->opcode);
     TCGv t0;
     gen_set_access_type(s, ACCESS_FLOAT);
-    t0 = tcg_temp_new();
+    t0 = tcg_temp_local_new();
     gen_addr_imm_index(s, t0, 0);
     gen_qemu_st64(s, cpu_fpr[rd], t0);
     gen_addr_add(s, t0, t0, 8);
@@ -5052,10 +5053,10 @@ static void gen_stfqu(DisasContext *s)
     int rd = rD(s->opcode);
     TCGv t0, t1;
     gen_set_access_type(s, ACCESS_FLOAT);
-    t0 = tcg_temp_new();
+    t0 = tcg_temp_local_new();
     gen_addr_imm_index(s, t0, 0);
     gen_qemu_st64(s, cpu_fpr[rd], t0);
-    t1 = tcg_temp_new();
+    t1 = tcg_temp_local_new();
     gen_addr_add(s, t1, t0, 8);
     gen_qemu_st64(s, cpu_fpr[(rd + 1) % 32], t1);
     tcg_temp_free(t1);
@@ -5072,10 +5073,10 @@ static void gen_stfqux(DisasContext *s)
     int rd = rD(s->opcode);
     TCGv t0, t1;
     gen_set_access_type(s, ACCESS_FLOAT);
-    t0 = tcg_temp_new();
+    t0 = tcg_temp_local_new();
     gen_addr_reg_index(s, t0);
     gen_qemu_st64(s, cpu_fpr[rd], t0);
-    t1 = tcg_temp_new();
+    t1 = tcg_temp_local_new();
     gen_addr_add(s, t1, t0, 8);
     gen_qemu_st64(s, cpu_fpr[(rd + 1) % 32], t1);
     tcg_temp_free(t1);
@@ -5091,7 +5092,7 @@ static void gen_stfqx(DisasContext *s)
     int rd = rD(s->opcode);
     TCGv t0;
     gen_set_access_type(s, ACCESS_FLOAT);
-    t0 = tcg_temp_new();
+    t0 = tcg_temp_local_new();
     gen_addr_reg_index(s, t0);
     gen_qemu_st64(s, cpu_fpr[rd], t0);
     gen_addr_add(s, t0, t0, 8);
@@ -5814,7 +5815,7 @@ static inline TCGv_ptr gen_avr_ptr(int reg)
             return;                                        \
         }                                                  \
         gen_set_access_type(s, ACCESS_INT);                \
-        EA = tcg_temp_new();                               \
+        EA = tcg_temp_local_new();                         \
         gen_addr_reg_index(s, EA);                         \
         tcg_gen_andi_tl(EA, EA, ~0xf);                     \
         if(s->le_mode) {                                   \
@@ -5857,7 +5858,7 @@ static inline TCGv_ptr gen_avr_ptr(int reg)
             return;                             \
         }                                       \
         gen_set_access_type(s, ACCESS_INT);     \
-        EA = tcg_temp_new();                    \
+        EA = tcg_temp_local_new();              \
         gen_addr_reg_index(s, EA);              \
         rs = gen_avr_ptr(rS(s->opcode));        \
         gen_helper_stve##name(rs, EA);          \
@@ -6275,7 +6276,7 @@ static inline void gen_evmra(DisasContext *s)
     tcg_gen_st_i64(cpu_gpr[rA(s->opcode)], cpu_env, offsetof(CPUState, spe_acc));
 #else
 
-    TCGv_i64 tmp = tcg_temp_new_i64();
+    TCGv_i64 tmp = tcg_temp_local_new_i64();
 
     /* tmp := rA_lo + rA_hi << 32 */
     tcg_gen_concat_i32_i64(tmp, cpu_gpr[rA(s->opcode)], cpu_gprh[rA(s->opcode)]);
@@ -6902,7 +6903,7 @@ static inline void gen_evmwumia(DisasContext *s)
 
     gen_evmwumi(s); /* rD := rA * rB */
 
-    tmp = tcg_temp_new_i64();
+    tmp = tcg_temp_local_new_i64();
 
     /* acc := rD */
     gen_load_gpr64(tmp, rD(s->opcode));
@@ -7272,7 +7273,7 @@ static inline void gen_op_evstdd(DisasContext *s, TCGv addr)
 #if defined(TARGET_PPC64)
     gen_qemu_st64(s, cpu_gpr[rS(s->opcode)], addr);
 #else
-    TCGv_i64 t0 = tcg_temp_new_i64();
+    TCGv_i64 t0 = tcg_temp_local_new_i64();
     tcg_gen_concat_i32_i64(t0, cpu_gpr[rS(s->opcode)], cpu_gprh[rS(s->opcode)]);
     gen_qemu_st64(s, t0, addr);
     tcg_temp_free_i64(t0);
@@ -7282,7 +7283,7 @@ static inline void gen_op_evstdd(DisasContext *s, TCGv addr)
 static inline void gen_op_evstdw(DisasContext *s, TCGv addr)
 {
 #if defined(TARGET_PPC64)
-    TCGv t0 = tcg_temp_new();
+    TCGv t0 = tcg_temp_local_new();
     tcg_gen_shri_tl(t0, cpu_gpr[rS(s->opcode)], 32);
     gen_qemu_st32(s, t0, addr);
     tcg_temp_free(t0);
@@ -7295,7 +7296,7 @@ static inline void gen_op_evstdw(DisasContext *s, TCGv addr)
 
 static inline void gen_op_evstdh(DisasContext *s, TCGv addr)
 {
-    TCGv t0 = tcg_temp_new();
+    TCGv t0 = tcg_temp_local_new();
 
 #if defined(TARGET_PPC64)
     tcg_gen_shri_tl(t0, cpu_gpr[rS(s->opcode)], 48);
@@ -7320,7 +7321,7 @@ static inline void gen_op_evstdh(DisasContext *s, TCGv addr)
 
 static inline void gen_op_evstwhe(DisasContext *s, TCGv addr)
 {
-    TCGv t0 = tcg_temp_new();
+    TCGv t0 = tcg_temp_local_new();
 #if defined(TARGET_PPC64)
     tcg_gen_shri_tl(t0, cpu_gpr[rS(s->opcode)], 48);
 #else
@@ -7336,7 +7337,7 @@ static inline void gen_op_evstwhe(DisasContext *s, TCGv addr)
 static inline void gen_op_evstwho(DisasContext *s, TCGv addr)
 {
 #if defined(TARGET_PPC64)
-    TCGv t0 = tcg_temp_new();
+    TCGv t0 = tcg_temp_local_new();
     tcg_gen_shri_tl(t0, cpu_gpr[rS(s->opcode)], 32);
     gen_qemu_st16(s, t0, addr);
     tcg_temp_free(t0);
@@ -7350,7 +7351,7 @@ static inline void gen_op_evstwho(DisasContext *s, TCGv addr)
 static inline void gen_op_evstwwe(DisasContext *s, TCGv addr)
 {
 #if defined(TARGET_PPC64)
-    TCGv t0 = tcg_temp_new();
+    TCGv t0 = tcg_temp_local_new();
     tcg_gen_shri_tl(t0, cpu_gpr[rS(s->opcode)], 32);
     gen_qemu_st32(s, t0, addr);
     tcg_temp_free(t0);
@@ -7373,7 +7374,7 @@ static inline void gen_op_evstwwo(DisasContext *s, TCGv addr)
             return;                                \
         }                                          \
         gen_set_access_type(s, ACCESS_INT);        \
-        t0 = tcg_temp_new();                       \
+        t0 = tcg_temp_local_new();                 \
         if(Rc(s->opcode)) {                        \
             gen_addr_spe_imm_index(s, t0, sh);     \
         } else {                                   \

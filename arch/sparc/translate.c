@@ -2811,9 +2811,9 @@ void setup_disas_context(DisasContextBase *base, CPUState *env)
     dc->fpu_enabled = tb_fpu_enabled(dc->base.tb->flags);
     dc->address_mask_32bit = tb_am_enabled(dc->base.tb->flags);
 
-    cpu_tmp0 = tcg_temp_new();
-    cpu_tmp32 = tcg_temp_new_i32();
-    cpu_tmp64 = tcg_temp_new_i64();
+    cpu_tmp0 = tcg_temp_local_new();
+    cpu_tmp32 = tcg_temp_local_new_i32();
+    cpu_tmp64 = tcg_temp_local_new_i64();
 
     cpu_dst = tcg_temp_local_new();
 

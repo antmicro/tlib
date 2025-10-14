@@ -210,7 +210,7 @@ static void gen_a64_set_pc(DisasContext *s, TCGv_i64 src)
 
 TCGv_i64 clean_data_tbi(DisasContext *s, TCGv_i64 addr)
 {
-    TCGv_i64 clean = new_tmp_a64(s);
+    TCGv_i64 clean = new_tmp_a64_local(s);
     tcg_gen_mov_i64(clean, addr);
     return clean;
 }
@@ -246,7 +246,7 @@ static TCGv_i64 gen_mte_check1_mmuidx(DisasContext *s, TCGv_i64 addr, bool is_wr
         desc = FIELD_DP32(desc, MTEDESC, WRITE, is_write);
         desc = FIELD_DP32(desc, MTEDESC, SIZEM1, (1 << log2_size) - 1);
 
-        ret = new_tmp_a64(s);
+        ret = new_tmp_a64_local(s);
         gen_helper_mte_check(ret, cpu_env, tcg_constant_i32(desc), addr);
 
         return ret;
@@ -274,7 +274,7 @@ TCGv_i64 gen_mte_checkN(DisasContext *s, TCGv_i64 addr, bool is_write, bool tag_
         desc = FIELD_DP32(desc, MTEDESC, WRITE, is_write);
         desc = FIELD_DP32(desc, MTEDESC, SIZEM1, size - 1);
 
-        ret = new_tmp_a64(s);
+        ret = new_tmp_a64_local(s);
         gen_helper_mte_check(ret, cpu_env, tcg_constant_i32(desc), addr);
 
         return ret;
@@ -418,7 +418,7 @@ TCGv_i64 new_tmp_a64_local(DisasContext *s)
 
 TCGv_i64 new_tmp_a64_zero(DisasContext *s)
 {
-    TCGv_i64 t = new_tmp_a64(s);
+    TCGv_i64 t = new_tmp_a64_local(s);
     tcg_gen_movi_i64(t, 0);
     return t;
 }
@@ -474,7 +474,7 @@ TCGv_i64 read_cpu_reg(DisasContext *s, int reg, int sf)
 
 TCGv_i64 read_cpu_reg_sp(DisasContext *s, int reg, int sf)
 {
-    TCGv_i64 v = new_tmp_a64(s);
+    TCGv_i64 v = new_tmp_a64_local(s);
     if(sf) {
         tcg_gen_mov_i64(v, cpu_X[reg]);
     } else {
@@ -889,7 +889,7 @@ static void do_gpr_ld(DisasContext *s, TCGv_i64 dest, TCGv_i64 tcg_addr, MemOp m
 static void do_fp_st(DisasContext *s, int srcidx, TCGv_i64 tcg_addr, int size)
 {
     /* This writes the bottom N bits of a 128 bit wide vector to memory */
-    TCGv_i64 tmplo = tcg_temp_new_i64();
+    TCGv_i64 tmplo = tcg_temp_local_new_i64();
     MemOp mop;
 
     tcg_gen_ld_i64(tmplo, cpu_env, fp_reg_offset(s, srcidx, MO_64));
@@ -899,8 +899,8 @@ static void do_fp_st(DisasContext *s, int srcidx, TCGv_i64 tcg_addr, int size)
         tcg_gen_qemu_st_i64(tmplo, tcg_addr, get_mem_index(s), mop);
     } else {
         bool be = s->be_data == MO_BE;
-        TCGv_i64 tcg_hiaddr = tcg_temp_new_i64();
-        TCGv_i64 tmphi = tcg_temp_new_i64();
+        TCGv_i64 tcg_hiaddr = tcg_temp_local_new_i64();
+        TCGv_i64 tmphi = tcg_temp_local_new_i64();
 
         tcg_gen_ld_i64(tmphi, cpu_env, fp_reg_hi_offset(s, srcidx));
 
@@ -1065,7 +1065,7 @@ static void write_vec_element_i32(DisasContext *s, TCGv_i32 tcg_src, int destidx
 /* Store from vector register to memory */
 static void do_vec_st(DisasContext *s, int srcidx, int element, TCGv_i64 tcg_addr, MemOp mop)
 {
-    TCGv_i64 tcg_tmp = tcg_temp_new_i64();
+    TCGv_i64 tcg_tmp = tcg_temp_local_new_i64();
 
     read_vec_element(s, tcg_tmp, srcidx, element, mop & MO_SIZE);
     tcg_gen_qemu_st_i64(tcg_tmp, tcg_addr, get_mem_index(s), mop);
@@ -2635,11 +2635,11 @@ static void gen_compare_and_swap_pair(DisasContext *s, int rs, int rt, int rn, i
             s->base.is_jmp = DISAS_NORETURN;
         }
     } else {
-        TCGv_i64 d1 = tcg_temp_new_i64();
-        TCGv_i64 d2 = tcg_temp_new_i64();
-        TCGv_i64 a2 = tcg_temp_new_i64();
-        TCGv_i64 c1 = tcg_temp_new_i64();
-        TCGv_i64 c2 = tcg_temp_new_i64();
+        TCGv_i64 d1 = tcg_temp_local_new_i64();
+        TCGv_i64 d2 = tcg_temp_local_new_i64();
+        TCGv_i64 a2 = tcg_temp_local_new_i64();
+        TCGv_i64 c1 = tcg_temp_local_new_i64();
+        TCGv_i64 c2 = tcg_temp_local_new_i64();
         TCGv_i64 zero = tcg_constant_i64(0);
 
         /* Load the two words, in memory order.  */
@@ -3750,7 +3750,7 @@ static void disas_ldst_multiple_struct(DisasContext *s, uint32_t insn)
     mop = endian | size | align;
 
     elements = (is_q ? 16 : 8) >> size;
-    tcg_ebytes = tcg_constant_i64(1 << size);
+    tcg_ebytes = tcg_const_local_i64(1 << size);
     for(r = 0; r < rpt; r++) {
         int e;
         for(e = 0; e < elements; e++) {

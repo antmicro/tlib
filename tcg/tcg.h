@@ -740,6 +740,7 @@ void tcg_add_target_add_op_defs(const TCGTargetOpDef *tdefs);
 #define tcg_const_ptr(V)                TCGV_NAT_TO_PTR(tcg_const_i32(V))
 #define tcg_global_reg_new_ptr(R, N)    TCGV_NAT_TO_PTR(tcg_global_reg_new_i32((R), (N)))
 #define tcg_global_mem_new_ptr(R, O, N) TCGV_NAT_TO_PTR(tcg_global_mem_new_i32((R), (O), (N)))
+#define tcg_temp_local_new_ptr()        TCGV_NAT_TO_PTR(tcg_temp_local_new_i32())
 #define tcg_temp_new_ptr()              TCGV_NAT_TO_PTR(tcg_temp_new_i32())
 #define tcg_temp_free_ptr(T)            tcg_temp_free_i32(TCGV_PTR_TO_NAT(T))
 #else
@@ -749,6 +750,7 @@ void tcg_add_target_add_op_defs(const TCGTargetOpDef *tdefs);
 #define tcg_const_ptr(V)                TCGV_NAT_TO_PTR(tcg_const_i64(V))
 #define tcg_global_reg_new_ptr(R, N)    TCGV_NAT_TO_PTR(tcg_global_reg_new_i64((R), (N)))
 #define tcg_global_mem_new_ptr(R, O, N) TCGV_NAT_TO_PTR(tcg_global_mem_new_i64((R), (O), (N)))
+#define tcg_temp_local_new_ptr()        TCGV_NAT_TO_PTR(tcg_temp_local_new_i64())
 #define tcg_temp_new_ptr()              TCGV_NAT_TO_PTR(tcg_temp_new_i64())
 #define tcg_temp_free_ptr(T)            tcg_temp_free_i64(TCGV_PTR_TO_NAT(T))
 #endif
