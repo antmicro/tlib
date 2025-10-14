@@ -24,7 +24,7 @@ extern unsigned int tlb_entry_addend;
 extern unsigned int sizeof_CPUTLBEntry;
 
 /* XXX: make safe guess about sizes */
-#define MAX_OP_PER_INSTR 208
+#define MAX_OP_PER_INSTR 4096
 
 #if HOST_LONG_BITS == 32
 #define MAX_OPC_PARAM_PER_ARG 2
@@ -39,8 +39,12 @@ extern unsigned int sizeof_CPUTLBEntry;
  * and up to 4 + N parameters on 64-bit archs
  * (N = number of input arguments + output arguments).  */
 #define MAX_OPC_PARAM (4 + (MAX_OPC_PARAM_PER_ARG * MAX_OPC_PARAM_ARGS))
-#define OPC_BUF_SIZE  640
+#define OPC_BUF_SIZE  8192
 #define OPC_MAX_SIZE  (OPC_BUF_SIZE - MAX_OP_PER_INSTR)
+
+#if MAX_OP_PER_INSTR >= OPC_BUF_SIZE
+#error OPC_BUF_SIZE has to be greater than MAX_OP_PER_INSTR
+#endif
 
 /* Maximum size a TCG op can expand to.  This is complicated because a
    single op may require several host instructions and register reloads.
