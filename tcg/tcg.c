@@ -1657,7 +1657,7 @@ static int tcg_reg_alloc_call(TCGContext *s, const TCGOpDef *def, TCGOpcode opc,
     if(allocate_args) {
         /* XXX: if more than TCG_STATIC_CALL_ARGS_SIZE is needed,
            preallocate call stack */
-        tcg_abort();
+        tlib_abortf("%s: call stack size %i too large (>%i)", __func__, call_stack_size, TCG_STATIC_CALL_ARGS_SIZE);
     }
 
     stack_offset = TCG_TARGET_CALL_STACK_OFFSET;
@@ -1681,7 +1681,8 @@ static int tcg_reg_alloc_call(TCGContext *s, const TCGOpDef *def, TCGOpcode opc,
                 tcg_out_movi(s, ts->type, reg, ts->val);
                 tcg_out_st(s, ts->type, reg, TCG_REG_CALL_STACK, stack_offset);
             } else {
-                tcg_abort();
+                tlib_abortf("%s: unexpected val_type `%d` for TCGv '%s' def '%s'", __func__, ts->val_type,
+                            ts->name ? ts->name : "unnamed", def->name);
             }
         }
 #ifndef TCG_TARGET_STACK_GROWSUP
