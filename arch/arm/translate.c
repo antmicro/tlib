@@ -35,6 +35,8 @@
 
 #include "debug.h"
 
+#include "common.h"
+
 #define abort()                                                   \
     do {                                                          \
         cpu_abort(cpu, "ABORT at %s : %d\n", __FILE__, __LINE__); \
@@ -125,23 +127,6 @@ void gen_sync_pc(DisasContext *dc)
 {
     gen_set_pc(dc->base.pc);
 }
-
-static inline TCGv load_cpu_offset(int offset)
-{
-    TCGv tmp = tcg_temp_local_new_i32();
-    tcg_gen_ld_i32(tmp, cpu_env, offset);
-    return tmp;
-}
-
-#define load_cpu_field(name) load_cpu_offset(offsetof(CPUState, name))
-
-static inline void store_cpu_offset(TCGv var, int offset)
-{
-    tcg_gen_st_i32(var, cpu_env, offset);
-    tcg_temp_free_i32(var);
-}
-
-#define store_cpu_field(var, name) store_cpu_offset(var, offsetof(CPUState, name))
 
 /* Set a variable to the value of a CPU register.  */
 static void load_reg_var(DisasContext *s, TCGv var, int reg)
@@ -866,12 +851,6 @@ static inline TCGv gen_ld16u(TCGv addr, int index)
     tcg_gen_qemu_ld16u(tmp, addr, index);
     return tmp;
 }
-static inline TCGv gen_ld32(TCGv addr, int index)
-{
-    TCGv tmp = tcg_temp_local_new_i32();
-    tcg_gen_qemu_ld32u(tmp, addr, index);
-    return tmp;
-}
 static inline TCGv_i64 gen_ld64(TCGv addr, int index)
 {
     TCGv_i64 tmp = tcg_temp_local_new_i64();
@@ -1182,17 +1161,6 @@ static inline void gen_vfp_st(DisasContext *s, int dp, TCGv addr)
         tcg_gen_qemu_st64(cpu_F0d, addr, context_to_mmu_index(s));
     } else {
         tcg_gen_qemu_st32(cpu_F0s, addr, context_to_mmu_index(s));
-    }
-}
-
-static inline long vfp_reg_offset(int dp, int reg)
-{
-    if(dp) {
-        return offsetof(CPUState, vfp.regs[reg]);
-    } else if(reg & 1) {
-        return offsetof(CPUState, vfp.regs[reg >> 1]) + offsetof(CPU_DoubleU, l.upper);
-    } else {
-        return offsetof(CPUState, vfp.regs[reg >> 1]) + offsetof(CPU_DoubleU, l.lower);
     }
 }
 
