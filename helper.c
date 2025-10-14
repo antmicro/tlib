@@ -153,22 +153,22 @@ void HELPER(cancel_reservation)(CPUState *env)
     cancel_reservation(env);
 }
 
-uintptr_t HELPER(translate_page_aligned_address_and_fill_tlb_u32)(target_ulong addr, uint32_t mmu_idx)
+uintptr_t HELPER(translate_page_aligned_address_and_fill_tlb_u32)(target_ulong addr, uint32_t access, uint32_t mmu_idx)
 {
     void *return_address = GETPC();
-    return translate_page_aligned_address_and_fill_tlb_u32(addr, mmu_idx, return_address);
+    return translate_page_aligned_address_and_fill_tlb_u32(addr, mmu_idx, access, return_address);
 }
 
-uintptr_t HELPER(translate_page_aligned_address_and_fill_tlb_u64)(target_ulong addr, uint32_t mmu_idx)
+uintptr_t HELPER(translate_page_aligned_address_and_fill_tlb_u64)(target_ulong addr, uint32_t access, uint32_t mmu_idx)
 {
     void *return_address = GETPC();
-    return translate_page_aligned_address_and_fill_tlb_u64(addr, mmu_idx, return_address);
+    return translate_page_aligned_address_and_fill_tlb_u64(addr, mmu_idx, access, return_address);
 }
 
-uintptr_t HELPER(translate_page_aligned_address_and_fill_tlb_u128)(target_ulong addr, uint32_t mmu_idx)
+uintptr_t HELPER(translate_page_aligned_address_and_fill_tlb_u128)(target_ulong addr, uint32_t access, uint32_t mmu_idx)
 {
     void *return_address = GETPC();
-    return translate_page_aligned_address_and_fill_tlb_u128(addr, mmu_idx, return_address);
+    return translate_page_aligned_address_and_fill_tlb_u128(addr, mmu_idx, access, return_address);
 }
 
 void HELPER(var_log)(target_ulong v)

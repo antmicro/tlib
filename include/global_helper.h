@@ -24,8 +24,8 @@ DEF_HELPER_2(check_address_reservation, tl, env, uintptr)
 DEF_HELPER_2(register_address_access, void, env, uintptr)
 DEF_HELPER_1(cancel_reservation, void, env)
 
-DEF_HELPER_2(translate_page_aligned_address_and_fill_tlb_u32, uintptr, tl, i32)
-DEF_HELPER_2(translate_page_aligned_address_and_fill_tlb_u64, uintptr, tl, i32)
-DEF_HELPER_2(translate_page_aligned_address_and_fill_tlb_u128, uintptr, tl, i32)
+DEF_HELPER_3(translate_page_aligned_address_and_fill_tlb_u32, uintptr, tl, i32, i32)
+DEF_HELPER_3(translate_page_aligned_address_and_fill_tlb_u64, uintptr, tl, i32, i32)
+DEF_HELPER_3(translate_page_aligned_address_and_fill_tlb_u128, uintptr, tl, i32, i32)
 
 #include "def-helper.h"
