@@ -719,7 +719,7 @@ TranslationBlock *tb_gen_code(CPUState *env, target_ulong pc, target_ulong cs_ba
     return tb;
 }
 
-void helper_mark_tbs_as_dirty(CPUState *env, target_ulong pc, int access_width, int broadcast)
+void helper_mark_tbs_as_dirty(CPUState *env, target_ulong pc, uint32_t access_width, uint32_t broadcast)
 {
     int n;
     PageDesc *p;
