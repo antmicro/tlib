@@ -99,7 +99,7 @@ static inline void tcg_gen_atomic_cmpxchg_i128(TCGv_i128 result, TCGv guestAddre
     //  We didn't jump to `fail`, meaning the 128-bit comparison succeeded.
 
     //  CAS success: store the new value.
-    tcg_gen_qemu_st_i128(newValue, guestAddressLow, memIndex, memop);
+    tcg_gen_qemu_st_i128_unsafe(newValue, guestAddressLow, memIndex, memop);
 
     gen_set_label(fail);
 

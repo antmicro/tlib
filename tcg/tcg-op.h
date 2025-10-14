@@ -2781,31 +2781,35 @@ static inline void tcg_gen_umax_i64(TCGv_i64 ret, TCGv_i64 a, TCGv_i64 b)
 #endif
 
 #if TARGET_LONG_BITS == 32
-#define TCGv                   TCGv_i32
-#define tcg_temp_new()         tcg_temp_new_i32()
-#define tcg_global_reg_new     tcg_global_reg_new_i32
-#define tcg_global_mem_new     tcg_global_mem_new_i32
-#define tcg_temp_local_new()   tcg_temp_local_new_i32()
-#define tcg_temp_free          tcg_temp_free_i32
-#define tcg_gen_qemu_ld_op     tcg_gen_op3i_i32
-#define tcg_gen_qemu_st_op     tcg_gen_st_op_i32
-#define tcg_gen_qemu_ld_op_i64 tcg_gen_qemu_ldst_op_i64_i32
-#define tcg_gen_qemu_st_op_i64 tcg_gen_qemu_st_op_i64_i32
-#define TCGV_UNUSED(x)         TCGV_UNUSED_I32(x)
-#define TCGV_EQUAL(a, b)       TCGV_EQUAL_I32(a, b)
+#define TCGv                          TCGv_i32
+#define tcg_temp_new()                tcg_temp_new_i32()
+#define tcg_global_reg_new            tcg_global_reg_new_i32
+#define tcg_global_mem_new            tcg_global_mem_new_i32
+#define tcg_temp_local_new()          tcg_temp_local_new_i32()
+#define tcg_temp_free                 tcg_temp_free_i32
+#define tcg_gen_qemu_ld_op            tcg_gen_op3i_i32
+#define tcg_gen_qemu_st_op            tcg_gen_st_op_i32
+#define tcg_gen_qemu_st_op_unsafe     tcg_gen_op3i_i32
+#define tcg_gen_qemu_ld_op_i64        tcg_gen_qemu_ldst_op_i64_i32
+#define tcg_gen_qemu_st_op_i64        tcg_gen_qemu_st_op_i64_i32
+#define tcg_gen_qemu_st_op_i64_unsafe tcg_gen_qemu_ldst_op_i64_i32
+#define TCGV_UNUSED(x)                TCGV_UNUSED_I32(x)
+#define TCGV_EQUAL(a, b)              TCGV_EQUAL_I32(a, b)
 #else
-#define TCGv                   TCGv_i64
-#define tcg_temp_new()         tcg_temp_new_i64()
-#define tcg_global_reg_new     tcg_global_reg_new_i64
-#define tcg_global_mem_new     tcg_global_mem_new_i64
-#define tcg_temp_local_new()   tcg_temp_local_new_i64()
-#define tcg_temp_free          tcg_temp_free_i64
-#define tcg_gen_qemu_ld_op     tcg_gen_op3i_i64
-#define tcg_gen_qemu_st_op     tcg_gen_st_op_i64
-#define tcg_gen_qemu_ld_op_i64 tcg_gen_qemu_ldst_op_i64_i64
-#define tcg_gen_qemu_st_op_i64 tcg_gen_qemu_st_op_i64_i64
-#define TCGV_UNUSED(x)         TCGV_UNUSED_I64(x)
-#define TCGV_EQUAL(a, b)       TCGV_EQUAL_I64(a, b)
+#define TCGv                          TCGv_i64
+#define tcg_temp_new()                tcg_temp_new_i64()
+#define tcg_global_reg_new            tcg_global_reg_new_i64
+#define tcg_global_mem_new            tcg_global_mem_new_i64
+#define tcg_temp_local_new()          tcg_temp_local_new_i64()
+#define tcg_temp_free                 tcg_temp_free_i64
+#define tcg_gen_qemu_ld_op            tcg_gen_op3i_i64
+#define tcg_gen_qemu_st_op            tcg_gen_st_op_i64
+#define tcg_gen_qemu_st_op_unsafe     tcg_gen_op3i_i64
+#define tcg_gen_qemu_ld_op_i64        tcg_gen_qemu_ldst_op_i64_i64
+#define tcg_gen_qemu_st_op_i64        tcg_gen_qemu_st_op_i64_i64
+#define tcg_gen_qemu_st_op_i64_unsafe tcg_gen_qemu_ldst_op_i64_i64
+#define TCGV_UNUSED(x)                TCGV_UNUSED_I64(x)
+#define TCGV_EQUAL(a, b)              TCGV_EQUAL_I64(a, b)
 #endif
 
 #if TARGET_INSN_START_WORDS == 1
@@ -3091,10 +3095,32 @@ static inline void tcg_gen_qemu_st32(TCGv arg, TCGv addr, int mem_index)
     tcg_gen_qemu_st_op(INDEX_op_qemu_st32, arg, addr, mem_index);
 }
 
+/*
+ * Performs an "unsafe" store.
+ * This means that it will NOT acquire the hash table lock and
+ * NOT invalidate any memory reservation.
+ */
+static inline void tcg_gen_qemu_st32_unsafe(TCGv arg, TCGv addr, int mem_index)
+{
+    tcg_request_block_interrupt_check();
+    tcg_gen_qemu_st_op_unsafe(INDEX_op_qemu_st32, arg, addr, mem_index);
+}
+
 static inline void tcg_gen_qemu_st64(TCGv_i64 arg, TCGv addr, int mem_index)
 {
     tcg_request_block_interrupt_check();
     tcg_gen_qemu_st_op_i64(INDEX_op_qemu_st64, arg, addr, mem_index);
+}
+
+/*
+ * Performs an "unsafe" store.
+ * This means that it will NOT acquire the hash table lock and
+ * NOT invalidate any memory reservation.
+ */
+static inline void tcg_gen_qemu_st64_unsafe(TCGv_i64 arg, TCGv addr, int mem_index)
+{
+    tcg_request_block_interrupt_check();
+    tcg_gen_qemu_st_op_i64_unsafe(INDEX_op_qemu_st64, arg, addr, mem_index);
 }
 
 #define tcg_gen_ld_ptr(R, A, O) tcg_gen_ld_i64(TCGV_PTR_TO_NAT(R), (A), (O))
@@ -3224,7 +3250,10 @@ static inline void tcg_gen_qemu_ld_i32(TCGv_i32 val, TCGv addr, TCGArg idx, TCGM
     }
 }
 
-static inline void tcg_gen_qemu_st_i32(TCGv_i32 val, TCGv_i32 addr, TCGArg idx, TCGMemOp memop)
+typedef void (*tcg_st_op_func32)(TCGOpcode opc, TCGv_i32 val, TCGv_i32 addr, TCGArg idx);
+
+static inline void tcg_gen_qemu_st_i32_common(TCGv_i32 val, TCGv_i32 addr, TCGArg idx, TCGMemOp memop,
+                                              tcg_st_op_func32 emit_st_op)
 {
     TCGv_i32 swap = -1;
     tcg_request_block_interrupt_check();
@@ -3246,11 +3275,26 @@ static inline void tcg_gen_qemu_st_i32(TCGv_i32 val, TCGv_i32 addr, TCGArg idx, 
         val = swap;
         memop &= ~MO_BSWAP;
     }
-    tcg_gen_qemu_st_op(old_st_opc[memop & MO_SIZE], val, addr, idx);
+    emit_st_op(old_st_opc[memop & MO_SIZE], val, addr, idx);
 
     if(swap != -1) {
         tcg_temp_free_i32(swap);
     }
+}
+
+static inline void tcg_gen_qemu_st_i32(TCGv_i32 val, TCGv_i32 addr, TCGArg idx, TCGMemOp memop)
+{
+    tcg_gen_qemu_st_i32_common(val, addr, idx, memop, tcg_gen_qemu_st_op);
+}
+
+/*
+ * Performs an "unsafe" store.
+ * This means that it will NOT acquire the hash table lock and
+ * NOT invalidate any memory reservation.
+ */
+static inline void tcg_gen_qemu_st_i32_unsafe(TCGv_i32 val, TCGv_i32 addr, TCGArg idx, TCGMemOp memop)
+{
+    tcg_gen_qemu_st_i32_common(val, addr, idx, memop, tcg_gen_qemu_st_op_unsafe);
 }
 
 static inline void tcg_gen_qemu_ld_i64(TCGv_i64 val, TCGv addr, TCGArg idx, TCGMemOp memop)
@@ -3323,7 +3367,9 @@ static inline void tcg_gen_qemu_ld_i128(TCGv_i128 result, TCGv guestAddressLow, 
     tcg_temp_free(guestAddressHigh);
 }
 
-static inline void tcg_gen_qemu_st_i64(TCGv_i64 val, TCGv addr, TCGArg idx, TCGMemOp memop)
+typedef void (*tcg_st_op_func64)(TCGOpcode opc, TCGv_i64 val, TCGv addr, TCGArg idx);
+
+static inline void tcg_gen_qemu_st_i64_common(TCGv_i64 val, TCGv addr, TCGArg idx, TCGMemOp memop, tcg_st_op_func64 emit_st_op)
 {
     TCGv_i64 swap = -1;
 
@@ -3358,11 +3404,26 @@ static inline void tcg_gen_qemu_st_i64(TCGv_i64 val, TCGv addr, TCGArg idx, TCGM
         memop &= ~MO_BSWAP;
     }
 
-    tcg_gen_qemu_st_op(old_st_opc[memop & MO_SIZE], val, addr, idx);
+    emit_st_op(old_st_opc[memop & MO_SIZE], val, addr, idx);
 
     if(swap != -1) {
         tcg_temp_free_i64(swap);
     }
+}
+
+static inline void tcg_gen_qemu_st_i64(TCGv_i64 val, TCGv addr, TCGArg idx, TCGMemOp memop)
+{
+    tcg_gen_qemu_st_i64_common(val, addr, idx, memop, tcg_gen_qemu_st_op);
+}
+
+/*
+ * Performs an "unsafe" store.
+ * This means that it will NOT acquire the hash table lock and
+ * NOT invalidate any memory reservation.
+ */
+static inline void tcg_gen_qemu_st_i64_unsafe(TCGv_i64 val, TCGv addr, TCGArg idx, TCGMemOp memop)
+{
+    tcg_gen_qemu_st_i64_common(val, addr, idx, memop, tcg_gen_qemu_st_op_unsafe);
 }
 
 /*
@@ -3371,19 +3432,23 @@ static inline void tcg_gen_qemu_st_i64(TCGv_i64 val, TCGv addr, TCGArg idx, TCGM
  * Places half of the value located at `guestAddressLow`
  * and the other at `guestAddressLow + sizeof(uint64_t)`.
  * Endianness is taken into account.
+ *
+ * Performs an "unsafe" store.
+ * This means that it will NOT acquire the hash table lock and
+ * NOT invalidate any memory reservation.
  */
-static inline void tcg_gen_qemu_st_i128(TCGv_i128 value, TCGv guestAddressLow, TCGArg memIndex, TCGMemOp memop)
+static inline void tcg_gen_qemu_st_i128_unsafe(TCGv_i128 value, TCGv guestAddressLow, TCGArg memIndex, TCGMemOp memop)
 {
     //  Compute the address of the upper 64 bits.
     TCGv guestAddressHigh = tcg_temp_local_new();
     tcg_gen_addi_tl(guestAddressHigh, guestAddressLow, sizeof(uint64_t));
 
 #ifdef TARGET_WORDS_BIGENDIAN
-    tcg_gen_qemu_st_i64(value.low, guestAddressHigh, memIndex, memop);
-    tcg_gen_qemu_st_i64(value.high, guestAddressLow, memIndex, memop);
+    tcg_gen_qemu_st_i64_unsafe(value.low, guestAddressHigh, memIndex, memop);
+    tcg_gen_qemu_st_i64_unsafe(value.high, guestAddressLow, memIndex, memop);
 #else
-    tcg_gen_qemu_st_i64(value.low, guestAddressLow, memIndex, memop);
-    tcg_gen_qemu_st_i64(value.high, guestAddressHigh, memIndex, memop);
+    tcg_gen_qemu_st_i64_unsafe(value.low, guestAddressLow, memIndex, memop);
+    tcg_gen_qemu_st_i64_unsafe(value.high, guestAddressHigh, memIndex, memop);
 #endif
 
     tcg_temp_free(guestAddressHigh);
