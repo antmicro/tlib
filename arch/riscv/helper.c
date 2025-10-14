@@ -229,9 +229,6 @@ static bool is_within_legal_address_space(target_ulong address, int access_type,
 static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int *prot, target_ulong address, int access_type,
                                 int mmu_idx, int no_page_fault)
 {
-    if(unlikely(cpu->external_mmu_enabled)) {
-        return get_external_mmu_phys_addr(env, address, access_type, physical, prot, no_page_fault);
-    }
     /* NOTE: the env->pc value visible here will not be
      * correct, but the value visible to the exception handler
      * (riscv_cpu_do_interrupt) is correct */
@@ -452,7 +449,7 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, i
 
     ret = get_physical_address(env, &pa, &prot, address, access_type, mmu_idx, no_page_fault);
     pmp_prot = pmp_get_access(env, pa, access_width, access_type);
-    if(!cpu->external_mmu_enabled && !((pmp_access_type & pmp_prot) == pmp_access_type)) {
+    if((pmp_access_type & pmp_prot) != pmp_access_type) {
         ret = TRANSLATE_FAIL;
     }
     if(ret == TRANSLATE_SUCCESS) {
@@ -474,7 +471,7 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, i
         }
 
         tlb_set_page(env, address & TARGET_PAGE_MASK, pa & TARGET_PAGE_MASK, prot, mmu_idx, page_size);
-    } else if(!cpu->external_mmu_enabled && !no_page_fault && ret == TRANSLATE_FAIL) {
+    } else if(!no_page_fault && ret == TRANSLATE_FAIL) {
         raise_mmu_exception(env, address, access_type);
     }
     return ret;

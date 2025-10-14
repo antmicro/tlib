@@ -256,10 +256,6 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong addr, int access_type, int 
     is_user = mmu_idx == MMU_USER_IDX;
     is_write = (access_type == ACCESS_DATA_STORE);
 
-    if(unlikely(cpu->external_mmu_enabled)) {
-        goto do_external_mmu_mapping;
-    }
-
     if(!(env->cr[0] & CR0_PG_MASK)) {
         pte = addr;
         virt_addr = addr & TARGET_PAGE_MASK;
@@ -519,15 +515,6 @@ do_mapping:
     paddr = (pte & TARGET_PAGE_MASK) + page_offset;
     vaddr = virt_addr + page_offset;
     goto set_page;
-do_external_mmu_mapping:
-    if(get_external_mmu_phys_addr(env, addr, access_type, &paddr, &prot, no_page_fault) == TRANSLATE_FAIL) {
-        error_code = 0;
-        return TRANSLATE_FAIL;
-    }
-    /* The external MMU granularity is limited to the TARGET_PAGE_SIZE */
-    page_size = TARGET_PAGE_SIZE;
-    vaddr = addr & TARGET_PAGE_MASK;
-    paddr = paddr & TARGET_PAGE_MASK;
 set_page:
     tlb_set_page(env, vaddr, paddr, prot, mmu_idx, page_size);
     return TRANSLATE_SUCCESS;

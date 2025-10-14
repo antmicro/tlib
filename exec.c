@@ -1415,6 +1415,29 @@ void tlb_flush_page(CPUState *env, target_ulong addr, bool from_generated_code)
 
 int tlb_fill(CPUState *env, target_ulong addr, int access_type, int mmu_idx, void *retaddr, int no_page_fault, int access_width)
 {
+    if(unlikely(cpu->external_mmu_enabled)) {
+#ifdef TARGET_PROTO_ARM_M
+        /* No notion of security in external MMU if it's enabled. We ignore security attribution, and warn the user */
+        if(unlikely(env->v7m.has_trustzone)) {
+            static bool has_printed_tz_warning = false;
+            /* Prevent flood of messages in console */
+            if(!has_printed_tz_warning) {
+                tlib_printf(LOG_LEVEL_WARNING,
+                            "Using external MMU with TrustZone. Security attribution checks with IDAU and SAU are disabled");
+                has_printed_tz_warning = true;
+            }
+        }
+#endif
+        int prot;
+        target_phys_addr_t paddr;
+        if(TRANSLATE_SUCCESS == get_external_mmu_phys_addr(env, addr, access_type, &paddr, &prot, no_page_fault)) {
+            tlb_set_page(env, addr & TARGET_PAGE_MASK, paddr & TARGET_PAGE_MASK, prot, mmu_idx, TARGET_PAGE_SIZE);
+            return TRANSLATE_SUCCESS;
+        } else {
+            return TRANSLATE_FAIL;
+        }
+    }
+
     return arch_tlb_fill(env, addr, access_type, mmu_idx, retaddr, no_page_fault, access_width);
 }
 

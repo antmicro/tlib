@@ -174,16 +174,6 @@ int arch_tlb_fill(CPUState *env, target_ulong address, MMUAccessType access_type
     uint32_t page_size;
     int access, ret;
 
-    if(unlikely(cpu->external_mmu_enabled)) {
-        if(TRANSLATE_SUCCESS == get_external_mmu_phys_addr(env, address, access_type, &paddr, &access, no_page_fault)) {
-            page_size = TARGET_PAGE_SIZE;
-            tlb_set_page(env, address & TARGET_PAGE_MASK, paddr & TARGET_PAGE_MASK, access, mmu_idx, page_size);
-            return TRANSLATE_SUCCESS;
-        } else {
-            return TRANSLATE_FAIL;
-        }
-    }
-
     ret = get_physical_address(env, true, address, access_type, mmu_idx, &paddr, &page_size, &access);
 #if DEBUG
     tlib_printf(LOG_LEVEL_DEBUG, "%s(%08x, %d, %d) -> %08x, ret = %d\n", __func__, address, access_type, mmu_idx, paddr, ret);

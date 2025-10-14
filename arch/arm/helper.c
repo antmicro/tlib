@@ -2668,22 +2668,6 @@ static inline bool pmsav8_check_security_attribution(CPUState *env, uint32_t add
 inline int get_phys_addr(CPUState *env, uint32_t address, bool is_secure, int access_type, bool is_user, uint32_t *phys_ptr,
                          int *prot, target_ulong *page_size, int no_page_fault)
 {
-    if(unlikely(cpu->external_mmu_enabled)) {
-#ifdef TARGET_PROTO_ARM_M
-        /* No notion of security in external MMU if it's enabled. We ignore security attribution, and warn the user */
-        if(unlikely(env->v7m.has_trustzone)) {
-            static bool has_printed_tz_warning = false;
-            /* Prevent flood of messages in console */
-            if(!has_printed_tz_warning) {
-                tlib_printf(LOG_LEVEL_WARNING,
-                            "Using external MMU with TrustZone. Security attribution checks with IDAU and SAU are disabled");
-                has_printed_tz_warning = true;
-            }
-        }
-#endif
-        return get_external_mmu_phys_addr(env, address, access_type, phys_ptr, prot, no_page_fault);
-    }
-
     /* Fast Context Switch Extension.  */
     if(address < 0x02000000) {
         address += env->cp15.c13_fcse;
