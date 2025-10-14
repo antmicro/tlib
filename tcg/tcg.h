@@ -755,12 +755,14 @@ void tcg_add_target_add_op_defs(const TCGTargetOpDef *tdefs);
 
 #if HOST_LONG_BITS == 64
 
+#define tcg_const_hostptr(V)         tcg_const_i64(V)
 #define tcg_temp_new_hostptr()       tcg_temp_new_i64()
 #define tcg_temp_local_new_hostptr() tcg_temp_local_new_i64()
 #define tcg_temp_free_hostptr(T)     tcg_temp_free_i64(T)
 
 #elif HOST_LONG_BITS == 32
 
+#define tcg_const_hostptr(V)         tcg_const_i32(V)
 #define tcg_temp_new_hostptr()       tcg_temp_new_i32()
 #define tcg_temp_local_new_hostptr() tcg_temp_local_new_i32()
 #define tcg_temp_free_hostptr(T)     tcg_temp_free_i32(T)
