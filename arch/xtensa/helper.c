@@ -33,8 +33,6 @@
 extern CPUState *env;
 
 typedef int MMUAccessType;
-typedef uint64_t vaddr;
-#define VADDR_PRIx PRIx64
 
 #define MAX_TTABLE_SIZE 4096
 
@@ -169,8 +167,8 @@ void do_unaligned_access(target_ulong addr, MMUAccessType access_type, int mmu_i
     }
 }
 
-int xtensa_cpu_tlb_fill(CPUState *env, vaddr address, MMUAccessType access_type, int mmu_idx, bool probe, uintptr_t retaddr,
-                        int no_page_fault)
+int arch_tlb_fill(CPUState *env, target_ulong address, MMUAccessType access_type, int mmu_idx, void *retaddr, int no_page_fault,
+                  int access_width)
 {
     uint32_t paddr;
     uint32_t page_size;
@@ -188,24 +186,18 @@ int xtensa_cpu_tlb_fill(CPUState *env, vaddr address, MMUAccessType access_type,
 
     ret = get_physical_address(env, true, address, access_type, mmu_idx, &paddr, &page_size, &access);
 #if DEBUG
-    tlib_printf(LOG_LEVEL_DEBUG, "%s(%08" VADDR_PRIx ", %d, %d) -> %08x, ret = %d\n", __func__, address, access_type, mmu_idx,
-                paddr, ret);
+    tlib_printf(LOG_LEVEL_DEBUG, "%s(%08x, %d, %d) -> %08x, ret = %d\n", __func__, address, access_type, mmu_idx, paddr, ret);
 #endif
 
     if(ret == TRANSLATE_SUCCESS) {
         tlb_set_page(env, address & TARGET_PAGE_MASK, paddr & TARGET_PAGE_MASK, access, mmu_idx, page_size);
         return TRANSLATE_SUCCESS;
-    } else if(probe) {
+    } else if(no_page_fault) {
         return TRANSLATE_FAIL;
     } else {
         cpu_restore_state(env, (void *)retaddr);
         HELPER(exception_cause_vaddr)(env, env->pc, ret, address);
     }
-}
-
-int tlb_fill(CPUState *env, target_ulong addr, int is_write, int mmu_idx, void *retaddr, int no_page_fault, int access_width)
-{
-    return xtensa_cpu_tlb_fill(env, addr, is_write, mmu_idx, no_page_fault, (uintptr_t)retaddr, no_page_fault);
 }
 
 void tlib_arch_dispose()

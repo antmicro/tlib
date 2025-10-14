@@ -1641,7 +1641,8 @@ void do_unaligned_access(target_ulong addr, int is_write, int is_user, void *ret
    NULL, it means that the function was called in C code (i.e. not
    from generated code or from helper.c) */
 /* XXX: fix it to restore all registers */
-int tlb_fill(CPUState *env, target_ulong addr, int access_type, int mmu_idx, void *retaddr, int no_page_fault, int access_width)
+int arch_tlb_fill(CPUState *env, target_ulong addr, int access_type, int mmu_idx, void *retaddr, int no_page_fault,
+                  int access_width)
 {
     int ret;
     ret = cpu_handle_mmu_fault(env, addr, access_type, mmu_idx, 1, no_page_fault);

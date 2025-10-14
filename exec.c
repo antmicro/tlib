@@ -1413,6 +1413,11 @@ void tlb_flush_page(CPUState *env, target_ulong addr, bool from_generated_code)
     tlb_flush_page_masked(env, addr, UINT32_MAX, from_generated_code);
 }
 
+int tlb_fill(CPUState *env, target_ulong addr, int access_type, int mmu_idx, void *retaddr, int no_page_fault, int access_width)
+{
+    return arch_tlb_fill(env, addr, access_type, mmu_idx, retaddr, no_page_fault, access_width);
+}
+
 /* update the TLB so that writes in physical page 'phys_addr' are no longer
    tested for self modifying code */
 static void tlb_unprotect_code_phys(CPUState *env, ram_addr_t ram_addr, target_ulong vaddr)

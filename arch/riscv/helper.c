@@ -438,7 +438,7 @@ uint64_t cpu_get_state_for_memory_transaction(CPUState *env, target_ulong addr, 
 }
 
 /*
- * Assuming system mode, only called in tlb_fill
+ * Assuming system mode, only called in arch_tlb_fill
  */
 int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, int mmu_idx, int access_width, int no_page_fault)
 {

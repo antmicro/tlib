@@ -751,7 +751,8 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, i
    NULL, it means that the function was called in C code (i.e. not
    from generated code or from helper.c) */
 /* XXX: fix it to restore all registers */
-int tlb_fill(CPUState *env1, target_ulong addr, int access_type, int mmu_idx, void *retaddr, int no_page_fault, int access_width)
+int arch_tlb_fill(CPUState *env1, target_ulong addr, int access_type, int mmu_idx, void *retaddr, int no_page_fault,
+                  int access_width)
 {
     CPUState *saved_env;
     int ret;

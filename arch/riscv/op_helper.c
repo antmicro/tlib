@@ -1318,7 +1318,8 @@ void do_unaligned_access(target_ulong addr, int access_type, int mmu_idx, void *
 }
 
 /* called to fill tlb */
-int tlb_fill(CPUState *env, target_ulong addr, int access_type, int mmu_idx, void *retaddr, int no_page_fault, int access_width)
+int arch_tlb_fill(CPUState *env, target_ulong addr, int access_type, int mmu_idx, void *retaddr, int no_page_fault,
+                  int access_width)
 {
     int ret;
     ret = cpu_handle_mmu_fault(env, addr, access_type, mmu_idx, access_width, no_page_fault);

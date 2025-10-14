@@ -55,7 +55,8 @@ uint32_t gen_intermediate_code_epilogue(CPUState *env, DisasContextBase *base);
 void gen_sync_pc(DisasContext *dc);
 void restore_state_to_opc(CPUState *env, struct TranslationBlock *tb, target_ulong *data);
 void setup_disas_context(DisasContextBase *dc, CPUState *env);
-int tlb_fill(CPUState *env1, target_ulong addr, int is_write, int mmu_idx, void *retaddr, int no_page_fault, int access_width);
+int arch_tlb_fill(CPUState *env1, target_ulong addr, int is_write, int mmu_idx, void *retaddr, int no_page_fault,
+                  int access_width);
 
 //  All the other functions declared in this header are common for all architectures.
 void gen_exit_tb(TranslationBlock *, int);
@@ -81,6 +82,7 @@ void tlb_flush(CPUState *env, int flush_global, bool from_generated_code);
 void tlb_flush_masked(CPUState *env, uint32_t mmu_indexes_mask);
 void tlb_flush_page(CPUState *env, target_ulong addr, bool from_generated_code);
 void tlb_flush_page_masked(CPUState *env, target_ulong addr, uint32_t mmu_indexes_mask, bool from_generated_code);
+int tlb_fill(CPUState *env, target_ulong addr, int is_write, int mmu_idx, void *retaddr, int no_page_fault, int access_width);
 void tlb_set_page(CPUState *env, target_ulong vaddr, target_phys_addr_t paddr, int prot, int mmu_idx, target_ulong size);
 void interrupt_current_translation_block(CPUState *env, int exception_type);
 int get_external_mmu_phys_addr(CPUState *env, uint64_t address, int access_type, target_phys_addr_t *phys_ptr, int *prot,
