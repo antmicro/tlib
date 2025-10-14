@@ -169,8 +169,8 @@ void do_unaligned_access(target_ulong addr, MMUAccessType access_type, int mmu_i
     }
 }
 
-int xtensa_cpu_tlb_fill(CPUState *env, vaddr address, int size, MMUAccessType access_type, int mmu_idx, bool probe,
-                        uintptr_t retaddr, int no_page_fault)
+int xtensa_cpu_tlb_fill(CPUState *env, vaddr address, MMUAccessType access_type, int mmu_idx, bool probe, uintptr_t retaddr,
+                        int no_page_fault)
 {
     uint32_t paddr;
     uint32_t page_size;
@@ -205,9 +205,7 @@ int xtensa_cpu_tlb_fill(CPUState *env, vaddr address, int size, MMUAccessType ac
 
 int tlb_fill(CPUState *env, target_ulong addr, int is_write, int mmu_idx, void *retaddr, int no_page_fault, int access_width)
 {
-    //  TODO: we don't use access_width?!
-    return xtensa_cpu_tlb_fill(env, addr, 0 /* size not used anyway */, is_write, mmu_idx, no_page_fault, (uintptr_t)retaddr,
-                               no_page_fault);
+    return xtensa_cpu_tlb_fill(env, addr, is_write, mmu_idx, no_page_fault, (uintptr_t)retaddr, no_page_fault);
 }
 
 void tlib_arch_dispose()
