@@ -2402,9 +2402,9 @@ static inline void gen_amocas(TCGv_i64 expectedValue, TCGv guestAddress, TCGv ne
     gen_set_label(fallback);
 
     if(size == 64) {
-        tcg_gen_atomic_cmpxchg_i64(result, guestAddress, expectedValue, newValue, memIndex, MO_64);
+        tcg_gen_atomic_cmpxchg_i64_unsafe(result, guestAddress, expectedValue, newValue, memIndex, MO_64);
     } else {
-        tcg_gen_atomic_cmpxchg_i32(result, guestAddress, expectedValue, newValue, memIndex, MO_32);
+        tcg_gen_atomic_cmpxchg_i32_unsafe(result, guestAddress, expectedValue, newValue, memIndex, MO_32);
     }
 
     gen_set_label(done);
@@ -2445,7 +2445,7 @@ static inline void gen_amocas_128(TCGv_i64 expectedValueLow, TCGv_i64 guestAddre
      */
     gen_set_label(fallback);
 
-    tcg_gen_atomic_cmpxchg_i128(result, guestAddress, expectedValue, newValue, memIndex);
+    tcg_gen_atomic_cmpxchg_i128_unsafe(result, guestAddress, expectedValue, newValue, memIndex);
 
     gen_set_label(done);
 

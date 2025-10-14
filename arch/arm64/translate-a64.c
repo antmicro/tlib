@@ -2531,8 +2531,8 @@ static void gen_store_exclusive(DisasContext *s, int rd, int rt, int rt2, TCGv_i
             } else {
                 tcg_gen_concat32_i64(tmp, cpu_reg(s, rt2), cpu_reg(s, rt));
             }
-            tcg_gen_atomic_cmpxchg_i64(tmp, cpu_exclusive_addr, cpu_exclusive_val, tmp, get_mem_index(s),
-                                       MO_64 | MO_ALIGN | s->be_data);
+            tcg_gen_atomic_cmpxchg_i64_unsafe(tmp, cpu_exclusive_addr, cpu_exclusive_val, tmp, get_mem_index(s),
+                                              MO_64 | MO_ALIGN | s->be_data);
             tcg_gen_setcond_i64(TCG_COND_NE, tmp, tmp, cpu_exclusive_val);
         } else if(tb_cflags(s->base.tb) & CF_PARALLEL) {
             if(!HAVE_CMPXCHG128) {
@@ -2554,8 +2554,8 @@ static void gen_store_exclusive(DisasContext *s, int rd, int rt, int rt2, TCGv_i
             gen_helper_paired_cmpxchg64_be(tmp, cpu_env, cpu_exclusive_addr, cpu_reg(s, rt), cpu_reg(s, rt2));
         }
     } else {
-        tcg_gen_atomic_cmpxchg_i64(tmp, cpu_exclusive_addr, cpu_exclusive_val, cpu_reg(s, rt), get_mem_index(s),
-                                   size | MO_ALIGN | s->be_data);
+        tcg_gen_atomic_cmpxchg_i64_unsafe(tmp, cpu_exclusive_addr, cpu_exclusive_val, cpu_reg(s, rt), get_mem_index(s),
+                                          size | MO_ALIGN | s->be_data);
         tcg_gen_setcond_i64(TCG_COND_NE, tmp, tmp, cpu_exclusive_val);
     }
     tcg_gen_mov_i64(cpu_reg(s, rd), tmp);
@@ -2582,7 +2582,7 @@ static void gen_compare_and_swap(DisasContext *s, int rs, int rt, int rn, int si
         gen_check_sp_alignment(s);
     }
     clean_addr = gen_mte_check1(s, cpu_reg_sp(s, rn), true, rn != 31, size);
-    tcg_gen_atomic_cmpxchg_i64(tcg_rs, clean_addr, tcg_rs, tcg_rt, memidx, size | MO_ALIGN | s->be_data);
+    tcg_gen_atomic_cmpxchg_i64_unsafe(tcg_rs, clean_addr, tcg_rs, tcg_rt, memidx, size | MO_ALIGN | s->be_data);
 }
 
 static void gen_compare_and_swap_pair(DisasContext *s, int rs, int rt, int rn, int size)
@@ -2613,7 +2613,7 @@ static void gen_compare_and_swap_pair(DisasContext *s, int rs, int rt, int rn, i
             tcg_gen_concat32_i64(cmp, s2, s1);
         }
 
-        tcg_gen_atomic_cmpxchg_i64(cmp, clean_addr, cmp, val, memidx, MO_64 | MO_ALIGN | s->be_data);
+        tcg_gen_atomic_cmpxchg_i64_unsafe(cmp, clean_addr, cmp, val, memidx, MO_64 | MO_ALIGN | s->be_data);
         tcg_temp_free_i64(val);
 
         if(s->be_data == MO_LE) {

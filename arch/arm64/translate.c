@@ -5029,7 +5029,7 @@ static void gen_store_exclusive(DisasContext *s, int rd, int rt, int rt2, TCGv_i
         }
         tcg_temp_free_i32(t2);
 
-        tcg_gen_atomic_cmpxchg_i64(o64, taddr, cpu_exclusive_val, n64, get_mem_index(s), opc);
+        tcg_gen_atomic_cmpxchg_i64_unsafe(o64, taddr, cpu_exclusive_val, n64, get_mem_index(s), opc);
         tcg_temp_free_i64(n64);
 
         tcg_gen_setcond_i64(TCG_COND_NE, o64, o64, cpu_exclusive_val);
@@ -5039,7 +5039,7 @@ static void gen_store_exclusive(DisasContext *s, int rd, int rt, int rt2, TCGv_i
     } else {
         t2 = tcg_temp_new_i32();
         tcg_gen_extrl_i64_i32(t2, cpu_exclusive_val);
-        tcg_gen_atomic_cmpxchg_i32(t0, taddr, t2, t1, get_mem_index(s), opc);
+        tcg_gen_atomic_cmpxchg_i32_unsafe(t0, taddr, t2, t1, get_mem_index(s), opc);
         tcg_gen_setcond_i32(TCG_COND_NE, t0, t0, t2);
         tcg_temp_free_i32(t2);
     }
