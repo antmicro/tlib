@@ -360,7 +360,6 @@ __attribute__((always_inline)) inline void REGPARM glue(glue(__inner_st, SUFFIX)
     int index;
     uintptr_t addend;
 
-    acquire_global_memory_lock(cpu);
     register_address_access(cpu, addr);
 
     index = (addr >> TARGET_PAGE_BITS) & (CPU_TLB_SIZE - 1);
@@ -432,7 +431,6 @@ redo:
     }
 
     mark_tbs_containing_pc_as_dirty(addr, DATA_SIZE, 1);
-    release_global_memory_lock(cpu);
 }
 
 __attribute__((always_inline)) inline void REGPARM glue(glue(__st, SUFFIX), MMUSUFFIX)(target_ulong addr, DATA_TYPE val,

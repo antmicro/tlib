@@ -28,10 +28,6 @@
 #include "exports.h"
 #include "tlib-alloc.h"
 
-#include <global_helper.h>
-#define GEN_HELPER 1
-#include <global_helper.h>
-
 int gen_new_label(void);
 
 extern TCGv_ptr cpu_env;
