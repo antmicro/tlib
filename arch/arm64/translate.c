@@ -49,8 +49,7 @@ static TCGv_i64 cpu_V0, cpu_V1, cpu_M0;
 /* These are TCG globals which alias CPUARMState fields */
 static TCGv_i32 cpu_R[16];
 TCGv_i32 cpu_CF, cpu_NF, cpu_VF, cpu_ZF;
-TCGv_i64 cpu_exclusive_addr;
-TCGv_i64 cpu_exclusive_val;
+TCGv reserved_address;
 extern TCGv_i64 cpu_pc;
 
 static const char *const regnames[] = { "r0", "r1", "r2",  "r3",  "r4",  "r5",  "r6",  "r7",
@@ -69,8 +68,7 @@ void arm_translate_init(void)
     cpu_VF = tcg_global_mem_new_i32(TCG_AREG0, offsetof(CPUARMState, VF), "VF");
     cpu_ZF = tcg_global_mem_new_i32(TCG_AREG0, offsetof(CPUARMState, ZF), "ZF");
 
-    cpu_exclusive_addr = tcg_global_mem_new_i64(TCG_AREG0, offsetof(CPUARMState, exclusive_addr), "exclusive_addr");
-    cpu_exclusive_val = tcg_global_mem_new_i64(TCG_AREG0, offsetof(CPUARMState, exclusive_val), "exclusive_val");
+    reserved_address = tcg_global_mem_new(TCG_AREG0, offsetof(CPUARMState, reserved_address), "reserved_address");
 
     a64_translate_init();
 }
@@ -4930,12 +4928,11 @@ static void gen_logicq_cc(TCGv_i32 lo, TCGv_i32 hi)
     tcg_gen_or_i32(cpu_ZF, lo, hi);
 }
 
-/* Load/Store exclusive instructions are implemented by remembering
-   the value/address loaded, and seeing if these are the same
-   when the store is performed.  This should be sufficient to implement
-   the architecturally mandated semantics, and avoids having to monitor
-   regular stores.  The compare vs the remembered value is done during
-   the cmpxchg operation, but we must compare the addresses manually.  */
+/*
+ * Load/Store exclusive relies on the Hash table-based Store Test (HST).
+ * By keeping track of accesses to the hash table entry tied to each guest address,
+ * we know if a reservation is still valid or not.
+ */
 static void gen_load_exclusive(DisasContext *s, int rt, int rt2, TCGv_i32 addr, int size)
 {
     TCGv_i32 tmp = tcg_temp_new_i32();
@@ -4943,7 +4940,9 @@ static void gen_load_exclusive(DisasContext *s, int rt, int rt2, TCGv_i32 addr, 
 
     s->is_ldex = true;
 
-    if(size == 3) {
+    gen_store_table_lock(cpu, addr);
+    gen_store_table_set(cpu, addr);
+    if(size == MO_64) {
         TCGv_i32 tmp2 = tcg_temp_new_i32();
         TCGv_i64 t64 = tcg_temp_new_i64();
 
@@ -4959,7 +4958,6 @@ static void gen_load_exclusive(DisasContext *s, int rt, int rt2, TCGv_i32 addr, 
 
         tcg_gen_qemu_ld_i64(t64, taddr, get_mem_index(s), opc);
         tcg_temp_free(taddr);
-        tcg_gen_mov_i64(cpu_exclusive_val, t64);
         if(s->be_data == MO_BE) {
             tcg_gen_extr_i64_i32(tmp2, tmp, t64);
         } else {
@@ -4970,45 +4968,89 @@ static void gen_load_exclusive(DisasContext *s, int rt, int rt2, TCGv_i32 addr, 
         store_reg(s, rt2, tmp2);
     } else {
         gen_aa32_ld_i32(s, tmp, addr, get_mem_index(s), opc);
-        tcg_gen_extu_i32_i64(cpu_exclusive_val, tmp);
     }
 
     store_reg(s, rt, tmp);
-    tcg_gen_extu_i32_i64(cpu_exclusive_addr, addr);
+    tcg_gen_extu_i32_i64(reserved_address, addr);
+    gen_store_table_unlock(cpu, addr);
 }
 
+/*
+    The ARMv8-A architecture reference manual states that:
+      "When the global monitor is in the Exclusive Access state,
+      it is IMPLEMENTATION DEFINED whether a CLREX instruction
+      causes the global monitor to transition from Exclusive Access to Open Access state."
+
+    Therefore, only the CPU’s local address reservation needs to be cleared.
+    The hash table reservation does not need to be cleared because
+    any other core can invalidate this core’s reservation, regardless of
+    whether we clear it here or not.
+*/
 static void gen_clrex(DisasContext *s)
 {
-    tcg_gen_movi_i64(cpu_exclusive_addr, -1);
+    tcg_gen_movi_i64(reserved_address, 0);
 }
 
 static void gen_store_exclusive(DisasContext *s, int rd, int rt, int rt2, TCGv_i32 addr, int size)
 {
     TCGv_i32 t0, t1, t2;
-    TCGv_i64 extaddr;
     TCGv taddr;
-    int done_label;
-    int fail_label;
+    int done = gen_new_label();
+    int fail = gen_new_label();
     MemOp opc = size | MO_ALIGN | s->be_data;
+    gen_store_table_lock(cpu, addr);
 
-    /* if (env->exclusive_addr == addr && env->exclusive_val == [addr]) {
-         [addr] = {Rt};
-         {Rd} = 0;
-       } else {
-         {Rd} = 1;
-       } */
-    fail_label = gen_new_label();
-    done_label = gen_new_label();
-    extaddr = tcg_temp_new_i64();
-    tcg_gen_extu_i32_i64(extaddr, addr);
-    tcg_gen_brcond_i64(TCG_COND_NE, extaddr, cpu_exclusive_addr, fail_label);
-    tcg_temp_free_i64(extaddr);
+    /*  A STREX may fail for two reasons: either there is no matching LDREX on
+     *  the same address to pair with, or the reservation has been invalidated.
+     *
+     *                "can the STREX pair with a previous LDREX?"
+     *                ┌───────────────────────────────────┐
+     *        ┌───────┼ reserved_address == guest_address ┼──────────────┐
+     *        │  true └───────────────────────────────────┘ false        │
+     *        │                                                          │
+     *        │   ┌────────────────────────────────────────────────────┐ │
+     *        └───► reserved_result = store_table_check(guest_address) │ │
+     *            └──────────────────────┬─────────────────────────────┘ │
+     *                                   │                               │
+     *                         ┌─────────▼────────────┐                  │
+     * "is reservation valid?" │ reserved_result == 1 ┼──────────────────┤
+     *                         └─────────┬────────────┘ false            │
+     *                                   │ true                          │
+     *                           ┌───────▼────────┐                      │
+     *       "perform the store" │ qemu_st(32|64) │                      │
+     *                           └───────┬────────┘                      │
+     *                                   │                               │
+     *                            ┌──────┘       ┌───────────────────────┘
+     *                            │              │
+     *                     ┌──────▼─────┐ ┌──────▼─────┐
+     *     "Zero indicates │ result = 0 │ │ result = 1 │ "Non-zero result
+     *      success"       └──────┬─────┘ └──────┬─────┘  indicates STREX failure"
+     *                            │              │
+     *                      ┌─────▼──────────────▼────┐
+     *                      │ reserved_address = null │ "Always invalidate reservation"
+     *                      └─────────────────────────┘
+     */
+
+    int address_reserved = gen_new_label();
+    tcg_gen_brcond_i64(TCG_COND_EQ, reserved_address, addr, address_reserved);
+
+    //  Didn't branch above, then the address wasn't reserved, so we fail...
+    tcg_gen_br(fail);
+
+    gen_set_label(address_reserved);
+
+    //  Check if address is reserved.
+    TCGv_i64 reserved_result = tcg_temp_new_i64();
+
+    gen_store_table_check(cpu, reserved_result, addr);
+
+    //  If address is not reserved (i.e. reserved_result = 0), jump to fail block.
+    tcg_gen_brcondi_i64(TCG_COND_EQ, reserved_result, 0, fail);
 
     taddr = gen_aa32_addr(s, addr, opc);
     t0 = tcg_temp_new_i32();
     t1 = load_reg(s, rt);
-    if(size == 3) {
-        TCGv_i64 o64 = tcg_temp_new_i64();
+    if(size == MO_64) {
         TCGv_i64 n64 = tcg_temp_new_i64();
 
         t2 = load_reg(s, rt2);
@@ -5029,30 +5071,33 @@ static void gen_store_exclusive(DisasContext *s, int rd, int rt, int rt2, TCGv_i
         }
         tcg_temp_free_i32(t2);
 
-        tcg_gen_atomic_cmpxchg_i64_unsafe(o64, taddr, cpu_exclusive_val, n64, get_mem_index(s), opc);
+        /* Didn't branch to fail block, this means STREX should perform the store... */
+        tcg_gen_qemu_st_i64_unsafe(n64, taddr, get_mem_index(s), opc);
         tcg_temp_free_i64(n64);
-
-        tcg_gen_setcond_i64(TCG_COND_NE, o64, o64, cpu_exclusive_val);
-        tcg_gen_extrl_i64_i32(t0, o64);
-
-        tcg_temp_free_i64(o64);
     } else {
-        t2 = tcg_temp_new_i32();
-        tcg_gen_extrl_i64_i32(t2, cpu_exclusive_val);
-        tcg_gen_atomic_cmpxchg_i32_unsafe(t0, taddr, t2, t1, get_mem_index(s), opc);
-        tcg_gen_setcond_i32(TCG_COND_NE, t0, t0, t2);
-        tcg_temp_free_i32(t2);
+        /* Didn't branch to fail block, this means STREX should perform the store... */
+        tcg_gen_qemu_st_i32_unsafe(t1, taddr, get_mem_index(s), opc);
     }
     tcg_temp_free_i32(t1);
     tcg_temp_free(taddr);
-    tcg_gen_mov_i32(cpu_R[rd], t0);
+    tcg_gen_movi_i32(cpu_R[rd], 0);
     tcg_temp_free_i32(t0);
-    tcg_gen_br(done_label);
 
-    gen_set_label(fail_label);
+    //  Didn't branch to fail block, this means STREX should perform the store.
+    //  The ARMv8-A architecture reference manual states that:
+    //      STREX clears the global monitor only if the STREX updates memory.
+    //
+    //  This means the hash table reservation is invalidated only at this point.
+    gen_store_table_set(cpu, addr);
+    tcg_gen_br(done);
+
+    gen_set_label(fail);
     tcg_gen_movi_i32(cpu_R[rd], 1);
-    gen_set_label(done_label);
-    tcg_gen_movi_i64(cpu_exclusive_addr, -1);
+    gen_set_label(done);
+
+    gen_store_table_unlock(cpu, addr);
+    //  Regardless of success or failure, executing an STREX instruction invalidates any reservation held by this core.
+    tcg_gen_movi_i64(reserved_address, 0);
 }
 
 /* gen_srs:
@@ -6983,7 +7028,10 @@ static bool op_swp(DisasContext *s, arg_SWP *a, MemOp opc)
     tcg_temp_free_i32(addr);
 
     tmp = load_reg(s, a->rt2);
+    gen_store_table_lock(cpu, taddr);
     tcg_gen_atomic_xchg_i32(tmp, taddr, tmp, get_mem_index(s), opc);
+    gen_store_table_set(cpu, taddr);
+    gen_store_table_unlock(cpu, taddr);
     tcg_temp_free(taddr);
 
     store_reg(s, a->rt, tmp);

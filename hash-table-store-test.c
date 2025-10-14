@@ -170,7 +170,7 @@ void gen_store_table_set(CPUState *env, TCGv_guestptr guest_address)
     tcg_temp_free_i32(core_id);
 }
 
-void gen_store_table_lock(CPUState *env, TCGv_guestptr guest_address)
+static void gen_store_table_lock_address(CPUState *env, TCGv_guestptr guest_address, tcg_target_long locked_address_offset)
 {
     TCGv_hostptr hashed_address = tcg_temp_local_new_hostptr();
     gen_hash_address(env, hashed_address, guest_address);
@@ -228,7 +228,7 @@ void gen_store_table_lock(CPUState *env, TCGv_guestptr guest_address)
     //  Lock is now owned by the current core.
 
     //  Update cpu's currently locked address.
-    tcg_gen_st_tl(guest_address, cpu_env, offsetof(CPUState, locked_address));
+    tcg_gen_st_tl(guest_address, cpu_env, locked_address_offset);
 
     tcg_temp_free_hostptr(hashed_address);
     tcg_temp_free_hostptr(lock_address);
@@ -237,7 +237,12 @@ void gen_store_table_lock(CPUState *env, TCGv_guestptr guest_address)
     tcg_temp_free_i32(result);
 }
 
-void gen_store_table_unlock(CPUState *env, TCGv_guestptr guest_address)
+void gen_store_table_lock(CPUState *env, TCGv_guestptr guest_address)
+{
+    gen_store_table_lock_address(env, guest_address, offsetof(CPUState, locked_address));
+}
+
+static void gen_store_table_unlock_address(CPUState *env, TCGv_guestptr guest_address, tcg_target_long locked_address_offset)
 {
     ensure_entry_locked(env, guest_address, __func__);
 
@@ -253,11 +258,16 @@ void gen_store_table_unlock(CPUState *env, TCGv_guestptr guest_address)
 
     //  Update cpu's currently locked address.
     TCGv_guestptr null = tcg_const_tl(0);
-    tcg_gen_st_tl(null, cpu_env, offsetof(CPUState, locked_address));
+    tcg_gen_st_tl(null, cpu_env, locked_address_offset);
 
     tcg_temp_free(null);
     tcg_temp_free_hostptr(hashed_address);
     tcg_temp_free_i32(unlocked);
+}
+
+void gen_store_table_unlock(CPUState *env, TCGv_guestptr guest_address)
+{
+    gen_store_table_unlock_address(env, guest_address, offsetof(CPUState, locked_address));
 }
 
 uintptr_t address_hash(CPUState *env, target_ulong guest_address)
@@ -267,4 +277,47 @@ uintptr_t address_hash(CPUState *env, target_ulong guest_address)
     hashed_address &= hst_guest_address_mask;
     hashed_address |= table_offset;
     return hashed_address;
+}
+
+static void gen_store_table_lock_high(CPUState *env, TCGv_guestptr guest_address)
+{
+    gen_store_table_lock_address(env, guest_address, offsetof(CPUState, locked_address_high));
+}
+
+static void gen_store_table_unlock_high(CPUState *env, TCGv_guestptr guest_address)
+{
+    gen_store_table_unlock_address(env, guest_address, offsetof(CPUState, locked_address_high));
+}
+
+void gen_store_table_lock_128(CPUState *env, TCGv_guestptr guest_addr_low, TCGv_guestptr guest_addr_high)
+{
+#ifdef DEBUG
+    int addr_is_equal = gen_new_label();
+    TCGv_guestptr comp_addr = tcg_temp_local_new_ptr();
+    tcg_gen_addi_tl(comp_addr, guest_addr_low, sizeof(uint64_t));
+    tcg_gen_brcond_tl(TCG_COND_EQ, comp_addr, guest_addr_high, addr_is_equal);
+
+    /* If we didn't jump, the address pair is illegal */
+    generate_log(0, "Illegal pair of guest addresses in %s", __func__);
+    generate_log(0, "guest_addr_low:");
+    generate_var_log(guest_addr_low);
+    generate_log(0, "guest_addr_high:");
+    generate_var_log(guest_addr_high);
+    generate_log(0, "Should be: guest_addr_high == guest_addr_low+8bytes");
+    generate_backtrace_print();
+    gen_helper_abort();
+
+    gen_set_label(addr_is_equal);
+    tcg_temp_free_ptr(comp_addr);
+#endif
+
+    /* To avoid deadlocks, the order is important and should always lock the lowest 64 bits first */
+    gen_store_table_lock(env, guest_addr_low);
+    gen_store_table_lock_high(env, guest_addr_high);
+}
+
+void gen_store_table_unlock_128(CPUState *env, TCGv_guestptr guest_addr_low, TCGv_guestptr guest_addr_high)
+{
+    gen_store_table_unlock(env, guest_addr_low);
+    gen_store_table_unlock_high(env, guest_addr_high);
 }

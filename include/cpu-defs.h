@@ -281,6 +281,10 @@ enum block_interrupt_cause {
     /* Keeps track of the currently active reservation */                     \
     target_ulong reserved_address;                                            \
     target_ulong locked_address;                                              \
+    /* Some target architectures support 128 bit load/store exclusive         \
+       that sometimes requires two consecutive                                \
+       locks to be held at the same time. */                                  \
+    target_ulong locked_address_high;                                         \
                                                                               \
     /* STARTING FROM HERE FIELDS ARE NOT SERIALIZED */                        \
     struct TranslationBlock *current_tb; /* currently executing TB  */        \

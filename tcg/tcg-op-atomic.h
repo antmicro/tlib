@@ -152,13 +152,20 @@ static void do_atomic_op_i32(TCGv_i32 ret, TCGv addr, TCGv_i32 val, TCGArg idx, 
 
     memop = tcg_canonicalize_memop(memop, 0, 0);
 
+#ifndef SUPPORTS_HST_ATOMICS
+    //  Only guests that aren't using HST fine-grained locking need to use
+    //  the global memory lock here.
     gen_helper_acquire_global_memory_lock(cpu_env);
+#endif
     tcg_gen_qemu_ld_i32(t1, addr, idx, memop);
     tcg_gen_ext_i32(t2, val, memop);
     gen(t2, t1, t2);
-    tcg_gen_qemu_st_i32(t2, addr, idx, memop);
+    tcg_gen_qemu_st_i32_unsafe(t2, addr, idx, memop);
+#ifndef SUPPORTS_HST_ATOMICS
+    //  Only guests that aren't using HST fine-grained locking need to use
+    //  the global memory lock here.
     gen_helper_release_global_memory_lock(cpu_env);
-
+#endif
     tcg_gen_ext_i32(ret, (new_val ? t2 : t1), memop);
     tcg_temp_free_i32(t1);
     tcg_temp_free_i32(t2);
@@ -173,13 +180,20 @@ static void do_atomic_op_i64(TCGv_i64 ret, TCGv addr, TCGv_i64 val, TCGArg idx, 
 
     memop = tcg_canonicalize_memop(memop, 1, 0);
 
+#ifndef SUPPORTS_HST_ATOMICS
+    //  Only guests that aren't using HST fine-grained locking need to use
+    //  the global memory lock here.
     gen_helper_acquire_global_memory_lock(cpu_env);
+#endif
     tcg_gen_qemu_ld_i64(t1, addr, idx, memop);
     tcg_gen_ext_i64(t2, val, memop);
     gen(t2, t1, t2);
-    tcg_gen_qemu_st_i64(t2, addr, idx, memop);
+    tcg_gen_qemu_st_i64_unsafe(t2, addr, idx, memop);
+#ifndef SUPPORTS_HST_ATOMICS
+    //  Only guests that aren't using HST fine-grained locking need to use
+    //  the global memory lock here.
     gen_helper_release_global_memory_lock(cpu_env);
-
+#endif
     tcg_gen_ext_i64(ret, (new_val ? t2 : t1), memop);
     tcg_temp_free_i64(t1);
     tcg_temp_free_i64(t2);

@@ -69,3 +69,15 @@ void gen_store_table_unlock(CPUState *env, TCGv_guestptr guest_address);
 
 /* Computes which hash table entry address corresponds to the given `guest_address`. */
 uintptr_t address_hash(CPUState *cpu_env, target_ulong guest_address);
+
+/* Generates code to lock a 128 bit region (two hash table entries).
+ * The arguments must adhere to:
+ *    * `guest_addr_low < guest_addr_high`
+ *    * `guest_addr_low + sizeof(uint64_t) == guest_addr_high`
+ */
+void gen_store_table_lock_128(CPUState *env, TCGv_guestptr guest_addr_low, TCGv_guestptr guest_addr_high);
+
+/* Generates code to unlock a 128 bit region (two hash table entries)
+ * This should match the addresses used when calling `gen_store_table_lock_pair()`
+ */
+void gen_store_table_unlock_128(CPUState *env, TCGv_guestptr guest_addr_low, TCGv_guestptr guest_addr_high);

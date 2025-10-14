@@ -10,8 +10,7 @@ typedef struct DisasCompare {
 
 /* Share the TCG temporaries common between 32 and 64 bit modes.  */
 extern TCGv_i32 cpu_NF, cpu_ZF, cpu_CF, cpu_VF;
-extern TCGv_i64 cpu_exclusive_addr;
-extern TCGv_i64 cpu_exclusive_val;
+extern TCGv reserved_address;
 
 /*
  * Constant expanders for the decoders.

@@ -29,6 +29,7 @@
 #include "translate-a64.h"
 #include "translate.h"
 #include "ttable.h"
+#include "hash-table-store-test.h"
 
 void arm_tr_init_disas_context(DisasContextBase *dcbase, CPUState *env);
 void arm_tr_tb_start(DisasContextBase *dcbase, CPUState *cpu);
@@ -41,9 +42,6 @@ static TCGv_i64 cpu_X[32];
 TCGv_i64 cpu_pc;
 
 static TCGv_i64 cpu_prev_sp;
-
-/* Load/store exclusive handling */
-static TCGv_i64 cpu_exclusive_high;
 
 static const char *regnames[] = { "x0",  "x1",  "x2",  "x3",  "x4",  "x5",  "x6",  "x7",  "x8",  "x9",  "x10",
                                   "x11", "x12", "x13", "x14", "x15", "x16", "x17", "x18", "x19", "x20", "x21",
@@ -71,8 +69,6 @@ void a64_translate_init(void)
     for(i = 0; i < 32; i++) {
         cpu_X[i] = tcg_global_mem_new_i64(TCG_AREG0, offsetof(CPUARMState, xregs[i]), regnames[i]);
     }
-
-    cpu_exclusive_high = tcg_global_mem_new_i64(TCG_AREG0, offsetof(CPUARMState, exclusive_high), "exclusive_high");
 
     cpu_prev_sp = tcg_global_mem_new_i64(TCG_AREG0, offsetof(CPUARMState, prev_sp), "previous sp");
 }
@@ -459,7 +455,7 @@ TCGv_i64 cpu_reg_sp(DisasContext *s, int reg)
  */
 TCGv_i64 read_cpu_reg(DisasContext *s, int reg, int sf)
 {
-    TCGv_i64 v = new_tmp_a64(s);
+    TCGv_i64 v = new_tmp_a64_local(s);
     if(reg != 31) {
         if(sf) {
             tcg_gen_mov_i64(v, cpu_X[reg]);
@@ -1518,12 +1514,20 @@ static void handle_hint(DisasContext *s, uint32_t insn, unsigned int op1, unsign
     }
 }
 
+/*
+    The ARMv8-A architecture reference manual states that:
+      "When the global monitor is in the Exclusive Access state,
+      it is IMPLEMENTATION DEFINED whether a CLREX instruction
+      causes the global monitor to transition from Exclusive Access to Open Access state."
+
+    Therefore, only the CPU’s local address reservation needs to be cleared.
+    The hash table reservation does not need to be cleared because
+    any other core can invalidate this core’s reservation, regardless of
+    whether we clear it here or not.
+*/
 static void gen_clrex(DisasContext *s, uint32_t insn)
 {
-    tcg_gen_movi_i64(cpu_exclusive_addr, -1);
-    gen_helper_acquire_global_memory_lock(cpu_env);
-    gen_helper_cancel_reservation(cpu_env);
-    gen_helper_release_global_memory_lock(cpu_env);
+    tcg_gen_movi_i64(reserved_address, 0);
 }
 
 /* CLREX, DSB, DMB, ISB */
@@ -2433,142 +2437,210 @@ static void disas_b_exc_sys(DisasContext *s, uint32_t insn)
 }
 
 /*
- * Load/Store exclusive instructions are implemented by remembering
- * the value/address loaded, and seeing if these are the same
- * when the store is performed. This is not actually the architecturally
- * mandated semantics, but it works for typical guest code sequences
- * and avoids having to monitor regular stores.
- *
- * The store exclusive uses the atomic cmpxchg primitives to avoid
- * races in multi-threaded linux-user and when MTTCG softmmu is
- * enabled.
+ * Load/Store exclusive relies on the Hash table-based Store Test (HST).
+ * By keeping track of accesses to the hash table entry tied to each guest address,
+ * we know if a reservation is still valid or not.
  */
 static void gen_load_exclusive(DisasContext *s, int rt, int rt2, TCGv_i64 addr, int size, bool is_pair)
 {
     int idx = get_mem_index(s);
     MemOp memop = s->be_data;
+    TCGv_i64 temp_val = tcg_temp_local_new_i64();
+    TCGv_i64 temp_val_high = tcg_temp_local_new_i64();
+    TCGv_i64 addr_high = tcg_temp_local_new_i64();
+    bool is_128_pair = is_pair && size == MO_64;
 
-    gen_helper_acquire_global_memory_lock(cpu_env);
+    if(is_128_pair) {
+        /*
+            In the case of a 128-bit LDXP, we need to acquire two consecutive
+            store-table locks to gain exclusivity over the entire 128-bit memory region.
+        */
+        tcg_gen_addi_i64(addr_high, addr, sizeof(uint64_t));
+        gen_store_table_lock_128(cpu, addr, addr_high);
+        gen_store_table_set(cpu, addr_high);
+    } else {
+        gen_store_table_lock(cpu, addr);
+    }
+    gen_store_table_set(cpu, addr);
 
-    tlib_assert(size <= 3);
+    tlib_assert(size <= MO_64);
     if(is_pair) {
-        tlib_assert(size >= 2);
-        if(size == 2) {
+        /* LDXP */
+        tlib_assert(size >= MO_32);
+        if(size == MO_32) {
             /* The pair must be single-copy atomic for the doubleword.  */
             memop |= MO_64 | MO_ALIGN;
-            tcg_gen_qemu_ld_i64(cpu_exclusive_val, addr, idx, memop);
+            tcg_gen_qemu_ld_i64(temp_val, addr, idx, memop);
             if(s->be_data == MO_LE) {
-                tcg_gen_extract_i64(cpu_reg(s, rt), cpu_exclusive_val, 0, 32);
-                tcg_gen_extract_i64(cpu_reg(s, rt2), cpu_exclusive_val, 32, 32);
+                tcg_gen_extract_i64(cpu_reg(s, rt), temp_val, 0, 32);
+                tcg_gen_extract_i64(cpu_reg(s, rt2), temp_val, 32, 32);
             } else {
-                tcg_gen_extract_i64(cpu_reg(s, rt), cpu_exclusive_val, 32, 32);
-                tcg_gen_extract_i64(cpu_reg(s, rt2), cpu_exclusive_val, 0, 32);
+                tcg_gen_extract_i64(cpu_reg(s, rt), temp_val, 32, 32);
+                tcg_gen_extract_i64(cpu_reg(s, rt2), temp_val, 0, 32);
             }
         } else {
             /* The pair must be single-copy atomic for *each* doubleword, not
                the entire quadword, however it must be quadword aligned.  */
             memop |= MO_64;
-            tcg_gen_qemu_ld_i64(cpu_exclusive_val, addr, idx, memop | MO_ALIGN_16);
+            tcg_gen_qemu_ld_i64(temp_val, addr, idx, memop | MO_ALIGN_16);
+            tcg_gen_qemu_ld_i64(temp_val_high, addr_high, idx, memop);
 
-            TCGv_i64 addr2 = tcg_temp_new_i64();
-            tcg_gen_addi_i64(addr2, addr, 8);
-            tcg_gen_qemu_ld_i64(cpu_exclusive_high, addr2, idx, memop);
-            tcg_temp_free_i64(addr2);
-
-            tcg_gen_mov_i64(cpu_reg(s, rt), cpu_exclusive_val);
-            tcg_gen_mov_i64(cpu_reg(s, rt2), cpu_exclusive_high);
+            tcg_gen_mov_i64(cpu_reg(s, rt), temp_val);
+            tcg_gen_mov_i64(cpu_reg(s, rt2), temp_val_high);
         }
     } else {
+        /* LDXR / LDXRH / LDXRB */
         memop |= size | MO_ALIGN;
-        tcg_gen_qemu_ld_i64(cpu_exclusive_val, addr, idx, memop);
-        tcg_gen_mov_i64(cpu_reg(s, rt), cpu_exclusive_val);
+        tcg_gen_qemu_ld_i64(temp_val, addr, idx, memop);
+        tcg_gen_mov_i64(cpu_reg(s, rt), temp_val);
     }
-    tcg_gen_mov_i64(cpu_exclusive_addr, addr);
+    tcg_gen_mov_i64(reserved_address, addr);
 
-    gen_helper_reserve_address(cpu_env, addr, tcg_const_i32(1));
-    gen_helper_release_global_memory_lock(cpu_env);
+    if(is_128_pair) {
+        gen_store_table_unlock_128(cpu, addr, addr_high);
+    } else {
+        gen_store_table_unlock(cpu, addr);
+    }
+
+    tcg_temp_free_i64(addr_high);
+    tcg_temp_free_i64(temp_val);
+    tcg_temp_free_i64(temp_val_high);
 }
 
 static void gen_store_exclusive(DisasContext *s, int rd, int rt, int rt2, TCGv_i64 addr, int size, int is_pair)
 {
-    /* if (env->exclusive_addr == addr && env->exclusive_val == [addr]
-     *     && (!is_pair || env->exclusive_high == [addr + datasize])) {
-     *     [addr] = {Rt};
-     *     if (is_pair) {
-     *         [addr + datasize] = {Rt2};
-     *     }
-     *     {Rd} = 0;
-     * } else {
-     *     {Rd} = 1;
-     * }
-     * env->exclusive_addr = -1;
+    TCGv_i64 tmp = tcg_temp_new_i64();
+    TCGv_i64 addr_high = tcg_temp_local_new_i64();
+    bool is_128_pair = is_pair && size == MO_64;
+
+    if(is_128_pair) {
+        /*
+            In the case of a 128-bit STXP, we need to acquire two consecutive
+            store-table locks to gain exclusivity over the entire 128-bit memory region.
+        */
+        tcg_gen_addi_i64(addr_high, addr, sizeof(uint64_t));
+        gen_store_table_lock_128(cpu, addr, addr_high);
+    } else {
+        gen_store_table_lock(cpu, addr);
+    }
+
+    int done = gen_new_label();
+    int fail = gen_new_label();
+
+    /*  A STX may fail for two reasons: either there is no matching LDX on
+     *  the same address to pair with, or the reservation has been invalidated.
+     *
+     *                "can the STX pair with a previous LDX?"
+     *                ┌───────────────────────────────────┐
+     *        ┌───────┼ reserved_address == guest_address ┼──────────────┐
+     *        │  true └───────────────────────────────────┘ false        │
+     *        │                                                          │
+     *        │   ┌────────────────────────────────────────────────────┐ │
+     *        └───► reserved_result = store_table_check(guest_address) │ │
+     *            └──────────────────────┬─────────────────────────────┘ │
+     *                                   │                               │
+     *                         ┌─────────▼────────────┐                  │
+     * "is reservation valid?" │ reserved_result == 1 ┼──────────────────┤
+     *                         └─────────┬────────────┘ false            │
+     *                                   │ true                          │
+     *                           ┌───────▼────────┐                      │
+     *       "perform the store" │ qemu_st(32|64) │                      │
+     *                           └───────┬────────┘                      │
+     *                                   │                               │
+     *                            ┌──────┘       ┌───────────────────────┘
+     *                            │              │
+     *                     ┌──────▼─────┐ ┌──────▼─────┐
+     *     "Zero indicates │ result = 0 │ │ result = 1 │ "Non-zero result
+     *      success"       └──────┬─────┘ └──────┬─────┘  indicates STX failure"
+     *                            │              │
+     *                      ┌─────▼──────────────▼────┐
+     *                      │ reserved_address = null │ "Always invalidate reservation"
+     *                      └─────────────────────────┘
      */
 
-    int fail_label = gen_new_label();
-    int done_label = gen_new_label();
-    TCGv_i64 tmp, addr_local;
+    int address_reserved = gen_new_label();
+    tcg_gen_brcond_i64(TCG_COND_EQ, reserved_address, addr, address_reserved);
 
-    //  Address is copied to a "local" temporary
-    //  so it lives through a branch instruction that results in basic block end
-    addr_local = tcg_temp_local_new_i64();
-    tcg_gen_mov_i64(addr_local, addr);
+    //  Didn't branch above, then the address wasn't reserved, so we fail...
+    tcg_gen_br(fail);
 
-    gen_helper_acquire_global_memory_lock(cpu_env);
+    gen_set_label(address_reserved);
 
-    TCGv_i64 has_reservation = tcg_temp_new_i64();
-    gen_helper_check_address_reservation(has_reservation, cpu_env, addr_local);
-    tcg_gen_brcond_i64(TCG_COND_NE, has_reservation, tcg_const_i64(0), fail_label);
-    tcg_temp_free_i64(has_reservation);
+    //  Check if address is reserved.
+    TCGv_i64 reserved_result = tcg_temp_new_i64();
 
-    tcg_gen_brcond_i64(TCG_COND_NE, addr_local, cpu_exclusive_addr, fail_label);
-    tcg_temp_free_i64(addr_local);
+    gen_store_table_check(cpu, reserved_result, addr);
 
-    tmp = tcg_temp_new_i64();
+    //  If address is not reserved (i.e. reserved_result = 0), jump to fail block.
+    tcg_gen_brcondi_i64(TCG_COND_EQ, reserved_result, 0, fail);
+
     if(is_pair) {
-        if(size == 2) {
+        /* STXP */
+        if(size == MO_32) {
+            /* 32-bit+32-bit */
             if(s->be_data == MO_LE) {
                 tcg_gen_concat32_i64(tmp, cpu_reg(s, rt), cpu_reg(s, rt2));
             } else {
                 tcg_gen_concat32_i64(tmp, cpu_reg(s, rt2), cpu_reg(s, rt));
             }
-            tcg_gen_atomic_cmpxchg_i64_unsafe(tmp, cpu_exclusive_addr, cpu_exclusive_val, tmp, get_mem_index(s),
-                                              MO_64 | MO_ALIGN | s->be_data);
-            tcg_gen_setcond_i64(TCG_COND_NE, tmp, tmp, cpu_exclusive_val);
-        } else if(tb_cflags(s->base.tb) & CF_PARALLEL) {
-            if(!HAVE_CMPXCHG128) {
-                gen_helper_exit_atomic(cpu_env);
-                /*
-                 * Produce a result so we have a well-formed opcode
-                 * stream when the following (dead) code uses 'tmp'.
-                 * TCG will remove the dead ops for us.
-                 */
-                tcg_gen_movi_i64(tmp, 0);
-            } else if(s->be_data == MO_LE) {
-                gen_helper_paired_cmpxchg64_le_parallel(tmp, cpu_env, cpu_exclusive_addr, cpu_reg(s, rt), cpu_reg(s, rt2));
-            } else {
-                gen_helper_paired_cmpxchg64_be_parallel(tmp, cpu_env, cpu_exclusive_addr, cpu_reg(s, rt), cpu_reg(s, rt2));
-            }
-        } else if(s->be_data == MO_LE) {
-            gen_helper_paired_cmpxchg64_le(tmp, cpu_env, cpu_exclusive_addr, cpu_reg(s, rt), cpu_reg(s, rt2));
+            /* Didn't branch to fail block, this means STX should perform the store... */
+            tcg_gen_qemu_st_i64_unsafe(tmp, addr, get_mem_index(s), MO_64 | MO_ALIGN | s->be_data);
         } else {
-            gen_helper_paired_cmpxchg64_be(tmp, cpu_env, cpu_exclusive_addr, cpu_reg(s, rt), cpu_reg(s, rt2));
+            /* 64-bit+64-bit */
+            gen_store_table_check(cpu, reserved_result, addr_high);
+
+            //  If address is not reserved (i.e. reserved_result = 0), jump to fail block.
+            tcg_gen_brcondi_i64(TCG_COND_EQ, reserved_result, 0, fail);
+
+            //  Didn't branch to fail block, this means STX should perform the store.
+            //  The ARMv8-A architecture reference manual states that:
+            //      STX clears the global monitor only if the STX updates memory.
+            //
+            //  This means the hash table reservation is invalidated only at this point.
+            gen_store_table_set(cpu, addr_high);
+            if(s->be_data == MO_LE) {
+                tcg_gen_qemu_st_i64_unsafe(cpu_reg(s, rt), addr, get_mem_index(s), MO_64 | MO_LE | MO_ALIGN_16);
+                tcg_gen_qemu_st_i64_unsafe(cpu_reg(s, rt2), addr_high, get_mem_index(s), MO_64 | MO_LE);
+            } else {
+                tcg_gen_qemu_st_i64_unsafe(cpu_reg(s, rt2), addr, get_mem_index(s), MO_64 | MO_BE | MO_ALIGN_16);
+                tcg_gen_qemu_st_i64_unsafe(cpu_reg(s, rt), addr_high, get_mem_index(s), MO_64 | MO_BE);
+            }
         }
     } else {
-        tcg_gen_atomic_cmpxchg_i64_unsafe(tmp, cpu_exclusive_addr, cpu_exclusive_val, cpu_reg(s, rt), get_mem_index(s),
-                                          size | MO_ALIGN | s->be_data);
-        tcg_gen_setcond_i64(TCG_COND_NE, tmp, tmp, cpu_exclusive_val);
+        /* STXR / STXRH / STXRB */
+        /* Didn't branch to fail block, this means STX should perform the store... */
+        tcg_gen_qemu_st_i64_unsafe(cpu_reg(s, rt), addr, get_mem_index(s), size | MO_ALIGN | s->be_data);
     }
-    tcg_gen_mov_i64(cpu_reg(s, rd), tmp);
-    tcg_temp_free_i64(tmp);
-    tcg_gen_br(done_label);
+    //  Zero value in rd indicates STX success.
+    tcg_gen_movi_i64(cpu_reg(s, rd), 0);
 
-    gen_set_label(fail_label);
+    //  Didn't branch to fail block, this means STX should perform the store.
+    //  The ARMv8-A architecture reference manual states that:
+    //      STX clears the global monitor only if the STX updates memory.
+    //
+    //  This means the hash table reservation is invalidated only at this point.
+    gen_store_table_set(cpu, addr);
+    //  Skip over the fail block below.
+    tcg_gen_br(done);
+
+    gen_set_label(fail);
+    //  Non-zero value in rd indicates STX failure.
     tcg_gen_movi_i64(cpu_reg(s, rd), 1);
-    gen_set_label(done_label);
-    tcg_gen_movi_i64(cpu_exclusive_addr, -1);
 
-    gen_helper_cancel_reservation(cpu_env);
-    gen_helper_release_global_memory_lock(cpu_env);
+    gen_set_label(done);
+
+    if(is_128_pair) {
+        gen_store_table_unlock_128(cpu, addr, addr_high);
+    } else {
+        gen_store_table_unlock(cpu, addr);
+    }
+
+    //  Regardless of success or failure, executing an STX instruction invalidates any reservation held by this core.
+    tcg_gen_movi_i64(reserved_address, 0);
+
+    tcg_temp_free_i64(reserved_result);
+    tcg_temp_free_i64(tmp);
+    tcg_temp_free_i64(addr_high);
 }
 
 static void gen_compare_and_swap(DisasContext *s, int rs, int rt, int rn, int size)
@@ -2582,7 +2654,10 @@ static void gen_compare_and_swap(DisasContext *s, int rs, int rt, int rn, int si
         gen_check_sp_alignment(s);
     }
     clean_addr = gen_mte_check1(s, cpu_reg_sp(s, rn), true, rn != 31, size);
+    gen_store_table_lock(cpu, clean_addr);
     tcg_gen_atomic_cmpxchg_i64_unsafe(tcg_rs, clean_addr, tcg_rs, tcg_rt, memidx, size | MO_ALIGN | s->be_data);
+    gen_store_table_set(cpu, clean_addr);
+    gen_store_table_unlock(cpu, clean_addr);
 }
 
 static void gen_compare_and_swap_pair(DisasContext *s, int rs, int rt, int rn, int size)
@@ -2601,7 +2676,9 @@ static void gen_compare_and_swap_pair(DisasContext *s, int rs, int rt, int rn, i
     /* This is a single atomic access, despite the "pair". */
     clean_addr = gen_mte_check1(s, cpu_reg_sp(s, rn), true, rn != 31, size + 1);
 
-    if(size == 2) {
+    if(size == MO_32) {
+        gen_store_table_lock(cpu, clean_addr);
+
         TCGv_i64 cmp = tcg_temp_new_i64();
         TCGv_i64 val = tcg_temp_new_i64();
 
@@ -2622,30 +2699,27 @@ static void gen_compare_and_swap_pair(DisasContext *s, int rs, int rt, int rn, i
             tcg_gen_extr32_i64(s2, s1, cmp);
         }
         tcg_temp_free_i64(cmp);
-    } else if(tb_cflags(s->base.tb) & CF_PARALLEL) {
-        if(HAVE_CMPXCHG128) {
-            TCGv_i32 tcg_rs = tcg_constant_i32(rs);
-            if(s->be_data == MO_LE) {
-                gen_helper_casp_le_parallel(cpu_env, tcg_rs, clean_addr, t1, t2);
-            } else {
-                gen_helper_casp_be_parallel(cpu_env, tcg_rs, clean_addr, t1, t2);
-            }
-        } else {
-            gen_helper_exit_atomic(cpu_env);
-            s->base.is_jmp = DISAS_NORETURN;
-        }
+
+        gen_store_table_set(cpu, clean_addr);
+        gen_store_table_unlock(cpu, clean_addr);
     } else {
         TCGv_i64 d1 = tcg_temp_local_new_i64();
         TCGv_i64 d2 = tcg_temp_local_new_i64();
-        TCGv_i64 a2 = tcg_temp_local_new_i64();
+        TCGv_i64 clean_addr_high = tcg_temp_local_new_i64();
+        tcg_gen_addi_i64(clean_addr_high, clean_addr, sizeof(uint64_t));
         TCGv_i64 c1 = tcg_temp_local_new_i64();
         TCGv_i64 c2 = tcg_temp_local_new_i64();
-        TCGv_i64 zero = tcg_constant_i64(0);
+        TCGv_i64 zero = tcg_const_local_i64(0);
+
+        /*
+            In the case of a 128-bit CASP, we need to acquire two consecutive
+            store-table locks to gain exclusivity over the entire 128-bit memory region.
+        */
+        gen_store_table_lock_128(cpu, clean_addr, clean_addr_high);
 
         /* Load the two words, in memory order.  */
         tcg_gen_qemu_ld_i64(d1, clean_addr, memidx, MO_64 | MO_ALIGN_16 | s->be_data);
-        tcg_gen_addi_i64(a2, clean_addr, 8);
-        tcg_gen_qemu_ld_i64(d2, a2, memidx, MO_64 | s->be_data);
+        tcg_gen_qemu_ld_i64(d2, clean_addr_high, memidx, MO_64 | s->be_data);
 
         /* Compare the two words, also in memory order.  */
         tcg_gen_setcond_i64(TCG_COND_EQ, c1, d1, s1);
@@ -2655,9 +2729,9 @@ static void gen_compare_and_swap_pair(DisasContext *s, int rs, int rt, int rn, i
         /* If compare equal, write back new data, else write back old data.  */
         tcg_gen_movcond_i64(TCG_COND_NE, c1, c2, zero, t1, d1);
         tcg_gen_movcond_i64(TCG_COND_NE, c2, c2, zero, t2, d2);
-        tcg_gen_qemu_st_i64(c1, clean_addr, memidx, MO_64 | s->be_data);
-        tcg_gen_qemu_st_i64(c2, a2, memidx, MO_64 | s->be_data);
-        tcg_temp_free_i64(a2);
+        tcg_gen_qemu_st_i64_unsafe(c1, clean_addr, memidx, MO_64 | s->be_data);
+        tcg_gen_qemu_st_i64_unsafe(c2, clean_addr_high, memidx, MO_64 | s->be_data);
+        tcg_temp_free_i64(zero);
         tcg_temp_free_i64(c1);
         tcg_temp_free_i64(c2);
 
@@ -2666,6 +2740,12 @@ static void gen_compare_and_swap_pair(DisasContext *s, int rs, int rt, int rn, i
         tcg_gen_mov_i64(s2, d2);
         tcg_temp_free_i64(d1);
         tcg_temp_free_i64(d2);
+
+        gen_store_table_set(cpu, clean_addr);
+        gen_store_table_set(cpu, clean_addr_high);
+        gen_store_table_unlock_128(cpu, clean_addr, clean_addr_high);
+
+        tcg_temp_free_i64(clean_addr_high);
     }
 }
 
@@ -3437,7 +3517,10 @@ static void disas_ldst_atomic(DisasContext *s, uint32_t insn, int size, int rt, 
     /* The tcg atomic primitives are all full barriers.  Therefore we
      * can ignore the Acquire and Release bits of this instruction.
      */
+    gen_store_table_lock(cpu, clean_addr);
     fn(tcg_rt, clean_addr, tcg_rs, get_mem_index(s), mop);
+    gen_store_table_set(cpu, clean_addr);
+    gen_store_table_unlock(cpu, clean_addr);
 
     if((mop & MO_SIGN) && size != MO_64) {
         tcg_gen_ext32u_i64(tcg_rt, tcg_rt);

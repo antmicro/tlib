@@ -299,6 +299,12 @@ static void unlock_dangling_locks(CPUState *env)
         //  No point in retrying this, so just do it as a one-off.
         atomic_compare_exchange_strong((_Atomic uint32_t *)&entry->lock, &coreId, HST_UNLOCKED);
     }
+    if(unlikely(env->locked_address_high != 0)) {
+        store_table_entry_t *entry_high = (store_table_entry_t *)address_hash(env, env->locked_address_high);
+        uint32_t coreId = get_core_id(env);
+        env->locked_address_high = 0;
+        atomic_compare_exchange_strong((_Atomic uint32_t *)&entry_high->lock, &coreId, HST_UNLOCKED);
+    }
 }
 
 //  `was_not_working` is in `env` so it will reset when CPU is reset

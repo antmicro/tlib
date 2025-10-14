@@ -214,11 +214,7 @@ static inline void aarch64_restore_sp(CPUState *env)
 
 static inline void arm_clear_exclusive(CPUState *env)
 {
-    //  Based on 'gen_clrex' and 'gen_store_exclusive' it seems -1 means the address isn't valid.
-    env->exclusive_addr = -1;
-
-    env->exclusive_high = 0;
-    env->exclusive_val = 0;
+    env->reserved_address = 0;
 }
 
 //  TODO: Calculate effective values for all bits.

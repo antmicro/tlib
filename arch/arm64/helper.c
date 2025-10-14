@@ -489,8 +489,7 @@ void cpu_reset_state(CPUState *env)
 
     memset(env, 0, RESET_OFFSET);
 
-    //  Based on 'gen_clrex' and 'gen_store_exclusive' it seems -1 means the address isn't valid.
-    env->exclusive_addr = -1;
+    arm_clear_exclusive(env);
 
     //  Restore preserved fields.
     env->arm_core_config = config;

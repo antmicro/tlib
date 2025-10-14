@@ -52,6 +52,8 @@ typedef struct ARMCoreConfig ARMCPU;
 typedef struct CPUState CPUARMState;
 typedef TCGMemOp MemOp;
 
+#define SUPPORTS_HST_ATOMICS
+
 //  FIELD expands to constants that are later used in FIELD_DP*/FIELD_EX*/FIELD_SEX*:
 //  * __REGISTER_<register>_<field>_START,
 //  * __REGISTER_<register>_<field>_WIDTH.
