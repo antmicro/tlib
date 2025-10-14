@@ -3643,7 +3643,7 @@ uint32_t helper_efdcmpeq(uint64_t op1, uint64_t op2)
    from generated code or from helper.c) */
 /* XXX: fix it to restore all registers */
 int arch_tlb_fill(CPUState *env1, target_ulong addr, int access_type, int mmu_idx, void *retaddr, int no_page_fault,
-                  int access_width)
+                  int access_width, target_phys_addr_t *paddr)
 {
     TranslationBlock *tb;
     CPUState *saved_env;
@@ -3652,7 +3652,7 @@ int arch_tlb_fill(CPUState *env1, target_ulong addr, int access_type, int mmu_id
 
     saved_env = env;
     env = env1;
-    ret = cpu_handle_mmu_fault(env, addr, access_type, mmu_idx, no_page_fault);
+    ret = cpu_handle_mmu_fault(env, addr, access_type, mmu_idx, no_page_fault, paddr);
     if(unlikely(ret != TRANSLATE_SUCCESS && !no_page_fault)) {
         if(likely(retaddr)) {
             /* now we have a real cpu fault */

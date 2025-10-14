@@ -1319,10 +1319,10 @@ void do_unaligned_access(target_ulong addr, int access_type, int mmu_idx, void *
 
 /* called to fill tlb */
 int arch_tlb_fill(CPUState *env, target_ulong addr, int access_type, int mmu_idx, void *retaddr, int no_page_fault,
-                  int access_width)
+                  int access_width, target_phys_addr_t *paddr)
 {
     int ret;
-    ret = cpu_handle_mmu_fault(env, addr, access_type, mmu_idx, access_width, no_page_fault);
+    ret = cpu_handle_mmu_fault(env, addr, access_type, mmu_idx, access_width, no_page_fault, paddr);
     if(ret == TRANSLATE_FAIL && !no_page_fault) {
         //  access_type == 2 ==> CODE ACCESS - do not fire block_end hooks!
         do_raise_exception_err(env, env->exception_index, (uintptr_t)retaddr, access_type != 2);

@@ -1379,7 +1379,8 @@ static void booke206_update_mas_tlb_miss(CPUState *env, target_ulong address, in
 }
 
 /* Perform address translation */
-int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, int mmu_idx, int no_page_fault)
+int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, int mmu_idx, int no_page_fault,
+                         target_phys_addr_t *paddr)
 {
     mmu_ctx_t mmu_ctx;
     int ret = TRANSLATE_SUCCESS;
@@ -1395,6 +1396,7 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, i
     }
     ret = get_physical_address(env, &mmu_ctx, address, is_write, ppc_access_type);
     if(ret == TRANSLATE_SUCCESS) {
+        *paddr = mmu_ctx.raddr;
         tlb_set_page(env, address & TARGET_PAGE_MASK, mmu_ctx.raddr & TARGET_PAGE_MASK, mmu_ctx.prot, mmu_idx, TARGET_PAGE_SIZE);
     } else if(ret < 0) {  //  TRANSLATE_FAIL
         tlib_printf(LOG_LEVEL_WARNING, "we got mmu fail @ %X on %s\n", address,

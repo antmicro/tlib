@@ -244,7 +244,8 @@ void cpu_x86_update_cr4(CPUState *env, uint32_t new_cr4)
    0  = nothing more to do
    1  = generate PF fault
  */
-int cpu_handle_mmu_fault(CPUState *env, target_ulong addr, int access_type, int mmu_idx, int no_page_fault)
+int cpu_handle_mmu_fault(CPUState *env, target_ulong addr, int access_type, int mmu_idx, int no_page_fault,
+                         target_phys_addr_t *out_paddr)
 {
     uint64_t ptep, pte;
     target_ulong pde_addr, pte_addr;
@@ -513,6 +514,7 @@ do_mapping:
        avoid filling it too fast */
     page_offset = (addr & TARGET_PAGE_MASK) & (page_size - 1);
     paddr = (pte & TARGET_PAGE_MASK) + page_offset;
+    *out_paddr = paddr;
     vaddr = virt_addr + page_offset;
     goto set_page;
 set_page:

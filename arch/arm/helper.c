@@ -2768,7 +2768,8 @@ inline int get_phys_addr(CPUState *env, uint32_t address, bool is_secure, int ac
     return ret;
 }
 
-int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, int mmu_idx, int no_page_fault)
+int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, int mmu_idx, int no_page_fault,
+                         target_phys_addr_t *paddr)
 {
     uint32_t phys_addr = 0;
     target_ulong page_size = 0;
@@ -2779,6 +2780,7 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, i
     ret = get_phys_addr(env, address, mode.secure, access_type, mode.user, &phys_addr, &prot, &page_size, no_page_fault);
 
     if(ret == TRANSLATE_SUCCESS) {
+        *paddr = phys_addr;
         /* Map a single [sub]page.  */
         phys_addr &= TARGET_PAGE_MASK;
         address &= TARGET_PAGE_MASK;

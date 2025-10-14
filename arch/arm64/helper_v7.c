@@ -725,7 +725,7 @@ uint64_t cpu_get_state_for_memory_transaction(CPUState *env, target_ulong addr, 
 
 //  The name of the function is a little misleading. It doesn't handle MMU faults as much as TLB misses.
 int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, int mmu_idx, uintptr_t return_address,
-                         bool suppress_faults, int access_width)
+                         bool suppress_faults, int access_width, target_phys_addr_t *paddr)
 {
     target_ulong phys_addr = 0;
     target_ulong page_size = 0;
@@ -735,6 +735,7 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, i
     ret = get_phys_addr(env, address, access_type, mmu_idx, return_address, suppress_faults, &phys_addr, &prot, &page_size,
                         access_width);
     if(ret == TRANSLATE_SUCCESS) {
+        *paddr = phys_addr;
         /* Map a single [sub]page.  */
         phys_addr &= TARGET_PAGE_MASK;
         address &= TARGET_PAGE_MASK;
@@ -748,14 +749,14 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, i
    from generated code or from helper.c) */
 /* XXX: fix it to restore all registers */
 int arch_tlb_fill(CPUState *env1, target_ulong addr, int access_type, int mmu_idx, void *retaddr, int no_page_fault,
-                  int access_width)
+                  int access_width, target_phys_addr_t *paddr)
 {
     CPUState *saved_env;
     int ret;
 
     saved_env = env;
     env = env1;
-    ret = cpu_handle_mmu_fault(env, addr, access_type, mmu_idx, (uintptr_t)retaddr, no_page_fault, access_width);
+    ret = cpu_handle_mmu_fault(env, addr, access_type, mmu_idx, (uintptr_t)retaddr, no_page_fault, access_width, paddr);
 
     //  Unless fault handling is suppressed with 'no_page_fault', we will never get back here
     //  in case of a fault with MMU (only). Faults are handled directly in that function.

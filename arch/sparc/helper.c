@@ -175,7 +175,8 @@ static int get_physical_address(CPUState *env, target_phys_addr_t *physical, int
 }
 
 /* Perform address translation */
-int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, int mmu_idx, int is_softmmu, int no_page_fault)
+int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, int mmu_idx, int is_softmmu, int no_page_fault,
+                         target_phys_addr_t *out_paddr)
 {
     target_phys_addr_t paddr;
     target_ulong vaddr;
@@ -184,6 +185,7 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, i
 
     error_code = get_physical_address(env, &paddr, &prot, &access_index, address, access_type, mmu_idx, &page_size);
     if(error_code == 0) {
+        *out_paddr = paddr;
         vaddr = address & TARGET_PAGE_MASK;
         paddr &= TARGET_PAGE_MASK;
         tlb_set_page(env, vaddr, paddr, prot, mmu_idx, page_size);
@@ -201,6 +203,7 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, i
         //  permissions. If no mapping is available, redirect accesses to
         //  neverland. Fake/overridden mappings will be flushed when
         //  switching to normal mode.
+        *out_paddr = paddr;
         vaddr = address & TARGET_PAGE_MASK;
         prot = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
         tlb_set_page(env, vaddr, paddr, prot, mmu_idx, TARGET_PAGE_SIZE);

@@ -49,14 +49,14 @@ uint32_t HELPER(neon_tbl)(uint32_t ireg, uint32_t def, uint32_t rn, uint32_t max
    from generated code or from helper.c) */
 /* XXX: fix it to restore all registers */
 int arch_tlb_fill(CPUState *env1, target_ulong addr, int access_type, int mmu_idx, void *retaddr, int no_page_fault,
-                  int access_width)
+                  int access_width, target_phys_addr_t *paddr)
 {
     CPUState *saved_env;
     int ret;
 
     saved_env = env;
     env = env1;
-    ret = cpu_handle_mmu_fault(env, addr, access_type, mmu_idx, no_page_fault);
+    ret = cpu_handle_mmu_fault(env, addr, access_type, mmu_idx, no_page_fault, paddr);
     if(unlikely(ret == TRANSLATE_FAIL && !no_page_fault)) {
         //  access_type == CODE ACCESS - do not fire block_end hooks!
         cpu_loop_exit_restore(env, (uintptr_t)retaddr, access_type != ACCESS_INST_FETCH);

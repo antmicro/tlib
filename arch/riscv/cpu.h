@@ -261,7 +261,8 @@ void riscv_set_mode(CPUState *env, target_ulong newpriv);
 void helper_raise_exception(CPUState *env, uint32_t exception);
 void helper_raise_illegal_instruction(CPUState *env);
 
-int cpu_handle_mmu_fault(CPUState *cpu, target_ulong address, int rw, int mmu_idx, int access_width, int no_page_fault);
+int cpu_handle_mmu_fault(CPUState *cpu, target_ulong address, int rw, int mmu_idx, int access_width, int no_page_fault,
+                         target_phys_addr_t *paddr);
 
 static inline int cpu_mmu_index(CPUState *env)
 {

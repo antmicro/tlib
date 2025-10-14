@@ -452,7 +452,7 @@ typedef struct CPUState {
 
 void switch_mode(CPUState *, int);
 
-int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int rw, int mmu_idx, int no_page_fault);
+int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int rw, int mmu_idx, int no_page_fault, target_phys_addr_t *paddr);
 
 #define PRIMASK_EN 1
 

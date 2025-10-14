@@ -437,7 +437,8 @@ uint64_t cpu_get_state_for_memory_transaction(CPUState *env, target_ulong addr, 
 /*
  * Assuming system mode, only called in arch_tlb_fill
  */
-int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, int mmu_idx, int access_width, int no_page_fault)
+int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, int mmu_idx, int access_width, int no_page_fault,
+                         target_phys_addr_t *paddr)
 {
     target_phys_addr_t pa = 0;
     int prot;
@@ -453,6 +454,7 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, i
         ret = TRANSLATE_FAIL;
     }
     if(ret == TRANSLATE_SUCCESS) {
+        *paddr = pa;
         overlapping_region_id = pmp_find_overlapping(env, pa & TARGET_PAGE_MASK, TARGET_PAGE_SIZE, 0);
 
         //  are there any PMP regions defined for this page?

@@ -168,7 +168,7 @@ void do_unaligned_access(target_ulong addr, MMUAccessType access_type, int mmu_i
 }
 
 int arch_tlb_fill(CPUState *env, target_ulong address, MMUAccessType access_type, int mmu_idx, void *retaddr, int no_page_fault,
-                  int access_width)
+                  int access_width, target_phys_addr_t *out_paddr)
 {
     uint32_t paddr;
     uint32_t page_size;
@@ -180,6 +180,7 @@ int arch_tlb_fill(CPUState *env, target_ulong address, MMUAccessType access_type
 #endif
 
     if(ret == TRANSLATE_SUCCESS) {
+        *out_paddr = paddr;
         tlb_set_page(env, address & TARGET_PAGE_MASK, paddr & TARGET_PAGE_MASK, access, mmu_idx, page_size);
         return TRANSLATE_SUCCESS;
     } else if(no_page_fault) {
