@@ -3,6 +3,10 @@
 #include "cpu.h"
 #include "infrastructure.h"
 #include "tcg-op.h"
+#include "tcg-op-atomic.h"
+#include "atomic-intrinsics.h"
+
+#include "debug.h"
 
 static uint64_t hst_guest_address_mask = 0;
 static uint64_t hst_table_entries_count = 0;
@@ -91,8 +95,42 @@ void gen_store_table_check(CPUState *env, TCGv result, TCGv_guestptr guest_addre
     tcg_temp_free_hostptr(hashed_address);
 }
 
+/* Debug assert that ensures the current core owns the hash table entry lock
+ * of the entry associated with the given `guest_address`.
+ */
+void ensure_entry_locked(CPUState *env, TCGv_guestptr guest_address, const char *function_name)
+{
+#ifdef DEBUG
+    TCGv_hostptr hashed_address = tcg_temp_local_new_hostptr();
+    gen_hash_address(env, hashed_address, guest_address);
+
+    TCGv_i32 lock = tcg_temp_local_new_i32();
+    //  Load lock from store table, to see which core holds it.
+    tcg_gen_ld32u_tl(lock, hashed_address, offsetof(store_table_entry_t, lock));
+
+    int done = gen_new_label();
+    uint32_t core_id = get_core_id(env);
+    //  Check if the lock is owned by the current core.
+    tcg_gen_brcondi_i32(TCG_COND_EQ, lock, core_id, done);
+
+    //  Lock isn't owned by the current core, abort.
+    generate_log(0, "%s: %s: hash table entry lock for guest address:", __func__, function_name);
+    generate_var_log(guest_address);
+    generate_log(0, "is not held by current core (id %u), it is held by:", core_id);
+    generate_var_log(lock);
+    gen_helper_abort();
+
+    gen_set_label(done);
+
+    tcg_temp_free_i32(lock);
+    tcg_temp_free_hostptr(hashed_address);
+#endif
+}
+
 void gen_store_table_set(CPUState *env, TCGv_guestptr guest_address)
 {
+    ensure_entry_locked(env, guest_address, __func__);
+
     TCGv_hostptr hashed_address = tcg_temp_local_new_hostptr();
     gen_hash_address(env, hashed_address, guest_address);
 
@@ -111,7 +149,92 @@ void gen_store_table_set(CPUState *env, TCGv_guestptr guest_address)
 
 void gen_store_table_lock(CPUState *env, TCGv_guestptr guest_address)
 {
-    tlib_abortf("gen_store_table_lock: not yet implemented");
+    TCGv_hostptr hashed_address = tcg_temp_local_new_hostptr();
+    gen_hash_address(env, hashed_address, guest_address);
+
+    //  Add the offset of the lock field, since we want to access the lock and not the core id.
+    TCGv_hostptr lock_address = tcg_temp_local_new_hostptr();
+    tcg_gen_addi_i64(lock_address, hashed_address, offsetof(store_table_entry_t, lock));
+
+    TCGv_i32 expected_lock = tcg_const_local_i32(HST_UNLOCKED);
+
+    //  Acquiring the lock means storing this core's id.
+    TCGv_i32 new_lock = tcg_const_local_i32(get_core_id(env));
+
+    /*  We need to check two cases, hence the two branching instructions
+     *  after the initial CAS. The table entry is either unlocked,
+     *  locked by another thread, or locked by the current thread.
+     *
+     *                         │
+     * ┌───────────────────────▼────────────────────────────┐
+     * │result = CAS(expected_lock, lock_address, new_lock) |◄────────┐
+     * └───────────────────────┬────────────────────────────┘         │
+     *        true    ┌────────▼──────────┐                           │
+     *         ┌──────┼ result == core_id │ "already locked by me?"   │
+     *         ▼      └────────┬──────────┘                           │
+     *       abort             │ false                                │
+     *                ┌────────▼───────────────┐  true                │
+     *      "locked?" │ result != HST_UNLOCKED ┼──────────────────────┘
+     *                └────────┬───────────────┘
+     *                         │ false
+     *                         ▼
+     *                   lock acquired!
+     */
+    int retry = gen_new_label();
+    gen_set_label(retry);
+
+    TCGv_i32 result = tcg_temp_local_new_i32();
+
+    //  Optimistically try to atomically acquire the lock (only succeeds if it's currently unlocked).
+    tcg_gen_atomic_compare_and_swap_host_intrinsic_i32(result, expected_lock, lock_address, new_lock);
+
+    int start_retrying = gen_new_label();
+    //  Locks are not reentrant, so it is an implementation bug
+    //  if the lock is already taken by this core.
+    tcg_gen_brcondi_i32(TCG_COND_NE, result, get_core_id(env), start_retrying);
+    //  Abort if result == get_core_id(env) (reentrant lock attempt)
+    TCGv_hostptr abort_message =
+        tcg_const_hostptr((uintptr_t)"Attempted to acquire a store table lock that this CPU already holds");
+    gen_helper_abort_message(abort_message);
+    tcg_temp_free_hostptr(abort_message);
+
+    gen_set_label(start_retrying);
+    //  If result != HST_UNLOCKED, then the lock is taken, and we should keep retrying.
+    tcg_gen_brcondi_i32(TCG_COND_NE, result, HST_UNLOCKED, retry);
+
+    //  Lock is now owned by the current core.
+
+    //  Update cpu's currently locked address.
+    tcg_gen_st_tl(guest_address, cpu_env, offsetof(CPUState, locked_address));
+
+    tcg_temp_free_hostptr(hashed_address);
+    tcg_temp_free_hostptr(lock_address);
+    tcg_temp_free_i32(expected_lock);
+    tcg_temp_free_i32(new_lock);
+    tcg_temp_free_i32(result);
+}
+
+void gen_store_table_unlock(CPUState *env, TCGv_guestptr guest_address)
+{
+    ensure_entry_locked(env, guest_address, __func__);
+
+    TCGv_hostptr hashed_address = tcg_temp_new_hostptr();
+    gen_hash_address(env, hashed_address, guest_address);
+
+    TCGv_i32 unlocked = tcg_const_i32(HST_UNLOCKED);
+
+    //  Unlock the table entry.
+    tcg_gen_st32_tl(unlocked, hashed_address, offsetof(store_table_entry_t, lock));
+    //  Emit a barrier to ensure that the store is visible to other processors.
+    tcg_gen_mb(TCG_MO_ST_ST);
+
+    //  Update cpu's currently locked address.
+    TCGv_guestptr null = tcg_const_tl(0);
+    tcg_gen_st_tl(null, cpu_env, offsetof(CPUState, locked_address));
+
+    tcg_temp_free(null);
+    tcg_temp_free_hostptr(hashed_address);
+    tcg_temp_free_i32(unlocked);
 }
 
 uintptr_t address_hash(CPUState *env, target_ulong guest_address)

@@ -48,8 +48,22 @@ uint32_t get_core_id(CPUState *env);
  * `guest_address` with the current core's ID.
  */
 void gen_store_table_set(CPUState *env, TCGv_guestptr guest_address);
+
+/*
+ * Generates code to check whether the hash table entry corresponding to the
+ * given `guest_address` has been invalidated.
+ * Places 1 in `result` if the address is reserved by the current core, 0 otherwise.
+ */
 void gen_store_table_check(CPUState *env, TCGv result, TCGv_guestptr guest_address);
+
+/* Generates code to acquire the lock of the hash table entry
+ * corresponding to the given `guest_address`.
+ */
 void gen_store_table_lock(CPUState *env, TCGv_guestptr guest_address);
+
+/* Generates code to release the lock of the hash table entry
+ * corresponding to the given `guest_address`.
+ */
 void gen_store_table_unlock(CPUState *env, TCGv_guestptr guest_address);
 
 /* Computes which hash table entry address corresponds to the given `guest_address`. */
