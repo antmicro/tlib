@@ -1415,30 +1415,48 @@ void tlb_flush_page(CPUState *env, target_ulong addr, bool from_generated_code)
 
 int tlb_fill(CPUState *env, target_ulong addr, int access_type, int mmu_idx, void *retaddr, int no_page_fault, int access_width)
 {
+    target_ulong iaddr = addr;
     target_phys_addr_t paddr;
-    if(unlikely(cpu->external_mmu_enabled)) {
+    int prot;
+
 #ifdef TARGET_PROTO_ARM_M
+    if(unlikely(external_mmu_enabled(cpu) && env->v7m.has_trustzone)) {
         /* No notion of security in external MMU if it's enabled. We ignore security attribution, and warn the user */
-        if(unlikely(env->v7m.has_trustzone)) {
-            static bool has_printed_tz_warning = false;
-            /* Prevent flood of messages in console */
-            if(!has_printed_tz_warning) {
-                tlib_printf(LOG_LEVEL_WARNING,
-                            "Using external MMU with TrustZone. Security attribution checks with IDAU and SAU are disabled");
-                has_printed_tz_warning = true;
-            }
+        static bool has_printed_tz_warning = false;
+        /* Prevent flood of messages in console */
+        if(!has_printed_tz_warning) {
+            tlib_printf(LOG_LEVEL_WARNING,
+                        "Using external MMU with TrustZone. Security attribution checks with IDAU and SAU are disabled");
+            has_printed_tz_warning = true;
         }
+    }
 #endif
-        int prot;
-        if(TRANSLATE_SUCCESS == get_external_mmu_phys_addr(env, addr, access_type, &paddr, &prot, no_page_fault)) {
-            tlb_set_page(env, addr & TARGET_PAGE_MASK, paddr & TARGET_PAGE_MASK, prot, mmu_idx, TARGET_PAGE_SIZE);
-            return TRANSLATE_SUCCESS;
-        } else {
+    if(likely(!external_mmu_enabled(env))) {
+        return arch_tlb_fill(env, iaddr, access_type, mmu_idx, retaddr, no_page_fault, access_width, &paddr);
+    }
+
+    if(env->external_mmu_position == EMMU_POS_BEFORE || env->external_mmu_position == EMMU_POS_REPLACE) {
+        if(TRANSLATE_FAIL == get_external_mmu_phys_addr(env, iaddr, access_type, &paddr, &prot, no_page_fault)) {
+            return TRANSLATE_FAIL;
+        }
+        iaddr = paddr;
+    }
+
+    if(env->external_mmu_position != EMMU_POS_REPLACE) {
+        if(TRANSLATE_FAIL == arch_tlb_fill(env, iaddr, access_type, mmu_idx, retaddr, no_page_fault, access_width, &paddr)) {
             return TRANSLATE_FAIL;
         }
     }
 
-    return arch_tlb_fill(env, addr, access_type, mmu_idx, retaddr, no_page_fault, access_width, &paddr);
+    if(env->external_mmu_position == EMMU_POS_AFTER) {
+        iaddr = paddr;
+        if(TRANSLATE_FAIL == get_external_mmu_phys_addr(env, iaddr, access_type, &paddr, &prot, no_page_fault)) {
+            return TRANSLATE_FAIL;
+        }
+    }
+
+    tlb_set_page(env, addr & TARGET_PAGE_MASK, paddr & TARGET_PAGE_MASK, prot, mmu_idx, TARGET_PAGE_SIZE);
+    return TRANSLATE_SUCCESS;
 }
 
 /* update the TLB so that writes in physical page 'phys_addr' are no longer

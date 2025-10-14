@@ -856,7 +856,7 @@ void tlib_clear_page_io_accessed(uint64_t address)
 EXC_VOID_1(tlib_clear_page_io_accessed, uint64_t, address)
 
 #define ASSERT_EXTERNAL_MMU_ENABLED                                                                 \
-    if(!cpu->external_mmu_enabled) {                                                                \
+    if(!external_mmu_enabled(cpu)) {                                                                \
         tlib_abort("Setting the external MMU parameters, when it is not enabled. Enable it first"); \
     }
 
@@ -900,7 +900,7 @@ void tlib_enable_external_window_mmu(uint32_t value)
 #ifndef TARGET_RISCV
     tlib_printf(LOG_LEVEL_WARNING, "Enabled the external MMU. Please note that this feature is experimental on this platform");
 #endif
-    cpu->external_mmu_enabled = !!value;
+    cpu->external_mmu_position = value ? EMMU_POS_REPLACE : EMMU_POS_NONE;
 }
 EXC_VOID_1(tlib_enable_external_window_mmu, uint32_t, value)
 

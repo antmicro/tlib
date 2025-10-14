@@ -178,6 +178,13 @@ typedef struct ExtMmuRange {
     bool range_end_inclusive;
 } ExtMmuRange;
 
+typedef enum ExtMmuPosition {
+    EMMU_POS_NONE = 0,
+    EMMU_POS_REPLACE = 1,
+    EMMU_POS_BEFORE = 2,
+    EMMU_POS_AFTER = 3,
+} ExtMmuPosition;
+
 enum block_interrupt_cause {
     TB_INTERRUPT_NONE = 0,
     TB_INTERRUPT_INCLUDE_LAST_INSTRUCTION = 1,
@@ -230,7 +237,7 @@ enum block_interrupt_cause {
     bool mmu_fault;                                                           \
                                                                               \
     /* External mmu settings */                                               \
-    bool external_mmu_enabled;                                                \
+    ExtMmuPosition external_mmu_position;                                     \
     ExtMmuRange external_mmu_window[MAX_EXTERNAL_MMU_RANGES];                 \
     /* user data */                                                           \
     /* chaining is enabled by default */                                      \

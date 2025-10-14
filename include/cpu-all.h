@@ -658,3 +658,8 @@ static inline void cpu_sync_instructions_count(CPUState *cpu)
     cpu->instructions_count_total_value += cpu->instructions_count_declaration;
     cpu->instructions_count_declaration = 0;
 }
+
+static inline bool external_mmu_enabled(CPUState *env)
+{
+    return env->external_mmu_position != EMMU_POS_NONE;
+}
