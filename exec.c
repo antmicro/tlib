@@ -1261,12 +1261,40 @@ void cpu_abort(CPUState *env, const char *fmt, ...)
     tlib_abort(s);
 }
 
+static int compare_mmu_windows(const void *a, const void *b)
+{
+    const ExtMmuRange *wa = (const ExtMmuRange *)a;
+    const ExtMmuRange *wb = (const ExtMmuRange *)b;
+    if(wa->range_start < wb->range_start) {
+        return -1;
+    }
+    if(wa->range_start > wb->range_start) {
+        return 1;
+    }
+    if(wa->range_end < wb->range_end) {
+        return -1;
+    }
+    if(wa->range_end > wb->range_end) {
+        return 1;
+    }
+    return 0;
+}
+
+static inline void ensure_mmu_windows_sorted(CPUState *env)
+{
+    if(unlikely(env->external_mmu_windows_unsorted)) {
+        qsort(env->external_mmu_windows, env->external_mmu_window_count, sizeof(ExtMmuRange), compare_mmu_windows);
+        env->external_mmu_windows_unsorted = false;
+    }
+}
+
 int get_external_mmu_phys_addr(CPUState *env, uint64_t address, int access_type, target_phys_addr_t *phys_ptr, int *prot,
                                int no_page_fault)
 {
-    bool found = false;
-    int window_index = 0;
-    ExtMmuRange *mmu_window = env->external_mmu_windows;
+    ensure_mmu_windows_sorted(env);
+    int window_index = -1;
+    int lo = 0, hi = env->external_mmu_window_count - 1;
+    ExtMmuRange *mmu_windows = env->external_mmu_windows;
     uint32_t access_type_mask = 0;
     switch(access_type) {
         case ACCESS_DATA_LOAD:
@@ -1286,22 +1314,29 @@ int get_external_mmu_phys_addr(CPUState *env, uint64_t address, int access_type,
     *phys_ptr = address;
     *prot = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
 
-    for(; window_index < cpu->external_mmu_window_count; window_index++) {
-        if(!mmu_window[window_index].active) {
-            break;
-        } else if((mmu_window[window_index].type & access_type_mask) && (address >= mmu_window[window_index].range_start) &&
-                  (mmu_window[window_index].range_end_inclusive ? (address <= mmu_window[window_index].range_end)
-                                                                : (address < mmu_window[window_index].range_end))) {
-            found = true;
-            break;
+    while(lo <= hi) {
+        int test_index = lo + (hi - lo) / 2;
+        if(mmu_windows[test_index].range_start <= address) {
+            window_index = test_index;
+            lo = test_index + 1;
+        } else {
+            hi = test_index - 1;
         }
     }
 
-    if(found) {
-        *phys_ptr += mmu_window[window_index].addend;
-        *prot = mmu_window[window_index].priv;
-        if(*prot & access_type_mask) {
-            return TRANSLATE_SUCCESS;
+    //  Now we have the index of the highest-numbered window which satisfies start <= address,
+    //  so check for a type match and then check whether the address is inside the window.
+    for(; window_index >= 0; --window_index) {
+        ExtMmuRange *window = &mmu_windows[window_index];
+        if((window->type & access_type_mask) &&
+           (window->range_end_inclusive ? address <= window->range_end : address < window->range_end)) {
+            *phys_ptr += window->addend;
+            *prot = window->priv;
+            if(window->priv & access_type_mask) {
+                return TRANSLATE_SUCCESS;
+            } else {
+                break;  //  No access privilege in the window
+            }
         }
     }
 
@@ -1309,7 +1344,7 @@ int get_external_mmu_phys_addr(CPUState *env, uint64_t address, int access_type,
         //  The exit_request needs to be set to prevent the cpu_exec from trying to execute the block
         cpu->exit_request = 1;
         cpu->mmu_fault = true;
-        tlib_mmu_fault_external_handler(address, access_type, found ? window_index : -1);
+        tlib_mmu_fault_external_handler(address, access_type, window_index);
         if(access_type != ACCESS_INST_FETCH && cpu->current_tb != NULL) {
             interrupt_current_translation_block(cpu, MMU_EXTERNAL_FAULT);
         }

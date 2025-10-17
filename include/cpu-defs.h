@@ -169,6 +169,7 @@ typedef struct opcode_counter_descriptor {
 } opcode_counter_descriptor;
 
 typedef struct ExtMmuRange {
+    uint64_t id;
     target_ulong range_start;
     target_ulong range_end;
     target_ulong addend;
@@ -240,6 +241,8 @@ enum block_interrupt_cause {
     ExtMmuPosition external_mmu_position;                                     \
     int external_mmu_window_count;                                            \
     int external_mmu_window_capacity;                                         \
+    uint64_t external_mmu_window_next_id;                                     \
+    bool external_mmu_windows_unsorted;                                       \
     /* user data */                                                           \
     /* chaining is enabled by default */                                      \
     int chaining_disabled;                                                    \

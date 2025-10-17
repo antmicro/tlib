@@ -21,6 +21,7 @@
 #include <stdint.h>
 
 #include "cpu-common.h"
+#include "cpu-defs.h"
 
 /* some important defines:
  *
@@ -662,4 +663,14 @@ static inline void cpu_sync_instructions_count(CPUState *cpu)
 static inline bool external_mmu_enabled(CPUState *env)
 {
     return env->external_mmu_position != EMMU_POS_NONE;
+}
+
+static inline ExtMmuRange *external_mmu_find_window_by_id(CPUState *env, uint64_t id)
+{
+    for(int i = 0; i < env->external_mmu_window_count; ++i) {
+        if(env->external_mmu_windows[i].id == id) {
+            return &env->external_mmu_windows[i];
+        }
+    }
+    return NULL;
 }

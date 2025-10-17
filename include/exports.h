@@ -79,23 +79,23 @@ uint32_t tlib_get_mmu_windows_count(void);
 
 void tlib_enable_external_window_mmu(uint32_t value);
 
-int32_t tlib_acquire_mmu_window(uint32_t type);
+uint64_t tlib_acquire_mmu_window(uint32_t type);
 
-void tlib_set_mmu_window_start(uint32_t index, uint64_t addr_start);
+void tlib_set_mmu_window_start(uint64_t id, uint64_t addr_start);
 
-void tlib_set_mmu_window_end(uint32_t index, uint64_t addr_end, uint32_t range_end_inclusive);
+void tlib_set_mmu_window_end(uint64_t id, uint64_t addr_end, uint32_t range_end_inclusive);
 
-void tlib_set_window_privileges(uint32_t index, int32_t privileges);
+void tlib_set_window_privileges(uint64_t id, int32_t privileges);
 
-void tlib_set_mmu_window_addend(uint32_t index, uint64_t addend);
+void tlib_set_mmu_window_addend(uint64_t id, uint64_t addend);
 
-uint64_t tlib_get_mmu_window_start(uint32_t index);
+uint64_t tlib_get_mmu_window_start(uint64_t id);
 
-uint64_t tlib_get_mmu_window_end(uint32_t index);
+uint64_t tlib_get_mmu_window_end(uint64_t id);
 
-int tlib_get_window_privileges(uint32_t index);
+int tlib_get_window_privileges(uint64_t id);
 
-uint64_t tlib_get_mmu_window_addend(uint32_t index);
+uint64_t tlib_get_mmu_window_addend(uint64_t id);
 
 //  Defined in 'arch/*/cpu_registers.c'.
 uint32_t tlib_get_register_value_32(int reg_number);
