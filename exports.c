@@ -890,16 +890,6 @@ EXC_VOID_1(tlib_clear_page_io_accessed, uint64_t, address)
         window;                                                                     \
     })
 
-#define ENSURE_ACTIVE_WINDOW_BY_ID(id)                                                                                  \
-    ({                                                                                                                  \
-        ExtMmuRange *window = ENSURE_WINDOW_BY_ID(id);                                                                  \
-        if(!window->active) {                                                                                           \
-            tlib_printf(LOG_LEVEL_ERROR, "Trying to configure an inactive window. Window needs to be activated first"); \
-            return;                                                                                                     \
-        }                                                                                                               \
-        window;                                                                                                         \
-    })
-
 #define ASSERT_ALIGNED_TO_PAGE_SIZE(addr)          \
     if(((target_ulong)addr) & (~TARGET_PAGE_MASK)) \
         tlib_abortf("MMU ranges must be aligned to the page size (0x%lx), the address 0x%lx is not.", TARGET_PAGE_SIZE, addr);
@@ -907,9 +897,6 @@ EXC_VOID_1(tlib_clear_page_io_accessed, uint64_t, address)
 #define ASSERT_NO_OVERLAP(value, window_type)                                                                                 \
     for(int window_index = 0; window_index < cpu->external_mmu_window_count; window_index++) {                                \
         ExtMmuRange *current_window = &cpu->external_mmu_windows[window_index];                                               \
-        if(!current_window->active) {                                                                                         \
-            break;                                                                                                            \
-        }                                                                                                                     \
         if(value >= current_window->range_start && value < current_window->range_end && current_window->type & window_type) { \
             tlib_printf(LOG_LEVEL_DEBUG,                                                                                      \
                         "The addr 0x%lx is already a part of the MMU window of the same type with index %d. Resulting range " \
@@ -966,7 +953,6 @@ uint64_t tlib_acquire_mmu_window(uint32_t type)
     ExtMmuRange *new_window = &cpu->external_mmu_windows[cpu->external_mmu_window_count++];
     *new_window = (ExtMmuRange) {
         .id = cpu->external_mmu_window_next_id++,
-        .active = true,
         .type = (uint8_t)type,
     };
     cpu->external_mmu_windows_unsorted = true;
@@ -978,7 +964,7 @@ EXC_INT_1(uint64_t, tlib_acquire_mmu_window, uint32_t, type)
 void tlib_set_mmu_window_start(uint64_t id, uint64_t addr_start)
 {
     ASSERT_EXTERNAL_MMU_ENABLED
-    ExtMmuRange *window = ENSURE_ACTIVE_WINDOW_BY_ID(id);
+    ExtMmuRange *window = ENSURE_WINDOW_BY_ID(id);
     ASSERT_ALIGNED_TO_PAGE_SIZE(addr_start)
 #ifdef DEBUG
     ASSERT_NO_OVERLAP(addr_start, window->type)
@@ -991,7 +977,7 @@ EXC_VOID_2(tlib_set_mmu_window_start, uint64_t, id, uint64_t, addr_start)
 void tlib_set_mmu_window_end(uint64_t id, uint64_t addr_end, uint32_t range_end_inclusive)
 {
     ASSERT_EXTERNAL_MMU_ENABLED
-    ExtMmuRange *window = ENSURE_ACTIVE_WINDOW_BY_ID(id);
+    ExtMmuRange *window = ENSURE_WINDOW_BY_ID(id);
     ASSERT_ALIGNED_TO_PAGE_SIZE(range_end_inclusive ? addr_end + 1 : addr_end)
 #ifdef DEBUG
     ASSERT_NO_OVERLAP(addr_end, window->type)
@@ -1010,14 +996,14 @@ EXC_VOID_3(tlib_set_mmu_window_end, uint64_t, id, uint64_t, addr_end, uint32_t, 
 void tlib_set_window_privileges(uint64_t id, int32_t privileges)
 {
     ASSERT_EXTERNAL_MMU_ENABLED
-    ENSURE_ACTIVE_WINDOW_BY_ID(id)->priv = privileges;
+    ENSURE_WINDOW_BY_ID(id)->priv = privileges;
 }
 EXC_VOID_2(tlib_set_window_privileges, uint64_t, id, int32_t, privileges)
 
 void tlib_set_mmu_window_addend(uint64_t id, uint64_t addend)
 {
     ASSERT_EXTERNAL_MMU_ENABLED
-    ENSURE_ACTIVE_WINDOW_BY_ID(id)->addend = addend;
+    ENSURE_WINDOW_BY_ID(id)->addend = addend;
 }
 EXC_VOID_2(tlib_set_mmu_window_addend, uint64_t, id, uint64_t, addend)
 

@@ -175,7 +175,6 @@ typedef struct ExtMmuRange {
     target_ulong addend;
     uint8_t type;
     uint8_t priv;
-    bool active;
     bool range_end_inclusive;
 } ExtMmuRange;
 
