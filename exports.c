@@ -582,6 +582,13 @@ void *tlib_export_state()
 
 EXC_POINTER_0(void *, tlib_export_state)
 
+void *tlib_export_external_mmu_state(void)
+{
+    return cpu->external_mmu_windows;
+}
+
+EXC_POINTER_0(void *, tlib_export_external_mmu_state)
+
 int32_t tlib_get_state_size()
 {
     //  Cpu state size is reported as
@@ -597,6 +604,13 @@ int32_t tlib_get_state_size()
 }
 
 EXC_INT_0(int32_t, tlib_get_state_size)
+
+int32_t tlib_get_external_mmu_state_size(void)
+{
+    return cpu->external_mmu_window_count * sizeof(ExtMmuRange);
+}
+
+EXC_INT_0(int32_t, tlib_get_external_mmu_state_size)
 
 void tlib_set_chaining_enabled(uint32_t val)
 {
@@ -1080,6 +1094,8 @@ EXC_VOID_1(tlib_before_save, void *, env)
 
 void tlib_after_load(void *env)
 {
+    CPUState *s = env;
+    s->external_mmu_windows = calloc(s->external_mmu_window_capacity, sizeof(ExtMmuRange));
     cpu_after_load(env);
 }
 
