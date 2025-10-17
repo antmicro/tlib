@@ -1286,7 +1286,7 @@ int get_external_mmu_phys_addr(CPUState *env, uint64_t address, int access_type,
     *phys_ptr = address;
     *prot = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
 
-    for(; window_index < MAX_EXTERNAL_MMU_RANGES; window_index++) {
+    for(; window_index < cpu->external_mmu_window_count; window_index++) {
         if(!mmu_window[window_index].active) {
             break;
         } else if((mmu_window[window_index].type & access_type_mask) && (address >= mmu_window[window_index].range_start) &&

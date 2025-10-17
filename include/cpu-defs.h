@@ -98,7 +98,7 @@ typedef uint64_t target_ulong __attribute__((aligned(TARGET_LONG_ALIGNMENT)));
 #define TB_JMP_CACHE_BITS 12
 #define TB_JMP_CACHE_SIZE (1 << TB_JMP_CACHE_BITS)
 
-#define MAX_EXTERNAL_MMU_RANGES 256
+#define DEFAULT_EXTERNAL_MMU_RANGE_COUNT 16
 
 /* ARM-M specific magic PC values, which can be used for exception/secure return */
 #define ARM_M_EXC_RETURN_MIN 0xffffff00
@@ -238,7 +238,8 @@ enum block_interrupt_cause {
                                                                               \
     /* External mmu settings */                                               \
     ExtMmuPosition external_mmu_position;                                     \
-    ExtMmuRange external_mmu_windows[MAX_EXTERNAL_MMU_RANGES];                \
+    int external_mmu_window_count;                                            \
+    int external_mmu_window_capacity;                                         \
     /* user data */                                                           \
     /* chaining is enabled by default */                                      \
     int chaining_disabled;                                                    \
@@ -270,6 +271,7 @@ enum block_interrupt_cause {
     /* STARTING FROM HERE FIELDS ARE NOT SERIALIZED */                        \
     struct TranslationBlock *current_tb; /* currently executing TB  */        \
     CPU_COMMON_TLB                                                            \
+    ExtMmuRange *external_mmu_windows;                                        \
     QTAILQ_HEAD(breakpoints_head, CPUBreakpoint) breakpoints;                 \
     QTAILQ_HEAD(cached_address_head, CachedRegiserDescriptor) cached_address; \
     struct TranslationBlock *tb_jmp_cache[TB_JMP_CACHE_SIZE];                 \

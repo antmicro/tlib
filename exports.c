@@ -873,7 +873,7 @@ EXC_VOID_1(tlib_clear_page_io_accessed, uint64_t, address)
     }
 
 #define ASSERT_WINDOW_IN_RANGE(index)                                            \
-    if(index > MAX_EXTERNAL_MMU_RANGES) {                                        \
+    if(index > cpu->external_mmu_window_count) {                                 \
         tlib_abort("Trying to access an unexisting MMU window. Index too high"); \
     }
 
@@ -882,7 +882,7 @@ EXC_VOID_1(tlib_clear_page_io_accessed, uint64_t, address)
         tlib_abortf("MMU ranges must be aligned to the page size (0x%lx), the address 0x%lx is not.", TARGET_PAGE_SIZE, addr);
 
 #define ASSERT_NO_OVERLAP(value, window_type)                                                                                 \
-    for(int window_index = 0; window_index < MAX_EXTERNAL_MMU_RANGES; window_index++) {                                       \
+    for(int window_index = 0; window_index < cpu->external_mmu_window_count; window_index++) {                                \
         ExtMmuRange *current_window = &cpu->external_mmu_windows[window_index];                                               \
         if(!current_window->active) {                                                                                         \
             break;                                                                                                            \
@@ -898,7 +898,7 @@ EXC_VOID_1(tlib_clear_page_io_accessed, uint64_t, address)
 
 uint32_t tlib_get_mmu_windows_count(void)
 {
-    return MAX_EXTERNAL_MMU_RANGES;
+    return cpu->external_mmu_window_count;
 }
 EXC_INT_0(uint32_t, tlib_get_mmu_windows_count)
 
@@ -922,16 +922,34 @@ EXC_VOID_1(tlib_reset_mmu_window, uint32_t, index)
 int32_t tlib_acquire_mmu_window(uint32_t type)
 {
     ASSERT_EXTERNAL_MMU_ENABLED
-    for(int window_index = 0; window_index < MAX_EXTERNAL_MMU_RANGES; window_index++) {
+
+    for(int window_index = 0; window_index < cpu->external_mmu_window_count; window_index++) {
         if(!cpu->external_mmu_windows[window_index].active) {
             cpu->external_mmu_windows[window_index].active = true;
             cpu->external_mmu_windows[window_index].type = (uint8_t)type;
             return window_index;
         }
     }
-    //  Failed
-    return -1;
+
+    if(cpu->external_mmu_window_count >= cpu->external_mmu_window_capacity) {
+        int new_capacity = cpu->external_mmu_window_capacity == 0 ? DEFAULT_EXTERNAL_MMU_RANGE_COUNT
+                                                                  : cpu->external_mmu_window_capacity * 2;
+        ExtMmuRange *new_array = realloc(cpu->external_mmu_windows, new_capacity * sizeof(ExtMmuRange));
+        if(!new_array) {
+            tlib_abort("Failed to allocate memory for external MMU windows");
+        }
+        memset(&new_array[cpu->external_mmu_window_capacity], 0,
+               (new_capacity - cpu->external_mmu_window_capacity) * sizeof(ExtMmuRange));
+        cpu->external_mmu_windows = new_array;
+        cpu->external_mmu_window_capacity = new_capacity;
+    }
+
+    int window_index = cpu->external_mmu_window_count++;
+    cpu->external_mmu_windows[window_index].active = true;
+    cpu->external_mmu_windows[window_index].type = (uint8_t)type;
+    return window_index;
 }
+
 EXC_INT_1(int32_t, tlib_acquire_mmu_window, uint32_t, type)
 
 void tlib_set_mmu_window_start(uint32_t index, uint64_t addr_start)
