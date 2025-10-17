@@ -1266,7 +1266,7 @@ int get_external_mmu_phys_addr(CPUState *env, uint64_t address, int access_type,
 {
     bool found = false;
     int window_index = 0;
-    ExtMmuRange *mmu_window = env->external_mmu_window;
+    ExtMmuRange *mmu_window = env->external_mmu_windows;
     uint32_t access_type_mask = 0;
     switch(access_type) {
         case ACCESS_DATA_LOAD:

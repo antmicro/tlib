@@ -238,7 +238,7 @@ enum block_interrupt_cause {
                                                                               \
     /* External mmu settings */                                               \
     ExtMmuPosition external_mmu_position;                                     \
-    ExtMmuRange external_mmu_window[MAX_EXTERNAL_MMU_RANGES];                 \
+    ExtMmuRange external_mmu_windows[MAX_EXTERNAL_MMU_RANGES];                \
     /* user data */                                                           \
     /* chaining is enabled by default */                                      \
     int chaining_disabled;                                                    \

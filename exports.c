@@ -868,7 +868,7 @@ EXC_VOID_1(tlib_clear_page_io_accessed, uint64_t, address)
     }
 
 #define ASSERT_WINDOW_ACTIVE(index)                                                                                 \
-    if(!cpu->external_mmu_window[index].active) {                                                                   \
+    if(!cpu->external_mmu_windows[index].active) {                                                                  \
         tlib_printf(LOG_LEVEL_ERROR, "Trying to configure an inactive window. Window needs to be activated first"); \
     }
 
@@ -883,7 +883,7 @@ EXC_VOID_1(tlib_clear_page_io_accessed, uint64_t, address)
 
 #define ASSERT_NO_OVERLAP(value, window_type)                                                                                 \
     for(int window_index = 0; window_index < MAX_EXTERNAL_MMU_RANGES; window_index++) {                                       \
-        ExtMmuRange *current_window = &cpu->external_mmu_window[window_index];                                                \
+        ExtMmuRange *current_window = &cpu->external_mmu_windows[window_index];                                               \
         if(!current_window->active) {                                                                                         \
             break;                                                                                                            \
         }                                                                                                                     \
@@ -914,7 +914,7 @@ EXC_VOID_1(tlib_enable_external_window_mmu, uint32_t, value)
 void tlib_reset_mmu_window(uint32_t index)
 {
     ASSERT_WINDOW_IN_RANGE(index)
-    ExtMmuRange *mmu_array = cpu->external_mmu_window;
+    ExtMmuRange *mmu_array = cpu->external_mmu_windows;
     memset((void *)(mmu_array + index), 0, sizeof(ExtMmuRange));
 }
 EXC_VOID_1(tlib_reset_mmu_window, uint32_t, index)
@@ -923,9 +923,9 @@ int32_t tlib_acquire_mmu_window(uint32_t type)
 {
     ASSERT_EXTERNAL_MMU_ENABLED
     for(int window_index = 0; window_index < MAX_EXTERNAL_MMU_RANGES; window_index++) {
-        if(!cpu->external_mmu_window[window_index].active) {
-            cpu->external_mmu_window[window_index].active = true;
-            cpu->external_mmu_window[window_index].type = (uint8_t)type;
+        if(!cpu->external_mmu_windows[window_index].active) {
+            cpu->external_mmu_windows[window_index].active = true;
+            cpu->external_mmu_windows[window_index].type = (uint8_t)type;
             return window_index;
         }
     }
@@ -940,9 +940,9 @@ void tlib_set_mmu_window_start(uint32_t index, uint64_t addr_start)
     ASSERT_WINDOW_ACTIVE(index)
     ASSERT_ALIGNED_TO_PAGE_SIZE(addr_start)
 #ifdef DEBUG
-    ASSERT_NO_OVERLAP(addr_start, cpu->external_mmu_window[index].type)
+    ASSERT_NO_OVERLAP(addr_start, cpu->external_mmu_windows[index].type)
 #endif
-    cpu->external_mmu_window[index].range_start = addr_start;
+    cpu->external_mmu_windows[index].range_start = addr_start;
 }
 EXC_VOID_2(tlib_set_mmu_window_start, uint32_t, index, uint64_t, addr_start)
 
@@ -952,7 +952,7 @@ void tlib_set_mmu_window_end(uint32_t index, uint64_t addr_end, uint32_t range_e
     ASSERT_WINDOW_ACTIVE(index)
     ASSERT_ALIGNED_TO_PAGE_SIZE(range_end_inclusive ? addr_end + 1 : addr_end)
 #ifdef DEBUG
-    ASSERT_NO_OVERLAP(addr_end, cpu->external_mmu_window[index].type)
+    ASSERT_NO_OVERLAP(addr_end, cpu->external_mmu_windows[index].type)
 #endif
     /* This is not necessary for the MMU to function properly, but it makes it easier to debug when we are using the same
      convention where possible. Only the window that contains the last page of address space will be inclusive at all times */
@@ -960,8 +960,8 @@ void tlib_set_mmu_window_end(uint32_t index, uint64_t addr_end, uint32_t range_e
         addr_end += 1;
         range_end_inclusive = 0;
     }
-    cpu->external_mmu_window[index].range_end = addr_end;
-    cpu->external_mmu_window[index].range_end_inclusive = !!range_end_inclusive;
+    cpu->external_mmu_windows[index].range_end = addr_end;
+    cpu->external_mmu_windows[index].range_end_inclusive = !!range_end_inclusive;
 }
 EXC_VOID_3(tlib_set_mmu_window_end, uint32_t, index, uint64_t, addr_end, uint32_t, range_end_inclusive)
 
@@ -969,7 +969,7 @@ void tlib_set_window_privileges(uint32_t index, int32_t privileges)
 {
     ASSERT_EXTERNAL_MMU_ENABLED
     ASSERT_WINDOW_ACTIVE(index)
-    cpu->external_mmu_window[index].priv = privileges;
+    cpu->external_mmu_windows[index].priv = privileges;
 }
 EXC_VOID_2(tlib_set_window_privileges, uint32_t, index, int32_t, privileges)
 
@@ -977,35 +977,35 @@ void tlib_set_mmu_window_addend(uint32_t index, uint64_t addend)
 {
     ASSERT_EXTERNAL_MMU_ENABLED
     ASSERT_WINDOW_ACTIVE(index)
-    cpu->external_mmu_window[index].addend = addend;
+    cpu->external_mmu_windows[index].addend = addend;
 }
 EXC_VOID_2(tlib_set_mmu_window_addend, uint32_t, index, uint64_t, addend)
 
 uint64_t tlib_get_mmu_window_start(uint32_t index)
 {
     ASSERT_WINDOW_IN_RANGE(index)
-    return cpu->external_mmu_window[index].range_start;
+    return cpu->external_mmu_windows[index].range_start;
 }
 EXC_INT_1(uint64_t, tlib_get_mmu_window_start, uint32_t, index)
 
 uint64_t tlib_get_mmu_window_end(uint32_t index)
 {
     ASSERT_WINDOW_IN_RANGE(index)
-    return cpu->external_mmu_window[index].range_end;
+    return cpu->external_mmu_windows[index].range_end;
 }
 EXC_INT_1(uint64_t, tlib_get_mmu_window_end, uint32_t, index)
 
 int tlib_get_window_privileges(uint32_t index)
 {
     ASSERT_WINDOW_IN_RANGE(index)
-    return cpu->external_mmu_window[index].priv;
+    return cpu->external_mmu_windows[index].priv;
 }
 EXC_INT_1(uint64_t, tlib_get_window_privileges, uint32_t, index)
 
 uint64_t tlib_get_mmu_window_addend(uint32_t index)
 {
     ASSERT_WINDOW_IN_RANGE(index)
-    return cpu->external_mmu_window[index].addend;
+    return cpu->external_mmu_windows[index].addend;
 }
 EXC_INT_1(uint64_t, tlib_get_mmu_window_addend, uint32_t, index)
 
