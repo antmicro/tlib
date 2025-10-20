@@ -744,6 +744,12 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, i
     return ret;
 }
 
+void arch_raise_mmu_fault_exception(CPUState *env, int errcode, int access_type, target_ulong address, void *retaddr)
+{
+    //  access_type == CODE ACCESS - do not fire block_end hooks!
+    cpu_loop_exit_restore(env, (uintptr_t)retaddr, access_type != ACCESS_INST_FETCH);
+}
+
 /* try to fill the TLB and return an exception if error. If retaddr is
    NULL, it means that the function was called in C code (i.e. not
    from generated code or from helper.c) */
@@ -760,11 +766,7 @@ int arch_tlb_fill(CPUState *env1, target_ulong addr, int access_type, int mmu_id
 
     //  Unless fault handling is suppressed with 'no_page_fault', we will never get back here
     //  in case of a fault with MMU (only). Faults are handled directly in that function.
-    //  The code below handles MPU faults.
-    if(unlikely(ret == TRANSLATE_FAIL && !no_page_fault)) {
-        //  access_type == CODE ACCESS - do not fire block_end hooks!
-        cpu_loop_exit_restore(env, (uintptr_t)retaddr, access_type != ACCESS_INST_FETCH);
-    }
+    //  The arch_raise_mmu_fault_exception call in tlb_fill (exec.c) handles MPU and external MMU faults.
 
     env = saved_env;
     return ret;

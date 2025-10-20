@@ -1448,6 +1448,17 @@ void tlb_flush_page(CPUState *env, target_ulong addr, bool from_generated_code)
     tlb_flush_page_masked(env, addr, UINT32_MAX, from_generated_code);
 }
 
+#define TRY_FILL(e)                                                                       \
+    do {                                                                                  \
+        int errcode = (e);                                                                \
+        if(unlikely(errcode != TRANSLATE_SUCCESS)) {                                      \
+            if(!no_page_fault) {                                                          \
+                arch_raise_mmu_fault_exception(env, errcode, access_type, addr, retaddr); \
+            }                                                                             \
+            return errcode;                                                               \
+        }                                                                                 \
+    } while(0)
+
 int tlb_fill(CPUState *env, target_ulong addr, int access_type, int mmu_idx, void *retaddr, int no_page_fault, int access_width)
 {
     target_ulong iaddr = addr;
@@ -1467,32 +1478,29 @@ int tlb_fill(CPUState *env, target_ulong addr, int access_type, int mmu_idx, voi
     }
 #endif
     if(likely(!external_mmu_enabled(env))) {
-        return arch_tlb_fill(env, iaddr, access_type, mmu_idx, retaddr, no_page_fault, access_width, &paddr);
+        TRY_FILL(arch_tlb_fill(env, iaddr, access_type, mmu_idx, retaddr, no_page_fault, access_width, &paddr));
+        return TRANSLATE_SUCCESS;
     }
 
     if(env->external_mmu_position == EMMU_POS_BEFORE || env->external_mmu_position == EMMU_POS_REPLACE) {
-        if(TRANSLATE_FAIL == get_external_mmu_phys_addr(env, iaddr, access_type, &paddr, &prot, no_page_fault)) {
-            return TRANSLATE_FAIL;
-        }
+        TRY_FILL(get_external_mmu_phys_addr(env, iaddr, access_type, &paddr, &prot, no_page_fault));
         iaddr = paddr;
     }
 
     if(env->external_mmu_position != EMMU_POS_REPLACE) {
-        if(TRANSLATE_FAIL == arch_tlb_fill(env, iaddr, access_type, mmu_idx, retaddr, no_page_fault, access_width, &paddr)) {
-            return TRANSLATE_FAIL;
-        }
+        TRY_FILL(arch_tlb_fill(env, iaddr, access_type, mmu_idx, retaddr, no_page_fault, access_width, &paddr));
     }
 
     if(env->external_mmu_position == EMMU_POS_AFTER) {
         iaddr = paddr;
-        if(TRANSLATE_FAIL == get_external_mmu_phys_addr(env, iaddr, access_type, &paddr, &prot, no_page_fault)) {
-            return TRANSLATE_FAIL;
-        }
+        TRY_FILL(get_external_mmu_phys_addr(env, iaddr, access_type, &paddr, &prot, no_page_fault));
     }
 
     tlb_set_page(env, addr & TARGET_PAGE_MASK, paddr & TARGET_PAGE_MASK, prot, mmu_idx, TARGET_PAGE_SIZE);
     return TRANSLATE_SUCCESS;
 }
+
+#undef TRY_FILL
 
 /* update the TLB so that writes in physical page 'phys_addr' are no longer
    tested for self modifying code */

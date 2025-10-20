@@ -1637,6 +1637,12 @@ void do_unaligned_access(target_ulong addr, int is_write, int is_user, void *ret
     raise_exception(TT_UNALIGNED);
 }
 
+void arch_raise_mmu_fault_exception(CPUState *env, int errcode, int access_type, target_ulong address, void *retaddr)
+{
+    cpu_restore_state(env, retaddr);
+    cpu_loop_exit(env);
+}
+
 /* try to fill the TLB and return an exception if error. If retaddr is
    NULL, it means that the function was called in C code (i.e. not
    from generated code or from helper.c) */
@@ -1644,13 +1650,7 @@ void do_unaligned_access(target_ulong addr, int is_write, int is_user, void *ret
 int arch_tlb_fill(CPUState *env, target_ulong addr, int access_type, int mmu_idx, void *retaddr, int no_page_fault,
                   int access_width, target_phys_addr_t *paddr)
 {
-    int ret;
-    ret = cpu_handle_mmu_fault(env, addr, access_type, mmu_idx, 1, no_page_fault, paddr);
-    if(ret == TRANSLATE_FAIL && !no_page_fault) {
-        cpu_restore_state(env, retaddr);
-        cpu_loop_exit(env);
-    }
-    return ret;
+    return cpu_handle_mmu_fault(env, addr, access_type, mmu_idx, 1, no_page_fault, paddr);
 }
 
 static void do_unassigned_access(target_phys_addr_t addr, int is_write, int is_exec, int is_asi, int size)

@@ -167,6 +167,12 @@ void do_unaligned_access(target_ulong addr, MMUAccessType access_type, int mmu_i
     }
 }
 
+void arch_raise_mmu_fault_exception(CPUState *env, int errcode, int access_type, target_ulong address, void *retaddr)
+{
+    cpu_restore_state(env, (void *)retaddr);
+    HELPER(exception_cause_vaddr)(env, env->pc, errcode, address);
+}
+
 int arch_tlb_fill(CPUState *env, target_ulong address, MMUAccessType access_type, int mmu_idx, void *retaddr, int no_page_fault,
                   int access_width, target_phys_addr_t *out_paddr)
 {
@@ -183,12 +189,8 @@ int arch_tlb_fill(CPUState *env, target_ulong address, MMUAccessType access_type
         *out_paddr = paddr;
         tlb_set_page(env, address & TARGET_PAGE_MASK, paddr & TARGET_PAGE_MASK, access, mmu_idx, page_size);
         return TRANSLATE_SUCCESS;
-    } else if(no_page_fault) {
-        return TRANSLATE_FAIL;
-    } else {
-        cpu_restore_state(env, (void *)retaddr);
-        HELPER(exception_cause_vaddr)(env, env->pc, ret, address);
     }
+    return TRANSLATE_FAIL;
 }
 
 void tlib_arch_dispose()

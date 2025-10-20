@@ -44,6 +44,12 @@ uint32_t HELPER(neon_tbl)(uint32_t ireg, uint32_t def, uint32_t rn, uint32_t max
     return val;
 }
 
+void arch_raise_mmu_fault_exception(CPUState *env, int errcode, int access_type, target_ulong address, void *retaddr)
+{
+    //  access_type == CODE ACCESS - do not fire block_end hooks!
+    cpu_loop_exit_restore(env, (uintptr_t)retaddr, access_type != ACCESS_INST_FETCH);
+}
+
 /* try to fill the TLB and return an exception if error. If retaddr is
    NULL, it means that the function was called in C code (i.e. not
    from generated code or from helper.c) */
@@ -57,10 +63,6 @@ int arch_tlb_fill(CPUState *env1, target_ulong addr, int access_type, int mmu_id
     saved_env = env;
     env = env1;
     ret = cpu_handle_mmu_fault(env, addr, access_type, mmu_idx, no_page_fault, paddr);
-    if(unlikely(ret == TRANSLATE_FAIL && !no_page_fault)) {
-        //  access_type == CODE ACCESS - do not fire block_end hooks!
-        cpu_loop_exit_restore(env, (uintptr_t)retaddr, access_type != ACCESS_INST_FETCH);
-    }
     env = saved_env;
     return ret;
 }

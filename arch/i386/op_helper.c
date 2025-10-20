@@ -4741,6 +4741,24 @@ void helper_boundl(target_ulong a0, int v)
     }
 }
 
+void arch_raise_mmu_fault_exception(CPUState *env, int errcode, int access_type, target_ulong address, void *retaddr)
+{
+    TranslationBlock *tb;
+    uintptr_t pc;
+
+    if(retaddr) {
+        /* now we have a real cpu fault */
+        pc = (uintptr_t)retaddr;
+        tb = tb_find_pc(pc);
+        if(tb) {
+            /* the PC is inside the translated code. It means that we have
+               a virtual CPU fault */
+            cpu_restore_state_and_restore_instructions_count(env, tb, pc, true);
+        }
+    }
+    raise_exception_err(env->exception_index, env->error_code);
+}
+
 /* try to fill the TLB and return an exception if error. If retaddr is
    NULL, it means that the function was called in C code (i.e. not
    from generated code or from helper.c) */
@@ -4748,28 +4766,13 @@ void helper_boundl(target_ulong a0, int v)
 int arch_tlb_fill(CPUState *env1, target_ulong addr, int access_type, int mmu_idx, void *retaddr, int no_page_fault,
                   int access_width, target_phys_addr_t *paddr)
 {
-    TranslationBlock *tb;
     int ret;
-    uintptr_t pc;
     CPUState *saved_env;
 
     saved_env = env;
     env = env1;
 
     ret = cpu_handle_mmu_fault(env, addr, access_type, mmu_idx, no_page_fault, paddr);
-    if(ret && !no_page_fault) {
-        if(retaddr) {
-            /* now we have a real cpu fault */
-            pc = (uintptr_t)retaddr;
-            tb = tb_find_pc(pc);
-            if(tb) {
-                /* the PC is inside the translated code. It means that we have
-                   a virtual CPU fault */
-                cpu_restore_state_and_restore_instructions_count(env, tb, pc, true);
-            }
-        }
-        raise_exception_err(env->exception_index, env->error_code);
-    }
     env = saved_env;
     return ret;
 }

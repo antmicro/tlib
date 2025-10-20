@@ -57,6 +57,7 @@ void restore_state_to_opc(CPUState *env, struct TranslationBlock *tb, target_ulo
 void setup_disas_context(DisasContextBase *dc, CPUState *env);
 int arch_tlb_fill(CPUState *env1, target_ulong addr, int is_write, int mmu_idx, void *retaddr, int no_page_fault,
                   int access_width, target_phys_addr_t *paddr);
+void arch_raise_mmu_fault_exception(CPUState *env, int errcode, int access_type, target_ulong address, void *retaddr);
 
 //  All the other functions declared in this header are common for all architectures.
 void gen_exit_tb(TranslationBlock *, int);
