@@ -1293,6 +1293,7 @@ int get_external_mmu_phys_addr(CPUState *env, uint64_t address, int access_type,
 {
     ensure_mmu_windows_sorted(env);
     int window_index = -1;
+    uint64_t window_id = -1;
     int lo = 0, hi = env->external_mmu_window_count - 1;
     ExtMmuRange *mmu_windows = env->external_mmu_windows;
     uint32_t access_type_mask = 0;
@@ -1332,6 +1333,7 @@ int get_external_mmu_phys_addr(CPUState *env, uint64_t address, int access_type,
            (window->range_end_inclusive ? address <= window->range_end : address < window->range_end)) {
             *phys_ptr += window->addend;
             *prot = window->priv;
+            window_id = window->id;
             if(window->priv & access_type_mask) {
                 return TRANSLATE_SUCCESS;
             } else {
@@ -1344,7 +1346,7 @@ int get_external_mmu_phys_addr(CPUState *env, uint64_t address, int access_type,
         //  The exit_request needs to be set to prevent the cpu_exec from trying to execute the block
         cpu->exit_request = 1;
         cpu->mmu_fault = true;
-        tlib_mmu_fault_external_handler(address, access_type, window_index);
+        tlib_mmu_fault_external_handler(address, access_type, window_id);
         if(access_type != ACCESS_INST_FETCH && cpu->current_tb != NULL) {
             interrupt_current_translation_block(cpu, MMU_EXTERNAL_FAULT);
         }

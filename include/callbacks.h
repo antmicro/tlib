@@ -68,7 +68,7 @@ void tlib_write_double_word(uint64_t address, uint64_t value, uint64_t cpustate)
 void tlib_write_quad_word(uint64_t address, uint64_t value, uint64_t cpustate);
 void *tlib_guest_offset_to_host_ptr(uint64_t offset);
 uint64_t tlib_host_ptr_to_guest_offset(void *ptr);
-void tlib_mmu_fault_external_handler(uint64_t addr, int32_t access_type, int32_t window_index);
+void tlib_mmu_fault_external_handler(uint64_t addr, int32_t access_type, uint64_t window_id);
 void tlib_invalidate_tb_in_other_cpus(uintptr_t start, uintptr_t end);
 void tlib_update_instruction_counter(int32_t value);
 uint32_t tlib_get_mp_index(void);
