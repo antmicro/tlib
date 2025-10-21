@@ -1291,6 +1291,8 @@ static inline void ensure_mmu_windows_sorted(CPUState *env)
 int get_external_mmu_phys_addr(CPUState *env, uint64_t address, int access_type, target_phys_addr_t *phys_ptr, int *prot,
                                int no_page_fault)
 {
+    int32_t first_try = 1;
+retry:
     ensure_mmu_windows_sorted(env);
     int window_index = -1;
     uint64_t window_id = -1;
@@ -1342,12 +1344,16 @@ int get_external_mmu_phys_addr(CPUState *env, uint64_t address, int access_type,
         }
     }
 
-    tlib_mmu_fault_external_handler(address, access_type, window_id);
+    if(first_try && tlib_mmu_fault_external_handler(address, access_type, window_id, first_try)) {
+        first_try = 0;
+        goto retry;
+    }
 
     if(!no_page_fault) {
         //  The exit_request needs to be set to prevent the cpu_exec from trying to execute the block
         cpu->exit_request = 1;
         cpu->mmu_fault = true;
+        tlib_mmu_fault_external_handler(address, access_type, window_id, /* first_try */ 0);
         if(access_type != ACCESS_INST_FETCH && cpu->current_tb != NULL) {
             interrupt_current_translation_block(cpu, MMU_EXTERNAL_FAULT);
         }
