@@ -9388,6 +9388,77 @@ static int do_2op(DisasContext *s, arg_2op *a, MVEGenTwoOpFn *fn)
     return do_2op_vec(s, a, fn, NULL);
 }
 
+static int do_vcmp(DisasContext *s, arg_vcmp *a, MVEGenCmpFn *fn)
+{
+    TCGv_ptr qn, qm;
+
+    if(!mve_check_qreg_bank(a->qm) || !fn) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    gen_helper_fp_lsp(cpu_env);
+
+    qn = mve_qreg_ptr(a->qn);
+    qm = mve_qreg_ptr(a->qm);
+
+    fn(cpu_env, qn, qm);
+
+    tcg_temp_free_ptr(qm);
+    tcg_temp_free_ptr(qn);
+
+    if(a->mask) {
+        /* VPT */
+        gen_mve_vpst(s, a->mask);
+    }
+
+    //  TODO(MVE): We may want to use a different method here or drop it entirely.
+    /* This insn updates predication bits */
+    s->base.is_jmp = EXIT_TB_NO_JUMP;
+    mve_update_eci(s);
+    return TRANS_STATUS_SUCCESS;
+}
+
+static int do_vcmp_scalar(DisasContext *s, arg_vcmp_scalar *a, MVEGenScalarCmpFn *fn)
+{
+    TCGv_ptr qn;
+    TCGv_i32 rm;
+
+    if(!fn || a->rm == 13) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    gen_helper_fp_lsp(cpu_env);
+
+    qn = mve_qreg_ptr(a->qn);
+    if(a->rm == 15) {
+        /* Encoding Rm=0b1111 means "constant zero" */
+        rm = tcg_const_i32(0);
+    } else {
+        rm = load_reg(s, a->rm);
+    }
+    fn(cpu_env, qn, rm);
+    if(a->mask) {
+        /* VPT */
+        gen_mve_vpst(s, a->mask);
+    }
+
+    tcg_temp_free_ptr(rm);
+    tcg_temp_free_ptr(qn);
+
+    //  TODO(MVE): We may want to use a different method here or drop it entirely.
+    /* This insn updates predication bits */
+    s->base.is_jmp = EXIT_TB_NO_JUMP;
+    mve_update_eci(s);
+    return TRANS_STATUS_SUCCESS;
+}
+
 /* This macro is just to make the arrays more compact in these functions */
 #define F(OP) glue(gen_mve_, OP)
 
@@ -9580,6 +9651,35 @@ static inline int trans_vpst(DisasContext *s, arg_vpst *a)
 
     return TRANS_STATUS_SUCCESS;
 }
+
+#define DO_TRANS_VCMP_FP(INSN, FN)                                              \
+    static int trans_##INSN(DisasContext *s, arg_vcmp *a)                       \
+    {                                                                           \
+        static MVEGenCmpFn *const fns[] = {                                     \
+            gen_helper_mve_##FN##s, /* gen_helper_mve_##FN##h, */               \
+            NULL,                                                               \
+        };                                                                      \
+                                                                                \
+        return do_vcmp(s, a, fns[a->size]);                                     \
+    }                                                                           \
+    static int trans_##INSN##_scalar(DisasContext *s, arg_vcmp_scalar *a)       \
+    {                                                                           \
+        static MVEGenScalarCmpFn *const fns[] = {                               \
+            gen_helper_mve_##FN##_scalars, /* gen_helper_mve_##FN##_scalarh, */ \
+            NULL,                                                               \
+        };                                                                      \
+                                                                                \
+        return do_vcmp_scalar(s, a, fns[a->size]);                              \
+    }
+
+DO_TRANS_VCMP_FP(vcmp_fp_eq, vcmp_fp_eq)
+DO_TRANS_VCMP_FP(vcmp_fp_ne, vcmp_fp_ne)
+DO_TRANS_VCMP_FP(vcmp_fp_ge, vcmp_fp_ge)
+DO_TRANS_VCMP_FP(vcmp_fp_lt, vcmp_fp_lt)
+DO_TRANS_VCMP_FP(vcmp_fp_gt, vcmp_fp_gt)
+DO_TRANS_VCMP_FP(vcmp_fp_le, vcmp_fp_le)
+
+#undef DO_TRANS_VCMP_FP
 
 #endif
 
@@ -10507,6 +10607,72 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_vpst a;
                     mve_extract_vpst(&a, insn);
                     return trans_vpst(s, &a);
+                }
+                if(is_insn_vcmp_fp(insn)) {
+                    ARCH(MVE);
+                    arg_vcmp a;
+                    mve_extract_vcmp_fp(&a, insn);
+
+                    //  This is [fcC, fcB, fcA] (least significant bit is fcA)
+                    uint32_t cmp =
+                        deposit32(deposit32(extract32(insn, 12, 1), 1, 31, extract32(insn, 0, 1)), 2, 30, extract32(insn, 7, 1));
+                    switch(cmp) {
+                        //  fcA = 0; fcB = 0; fcC = 0
+                        case 0:
+                            return trans_vcmp_fp_eq(s, &a);
+                        //  fcA = 0; fcB = 0; fcC = 1
+                        case 4:
+                            return trans_vcmp_fp_ne(s, &a);
+                        //  fcA = 1; fcB = 0; fcC = 0
+                        case 1:
+                            return trans_vcmp_fp_ge(s, &a);
+                        //  fcA = 1; fcB = 0; fcC = 1
+                        case 5:
+                            return trans_vcmp_fp_lt(s, &a);
+                        //  fcA = 1; fcB = 1; fcC = 0
+                        case 3:
+                            return trans_vcmp_fp_gt(s, &a);
+                        //  fcA = 1; fcB = 1; fcC = 1
+                        case 7:
+                            return trans_vcmp_fp_le(s, &a);
+                        //  This should never happen as other values are related encodings
+                        default:
+                            return TRANS_STATUS_ILLEGAL_INSN;
+                    }
+
+                    return trans_vcmp_fp_eq(s, &a);
+                }
+                if(is_insn_vcmp_fp_scalar(insn)) {
+                    ARCH(MVE);
+                    arg_vcmp_scalar a;
+                    mve_extract_vcmp_fp_scalar(&a, insn);
+
+                    //  This is [fcC, fcB, fcA] (least significant bit is fcA)
+                    uint32_t cmp =
+                        deposit32(deposit32(extract32(insn, 12, 1), 1, 31, extract32(insn, 5, 1)), 2, 30, extract32(insn, 7, 1));
+                    switch(cmp) {
+                        //  fcA = 0; fcB = 0; fcC = 0
+                        case 0:
+                            return trans_vcmp_fp_eq_scalar(s, &a);
+                        //  fcA = 0; fcB = 0; fcC = 1
+                        case 4:
+                            return trans_vcmp_fp_ge_scalar(s, &a);
+                        //  fcA = 1; fcB = 0; fcC = 0
+                        case 1:
+                            return trans_vcmp_fp_ne_scalar(s, &a);
+                        //  fcA = 1; fcB = 0; fcC = 1
+                        case 5:
+                            return trans_vcmp_fp_lt_scalar(s, &a);
+                        //  fcA = 1; fcB = 1; fcC = 0
+                        case 6:
+                            return trans_vcmp_fp_gt_scalar(s, &a);
+                        //  fcA = 1; fcB = 1; fcC = 1
+                        case 7:
+                            return trans_vcmp_fp_le_scalar(s, &a);
+                        //  This should never happen as other values are related encodings
+                        default:
+                            return TRANS_STATUS_ILLEGAL_INSN;
+                    }
                 }
             }
 #endif

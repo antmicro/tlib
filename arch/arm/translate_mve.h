@@ -23,6 +23,8 @@ typedef void MVEGenLdStFn(TCGv_ptr, TCGv_ptr, TCGv_i32);
 typedef void MVEGenLdStIlFn(DisasContext *, uint32_t, TCGv_i32);
 typedef void MVEGenTwoOpScalarFn(TCGv_ptr, TCGv_ptr, TCGv_ptr, TCGv_i32);
 typedef void MVEGenTwoOpFn(TCGv_ptr, TCGv_ptr, TCGv_ptr, TCGv_ptr);
+typedef void MVEGenCmpFn(TCGv_ptr, TCGv_ptr, TCGv_ptr);
+typedef void MVEGenScalarCmpFn(TCGv_ptr, TCGv_ptr, TCGv_i32);
 /* Note that the gvec expanders operate on offsets + sizes.  */
 typedef void GVecGen3Fn(unsigned, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
 
@@ -89,6 +91,22 @@ typedef struct {
 typedef struct {
     int mask;
 } arg_vpst;
+
+/* Arguments of VCMP (non-scalar) instruction (both floating-point and vector) */
+typedef struct {
+    int qm;
+    int qn;
+    int size;
+    int mask;
+} arg_vcmp;
+
+/* Arguments of VCMP scalar instructions (both floating-point and vector) */
+typedef struct {
+    int qn;
+    int rm;
+    int size;
+    int mask;
+} arg_vcmp_scalar;
 
 void gen_mve_vld40b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld41b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
@@ -186,6 +204,29 @@ static inline bool is_insn_vpst(uint32_t insn)
     return mask != 0 && (insn & 0xFFB10F5F) == 0xFE310F4D;
 }
 
+static inline bool is_insn_vcmp_fp(uint32_t insn)
+{
+    uint32_t fca = extract32(insn, 0, 0);
+    uint32_t fcb = extract32(insn, 0, 0);
+
+    /* fcA == 1 && fcB == 1 is related encodings */
+    if(fca == 1 && fcb == 1) {
+        return false;
+    }
+    return (insn & 0xEFF1EF50) == 0xEE310F00;
+}
+
+static inline bool is_insn_vcmp_fp_scalar(uint32_t insn)
+{
+    uint32_t rm = extract32(insn, 0, 4);
+
+    /* rm == 0b1101 is related encodings */
+    if(rm == 13) {
+        return false;
+    }
+    return (insn & 0xEFF1EF50) == 0xEE310F40;
+}
+
 static inline bool is_insn_vld4(uint32_t insn)
 {
     return (insn & 0xFF901E01) == 0xFC901E01;
@@ -266,4 +307,22 @@ static void mve_extract_vctp(arg_vctp *a, uint32_t insn)
 static void mve_extract_vpst(arg_vpst *a, uint32_t insn)
 {
     a->mask = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+}
+
+/* Extract arguments of VCMP floating-point instruction */
+static void mve_extract_vcmp_fp(arg_vcmp *a, uint32_t insn)
+{
+    a->qn = extract32(insn, 17, 3);
+    a->mask = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));
+    a->size = extract32(insn, 28, 1);
+}
+
+/* Extract arguments of VCMP scalar floating-point instruction */
+static void mve_extract_vcmp_fp_scalar(arg_vcmp_scalar *a, uint32_t insn)
+{
+    a->qn = extract32(insn, 17, 3);
+    a->mask = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    a->rm = extract32(insn, 0, 4);
+    a->size = extract32(insn, 28, 1);
 }
