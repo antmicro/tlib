@@ -933,6 +933,46 @@ void tlib_reset_mmu_window(uint64_t id)
 }
 EXC_VOID_1(tlib_reset_mmu_window, uint64_t, id)
 
+void tlib_reset_mmu_windows_covering_address(uint64_t address)
+{
+    //  NB. assumes that a window starting earlier cannot end later (for example because all windows have equal size)
+    ExtMmuRange *mmu_windows = env->external_mmu_windows;
+    int last_to_remove = find_last_mmu_window_possibly_covering(address);
+    if(last_to_remove < 0) {
+        return;
+    }
+    ExtMmuRange *last = &mmu_windows[last_to_remove];
+    if(!(last->range_end_inclusive ? address <= last->range_end : address < last->range_end)) {
+        return;
+    }
+
+    int first_to_remove;
+    for(first_to_remove = last_to_remove - 1; first_to_remove >= 0; --first_to_remove) {
+        ExtMmuRange *window = &mmu_windows[first_to_remove];
+        if(!(window->range_end_inclusive ? address <= window->range_end : address < window->range_end)) {
+            break;
+        }
+    }
+    ++first_to_remove;
+
+    int windows_to_remove = last_to_remove - first_to_remove + 1;
+    if(windows_to_remove > 0) {
+        size_t bytes_to_move = (env->external_mmu_window_count - (last_to_remove + 1)) * sizeof(ExtMmuRange);
+        memmove(&mmu_windows[first_to_remove], &mmu_windows[last_to_remove + 1], bytes_to_move);
+    }
+
+    env->external_mmu_window_count -= windows_to_remove;
+}
+
+EXC_VOID_1(tlib_reset_mmu_windows_covering_address, uint64_t, address)
+
+void tlib_reset_all_mmu_windows(void)
+{
+    cpu->external_mmu_window_count = 0;
+}
+
+EXC_VOID_0(tlib_reset_all_mmu_windows)
+
 uint64_t tlib_acquire_mmu_window(uint32_t type)
 {
     ASSERT_EXTERNAL_MMU_ENABLED

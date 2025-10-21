@@ -1294,9 +1294,7 @@ int get_external_mmu_phys_addr(CPUState *env, uint64_t address, int access_type,
     int32_t first_try = 1;
 retry:
     ensure_mmu_windows_sorted(env);
-    int window_index = -1;
     uint64_t window_id = -1;
-    int lo = 0, hi = env->external_mmu_window_count - 1;
     ExtMmuRange *mmu_windows = env->external_mmu_windows;
     uint32_t access_type_mask = 0;
     switch(access_type) {
@@ -1317,15 +1315,7 @@ retry:
     *phys_ptr = address;
     *prot = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
 
-    while(lo <= hi) {
-        int test_index = lo + (hi - lo) / 2;
-        if(mmu_windows[test_index].range_start <= address) {
-            window_index = test_index;
-            lo = test_index + 1;
-        } else {
-            hi = test_index - 1;
-        }
-    }
+    int window_index = find_last_mmu_window_possibly_covering(address);
 
     //  Now we have the index of the highest-numbered window which satisfies start <= address,
     //  so check for a type match and then check whether the address is inside the window.

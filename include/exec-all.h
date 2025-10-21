@@ -353,6 +353,22 @@ static inline tb_page_addr_t get_page_addr_code(CPUState *env1, target_ulong add
     return ram_addr_from_host(p);
 }
 
+static inline int find_last_mmu_window_possibly_covering(uint64_t address)
+{
+    int res = -1;
+    int lo = 0, hi = env->external_mmu_window_count - 1;
+    while(lo <= hi) {
+        int test_index = lo + (hi - lo) / 2;
+        if(env->external_mmu_windows[test_index].range_start <= address) {
+            res = test_index;
+            lo = test_index + 1;
+        } else {
+            hi = test_index - 1;
+        }
+    }
+    return res;
+}
+
 typedef void(CPUDebugExcpHandler)(CPUState *env);
 
 CPUDebugExcpHandler *cpu_set_debug_excp_handler(CPUDebugExcpHandler *handler);

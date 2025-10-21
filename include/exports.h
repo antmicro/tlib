@@ -83,6 +83,10 @@ uint64_t tlib_acquire_mmu_window(uint32_t type);
 
 void tlib_reset_mmu_window(uint64_t id);
 
+void tlib_reset_mmu_windows_covering_address(uint64_t address);
+
+void tlib_reset_all_mmu_windows(void);
+
 void tlib_set_mmu_window_start(uint64_t id, uint64_t addr_start);
 
 void tlib_set_mmu_window_end(uint64_t id, uint64_t addr_end, uint32_t range_end_inclusive);
