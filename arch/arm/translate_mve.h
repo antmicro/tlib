@@ -256,6 +256,16 @@ static inline bool is_insn_vidup(uint32_t insn)
     return (insn & 0xFF811F7E) == 0xEE010F6E;
 }
 
+static inline bool is_insn_vddup(uint32_t insn)
+{
+    uint32_t size = extract32(insn, 20, 2);
+    /* size = 0b11 is related encodings */
+    if(size == 3) {
+        return false;
+    }
+    return (insn & 0xFF811F7E) == 0xEE011F6E;
+}
+
 static inline bool is_insn_viwdup(uint32_t insn)
 {
     uint32_t size = extract32(insn, 20, 2);

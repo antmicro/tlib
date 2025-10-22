@@ -9754,6 +9754,19 @@ static int trans_vidup(DisasContext *s, arg_vidup *a)
     return do_vidup(s, a, fns[a->size]);
 }
 
+static int trans_vddup(DisasContext *s, arg_vidup *a)
+{
+    static MVEGenVIDUPFn *const fns[] = {
+        gen_helper_mve_vidupb,
+        gen_helper_mve_viduph,
+        gen_helper_mve_vidupw,
+        NULL,
+    };
+    /* VDDUP is just like VIDUP but with a negative immediate */
+    a->imm = -a->imm;
+    return do_vidup(s, a, fns[a->size]);
+}
+
 static int trans_viwdup(DisasContext *s, arg_viwdup *a)
 {
     static MVEGenVIWDUPFn *const fns[] = {
@@ -10774,6 +10787,12 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_vidup a;
                     mve_extract_vidup(&a, insn);
                     return trans_vidup(s, &a);
+                }
+                if(is_insn_vddup(insn)) {
+                    ARCH(MVE);
+                    arg_vidup a;
+                    mve_extract_vidup(&a, insn);
+                    return trans_vddup(s, &a);
                 }
                 if(is_insn_viwdup(insn)) {
                     ARCH(MVE);
