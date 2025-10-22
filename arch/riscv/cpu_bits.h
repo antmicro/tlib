@@ -333,8 +333,8 @@
 #endif
 
 /* mstatush bits */
-#define MSTATUSH_SBE   0x00000010
-#define MSTATUSH_MBE   0x00000020
+#define MSTATUSH_SBE 0x00000010
+#define MSTATUSH_MBE 0x00000020
 
 /* mcause bits */
 #define MCAUSE_EXCCODE 0x00000fff

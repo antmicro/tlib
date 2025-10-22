@@ -404,7 +404,8 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
             big_endian_mode_mask |= MSTATUS_MBE | MSTATUS_SBE;
 #endif
             if(val_to_write & big_endian_mode_mask) {
-                tlib_printf(LOG_LEVEL_WARNING, "Big endian data access is not supported, writes to MSTATUS.MBE/SBE/UBE are ignored");
+                tlib_printf(LOG_LEVEL_WARNING,
+                            "Big endian data access is not supported, writes to MSTATUS.MBE/SBE/UBE are ignored");
             }
 
             mstatus = (mstatus & ~mask) | (val_to_write & mask);
@@ -428,7 +429,7 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
                 helper_raise_illegal_instruction(env);
             }
             //  All fields hardwired to zero in the current implementation
-            if(val_to_write & (MSTATUSH_MBE | MSTATUSH_SBE)){
+            if(val_to_write & (MSTATUSH_MBE | MSTATUSH_SBE)) {
                 tlib_printf(LOG_LEVEL_WARNING, "Big endian data access is not supported, writes to MSTATUSH.MBE/SBE are ignored");
             }
 #else
@@ -907,7 +908,7 @@ static inline target_ulong csr_read_helper(CPUState *env, target_ulong csrno)
             return env->mstatus;
         case CSR_MSTATUSH:
 #ifdef TARGET_RISCV32
-            // CSR was added in priv 1.12
+            //  CSR was added in priv 1.12
             if(env->privilege_architecture < RISCV_PRIV1_12) {
                 helper_raise_illegal_instruction(env);
             }
