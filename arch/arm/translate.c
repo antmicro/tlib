@@ -9485,6 +9485,41 @@ static bool do_vidup(DisasContext *s, arg_vidup *a, MVEGenVIDUPFn *fn)
     return TRANS_STATUS_SUCCESS;
 }
 
+static int do_viwdup(DisasContext *s, arg_viwdup *a, MVEGenVIWDUPFn *fn)
+{
+    TCGv_ptr qd;
+    TCGv_i32 rn, rm;
+
+    if(!mve_check_qreg_bank(a->qd)) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    if(!fn || a->rm == 13) {
+        /*
+         * size == 0b11 is related encodings but that's handled elsewhere,
+         * same goes for rm == 15 which is VIDUP,
+         * rm == 13 is UNPREDICTABLE
+         */
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    gen_helper_fp_lsp(cpu_env);
+
+    qd = mve_qreg_ptr(a->qd);
+    rn = load_reg(s, a->rn);
+    rm = load_reg(s, a->rm);
+    TCGv_i32 imm = tcg_const_i32(a->imm);
+    fn(rn, cpu_env, qd, rn, rm, imm);
+    store_reg(s, a->rn, rn);
+    tcg_temp_free_i32(imm);
+    tcg_temp_free_i32(rm);
+    tcg_temp_free_ptr(qd);
+    mve_update_eci(s);
+    return TRANS_STATUS_SUCCESS;
+}
+
 /* This macro is just to make the arrays more compact in these functions */
 #define F(OP) glue(gen_mve_, OP)
 
@@ -9717,6 +9752,17 @@ static int trans_vidup(DisasContext *s, arg_vidup *a)
     };
 
     return do_vidup(s, a, fns[a->size]);
+}
+
+static int trans_viwdup(DisasContext *s, arg_viwdup *a)
+{
+    static MVEGenVIWDUPFn *const fns[] = {
+        gen_helper_mve_viwdupb,
+        gen_helper_mve_viwduph,
+        gen_helper_mve_viwdupw,
+        NULL,
+    };
+    return do_viwdup(s, a, fns[a->size]);
 }
 
 #endif
@@ -10717,6 +10763,12 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_vidup a;
                     mve_extract_vidup(&a, insn);
                     return trans_vidup(s, &a);
+                }
+                if(is_insn_viwdup(insn)) {
+                    ARCH(MVE);
+                    arg_viwdup a;
+                    mve_extract_viwdup(&a, insn);
+                    return trans_viwdup(s, &a);
                 }
             }
 #endif

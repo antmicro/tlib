@@ -646,11 +646,40 @@ DO_VCMP_FP_BOTH(vcmp_fp_les, vcmp_fp_le_scalars, 4, float32, !DO_GT32)
         return offset;                                                                       \
     }
 
+#define DO_VIWDUP(OP, ESIZE, TYPE, FN)                                                                      \
+    uint32_t HELPER(glue(mve_, OP))(CPUState * env, void *vd, uint32_t offset, uint32_t wrap, uint32_t imm) \
+    {                                                                                                       \
+        TYPE *d = vd;                                                                                       \
+        uint16_t mask = mve_element_mask(env);                                                              \
+        unsigned e;                                                                                         \
+        for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                                                   \
+            mergemask(&d[e], offset, mask);                                                                 \
+            offset = FN(offset, wrap, imm);                                                                 \
+        }                                                                                                   \
+        mve_advance_vpt(env);                                                                               \
+        return offset;                                                                                      \
+    }
+
 #define DO_VIDUP_ALL(OP, FN)        \
     DO_VIDUP(OP##b, 1, int8_t, FN)  \
     DO_VIDUP(OP##h, 2, int16_t, FN) \
     DO_VIDUP(OP##w, 4, int32_t, FN)
 
+#define DO_VIWDUP_ALL(OP, FN)        \
+    DO_VIWDUP(OP##b, 1, int8_t, FN)  \
+    DO_VIWDUP(OP##h, 2, int16_t, FN) \
+    DO_VIWDUP(OP##w, 4, int32_t, FN)
+
+static uint32_t do_add_wrap(uint32_t offset, uint32_t wrap, uint32_t imm)
+{
+    offset += imm;
+    if(offset == wrap) {
+        offset = 0;
+    }
+    return offset;
+}
+
 DO_VIDUP_ALL(vidup, DO_ADD)
+DO_VIWDUP_ALL(viwdup, do_add_wrap)
 
 #endif
