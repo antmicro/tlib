@@ -679,7 +679,17 @@ static uint32_t do_add_wrap(uint32_t offset, uint32_t wrap, uint32_t imm)
     return offset;
 }
 
+static uint32_t do_sub_wrap(uint32_t offset, uint32_t wrap, uint32_t imm)
+{
+    if(offset == 0) {
+        offset = wrap;
+    }
+    offset -= imm;
+    return offset;
+}
+
 DO_VIDUP_ALL(vidup, DO_ADD)
 DO_VIWDUP_ALL(viwdup, do_add_wrap)
+DO_VIWDUP_ALL(vdwdup, do_sub_wrap)
 
 #endif

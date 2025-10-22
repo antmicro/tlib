@@ -573,6 +573,10 @@ DEF_HELPER_4(mve_vidupw, i32, env, ptr, i32, i32)
 DEF_HELPER_5(mve_viwdupb, i32, env, ptr, i32, i32, i32)
 DEF_HELPER_5(mve_viwduph, i32, env, ptr, i32, i32, i32)
 DEF_HELPER_5(mve_viwdupw, i32, env, ptr, i32, i32, i32)
+
+DEF_HELPER_5(mve_vdwdupb, i32, env, ptr, i32, i32, i32)
+DEF_HELPER_5(mve_vdwduph, i32, env, ptr, i32, i32, i32)
+DEF_HELPER_5(mve_vdwdupw, i32, env, ptr, i32, i32, i32)
 #endif
 
 #include "def-helper.h"

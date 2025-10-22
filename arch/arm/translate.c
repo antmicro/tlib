@@ -9765,6 +9765,17 @@ static int trans_viwdup(DisasContext *s, arg_viwdup *a)
     return do_viwdup(s, a, fns[a->size]);
 }
 
+static int trans_vdwdup(DisasContext *s, arg_viwdup *a)
+{
+    static MVEGenVIWDUPFn *const fns[] = {
+        gen_helper_mve_vdwdupb,
+        gen_helper_mve_vdwduph,
+        gen_helper_mve_vdwdupw,
+        NULL,
+    };
+    return do_viwdup(s, a, fns[a->size]);
+}
+
 #endif
 
 /* Translate a 32-bit thumb instruction.  Returns nonzero if the instruction
@@ -10769,6 +10780,12 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_viwdup a;
                     mve_extract_viwdup(&a, insn);
                     return trans_viwdup(s, &a);
+                }
+                if(is_insn_vdwdup(insn)) {
+                    ARCH(MVE);
+                    arg_viwdup a;
+                    mve_extract_viwdup(&a, insn);
+                    return trans_vdwdup(s, &a);
                 }
             }
 #endif

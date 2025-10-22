@@ -271,6 +271,21 @@ static inline bool is_insn_viwdup(uint32_t insn)
     return (insn & 0xFF811F71) == 0xEE010F60;
 }
 
+static inline bool is_insn_vdwdup(uint32_t insn)
+{
+    uint32_t size = extract32(insn, 20, 2);
+    /* size = 0b11 is related encodings */
+    if(size == 3) {
+        return false;
+    }
+    uint32_t rm = extract32(insn, 1, 3);
+    /* rm == 0b111 related encodings */
+    if(rm == 7) {
+        return false;
+    }
+    return (insn & 0xFF811F70) == 0xEE011F60;
+}
+
 static inline bool is_insn_vld4(uint32_t insn)
 {
     return (insn & 0xFF901E01) == 0xFC901E01;
