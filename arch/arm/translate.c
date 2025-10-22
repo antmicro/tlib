@@ -9459,6 +9459,32 @@ static int do_vcmp_scalar(DisasContext *s, arg_vcmp_scalar *a, MVEGenScalarCmpFn
     return TRANS_STATUS_SUCCESS;
 }
 
+static bool do_vidup(DisasContext *s, arg_vidup *a, MVEGenVIDUPFn *fn)
+{
+    TCGv_ptr qd;
+    TCGv_i32 rn;
+
+    if(!mve_check_qreg_bank(a->qd)) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    gen_helper_fp_lsp(cpu_env);
+
+    qd = mve_qreg_ptr(a->qd);
+    rn = load_reg(s, a->rn);
+    TCGv_i32 imm = tcg_const_i32(a->imm);
+    fn(rn, cpu_env, qd, rn, imm);
+    tcg_temp_free_i32(imm);
+    tcg_temp_free_ptr(qd);
+    store_reg(s, a->rn, rn);
+    mve_update_eci(s);
+    return TRANS_STATUS_SUCCESS;
+}
+
 /* This macro is just to make the arrays more compact in these functions */
 #define F(OP) glue(gen_mve_, OP)
 
@@ -9680,6 +9706,18 @@ DO_TRANS_VCMP_FP(vcmp_fp_gt, vcmp_fp_gt)
 DO_TRANS_VCMP_FP(vcmp_fp_le, vcmp_fp_le)
 
 #undef DO_TRANS_VCMP_FP
+
+static int trans_vidup(DisasContext *s, arg_vidup *a)
+{
+    static MVEGenVIDUPFn *const fns[] = {
+        gen_helper_mve_vidupb,
+        gen_helper_mve_viduph,
+        gen_helper_mve_vidupw,
+        NULL,
+    };
+
+    return do_vidup(s, a, fns[a->size]);
+}
 
 #endif
 
@@ -10673,6 +10711,12 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                         default:
                             return TRANS_STATUS_ILLEGAL_INSN;
                     }
+                }
+                if(is_insn_vidup(insn)) {
+                    ARCH(MVE);
+                    arg_vidup a;
+                    mve_extract_vidup(&a, insn);
+                    return trans_vidup(s, &a);
                 }
             }
 #endif

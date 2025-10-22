@@ -25,6 +25,7 @@ typedef void MVEGenTwoOpScalarFn(TCGv_ptr, TCGv_ptr, TCGv_ptr, TCGv_i32);
 typedef void MVEGenTwoOpFn(TCGv_ptr, TCGv_ptr, TCGv_ptr, TCGv_ptr);
 typedef void MVEGenCmpFn(TCGv_ptr, TCGv_ptr, TCGv_ptr);
 typedef void MVEGenScalarCmpFn(TCGv_ptr, TCGv_ptr, TCGv_i32);
+typedef void MVEGenVIDUPFn(TCGv_i32, TCGv_ptr, TCGv_ptr, TCGv_i32, TCGv_i32);
 /* Note that the gvec expanders operate on offsets + sizes.  */
 typedef void GVecGen3Fn(unsigned, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
 
@@ -107,6 +108,14 @@ typedef struct {
     int size;
     int mask;
 } arg_vcmp_scalar;
+
+/* Arguments of VIDUP and VDDUP instructions */
+typedef struct {
+    int qd;
+    int rn;
+    int size;
+    int imm;
+} arg_vidup;
 
 void gen_mve_vld40b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld41b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
@@ -227,6 +236,16 @@ static inline bool is_insn_vcmp_fp_scalar(uint32_t insn)
     return (insn & 0xEFF1EF50) == 0xEE310F40;
 }
 
+static inline bool is_insn_vidup(uint32_t insn)
+{
+    uint32_t size = extract32(insn, 20, 2);
+    /* size = 0b11 is related encodings */
+    if(size == 3) {
+        return false;
+    }
+    return (insn & 0xFF811F7E) == 0xEE010F6E;
+}
+
 static inline bool is_insn_vld4(uint32_t insn)
 {
     return (insn & 0xFF901E01) == 0xFC901E01;
@@ -325,4 +344,15 @@ static void mve_extract_vcmp_fp_scalar(arg_vcmp_scalar *a, uint32_t insn)
     a->mask = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
     a->rm = extract32(insn, 0, 4);
     a->size = extract32(insn, 28, 1);
+}
+
+/* Extract arguments for VIDUP and VDDUP */
+static void mve_extract_vidup(arg_vidup *a, uint32_t insn)
+{
+    uint32_t imm = deposit32(extract32(insn, 0, 1), 1, 31, extract32(insn, 7, 1));
+    a->imm = 1 << imm;
+    a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    a->size = extract32(insn, 20, 2);
+    /* Decode for this instruction puts a zero at least significant bit */
+    a->rn = extract32(insn, 17, 3) << 1;
 }

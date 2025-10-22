@@ -565,6 +565,10 @@ DEF_HELPER_4(mve_vfmas_scalars, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vfadds, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vfsubs, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vfmuls, void, env, ptr, ptr, ptr)
+
+DEF_HELPER_4(mve_vidupb, i32, env, ptr, i32, i32)
+DEF_HELPER_4(mve_viduph, i32, env, ptr, i32, i32)
+DEF_HELPER_4(mve_vidupw, i32, env, ptr, i32, i32)
 #endif
 
 #include "def-helper.h"
