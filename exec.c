@@ -1331,8 +1331,11 @@ retry:
     //  so check for a type match and then check whether the address is inside the window.
     for(; window_index >= 0; --window_index) {
         ExtMmuRange *window = &mmu_windows[window_index];
-        if((window->type & access_type_mask) &&
-           (window->range_end_inclusive ? address <= window->range_end : address < window->range_end)) {
+        if(!(window->range_end_inclusive ? address <= window->range_end : address < window->range_end)) {
+            //  NB. assumes that a window starting earlier cannot end later (for example because all windows have equal size)
+            break;
+        }
+        if(window->type & access_type_mask) {
             *phys_ptr += window->addend;
             *prot = window->priv;
             window_id = window->id;
