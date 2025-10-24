@@ -844,9 +844,6 @@ typedef struct CPUState {
         uint64_t zcr_el[4];  /* ZCR_EL[1-3] */
         uint64_t smcr_el[4]; /* SMCR_EL[1-3] */
     } vfp;
-    uint64_t exclusive_addr;
-    uint64_t exclusive_val;
-    uint64_t exclusive_high;
 
     /* iwMMXt coprocessor state.  */
     struct {
