@@ -914,7 +914,7 @@ EXC_INT_0(uint32_t, tlib_get_mmu_windows_count)
 
 void tlib_enable_external_window_mmu(uint32_t value)
 {
-#ifndef TARGET_RISCV
+#if !(defined(TARGET_RISCV) || defined(TARGET_ARM) || defined(TARGET_ARM64))
     tlib_printf(LOG_LEVEL_WARNING, "Enabled the external MMU. Please note that this feature is experimental on this platform");
 #endif
     cpu->external_mmu_position = value;
