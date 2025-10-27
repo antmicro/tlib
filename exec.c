@@ -1650,6 +1650,8 @@ void tlb_set_page(CPUState *env, target_ulong vaddr, target_phys_addr_t paddr, i
     p = phys_page_find(paddr >> TARGET_PAGE_BITS);
     if(!p) {
         pd = IO_MEM_UNASSIGNED;
+    } else if(unlikely(p->flags.external_permissions) && !tlib_check_external_permissions(vaddr)) {
+        pd = IO_MEM_UNASSIGNED;
     } else {
         pd = p->phys_offset;
 

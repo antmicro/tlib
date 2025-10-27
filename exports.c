@@ -466,6 +466,31 @@ void tlib_register_access_flags_for_range(uint64_t start_address, uint64_t lengt
 }
 EXC_VOID_3(tlib_register_access_flags_for_range, uint64_t, startAddress, uint64_t, length, uint32_t, is_executable_io_mem)
 
+uint32_t tlib_enable_external_permission_handler_for_range(uint64_t start_address, uint64_t length, uint32_t external_permissions)
+{
+    PhysPageDesc *pd;
+
+    uint64_t addr = start_address;
+    while(addr < (start_address + length)) {
+        pd = phys_page_find((target_phys_addr_t)addr >> TARGET_PAGE_BITS);
+        if(pd != NULL) {
+            pd->flags.external_permissions = external_permissions;
+            addr += TARGET_PAGE_SIZE;
+            continue;
+        }
+
+        PhysPageDescFlags flags = {
+            .external_permissions = external_permissions,
+        };
+        pd = phys_page_alloc(addr >> TARGET_PAGE_BITS, flags);
+
+        addr += TARGET_PAGE_SIZE;
+    }
+    return 0;
+}
+EXC_INT_3(uint32_t, tlib_enable_external_permission_handler_for_range, uint64_t, start_address, uint64_t, length, uint32_t,
+          external_permissions)
+
 uint32_t tlib_is_range_mapped(uint64_t start, uint64_t end)
 {
     PhysPageDesc *pd;

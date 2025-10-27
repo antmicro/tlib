@@ -86,6 +86,7 @@ void cpu_physical_memory_write_rom(target_phys_addr_t addr, const uint8_t *buf, 
 typedef struct __attribute__((__packed__)) {
     bool dirty : 1;
     bool executable_io_mem : 1;
+    bool external_permissions : 1;
 } PhysPageDescFlags;
 
 typedef struct PhysPageDesc {

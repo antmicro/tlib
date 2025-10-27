@@ -123,3 +123,5 @@ DEFAULT_PTR_HANDLER1(void *tlib_get_dirty_addresses_list, void *size)
 DEFAULT_VOID_HANDLER1(void tlib_on_wfi_state_change, int32_t is_in_wfi)
 
 DEFAULT_INT_HANDLER2(uint32_t tlib_is_memory_disabled, uint64_t start, uint64_t size)
+
+DEFAULT_INT_HANDLER1(uint32_t tlib_check_external_permissions, uint64_t vaddr)
