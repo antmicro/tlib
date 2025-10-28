@@ -21,6 +21,9 @@
 
 #include "cpu.h"
 #include "helper.h"
+#include "common.h"
+#include "vec_common.h"
+#include "softfloat-2.h"
 
 #define DO_ADD(N, M) ((N) + (M))
 
@@ -691,5 +694,42 @@ static uint32_t do_sub_wrap(uint32_t offset, uint32_t wrap, uint32_t imm)
 DO_VIDUP_ALL(vidup, DO_ADD)
 DO_VIWDUP_ALL(viwdup, do_add_wrap)
 DO_VIWDUP_ALL(vdwdup, do_sub_wrap)
+
+#define float32_silence_nan(a, fpst) float32_maybe_silence_nan(a, fpst)
+
+#define DO_FP_VMAXMINV(OP, ESIZE, TYPE, ABS, FN)                                         \
+    uint32_t HELPER(glue(mve_, OP))(CPUState * env, void *vm, uint32_t ra_in)            \
+    {                                                                                    \
+        uint16_t mask = mve_element_mask(env);                                           \
+        unsigned e;                                                                      \
+        TYPE *m = vm;                                                                    \
+        TYPE ra = (TYPE)ra_in;                                                           \
+        float_status *fpst = ESIZE == 2 ? &env->vfp.fp_status_f16 : &env->vfp.fp_status; \
+        for(e = 0; e < (16 / ESIZE); e++) {                                              \
+            if(mask & 1) {                                                               \
+                TYPE v = m[e];                                                           \
+                if(glue(TYPE, _is_signaling_nan)(ra, fpst)) {                            \
+                    ra = glue(TYPE, _silence_nan)(ra, fpst);                             \
+                    float_raise(float_flag_invalid, fpst);                               \
+                }                                                                        \
+                if(glue(TYPE, _is_signaling_nan)(v, fpst)) {                             \
+                    v = glue(TYPE, _silence_nan)(v, fpst);                               \
+                    float_raise(float_flag_invalid, fpst);                               \
+                }                                                                        \
+                if(ABS) {                                                                \
+                    v = glue(TYPE, _abs)(v);                                             \
+                }                                                                        \
+                ra = FN(ra, v, fpst);                                                    \
+            }                                                                            \
+            mask >>= ESIZE;                                                              \
+        }                                                                                \
+        mve_advance_vpt(env);                                                            \
+        return ra;                                                                       \
+    }
+
+DO_FP_VMAXMINV(vmaxnmvs, 4, float32, false, float32_maxnum)
+DO_FP_VMAXMINV(vminnmvs, 4, float32, false, float32_minnum)
+DO_FP_VMAXMINV(vmaxnmavs, 4, float32, true, float32_maxnum)
+DO_FP_VMAXMINV(vminnmavs, 4, float32, true, float32_minnum)
 
 #endif

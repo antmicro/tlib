@@ -556,6 +556,11 @@ DEF_HELPER_3(mve_vcmp_fp_gt_scalars, void, env, ptr, i32)
 
 DEF_HELPER_3(mve_vcmp_fp_lt_scalars, void, env, ptr, i32)
 
+DEF_HELPER_3(mve_vmaxnmvs, i32, env, ptr, i32)
+DEF_HELPER_3(mve_vminnmvs, i32, env, ptr, i32)
+DEF_HELPER_3(mve_vmaxnmavs, i32, env, ptr, i32)
+DEF_HELPER_3(mve_vminnmavs, i32, env, ptr, i32)
+
 DEF_HELPER_4(mve_vfmul_scalars, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vfadd_scalars, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vfsub_scalars, void, env, ptr, ptr, i32)

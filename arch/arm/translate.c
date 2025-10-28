@@ -9520,6 +9520,30 @@ static int do_viwdup(DisasContext *s, arg_viwdup *a, MVEGenVIWDUPFn *fn)
     return TRANS_STATUS_SUCCESS;
 }
 
+static int do_vmaxv(DisasContext *s, arg_vmaxv *a, MVEGenVADDVFn fn)
+{
+    TCGv_ptr qm;
+    TCGv_i32 rda;
+
+    if(!mve_check_qreg_bank(a->qm) || !fn || a->rda == 13 || a->rda == 15) {
+        /* Rda cases are UNPREDICTABLE */
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    gen_helper_fp_lsp(cpu_env);
+
+    qm = mve_qreg_ptr(a->qm);
+    rda = load_reg(s, a->rda);
+    fn(rda, cpu_env, qm, rda);
+    store_reg(s, a->rda, rda);
+    tcg_temp_free_ptr(qm);
+    mve_update_eci(s);
+    return TRANS_STATUS_SUCCESS;
+}
+
 /* This macro is just to make the arrays more compact in these functions */
 #define F(OP) glue(gen_mve_, OP)
 
@@ -9788,6 +9812,22 @@ static int trans_vdwdup(DisasContext *s, arg_viwdup *a)
     };
     return do_viwdup(s, a, fns[a->size]);
 }
+
+/* Translate vector max/min across vector */
+#define DO_TRANS_V_MAXMIN_V_FP(INSN, FN)                         \
+    static int trans_##INSN(DisasContext *s, arg_vmaxv *a)       \
+    {                                                            \
+        static MVEGenVADDVFn *const fns[] = {                    \
+            gen_helper_mve_##FN##s, /*gen_helper_mve_##FN##h, */ \
+            NULL,                                                \
+        };                                                       \
+        return do_vmaxv(s, a, fns[a->size]);                     \
+    }
+
+DO_TRANS_V_MAXMIN_V_FP(vmaxnmv, vmaxnmv)
+DO_TRANS_V_MAXMIN_V_FP(vminnmv, vminnmv)
+DO_TRANS_V_MAXMIN_V_FP(vmaxnmav, vmaxnmav)
+DO_TRANS_V_MAXMIN_V_FP(vminnmav, vminnmav)
 
 #endif
 
@@ -10805,6 +10845,39 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_viwdup a;
                     mve_extract_viwdup(&a, insn);
                     return trans_vdwdup(s, &a);
+                }
+                /* VMAXNMV/VMAXNMAV/VMINNMV/VMINNMAV instructions */
+                if((insn & 0xEFF10F51) == 0xEEE00F00) {
+                    ARCH(MVE);
+                    arg_vmaxv a;
+                    //  Is this T1 variant - if not it's T2
+                    uint32_t is_t1 = extract32(insn, 17, 1) == 1;
+                    //  Is it MAX version - if not it's MIN.
+                    uint32_t is_max = extract32(insn, 7, 1) == 0;
+                    /*
+                     * Look at VMAXV/VMINV at the `size` assembler symbol.
+                     * `size` == '11' is related encodings and that is VMAXNMV/VMINNMV
+                     */
+                    uint32_t size = extract32(insn, 18, 2);
+
+                    if(size == 3) {
+                        mve_extract_vmaxnmv(&a, insn);
+                        if(is_t1 && is_max) {
+                            return trans_vmaxnmv(s, &a);
+                        }
+                        if(!is_t1 && is_max) {
+                            return trans_vmaxnmav(s, &a);
+                        }
+                        if(is_t1 && !is_max) {
+                            return trans_vminnmv(s, &a);
+                        }
+                        if(!is_t1 && !is_max) {
+                            return trans_vminnmav(s, &a);
+                        }
+                    } else {
+                        // NOTE: Not yet implemented
+                        goto illegal_op;
+                    }
                 }
             }
 #endif

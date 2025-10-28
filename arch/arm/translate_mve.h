@@ -27,6 +27,7 @@ typedef void MVEGenCmpFn(TCGv_ptr, TCGv_ptr, TCGv_ptr);
 typedef void MVEGenScalarCmpFn(TCGv_ptr, TCGv_ptr, TCGv_i32);
 typedef void MVEGenVIDUPFn(TCGv_i32, TCGv_ptr, TCGv_ptr, TCGv_i32, TCGv_i32);
 typedef void MVEGenVIWDUPFn(TCGv_i32, TCGv_ptr, TCGv_ptr, TCGv_i32, TCGv_i32, TCGv_i32);
+typedef void MVEGenVADDVFn(TCGv_i32, TCGv_ptr, TCGv_ptr, TCGv_i32);
 /* Note that the gvec expanders operate on offsets + sizes.  */
 typedef void GVecGen3Fn(unsigned, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
 
@@ -126,6 +127,13 @@ typedef struct {
     int size;
     int imm;
 } arg_viwdup;
+
+/* Arguments of VMAX*V and VMIN*V instructions */
+typedef struct {
+    int qm;
+    int rda;
+    int size;
+} arg_vmaxv;
 
 void gen_mve_vld40b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld41b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
@@ -418,4 +426,12 @@ static void mve_extract_viwdup(arg_viwdup *a, uint32_t insn)
     a->rm = (extract32(insn, 1, 3) << 1) + 1;
     /* Decode for this instruction puts a zero at least significant bit */
     a->rn = extract32(insn, 17, 3) << 1;
+}
+
+/* Extract arguments of VMAXNMV/VMAXNMAV/VMINNMV/VMINNMAV instructions */
+static void mve_extract_vmaxnmv(arg_vmaxv *a, uint32_t insn)
+{
+    a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));
+    a->rda = extract32(insn, 12, 4);
+    a->size = extract32(insn, 28, 1);
 }
