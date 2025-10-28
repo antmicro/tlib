@@ -20,6 +20,7 @@ DEFAULT_VOID_HANDLER2(void tlib_on_execution_mode_changed, uint32_t el, uint32_t
 
 DEFAULT_VOID_HANDLER0(void tlib_handle_psci_call)
 
-DEFAULT_VOID_HANDLER2(void tlib_on_tcm_mapping_update, int32_t index, uint64_t new_address)
+DEFAULT_VOID_HANDLER4(void tlib_on_tcm_mapping_update, int32_t index, uint64_t new_address, uint32_t el01_enabled,
+                      uint32_t el2_enabled)
 
 DEFAULT_INT_HANDLER1(uint64_t tlib_get_random_ulong, void)

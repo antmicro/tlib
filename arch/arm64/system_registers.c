@@ -398,10 +398,14 @@ WRITE_FUNCTION(64, ats1, {
 
 WRITE_FUNCTION(64, tcm_region, {
     uint32_t current_address = value >> 13;
+    uint32_t el01_enabled = value & 0x1;
+    uint32_t el2_enabled = value & 0x2;
 
     *sysreg_field_ptr(env, info) &= IMP_XTCMREGIONR_MASK;
     *sysreg_field_ptr(env, info) |= value & ~IMP_XTCMREGIONR_MASK;
-    tlib_on_tcm_mapping_update(info->op2, current_address);
+    tlib_on_tcm_mapping_update(info->op2, current_address, el01_enabled, el2_enabled);
+
+    tlb_flush(env, 1, true);
 });
 
 ACCESS_FUNCTION(rndr, isar_feature_aa64_rndr(&env->arm_core_config.isar) ? CP_ACCESS_OK : CP_ACCESS_TRAP);
