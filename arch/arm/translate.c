@@ -3648,6 +3648,14 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                                     if(!arm_feature(env, ARM_FEATURE_VFP3)) {
                                         return 1;
                                     }
+                                    //  Note: Dirty fix, bit 28 is ignored when decoding
+                                    if((insn >> 28) == 0xf) {  //  Instruction is actually vcvtp
+                                        if(!arm_feature(env, ARM_FEATURE_VFP5)) {
+                                            return 1;
+                                        }
+                                        gen_vfp_toui(dp, 0);
+                                        break;
+                                    }
                                     gen_vfp_tosh(dp, 16 - rm, 0);
                                     break;
                                 case 29: /* ftosl */
