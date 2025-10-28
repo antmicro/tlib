@@ -26,6 +26,8 @@
 #include "softfloat-2.h"
 
 #define DO_ADD(N, M) ((N) + (M))
+#define DO_MAX(N, M) ((N) >= (M) ? (N) : (M))
+#define DO_MIN(N, M) ((N) >= (M) ? (M) : (N))
 
 static uint16_t mve_eci_mask(CPUState *env)
 {
@@ -694,6 +696,67 @@ static uint32_t do_sub_wrap(uint32_t offset, uint32_t wrap, uint32_t imm)
 DO_VIDUP_ALL(vidup, DO_ADD)
 DO_VIWDUP_ALL(viwdup, do_add_wrap)
 DO_VIWDUP_ALL(vdwdup, do_sub_wrap)
+
+#define DO_VMAXMINV(OP, ESIZE, TYPE, RATYPE, FN)                              \
+    uint32_t HELPER(glue(mve_, OP))(CPUState * env, void *vm, uint32_t ra_in) \
+    {                                                                         \
+        uint16_t mask = mve_element_mask(env);                                \
+        unsigned e;                                                           \
+        TYPE *m = vm;                                                         \
+        int64_t ra = (RATYPE)ra_in;                                           \
+        for(e = 0; e < (16 / ESIZE); e++) {                                   \
+            if(mask & 1) {                                                    \
+                ra = FN(ra, m[e]);                                            \
+            }                                                                 \
+            mask >>= ESIZE;                                                   \
+        }                                                                     \
+        mve_advance_vpt(env);                                                 \
+        return ra;                                                            \
+    }
+
+#define DO_VMAXMINV_U(INSN, FN)                     \
+    DO_VMAXMINV(INSN##b, 1, uint8_t, uint8_t, FN)   \
+    DO_VMAXMINV(INSN##h, 2, uint16_t, uint16_t, FN) \
+    DO_VMAXMINV(INSN##w, 4, uint32_t, uint32_t, FN)
+#define DO_VMAXMINV_S(INSN, FN)                   \
+    DO_VMAXMINV(INSN##b, 1, int8_t, int8_t, FN)   \
+    DO_VMAXMINV(INSN##h, 2, int16_t, int16_t, FN) \
+    DO_VMAXMINV(INSN##w, 4, int32_t, int32_t, FN)
+
+/*
+ * Helpers for max and min of absolute values across vector:
+ * note that we only take the absolute value of 'm', not 'n'
+ */
+static int64_t do_maxa(int64_t n, int64_t m)
+{
+    if(m < 0) {
+        m = -m;
+    }
+    return MAX(n, m);
+}
+
+static int64_t do_mina(int64_t n, int64_t m)
+{
+    if(m < 0) {
+        m = -m;
+    }
+    return MIN(n, m);
+}
+
+DO_VMAXMINV_S(vmaxvs, DO_MAX)
+DO_VMAXMINV_U(vmaxvu, DO_MAX)
+DO_VMAXMINV_S(vminvs, DO_MIN)
+DO_VMAXMINV_U(vminvu, DO_MIN)
+/*
+ * VMAXAV, VMINAV treat the general purpose input as unsigned
+ * and the vector elements as signed.
+ */
+DO_VMAXMINV(vmaxavb, 1, int8_t, uint8_t, do_maxa)
+DO_VMAXMINV(vmaxavh, 2, int16_t, uint16_t, do_maxa)
+DO_VMAXMINV(vmaxavw, 4, int32_t, uint32_t, do_maxa)
+DO_VMAXMINV(vminavb, 1, int8_t, uint8_t, do_mina)
+DO_VMAXMINV(vminavh, 2, int16_t, uint16_t, do_mina)
+DO_VMAXMINV(vminavw, 4, int32_t, uint32_t, do_mina)
 
 #define float32_silence_nan(a, fpst) float32_maybe_silence_nan(a, fpst)
 

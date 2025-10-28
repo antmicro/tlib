@@ -428,6 +428,14 @@ static void mve_extract_viwdup(arg_viwdup *a, uint32_t insn)
     a->rn = extract32(insn, 17, 3) << 1;
 }
 
+/* Extract arguments of VMAXV/VMAXAV/VMINV/VMINAV instructions */
+static void mve_extract_vmaxv(arg_vmaxv *a, uint32_t insn)
+{
+    a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));
+    a->rda = extract32(insn, 12, 4);
+    a->size = extract32(insn, 18, 2);
+}
+
 /* Extract arguments of VMAXNMV/VMAXNMAV/VMINNMV/VMINNMAV instructions */
 static void mve_extract_vmaxnmv(arg_vmaxv *a, uint32_t insn)
 {

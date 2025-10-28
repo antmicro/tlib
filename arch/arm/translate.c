@@ -9813,6 +9813,25 @@ static int trans_vdwdup(DisasContext *s, arg_viwdup *a)
     return do_viwdup(s, a, fns[a->size]);
 }
 
+#define DO_TRANS_V_MAXMIN_V(INSN, FN)                      \
+    static int trans_##INSN(DisasContext *s, arg_vmaxv *a) \
+    {                                                      \
+        static MVEGenVADDVFn *const fns[] = {              \
+            gen_helper_mve_##FN##b,                        \
+            gen_helper_mve_##FN##h,                        \
+            gen_helper_mve_##FN##w,                        \
+            NULL,                                          \
+        };                                                 \
+        return do_vmaxv(s, a, fns[a->size]);               \
+    }
+
+DO_TRANS_V_MAXMIN_V(vmaxv_s, vmaxvs)
+DO_TRANS_V_MAXMIN_V(vmaxv_u, vmaxvu)
+DO_TRANS_V_MAXMIN_V(vmaxav, vmaxav)
+DO_TRANS_V_MAXMIN_V(vminv_s, vminvs)
+DO_TRANS_V_MAXMIN_V(vminv_u, vminvu)
+DO_TRANS_V_MAXMIN_V(vminav, vminav)
+
 /* Translate vector max/min across vector */
 #define DO_TRANS_V_MAXMIN_V_FP(INSN, FN)                         \
     static int trans_##INSN(DisasContext *s, arg_vmaxv *a)       \
@@ -10846,7 +10865,7 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     mve_extract_viwdup(&a, insn);
                     return trans_vdwdup(s, &a);
                 }
-                /* VMAXNMV/VMAXNMAV/VMINNMV/VMINNMAV instructions */
+                /* VMAXV/VMAXAV/VMINV/VMINAV/VMAXNMV/VMAXNMAV/VMINNMV/VMINNMAV instructions */
                 if((insn & 0xEFF10F51) == 0xEEE00F00) {
                     ARCH(MVE);
                     arg_vmaxv a;
@@ -10875,8 +10894,29 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                             return trans_vminnmav(s, &a);
                         }
                     } else {
-                        // NOTE: Not yet implemented
-                        goto illegal_op;
+                        mve_extract_vmaxv(&a, insn);
+                        if(is_t1) {
+                            uint32_t is_signed = extract32(insn, 28, 1) == 0;
+                            if(is_max && is_signed) {
+                                return trans_vmaxv_s(s, &a);
+                            }
+                            if(is_max && !is_signed) {
+                                return trans_vmaxv_u(s, &a);
+                            }
+                            if(!is_max && is_signed) {
+                                return trans_vminv_s(s, &a);
+                            }
+                            if(!is_max && !is_signed) {
+                                return trans_vminv_u(s, &a);
+                            }
+                        } else {
+                            if(is_max) {
+                                return trans_vmaxav(s, &a);
+                            }
+                            if(!is_max) {
+                                return trans_vminav(s, &a);
+                            }
+                        }
                     }
                 }
             }
