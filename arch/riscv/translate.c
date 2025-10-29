@@ -25,12 +25,14 @@
 #include "cpu_registers.h"
 #include "atomic-intrinsics.h"
 #include "tcg-op-atomic.h"
+#include "hash-table-store-test.h"
 
 /* global register indices */
 static TCGv cpu_gpr[32], cpu_pc, cpu_opcode;
 static TCGv_i64 cpu_fpr[32]; /* assume F and D extensions */
 static TCGv cpu_vstart;
 static TCGv cpu_prev_sp;
+static TCGv reserved_address;
 
 #include "tb-helper.h"
 
@@ -64,6 +66,8 @@ void translate_init(void)
     cpu_vstart = tcg_global_mem_new(TCG_AREG0, offsetof(CPUState, vstart), "vstart");
 
     cpu_prev_sp = tcg_global_mem_new(TCG_AREG0, offsetof(CPUState, prev_sp), "previous_sp");
+
+    reserved_address = tcg_global_mem_new(TCG_AREG0, offsetof(CPUState, reserved_address), "reserved_address");
 }
 
 static inline void kill_unknown(DisasContext *dc, int excp);
@@ -560,24 +564,6 @@ static void gen_mulhsu(TCGv ret, TCGv arg1, TCGv arg2)
 
     tcg_temp_free(rl);
     tcg_temp_free(rh);
-}
-
-static void gen_sc(TCGv source1, TCGv source2, TCGv dat, DisasContext *dc, int is_sc_d)
-{
-    int finish_label;
-    finish_label = gen_new_label();
-    gen_helper_check_address_reservation(dat, cpu_env, source1);
-    tcg_gen_brcondi_tl(TCG_COND_NE, dat, 0, finish_label);
-    if(is_sc_d) {
-        tcg_gen_qemu_st64(source2, source1, dc->base.mem_idx);
-    } else {
-        tcg_gen_qemu_st32(source2, source1, dc->base.mem_idx);
-    }
-    //  Successful store - access the address to cancel reservation for other CPUs
-    gen_helper_register_address_access(cpu_env, source1);
-    gen_set_label(finish_label);
-    //  Always cancel the reservation for the current CPU
-    gen_helper_cancel_reservation(cpu_env);
 }
 
 static void gen_fsgnj(DisasContext *dc, uint32_t rd, uint32_t rs1, uint32_t rs2, int rm,
@@ -2117,6 +2103,86 @@ static void gen_v_store(DisasContext *dc, uint32_t opc, uint32_t rest, uint32_t 
 #endif  //  HOST_LONG_BITS != 32
 }
 
+static void gen_sc(CPUState *env, TCGv result, TCGv value, TCGv guest_address, int mem_index, int size)
+{
+    tlib_assert(size == 32 || size == 64);
+
+    int done = gen_new_label();
+    int fail = gen_new_label();
+
+    /*  An SC may fail for two reasons: either there is no matching LR on
+     *  the same address to pair with, or the reservation has been invalidated.
+     *
+     *                "can the SC pair with a previous LR?"
+     *                ┌───────────────────────────────────┐
+     *        ┌───────┼ reserved_address == guest_address ┼──────────────┐
+     *        │  true └───────────────────────────────────┘ false        │
+     *        │                                                          │
+     *        │   ┌────────────────────────────────────────────────────┐ │
+     *        └───► reserved_result = store_table_check(guest_address) │ │
+     *            └──────────────────────┬─────────────────────────────┘ │
+     *                                   │                               │
+     *                         ┌─────────▼────────────┐                  │
+     * "is reservation valid?" │ reserved_result == 0 ┼──────────────────┤
+     *                         └─────────┬────────────┘ false            │
+     *                                   │ true                          │
+     *                           ┌───────▼────────┐                      │
+     *       "perform the store" │ qemu_st(32|64) │                      │
+     *                           └───────┬────────┘                      │
+     *                                   │                               │
+     *                            ┌──────┘       ┌───────────────────────┘
+     *                            │              │
+     *                     ┌──────▼─────┐ ┌──────▼─────┐
+     *     "Zero indicates │ result = 0 │ │ result = 1 │ "Non-zero result
+     *      success"       └──────┬─────┘ └──────┬─────┘  indicates SC failure"
+     *                            │              │
+     *                      ┌─────▼──────────────▼────┐
+     *                      │ reserved_address = null │ "Always invalidate reservation"
+     *                      └─────────────────────────┘
+     */
+
+    int address_reserved = gen_new_label();
+    tcg_gen_brcond_tl(TCG_COND_EQ, reserved_address, guest_address, address_reserved);
+
+    //  Didn't branch above, then the address wasn't reserved, so we fail...
+    tcg_gen_br(fail);
+
+    gen_set_label(address_reserved);
+
+    gen_store_table_lock(env, guest_address);
+
+    //  Check if address is reserved.
+    TCGv reserved_result = tcg_temp_new();
+    gen_store_table_check(env, reserved_result, guest_address);
+
+    //  If address is not reserved (i.e. reserved_result = 0), jump to fail block.
+    tcg_gen_brcondi_tl(TCG_COND_EQ, reserved_result, 0, fail);
+    tcg_temp_free(reserved_result);
+
+    /* Didn't branch to fail block, this means SC should perform the store... */
+    if(size == 64) {
+        tcg_gen_qemu_st64(value, guest_address, mem_index);
+    } else {
+        tcg_gen_qemu_st32(value, guest_address, mem_index);
+    }
+
+    //  Zero value in rd indicates SC success.
+    tcg_gen_movi_tl(result, 0);
+    gen_store_table_unlock(env, guest_address);
+    //  Skip over the fail block below.
+    tcg_gen_br(done);
+
+    gen_set_label(fail);
+    //  Non-zero value in rd indicates SC failure.
+    tcg_gen_movi_tl(result, 1);
+    gen_store_table_unlock(env, guest_address);
+
+    gen_set_label(done);
+
+    //  Regardless of success or failure, executing an SC instruction invalidates any reservation held by this hart.
+    tcg_gen_movi_tl(reserved_address, 0);
+}
+
 static inline void gen_atomic_with_global_memory_lock(DisasContext *dc, uint32_t opc, TCGv dat, TCGv source1, TCGv source2)
 {
     int done;
@@ -2125,17 +2191,6 @@ static inline void gen_atomic_with_global_memory_lock(DisasContext *dc, uint32_t
     gen_helper_acquire_global_memory_lock(cpu_env);
 
     switch(opc) {
-        /*
-         * Note about LR/SC instructions:
-         * Our implementation reserves the address, not region.
-         */
-        case OPC_RISC_LR_W:
-            tcg_gen_qemu_ld32s(dat, source1, dc->base.mem_idx);
-            gen_helper_reserve_address(cpu_env, source1, tcg_const_i32(0));
-            break;
-        case OPC_RISC_SC_W:
-            gen_sc(source1, source2, dat, dc, 0);
-            break;
         case OPC_RISC_AMOSWAP_W:
             tcg_gen_qemu_ld32s(dat, source1, dc->base.mem_idx);
             tcg_gen_qemu_st32(source2, source1, dc->base.mem_idx);
@@ -2176,17 +2231,6 @@ static inline void gen_atomic_with_global_memory_lock(DisasContext *dc, uint32_t
             tcg_gen_qemu_st32(source2, source1, dc->base.mem_idx);
             break;
 #if defined(TARGET_RISCV64)
-        /*
-         * Note about LR/SC instructions:
-         * Our implementation reserves the address, not region.
-         */
-        case OPC_RISC_LR_D:
-            tcg_gen_qemu_ld64(dat, source1, dc->base.mem_idx);
-            gen_helper_reserve_address(cpu_env, source1, tcg_const_i64(0));
-            break;
-        case OPC_RISC_SC_D:
-            gen_sc(source1, source2, dat, dc, 1);
-            break;
         case OPC_RISC_AMOSWAP_D:
             tcg_gen_qemu_ld64(dat, source1, dc->base.mem_idx);
             tcg_gen_qemu_st64(source2, source1, dc->base.mem_idx);
@@ -2281,21 +2325,55 @@ static void gen_atomic_fetch_and_op(DisasContext *dc, uint32_t opc, TCGv result,
     }
 
     switch(opc) {
+        case OPC_RISC_LR_W:
+            gen_helper_acquire_global_memory_lock(cpu_env);
+            tcg_gen_mov_tl(reserved_address, source1);
+            gen_store_table_set(env, source1);
+            tcg_gen_qemu_ld32s(result, source1, dc->base.mem_idx);
+            gen_helper_release_global_memory_lock(cpu_env);
+            break;
+        case OPC_RISC_SC_W:
+            gen_sc(env, result, source2, source1, dc->base.mem_idx, 32);
+            break;
         /*
          * AMO instructions:
          * rd = *rs1
          * *rs1 = rd OP rs2
          */
         case OPC_RISC_AMOADD_W:
+            gen_helper_acquire_global_memory_lock(cpu_env);
+            gen_store_table_set(env, source1);
             gen_amoadd(result, source1, source2, dc->base.mem_idx, 32);
+            gen_helper_release_global_memory_lock(cpu_env);
             break;
 #if defined(TARGET_RISCV64)
+        case OPC_RISC_LR_D:
+            gen_helper_acquire_global_memory_lock(cpu_env);
+            tcg_gen_mov_tl(reserved_address, source1);
+            gen_store_table_set(env, source1);
+            tcg_gen_qemu_ld64(result, source1, dc->base.mem_idx);
+            gen_helper_release_global_memory_lock(cpu_env);
+            break;
+        case OPC_RISC_SC_D:
+            gen_sc(env, result, source2, source1, dc->base.mem_idx, 64);
+            break;
+        /*
+         * AMO instructions:
+         * rd = *rs1
+         * *rs1 = rd OP rs2
+         */
         case OPC_RISC_AMOADD_D:
+            gen_helper_acquire_global_memory_lock(cpu_env);
+            gen_store_table_set(env, source1);
             gen_amoadd(result, source1, source2, dc->base.mem_idx, 64);
+            gen_helper_release_global_memory_lock(cpu_env);
             break;
 #endif
         default:
+            gen_helper_acquire_global_memory_lock(cpu_env);
+            gen_store_table_set(env, source1);
             gen_atomic_with_global_memory_lock(dc, opc, result, source1, source2);
+            gen_helper_release_global_memory_lock(cpu_env);
             break;
     }
 }
@@ -2446,6 +2524,9 @@ static void gen_atomic_compare_and_swap(DisasContext *dc, uint32_t opc, TCGv res
         return;
     }
 
+    gen_helper_acquire_global_memory_lock(cpu_env);
+    gen_store_table_set(env, source1);
+
     switch(opc) {
         case OPC_RISC_AMOCAS_W:
             gen_amocas(result, source1, source2, dc->base.mem_idx, 32);
@@ -2472,6 +2553,8 @@ static void gen_atomic_compare_and_swap(DisasContext *dc, uint32_t opc, TCGv res
             kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
             break;
     }
+
+    gen_helper_release_global_memory_lock(cpu_env);
 }
 
 static void gen_atomic(CPUState *env, DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
