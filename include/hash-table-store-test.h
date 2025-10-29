@@ -42,6 +42,8 @@ typedef struct CPUState CPUState;
 
 void initialize_store_table(store_table_entry_t *store_table, uint8_t store_table_bits);
 
+uint32_t get_core_id(CPUState *env);
+
 /* Generates code to update the hash table entry corresponding to the given
  * `guest_address` with the current core's ID.
  */
@@ -49,3 +51,6 @@ void gen_store_table_set(CPUState *env, TCGv_guestptr guest_address);
 void gen_store_table_check(CPUState *env, TCGv result, TCGv_guestptr guest_address);
 void gen_store_table_lock(CPUState *env, TCGv_guestptr guest_address);
 void gen_store_table_unlock(CPUState *env, TCGv_guestptr guest_address);
+
+/* Computes which hash table entry address corresponds to the given `guest_address`. */
+uintptr_t address_hash(CPUState *cpu_env, target_ulong guest_address);

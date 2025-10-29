@@ -116,6 +116,9 @@ void gen_store_table_lock(CPUState *env, TCGv_guestptr guest_address)
 
 uintptr_t address_hash(CPUState *env, target_ulong guest_address)
 {
-    tlib_abortf("gen_store_table_unlock: not yet implemented");
-    return 0;
+    uintptr_t table_offset = (uintptr_t)env->store_table;
+    uintptr_t hashed_address = guest_address;
+    hashed_address &= hst_guest_address_mask;
+    hashed_address |= table_offset;
+    return hashed_address;
 }
