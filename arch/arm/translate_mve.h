@@ -304,6 +304,11 @@ static inline bool is_insn_vdwdup(uint32_t insn)
     return (insn & 0xFF811F70) == 0xEE011F60;
 }
 
+static inline bool is_insn_vpsel(uint32_t insn)
+{
+    return (insn & 0xFFB11F51) == 0xFE310F01;
+}
+
 static inline bool is_insn_vld4(uint32_t insn)
 {
     return (insn & 0xFF901E01) == 0xFC901E01;
@@ -442,4 +447,13 @@ static void mve_extract_vmaxnmv(arg_vmaxv *a, uint32_t insn)
     a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));
     a->rda = extract32(insn, 12, 4);
     a->size = extract32(insn, 28, 1);
+}
+
+/* Extract arguments of 2-operand instructions without a size */
+static void mve_extract_2op_no_size(arg_2op *a, uint32_t insn)
+{
+    a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));
+    a->qn = deposit32(extract32(insn, 17, 3), 3, 29, extract32(insn, 7, 1));
+    a->size = 0;
 }

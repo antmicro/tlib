@@ -9848,6 +9848,14 @@ DO_TRANS_V_MAXMIN_V_FP(vminnmv, vminnmv)
 DO_TRANS_V_MAXMIN_V_FP(vmaxnmav, vmaxnmav)
 DO_TRANS_V_MAXMIN_V_FP(vminnmav, vminnmav)
 
+static int trans_vpsel(DisasContext *s, arg_2op *a)
+{
+    //  TODO(MVE): We may want to use a different method here or drop it entirely.
+    /* This insn updates predication bits */
+    s->base.is_jmp = EXIT_TB_NO_JUMP;
+    return do_2op(s, a, gen_helper_mve_vpsel);
+}
+
 #endif
 
 /* Translate a 32-bit thumb instruction.  Returns nonzero if the instruction
@@ -10918,6 +10926,12 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                             }
                         }
                     }
+                }
+                if(is_insn_vpsel(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op_no_size(&a, insn);
+                    return trans_vpsel(s, &a);
                 }
             }
 #endif

@@ -795,4 +795,23 @@ DO_FP_VMAXMINV(vminnmvs, 4, float32, false, float32_minnum)
 DO_FP_VMAXMINV(vmaxnmavs, 4, float32, true, float32_maxnum)
 DO_FP_VMAXMINV(vminnmavs, 4, float32, true, float32_minnum)
 
+void HELPER(mve_vpsel)(CPUState *env, void *vd, void *vn, void *vm)
+{
+    /*
+     * Qd[n] = VPR.P0[n] ? Qn[n] : Qm[n]
+     * but note that whether bytes are written to Qd is still subject
+     * to (all forms of) predication in the usual way.
+     */
+    uint64_t *d = vd, *n = vn, *m = vm;
+    uint16_t mask = mve_element_mask(env);
+    uint16_t p0 = FIELD_EX32(env->v7m.vpr, V7M_VPR, P0);
+    unsigned e;
+    for(e = 0; e < 16 / 8; e++, mask >>= 8, p0 >>= 8) {
+        uint64_t r = m[e];
+        mergemask(&r, n[e], p0);
+        mergemask(&d[e], r, mask);
+    }
+    mve_advance_vpt(env);
+}
+
 #endif
