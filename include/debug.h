@@ -17,6 +17,7 @@ extern char *msgs[MAX_MSG_COUNT];
 
 void generate_log(uint64_t pc, char *format, ...);
 void generate_var_log(TCGv v);
+void generate_backtrace_print(void);
 
 void mark_as_locked(struct TranslationBlock *tb, char *filename, int line_number);
 void check_locked(struct TranslationBlock *tb);

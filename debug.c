@@ -92,3 +92,33 @@ void generate_var_log(TCGv v)
     gen_helper_var_log(v);
 #endif
 }
+
+/*
+ * Emits code that will print a backtrace at runtime.
+ * Note that the backtrace is collected when this function is called, during code generation.
+ * This is useful for finding out which instruction in the frontend
+ * causes some runtime state (i.e. an assert failure).
+ */
+void generate_backtrace_print(void)
+{
+#if !defined(TCG_OPCODE_BACKTRACE)
+    generate_log(0, "TCG opcode backtrace is not enabled. Recompile with TCG_OPCODE_BACKTRACE to enable");
+#elif defined(_WIN32)
+    generate_log(0, "TCG opcode backtrace collection is not supported on Windows");
+#else
+    void *return_addresses[TCG_TRACE_MAX_SIZE];
+    const uint32_t address_count = backtrace(return_addresses, TCG_TRACE_MAX_SIZE);
+    char **backtrace_functions = backtrace_symbols(return_addresses, address_count);
+
+    if(backtrace_functions == NULL || address_count == 0) {
+        return;
+    }
+
+    generate_log(0, "Failed when processing opcode");
+    for(int i = 0; i < address_count; i++) {
+        generate_log(0, "At %s", backtrace_functions[i]);
+    }
+
+    free(backtrace_functions);
+#endif
+}

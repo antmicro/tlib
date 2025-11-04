@@ -140,6 +140,7 @@ void ensure_entry_locked(CPUState *env, TCGv_guestptr guest_address, const char 
     generate_var_log(guest_address);
     generate_log(0, "is not held by current core (id %u), it is held by:", core_id);
     generate_var_log(lock);
+    generate_backtrace_print();
     gen_helper_abort();
 
     gen_set_label(done);
