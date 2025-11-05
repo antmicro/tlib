@@ -2126,7 +2126,7 @@ static void gen_sc(CPUState *env, TCGv result, TCGv value, TCGv guest_address, i
      *            └──────────────────────┬─────────────────────────────┘ │
      *                                   │                               │
      *                         ┌─────────▼────────────┐                  │
-     * "is reservation valid?" │ reserved_result == 0 ┼──────────────────┤
+     * "is reservation valid?" │ reserved_result == 1 ┼──────────────────┤
      *                         └─────────┬────────────┘ false            │
      *                                   │ true                          │
      *                           ┌───────▼────────┐                      │
