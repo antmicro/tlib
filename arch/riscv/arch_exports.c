@@ -59,7 +59,11 @@ void tlib_raise_interrupt(uint32_t exception)
 {
     tlib_set_mip_bit(exception, 1);
     env->exception_index = exception;
-    cpu_interrupt(cpu, CPU_INTERRUPT_HARD);
+    if(cpu->custom_interrupts & (1UL << exception)) {
+        cpu_interrupt(cpu, RISCV_CPU_INTERRUPT_CUSTOM);
+    } else {
+        cpu_interrupt(cpu, CPU_INTERRUPT_HARD);
+    }
 }
 EXC_VOID_1(tlib_raise_interrupt, uint32_t, exception)
 

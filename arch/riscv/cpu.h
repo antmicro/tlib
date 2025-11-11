@@ -70,6 +70,8 @@ typedef struct opcode_hook_mask_t {
 #define VLEN_MAX (1 << 16)
 
 #define RISCV_CPU_INTERRUPT_CLIC CPU_INTERRUPT_TGT_EXT_0
+//  Intended to be used for any core specific custom interrupts
+#define RISCV_CPU_INTERRUPT_CUSTOM CPU_INTERRUPT_TGT_EXT_1
 
 typedef struct DisasContext {
     struct DisasContextBase base;
