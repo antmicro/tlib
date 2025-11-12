@@ -814,4 +814,66 @@ void HELPER(mve_vpsel)(CPUState *env, void *vd, void *vn, void *vm)
     mve_advance_vpt(env);
 }
 
+#define DO_VCMULH(N, M, S) float16_mul((N), (M), (S))
+#define DO_VCMULS(N, M, S) float32_mul((N), (M), (S))
+
+#define DO_VCMLA(OP, ESIZE, TYPE, ROT, FN)                                      \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vn, void *vm)   \
+    {                                                                           \
+        TYPE *d = vd, *n = vn, *m = vm;                                         \
+        TYPE r0, r1;                                                            \
+        uint16_t mask = mve_element_mask(env);                                  \
+        unsigned e;                                                             \
+        float_status *fpst0, *fpst1;                                            \
+        float_status scratch_fpst;                                              \
+        /* We loop through pairs of elements at a time */                       \
+        for(e = 0; e < 16 / ESIZE; e += 2, mask >>= ESIZE * 2) {                \
+            if((mask & MAKE_64BIT_MASK(0, ESIZE * 2)) == 0) {                   \
+                continue;                                                       \
+            }                                                                   \
+            fpst0 = ESIZE == 2 ? &env->vfp.fp_status_f16 : &env->vfp.fp_status; \
+            fpst1 = fpst0;                                                      \
+            if(!(mask & 1)) {                                                   \
+                scratch_fpst = *fpst0;                                          \
+                fpst0 = &scratch_fpst;                                          \
+            }                                                                   \
+            if(!(mask & (1 << ESIZE))) {                                        \
+                scratch_fpst = *fpst1;                                          \
+                fpst1 = &scratch_fpst;                                          \
+            }                                                                   \
+            switch(ROT) {                                                       \
+                case 0:                                                         \
+                    r0 = FN(n[e], m[e], fpst0);                                 \
+                    r1 = FN(n[e], m[e + 1], fpst1);                             \
+                    break;                                                      \
+                case 1:                                                         \
+                    r0 = FN(glue(TYPE, _chs)(n[e + 1]), m[e + 1], fpst0);       \
+                    r1 = FN(n[e + 1], m[e], fpst1);                             \
+                    break;                                                      \
+                case 2:                                                         \
+                    r0 = FN(glue(TYPE, _chs)(n[e]), m[e], fpst0);               \
+                    r1 = FN(glue(TYPE, _chs)(n[e]), m[e + 1], fpst1);           \
+                    break;                                                      \
+                case 3:                                                         \
+                    r0 = FN(n[e + 1], m[e + 1], fpst0);                         \
+                    r1 = FN(glue(TYPE, _chs)(n[e + 1]), m[e], fpst1);           \
+                    break;                                                      \
+                default:                                                        \
+                    g_assert_not_reached();                                     \
+            }                                                                   \
+            mergemask(&d[e], r0, mask);                                         \
+            mergemask(&d[e + 1], r1, mask >> ESIZE);                            \
+        }                                                                       \
+        mve_advance_vpt(env);                                                   \
+    }
+
+DO_VCMLA(vcmul0s, 4, float32, 0, DO_VCMULS)
+DO_VCMLA(vcmul90s, 4, float32, 1, DO_VCMULS)
+DO_VCMLA(vcmul180s, 4, float32, 2, DO_VCMULS)
+DO_VCMLA(vcmul270s, 4, float32, 3, DO_VCMULS)
+
+#undef DO_VCMLA
+#undef DO_VCMULH
+#undef DO_VCMULS
+
 #endif

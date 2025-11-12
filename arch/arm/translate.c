@@ -9613,6 +9613,10 @@ DO_VLDST_WIDE_NARROW(vldsth_w, vldrh_sw, vldrh_uw, vstrh_w, 2)
 DO_TRANS_2OP_FP(vadd_fp, vfadd)
 DO_TRANS_2OP_FP(vsub_fp, vfsub)
 DO_TRANS_2OP_FP(vmul_fp, vfmul)
+DO_TRANS_2OP_FP(vcmul0, vcmul0)
+DO_TRANS_2OP_FP(vcmul90, vcmul90)
+DO_TRANS_2OP_FP(vcmul180, vcmul180)
+DO_TRANS_2OP_FP(vcmul270, vcmul270)
 
 #define DO_TRANS_2OP_FP_SCALAR(INSN, FN)                     \
     static int trans_##INSN(DisasContext *s, arg_2scalar *a) \
@@ -10932,6 +10936,25 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_2op a;
                     mve_extract_2op_no_size(&a, insn);
                     return trans_vpsel(s, &a);
+                }
+                if(is_insn_vcmul(insn)) {
+                    ARCH(MVE);
+                    uint32_t rot = deposit32(extract32(insn, 12, 1), 1, 31, extract32(insn, 0, 1));
+                    arg_2op a;
+                    mve_extract_vmul(&a, insn);
+
+                    switch(rot) {
+                        case 0:
+                            return trans_vcmul0(s, &a);
+                        case 1:
+                            return trans_vcmul90(s, &a);
+                        case 2:
+                            return trans_vcmul180(s, &a);
+                        case 3:
+                            return trans_vcmul270(s, &a);
+                        default:
+                            g_assert_not_reached();
+                    }
                 }
             }
 #endif

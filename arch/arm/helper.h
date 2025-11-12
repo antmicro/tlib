@@ -595,6 +595,11 @@ DEF_HELPER_4(mve_vidupw, i32, env, ptr, i32, i32)
 
 DEF_HELPER_4(mve_vpsel, void, env, ptr, ptr, ptr)
 
+DEF_HELPER_4(mve_vcmul0s, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vcmul90s, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vcmul180s, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vcmul270s, void, env, ptr, ptr, ptr)
+
 DEF_HELPER_5(mve_viwdupb, i32, env, ptr, i32, i32, i32)
 DEF_HELPER_5(mve_viwduph, i32, env, ptr, i32, i32, i32)
 DEF_HELPER_5(mve_viwdupw, i32, env, ptr, i32, i32, i32)
