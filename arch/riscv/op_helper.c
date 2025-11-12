@@ -202,12 +202,14 @@ target_ulong priv_version_csr_filter(CPUState *env, target_ulong csrno)
         switch(csrno) {
             /* CSR_MUCOUNTEREN register is now used for CSR_MCOUNTINHIBIT */
             case CSR_MSCOUNTEREN:
+                tlib_printf(LOG_LEVEL_WARNING, "The csr mscounteren is not present in privilege architecture version 1.11");
                 return CSR_UNHANDLED;
         }
     } else if(env->privilege_architecture == RISCV_PRIV1_10) {
         switch(csrno) {
             case CSR_MUCOUNTEREN:
             case CSR_MSCOUNTEREN:
+                tlib_printf(LOG_LEVEL_WARNING, "The csr ms/ucounteren is not present in privilege architecture version 1.10");
                 return CSR_UNHANDLED;
         }
     } else if(env->privilege_architecture == RISCV_PRIV1_09) {
@@ -217,6 +219,7 @@ target_ulong priv_version_csr_filter(CPUState *env, target_ulong csrno)
             case CSR_PMPCFG0 ... CSR_PMPCFG_LAST:
             case CSR_PMPADDR0 ... CSR_PMPADDR_LAST:
             case CSR_MHPMEVENT3 ... CSR_MHPMEVENT31:
+                tlib_printf(LOG_LEVEL_WARNING, "CSR with id #%i is not available in privilege architecture version 1.09", csrno);
                 return CSR_UNHANDLED;
         }
     }
@@ -307,11 +310,19 @@ static target_ulong snxti_read_handler(target_ulong src)
 
 static inline void warn_nonexistent_csr_read(const int no)
 {
-    tlib_printf(LOG_LEVEL_WARNING, "Reading from CSR #%d that is not implemented.", no);
+    if(no == CSR_UNHANDLED) {
+        tlib_printf(LOG_LEVEL_WARNING, "Trying to read from a non-exsistent CSR");
+    } else {
+        tlib_printf(LOG_LEVEL_WARNING, "Reading from CSR #%d that is not implemented.", no);
+    }
 }
 static inline void warn_nonexistent_csr_write(const int no, const target_ulong val)
 {
-    tlib_printf(LOG_LEVEL_WARNING, "Writing value 0x%X to CSR #%d that is not implemented.", val, no);
+    if(no == CSR_UNHANDLED) {
+        tlib_printf(LOG_LEVEL_WARNING, "Trying to write value 0x%X to a non-exsistent CSR", val);
+    } else {
+        tlib_printf(LOG_LEVEL_WARNING, "Writing value 0x%X to CSR #%d that is not implemented.", val, no);
+    }
 }
 
 uint32_t has_custom_csr(CPUState *env, uint64_t id)
