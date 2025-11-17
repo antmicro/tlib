@@ -33,6 +33,24 @@ typedef struct {
     int w;
 } arg_vldst_il;
 
+void gen_mve_vld40b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vld41b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vld42b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vld43b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vld40h(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vld41h(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vld42h(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vld43h(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vld40w(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vld41w(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vld42w(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vld43w(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+
+static inline bool is_insn_vld4(uint32_t insn)
+{
+    return (insn & 0xFF901E01) == 0xFC901E01;
+}
+
 /* Extract arguments of (de)interleaving stores/loads */
 static void extract_arg_vldst_il(arg_vldst_il *a, uint32_t insn)
 {

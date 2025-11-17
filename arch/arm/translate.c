@@ -9255,10 +9255,10 @@ static int do_vldst_il(DisasContext *s, arg_vldst_il *a, MVEGenLdStIlFn *fn, int
 static int trans_vld4(DisasContext *s, uint32_t insn)
 {
     static MVEGenLdStIlFn *const fns[4][4] = {
-        { NULL, NULL, NULL, NULL },
-        { NULL, NULL, NULL, NULL },
-        { NULL, NULL, NULL, NULL },
-        { NULL, NULL, NULL, NULL },
+        { F(vld40b), F(vld40h), F(vld40w), NULL },
+        { F(vld41b), F(vld41h), F(vld41w), NULL },
+        { F(vld42b), F(vld42h), F(vld42w), NULL },
+        { F(vld43b), F(vld43h), F(vld43w), NULL },
     };
     arg_vldst_il a;
     extract_arg_vldst_il(&a, insn);
@@ -10099,6 +10099,14 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
             op1 = (insn >> 21) & 0xf;
             op4 = (insn >> 6) & 0x7;
 
+#ifdef TARGET_PROTO_ARM_M
+            if(arm_feature(env, ARM_FEATURE_V8) && (insn & 0xE0000800) == 0xE0000800) {
+                if(is_insn_vld4(insn)) {
+                    ARCH(MVE);
+                    return trans_vld4(s, insn);
+                }
+            }
+#endif
             if(((insn >> 24) & 3) == 3) {
                 /* Translate into the equivalent ARM encoding.  */
                 insn = (insn & 0xe2ffffff) | ((insn & (1 << 28)) >> 4) | (1 << 28);
