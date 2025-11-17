@@ -54,3 +54,9 @@ static inline long vfp_reg_offset(int dp, int reg)
         return offsetof(CPUState, vfp.regs[reg >> 1]) + offsetof(CPU_DoubleU, l.lower);
     }
 }
+
+/* Return the offset of a Qn register */
+static inline long mve_qreg_offset(uint32_t reg)
+{
+    return vfp_reg_offset(1, reg * 2);
+}

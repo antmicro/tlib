@@ -147,6 +147,15 @@ typedef struct DisasContext {
     int vfp_enabled;
     int vec_len;
     int vec_stride;
+    /* M-profile ECI/ICI exception-continuable instruction state */
+    int eci;
+    /*
+     * trans_ functions for insns which are continuable should set this true
+     * after decode (ie after any UNDEF checks)
+     */
+    bool eci_handled;
+    /* True if MVE insns are definitely not predicated by VPR or LTPSIZE */
+    bool mve_no_pred;
 } DisasContext;
 
 /* ARM-specific interrupt pending bits.  */
@@ -677,6 +686,17 @@ enum arm_features {
     ARM_FEATURE_CBAR_RO, /* has cp15 CBAR and it is read-only */
     ARM_FEATURE_LPAE,    /* v7 Only, Large Physical Address Extension */
     ARM_FEATURE_V8_1M,
+};
+
+/* Values for M-profile PSR.ECI for MVE insns */
+enum MVEECIState {
+    ECI_NONE = 0, /* No completed beats */
+    ECI_A0 = 1,   /* Completed: A0 */
+    ECI_A0A1 = 2, /* Completed: A0, A1 */
+    /* 3 is reserved */
+    ECI_A0A1A2 = 4,   /* Completed: A0, A1, A2 */
+    ECI_A0A1A2B0 = 5, /* Completed: A0, A1, A2, B0 */
+    /* All other values reserved */
 };
 
 static inline int arm_feature(const CPUState *env, int feature)

@@ -9140,6 +9140,142 @@ static int gen_thumb2_data_op(DisasContext *s, int op, int conds, uint32_t shift
 
 #include "translate_lob.h"
 
+#ifdef TARGET_PROTO_ARM_M
+#include "translate_mve.h"
+
+static bool mve_check_qreg_bank(int qmask)
+{
+    /*
+     * Check whether Qregs are in range. For v8.1M only Q0..Q7
+     * are supported.
+     */
+    return qmask < 8;
+}
+
+bool mve_eci_check(DisasContext *s)
+{
+    /*
+     * This is a beatwise insn: check that ECI is valid (not a
+     * reserved value) and note that we are handling it.
+     * Return true if OK, false if we generated an exception.
+     */
+    s->eci_handled = true;
+    switch(s->eci) {
+        case ECI_NONE:
+        case ECI_A0:
+        case ECI_A0A1:
+        case ECI_A0A1A2:
+        case ECI_A0A1A2B0:
+            return true;
+        default:
+            /* Reserved value: INVSTATE UsageFault */
+            gen_exception_insn(s, 0, EXCP_INVSTATE);
+            LOCK_TB(s->base.tb);
+            return false;
+    }
+}
+
+void mve_update_eci(DisasContext *s)
+{
+    /*
+     * The helper function will always update the CPUState field,
+     * so we only need to update the DisasContext field.
+     */
+    if(s->eci) {
+        s->eci = (s->eci == ECI_A0A1A2B0) ? ECI_A0 : ECI_NONE;
+    }
+}
+
+void mve_update_and_store_eci(DisasContext *s)
+{
+    /*
+     * For insns which don't call a helper function that will call
+     * mve_advance_vpt(), this version updates s->eci and also stores
+     * it out to the CPUState field.
+     */
+    if(s->eci) {
+        mve_update_eci(s);
+        store_cpu_field(tcg_const_i32(s->eci << 4), condexec_bits);
+    }
+}
+
+static bool mve_no_predication(DisasContext *s)
+{
+    /*
+     * Return true if we are executing the entire MVE instruction
+     * with no predication or partial-execution, and so we can safely
+     * use an inline TCG vector implementation.
+     */
+    return s->eci == 0 && s->mve_no_pred;
+}
+
+static TCGv_ptr mve_qreg_ptr(uint32_t reg)
+{
+    TCGv_ptr ret = tcg_temp_new_ptr();
+    tcg_gen_addi_ptr(ret, cpu_env, mve_qreg_offset(reg));
+    return ret;
+}
+
+static int do_vldst_il(DisasContext *s, arg_vldst_il *a, MVEGenLdStIlFn *fn, int addrinc)
+{
+    TCGv_i32 rn;
+
+    if(!mve_check_qreg_bank(a->qd) || !fn || (a->rn == 13 && a->w) || a->rn == 15) {
+        /* Variously UNPREDICTABLE or UNDEF or related-encoding */
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    gen_helper_fp_lsp(cpu_env);
+
+    rn = load_reg(s, a->rn);
+    /*
+     * We pass the index of Qd, not a pointer, because the helper must
+     * access multiple Q registers starting at Qd and working up.
+     */
+    fn(s, a->qd, rn);
+
+    if(a->w) {
+        tcg_gen_addi_i32(rn, rn, addrinc);
+        store_reg(s, a->rn, rn);
+    } else {
+        tcg_temp_free_i32(rn);
+    }
+
+    mve_update_and_store_eci(s);
+
+    return TRANS_STATUS_SUCCESS;
+}
+
+/* This macro is just to make the arrays more compact in these functions */
+#define F(OP) glue(gen_mve_, OP)
+
+static int trans_vld4(DisasContext *s, uint32_t insn)
+{
+    static MVEGenLdStIlFn *const fns[4][4] = {
+        { NULL, NULL, NULL, NULL },
+        { NULL, NULL, NULL, NULL },
+        { NULL, NULL, NULL, NULL },
+        { NULL, NULL, NULL, NULL },
+    };
+    arg_vldst_il a;
+    extract_arg_vldst_il(&a, insn);
+
+    /* We use 4 consecutive vector registers */
+    if(a.qd > 4) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+
+    do_vldst_il(s, &a, fns[a.pat][a.size], 64);
+    return TRANS_STATUS_SUCCESS;
+}
+
+#undef F
+
+#endif
+
 /* Translate a 32-bit thumb instruction.  Returns nonzero if the instruction
    is not legal.  */
 static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
