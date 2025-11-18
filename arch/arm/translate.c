@@ -3820,7 +3820,10 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                         tcg_temp_free_i32(zero);
                     }
 
-                    /* We should clear VPR here, but our MVE implementation doesn't have it yet */
+                    /* Clear VPR */
+                    TCGv_i32 vpr_zeroed = tcg_const_i32(0);
+                    tcg_gen_st_i32(vpr_zeroed, cpu_env, load_cpu_field(v7m.vpr));
+                    tcg_temp_free_i32(vpr_zeroed);
 #else
                     goto illegal_op;
 #endif
