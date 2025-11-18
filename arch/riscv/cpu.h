@@ -94,8 +94,8 @@ struct CPUState {
     target_ulong pc;
     target_ulong opcode;
 
-    target_ulong frm;
-    target_ulong fflags;
+    uint32_t frm;
+    uint32_t fflags;
 
     target_ulong badaddr;
 

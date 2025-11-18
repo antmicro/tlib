@@ -99,6 +99,21 @@ uint64_t *get_reg_pointer_64(int reg)
 }
 
 CPU_REGISTER_ACCESSOR(64)
+
+uint32_t *get_reg_pointer_32(int reg)
+{
+    switch(reg) {
+        case FFLAGS_32:
+            return &(cpu->fflags);
+        case FRM_32:
+            return &(cpu->frm);
+        default:
+            break;
+    }
+    return NULL;
+}
+
+CPU_REGISTER_ACCESSOR(32)
 #endif
 #ifdef TARGET_RISCV32
 uint32_t *get_reg_pointer_32(int reg)
@@ -150,6 +165,10 @@ uint32_t *get_reg_pointer_32(int reg)
             return &(cpu->mtval);
         case MIP_32:
             return &(cpu->mip);
+        case FFLAGS_32:
+            return &(cpu->fflags);
+        case FRM_32:
+            return &(cpu->frm);
         case VSTART_32:
             return &(cpu->vstart);
         case VXSAT_32:
