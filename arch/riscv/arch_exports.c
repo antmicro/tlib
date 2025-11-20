@@ -164,6 +164,15 @@ void tlib_allow_additional_feature(uint32_t feature)
         case RISCV_FEATURE_ZACAS:
             //  No dependencies
             break;
+        case RISCV_FEATURE_ZCB:
+            tlib_allow_feature('C' - 'A');  // Depends on RVC
+            break;
+        case RISCV_FEATURE_ZCMP:
+            tlib_allow_feature('C' - 'A');  // Depends on RVC
+            break;
+        case RISCV_FEATURE_ZCMT:
+            tlib_allow_feature('C' - 'A');  // Depends on RVC
+            break;
     }
     cpu->additional_extensions |= 1U << extension;
 }

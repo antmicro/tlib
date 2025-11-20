@@ -159,6 +159,8 @@ struct CPUState {
     target_ulong mseccfg;
     target_ulong mseccfgh;
 
+    target_ulong jvt;
+
     /* Vector shadow state */
     target_ulong elen;
     target_ulong vlmax;
@@ -355,8 +357,11 @@ enum riscv_additional_feature {
     RISCV_FEATURE_ZVE64D = 13,
     RISCV_FEATURE_ZACAS = 14,
     RISCV_FEATURE_SSCOFPMF = 15,
+    RISCV_FEATURE_ZCB = 16,
+    RISCV_FEATURE_ZCMP = 17,
+    RISCV_FEATURE_ZCMT = 18,
     //  Please update the highest additional when adding a new member!
-    RISCV_FEATURE_HIGHEST_ADDITIONAL = RISCV_FEATURE_SSCOFPMF
+    RISCV_FEATURE_HIGHEST_ADDITIONAL = RISCV_FEATURE_ZCMT
 };
 
 enum privilege_architecture {
