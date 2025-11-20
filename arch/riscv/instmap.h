@@ -715,3 +715,19 @@ enum {
 #define GET_C_RS2(inst)   extract32(inst, 2, 5)
 #define GET_C_RS1S(inst)  (8 + extract32(inst, 7, 3))
 #define GET_C_RS2S(inst)  (8 + extract32(inst, 2, 3))
+
+/* Zcb decoding macros */
+#define GET_C_LBU_IMM(inst) ((extract32(inst, 5, 1) << 1) | extract32(inst, 6, 1))
+#define GET_C_LH_IMM(inst)  (extract32(inst, 5, 1) << 1)
+#define GET_C_LHU_IMM(inst) (extract32(inst, 5, 1) << 1)
+#define GET_C_SB_IMM(inst)  ((extract32(inst, 5, 1) << 1) | extract32(inst, 6, 1))
+#define GET_C_SH_IMM(inst)  (extract32(inst, 5, 1) << 1)
+
+/* Zcmp decoding macros */
+#define GET_C_PUSHPOP_SPIMM(inst) extract32(inst, 2, 2)
+#define GET_C_PUSHPOP_RLIST(inst) extract32(inst, 4, 4)
+#define GET_C_MVSA01_R1S(inst)    extract32(inst, 7, 3)
+#define GET_C_MVSA01_R2S(inst)    extract32(inst, 2, 3)
+
+/* Zcmt decoding macros */
+#define GET_C_JT_INDEX(inst) extract32(inst, 2, 8)

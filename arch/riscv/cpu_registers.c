@@ -92,6 +92,8 @@ uint64_t *get_reg_pointer_64(int reg)
             return &(cpu->vlenb);
         case MSECCFG_64:
             return &(cpu->mseccfg);
+        case JVT_64:
+            return &(cpu->jvt);
         default:
             break;
     }
@@ -185,6 +187,8 @@ uint32_t *get_reg_pointer_32(int reg)
             return &(cpu->vlenb);
         case MSECCFG_32:
             return &(cpu->mseccfg);
+        case JVT_32:
+            return &(cpu->jvt);
         default:
             break;
     }

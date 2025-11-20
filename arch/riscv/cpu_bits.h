@@ -29,6 +29,7 @@
 #define CSR_FFLAGS        0x1
 #define CSR_FRM           0x2
 #define CSR_FCSR          0x3
+#define CSR_JVT           0x17 /* Jump Vector Table base - Zcmt extension */
 #define CSR_SSTATUS       0x100
 #define CSR_SIE           0x104
 #define CSR_STVEC         0x105

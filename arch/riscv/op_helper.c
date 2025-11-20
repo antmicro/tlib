@@ -383,6 +383,14 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
                 helper_raise_illegal_instruction(env);
             }
             break;
+        case CSR_JVT:
+            if(!riscv_has_additional_ext(env, RISCV_FEATURE_ZCMT)) {
+                tlib_printf(LOG_LEVEL_ERROR, "CSR_JVT can only be accessed when ZCMT extension is enabled");
+                goto unhandled_csr_write;
+            }
+            //  Bits [5:0] are reserved and must be 0, jump table base address must be 64-byte aligned.
+            env->jvt = val_to_write & ~((target_ulong)0x3F);
+            break;
         case CSR_MSTATUS: {
             target_ulong mstatus = env->mstatus;
             target_ulong mask = MSTATUS_MIE | MSTATUS_MPIE | MSTATUS_FS | MSTATUS_MPRV | MSTATUS_MPP | MSTATUS_MXR | MSTATUS_VS;
@@ -810,6 +818,12 @@ static inline target_ulong csr_read_helper(CPUState *env, target_ulong csrno)
                 helper_raise_illegal_instruction(env);
                 break;
             }
+        case CSR_JVT:
+            if(!riscv_has_additional_ext(env, RISCV_FEATURE_ZCMT)) {
+                tlib_printf(LOG_LEVEL_ERROR, "CSR_JVT can only be accessed when ZCMT extension is enabled");
+                goto unhandled_csr_read;
+            }
+            return env->jvt;
         case CSR_TIME:
             return tlib_get_cpu_time();
         case CSR_TIMEH:

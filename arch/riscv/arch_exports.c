@@ -164,9 +164,13 @@ void tlib_allow_additional_feature(uint32_t feature)
         case RISCV_FEATURE_ZACAS:
             //  No dependencies
             break;
-
+        case RISCV_FEATURE_ZCB:
+        case RISCV_FEATURE_ZCMP:
+        case RISCV_FEATURE_ZCMT:
+            tlib_allow_feature('C' - 'A');  //  Depends on RVC
+            break;
         case RISCV_FEATURE_ONE_HIGHER_THAN_HIGHEST_ADDITIONAL:
-            // We should never reach here, as we are gated by if check
+            //  We should never reach here, as we are gated by if check
             tlib_assert_not_reached();
             break;
     }

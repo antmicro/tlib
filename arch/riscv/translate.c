@@ -191,6 +191,15 @@ static int ensure_additional_extension(DisasContext *dc, enum riscv_additional_f
         case RISCV_FEATURE_ZACAS:
             encoding = "acas";
             break;
+        case RISCV_FEATURE_ZCB:
+            encoding = "cb";
+            break;
+        case RISCV_FEATURE_ZCMP:
+            encoding = "cmp";
+            break;
+        case RISCV_FEATURE_ZCMT:
+            encoding = "cmt";
+            break;
         default:
             tlib_printf(LOG_LEVEL_ERROR, "Unexpected additional extension encoding: %d", ext);
             break;
@@ -564,6 +573,229 @@ static void gen_mulhsu(TCGv ret, TCGv arg1, TCGv arg2)
 
     tcg_temp_free(rl);
     tcg_temp_free(rh);
+}
+
+/* Zcmp helper functions */
+static void gen_push_pop(DisasContext *dc, uint8_t rlist, target_ulong spimm, bool is_push)
+{
+    //  Validate rlist range
+    if(rlist < 4 || rlist > 15) {
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        return;
+    }
+
+    //  For RV32E only rlist values 4-6 are legal
+    if(riscv_has_ext(env, RISCV_FEATURE_RVE) && rlist > 6) {
+        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+        return;
+    }
+
+    TCGv sp = tcg_temp_local_new();
+    TCGv addr = tcg_temp_local_new();
+    TCGv reg = tcg_temp_local_new();
+
+    //  Calculate stack adjustment according to RISC-V Zcmp specification
+    target_ulong base_adj;
+
+#if defined(TARGET_RISCV64)
+    //  RV64 base adjustments
+    if(rlist >= 4 && rlist <= 5) {
+        base_adj = 16;
+    } else if(rlist >= 6 && rlist <= 7) {
+        base_adj = 32;
+    } else if(rlist >= 8 && rlist <= 9) {
+        base_adj = 48;
+    } else if(rlist >= 10 && rlist <= 11) {
+        base_adj = 64;
+    } else if(rlist >= 12 && rlist <= 13) {
+        base_adj = 80;
+    } else if(rlist == 14) {
+        base_adj = 96;
+    } else {  //  rlist == 15
+        base_adj = 112;
+    }
+#else
+    //  RV32 base adjustments
+    if(rlist >= 4 && rlist <= 7) {
+        base_adj = 16;
+    } else if(rlist >= 8 && rlist <= 11) {
+        base_adj = 32;
+    } else if(rlist >= 12 && rlist <= 14) {
+        base_adj = 48;
+    } else {  //  rlist == 15
+        base_adj = 64;
+    }
+#endif
+
+    //  Total stack adjustment: base + spimm * 16 bytes
+    target_ulong total_adj = base_adj + (spimm * 16);
+
+    gen_get_gpr(sp, 2);  //  x2 is stack pointer
+
+    const int reg_size = sizeof(target_ulong);
+
+    TCGv new_sp = tcg_temp_local_new();
+    if(is_push) {
+        //  PUSH: Per spec, addr=sp-bytes, then store in reverse order
+        //  Start from sp - reg_size (before the first register slot)
+        tcg_gen_subi_tl(new_sp, sp, total_adj);
+        tcg_gen_subi_tl(addr, sp, reg_size);
+    } else {
+        //  POP: load from sp + stack_adj - reg_size (per Zcmp spec)
+        //  The spec says: addr=sp+stack_adj-bytes, then work backwards
+        tcg_gen_addi_tl(addr, sp, total_adj - reg_size);
+    }
+
+    //  Process registers
+    //  Both PUSH and POP iterate in REVERSE order per Zcmp spec
+    //  Spec: for(i in 27,26,25,24,23,22,21,20,19,18,9,8,1)
+    //  This means: s11,s10,...,s1,s0,ra (reverse of storage order)
+
+    //  Number of s-registers: rlist=15 includes s0-s11 (12 regs), others follow rlist-4
+    int s_regs = (rlist == 15) ? 12 : (rlist - 4);
+
+    if(is_push) {
+        //  PUSH: Reverse order per spec - store s11 down to s0, then ra
+        //  Start address is sp-reg_size, store, then decrement
+        for(int i = s_regs - 1; i >= 0; i--) {
+            int reg_num = (i <= 1) ? (8 + i) : (16 + i);
+            gen_get_gpr(reg, reg_num);
+            tcg_gen_qemu_st_tl(reg, addr, dc->base.mem_idx, MO_TETL);
+            tcg_gen_subi_tl(addr, addr, reg_size);
+        }
+
+        //  Process ra last (stored at lowest address)
+        gen_get_gpr(reg, RA);
+        tcg_gen_qemu_st_tl(reg, addr, dc->base.mem_idx, MO_TETL);
+    } else {
+        //  POP: Reverse order per spec - s11-s0, then ra
+        //  Start address is sp+stack_adj-reg_size, load, then decrement
+        for(int i = s_regs - 1; i >= 0; i--) {
+            int reg_num = (i <= 1) ? (8 + i) : (16 + i);
+
+            tcg_gen_qemu_ld_tl(reg, addr, dc->base.mem_idx, MO_TETL);
+            gen_set_gpr(reg_num, reg);
+            tcg_gen_subi_tl(addr, addr, reg_size);
+        }
+
+        //  Process ra last
+        tcg_gen_qemu_ld_tl(reg, addr, dc->base.mem_idx, MO_TETL);
+        gen_set_gpr(RA, reg);
+    }
+
+    //  Update stack pointer atomically after all operations complete
+    if(is_push) {
+        gen_set_gpr(SP, new_sp);
+    } else {
+        tcg_gen_addi_tl(sp, sp, total_adj);
+        gen_set_gpr(SP, sp);
+    }
+
+    tcg_temp_free(new_sp);
+    tcg_temp_free(sp);
+    tcg_temp_free(addr);
+    tcg_temp_free(reg);
+}
+
+static inline void gen_push(DisasContext *dc, uint8_t rlist, target_ulong spimm)
+{
+    gen_push_pop(dc, rlist, spimm, true);
+}
+
+static inline void gen_pop(DisasContext *dc, uint8_t rlist, target_ulong spimm)
+{
+    gen_push_pop(dc, rlist, spimm, false);
+}
+
+static void gen_popret_popretz(DisasContext *dc, uint8_t rlist, target_ulong spimm, bool clear_a0)
+{
+    //  C.POPRET/C.PORETZ combines the functionality of C.POP followed by a return jump
+
+    //  Restore registers from stack and update stack pointer
+    gen_pop(dc, rlist, spimm);
+
+    if(clear_a0) {
+        //  Set a0 (x10) to 0
+        TCGv zero = tcg_const_tl(0);
+        gen_set_gpr(10, zero);
+        tcg_temp_free(zero);
+    }
+
+    //  Then jump to the return address that was loaded into RA register
+    //  Load RA (x1) into PC and clear LSB (like JALR does)
+    gen_get_gpr(cpu_pc, 1);
+    tcg_gen_andi_tl(cpu_pc, cpu_pc, ~(target_ulong)1);
+
+    //  Properly exit the translation block
+    gen_exit_tb_no_chaining(dc->base.tb);
+    dc->base.is_jmp = DISAS_BRANCH;
+}
+
+static inline void gen_popret(DisasContext *dc, uint8_t rlist, target_ulong spimm)
+{
+    gen_popret_popretz(dc, rlist, spimm, false);
+}
+
+static inline void gen_popretz(DisasContext *dc, uint8_t rlist, target_ulong spimm)
+{
+    gen_popret_popretz(dc, rlist, spimm, true);
+}
+
+//  Map s-register selector (3-bit) to architectural x-register number
+//  rsc[2:0] encodes s0-s7 using non-contiguous x-register mapping:
+//    s0-s1 → x8-x9, s2-s7 → x18-x23
+//  Formula from spec: xreg = { rsc[2:1] > 0, rsc[2:1] == 0, rsc[2:0] }
+static inline uint8_t sreg_selector_to_xreg(uint8_t rsc)
+{
+    if((rsc >> 1) > 0) {
+        return 16 + rsc;  //  s2-s7 → x18-x23
+    } else {
+        return 8 + rsc;  //  s0-s1 → x8-x9
+    }
+}
+
+/* Zcmt helper functions */
+static inline void gen_jt(DisasContext *dc, uint8_t index, bool save_ra)
+{
+    TCGv jvt = tcg_temp_local_new();
+    TCGv table_addr = tcg_temp_local_new();
+    TCGv target_addr = tcg_temp_local_new();
+
+    //  Save return address if needed (for CM.JALT)
+    if(save_ra) {
+        TCGv ra = tcg_temp_local_new();
+        tcg_gen_movi_tl(ra, dc->base.pc + 2);
+        gen_set_gpr(1, ra);  //  x1 is return address register
+        tcg_temp_free(ra);
+    }
+
+    //  Read JVT CSR directly from CPU state
+    tcg_gen_ld_tl(jvt, cpu_env, offsetof(CPUState, jvt));
+
+    //  Calculate table address based on XLEN
+    //  RV32: table_address = jvt.base + (index<<2)
+    //  RV64: table_address = jvt.base + (index<<3)
+#if defined(TARGET_RISCV64)
+    const int index_shift = index << 3;
+#else
+    const int index_shift = index << 2;
+#endif
+    tcg_gen_mov_tl(table_addr, jvt);
+    tcg_gen_addi_tl(table_addr, table_addr, index_shift);
+
+    //  Load jump target from table (XLEN-bit load)
+    tcg_gen_qemu_ld_tl(target_addr, table_addr, dc->base.mem_idx, MO_TETL);
+
+    //  Clear LSB and jump to target
+    tcg_gen_andi_tl(cpu_pc, target_addr, ~0x1);
+
+    //  Exit translation block
+    gen_exit_tb_no_chaining(dc->base.tb);
+    dc->base.is_jmp = DISAS_BRANCH;
+
+    tcg_temp_free(jvt);
+    tcg_temp_free(table_addr);
+    tcg_temp_free(target_addr);
 }
 
 static void gen_fsgnj(DisasContext *dc, uint32_t rd, uint32_t rs1, uint32_t rs2, int rm,
@@ -1476,7 +1708,7 @@ static void gen_jalr(CPUState *env, DisasContext *dc, uint32_t opc, int rd, int 
         case OPC_RISC_JALR:
             gen_get_gpr(cpu_pc, rs1);
             tcg_gen_addi_tl(cpu_pc, cpu_pc, imm);
-            tcg_gen_andi_tl(cpu_pc, cpu_pc, (target_ulong)-2);
+            tcg_gen_andi_tl(cpu_pc, cpu_pc, ~(target_ulong)1);
 
             if(!riscv_has_ext(env, RISCV_FEATURE_RVC)) {
                 tcg_gen_andi_tl(t0, cpu_pc, 0x2);
@@ -5808,8 +6040,32 @@ static void decode_RV32_64C0(DisasContext *dc)
 #endif
             break;
         case 4:
-            /* reserved */
-            kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+            /* Zcb extension instructions */
+            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZCB)) {
+                break;
+            }
+            uint8_t funct5_high = extract32(dc->opcode, 10, 2);
+            if(funct5_high == 0) {
+                /* C.LBU -> lbu rd', uimm[1:0](rs1') */
+                gen_load(dc, OPC_RISC_LBU, rd_rs2, rs1s, GET_C_LBU_IMM(dc->opcode));
+            } else if(funct5_high == 1) {
+                /* Differentiate between C.LH and C.LHU based on bit 6 */
+                if(extract32(dc->opcode, 6, 1) == 0) {
+                    /* C.LHU -> lhu rd', uimm[1](rs1') */
+                    gen_load(dc, OPC_RISC_LHU, rd_rs2, rs1s, GET_C_LHU_IMM(dc->opcode));
+                } else {
+                    /* C.LH -> lh rd', uimm[1](rs1') */
+                    gen_load(dc, OPC_RISC_LH, rd_rs2, rs1s, GET_C_LH_IMM(dc->opcode));
+                }
+            } else if(funct5_high == 2) {
+                /* C.SB -> sb rs2', uimm[1:0](rs1') */
+                gen_store(dc, OPC_RISC_SB, rs1s, rd_rs2, GET_C_SB_IMM(dc->opcode));
+            } else if(funct5_high == 3) {
+                /* C.SH -> sh rs2', uimm[1](rs1') */
+                gen_store(dc, OPC_RISC_SH, rs1s, rd_rs2, GET_C_SH_IMM(dc->opcode));
+            } else {
+                kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+            }
             break;
         case 5:
             /* C.FSD(RV32/64) -> fsd rs2', offset[7:3](rs1') */
@@ -5901,38 +6157,108 @@ static void decode_RV32_64C1(CPUState *env, DisasContext *dc)
                 case 3:
                     funct2 = extract32(dc->opcode, 5, 2);
                     rs2s = GET_C_RS2S(dc->opcode);
-                    switch(funct2) {
-                        case 0:
-                            /* C.SUB -> sub rd', rd', rs2' */
-                            if(extract32(dc->opcode, 12, 1) == 0) {
+                    //  Bit 12 = 0: C.AND, C.OR, C.XOR, C.SUB
+                    if(extract32(dc->opcode, 12, 1) == 0) {
+                        switch(funct2) {
+                            case 0:
+                                /* C.SUB -> sub rd', rd', rs2' */
                                 gen_arith(dc, OPC_RISC_SUB, rs1s, rs1s, rs2s);
-                            }
-#if defined(TARGET_RISCV64)
-                            else {
-                                gen_arith(dc, OPC_RISC_SUBW, rs1s, rs1s, rs2s);
-                            }
-#endif
-                            break;
-                        case 1:
-                            /* C.XOR -> xor rs1', rs1', rs2' */
-                            if(extract32(dc->opcode, 12, 1) == 0) {
+                                break;
+                            case 1:
+                                /* C.XOR -> xor rs1', rs1', rs2' */
                                 gen_arith(dc, OPC_RISC_XOR, rs1s, rs1s, rs2s);
-                            }
+                                break;
+                            case 2:
+                                /* C.OR -> or rs1', rs1', rs2' */
+                                gen_arith(dc, OPC_RISC_OR, rs1s, rs1s, rs2s);
+                                break;
+                            case 3:
+                                /* C.AND -> and rs1', rs1', rs2' */
+                                gen_arith(dc, OPC_RISC_AND, rs1s, rs1s, rs2s);
+                                break;
+                            default:
+                                kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+                                break;
+                        }
+                    } else {  //  Bit 12 = 1: C.SUBW, C.ADDW and Zcb instructions
+                        switch(funct2) {
 #if defined(TARGET_RISCV64)
-                            else {
+                            case 0:
+                                /* C.SUBW (RV64/128) */
+                                gen_arith(dc, OPC_RISC_SUBW, rs1s, rs1s, rs2s);
+                                break;
+                            case 1:
                                 /* C.ADDW (RV64/128) */
                                 gen_arith(dc, OPC_RISC_ADDW, rs1s, rs1s, rs2s);
-                            }
+                                break;
 #endif
-                            break;
-                        case 2:
-                            /* C.OR -> or rs1', rs1', rs2' */
-                            gen_arith(dc, OPC_RISC_OR, rs1s, rs1s, rs2s);
-                            break;
-                        case 3:
-                            /* C.AND -> and rs1', rs1', rs2' */
-                            gen_arith(dc, OPC_RISC_AND, rs1s, rs1s, rs2s);
-                            break;
+                            case 2:  //  C.MUL
+                                if(!ensure_additional_extension(dc, RISCV_FEATURE_ZCB)) {
+                                    break;
+                                }
+                                /* C.MUL -> mul rd', rd', rs2' */
+                                gen_arith(dc, OPC_RISC_MUL, rs1s, rs1s, rs2s);
+                                break;
+                            case 3:
+                                if(!ensure_additional_extension(dc, RISCV_FEATURE_ZCB)) {
+                                    break;
+                                }
+                                /* C.ZEXT.B, C.SEXT.B, C.ZEXT.H, C.SEXT.H, C.ZEXT.W, C.NOT */
+                                uint8_t c_op = extract32(dc->opcode, 2, 3);
+
+                                switch(c_op) {
+                                    case 0:
+                                        /* C.ZEXT.B -> andi rd', rd', 255 */
+                                        gen_arith_imm(dc, OPC_RISC_ANDI, rs1s, rs1s, 0xFF);
+                                        break;
+                                    case 1:
+                                        /* C.SEXT.B -> sign extend byte (Zcb) */
+                                        {
+                                            TCGv t0 = tcg_temp_new();
+                                            gen_get_gpr(t0, rs1s);
+                                            tcg_gen_ext8s_tl(t0, t0);
+                                            gen_set_gpr(rs1s, t0);
+                                            tcg_temp_free(t0);
+                                        }
+                                        break;
+                                    case 2:
+                                        /* C.ZEXT.H -> zero extend halfword (Zcb) */
+                                        {
+                                            TCGv t0 = tcg_temp_new();
+                                            gen_get_gpr(t0, rs1s);
+                                            tcg_gen_ext16u_tl(t0, t0);
+                                            gen_set_gpr(rs1s, t0);
+                                            tcg_temp_free(t0);
+                                        }
+                                        break;
+                                    case 3:
+                                        /* C.SEXT.H -> sign extend halfword (Zcb) */
+                                        {
+                                            TCGv t0 = tcg_temp_new();
+                                            gen_get_gpr(t0, rs1s);
+                                            tcg_gen_ext16s_tl(t0, t0);
+                                            gen_set_gpr(rs1s, t0);
+                                            tcg_temp_free(t0);
+                                        }
+                                        break;
+#if defined(TARGET_RISCV64)
+                                    case 4:
+                                        /* C.ZEXT.W -> add.uw rd', rd', x0 (RV64 only) */
+                                        gen_arith(dc, OPC_RISC_ADD_UW, rs1s, rs1s, 0);
+                                        break;
+#endif
+                                    case 5:
+                                        /* C.NOT -> xori rd', rd', -1 */
+                                        gen_arith_imm(dc, OPC_RISC_XORI, rs1s, rs1s, -1);
+                                        break;
+                                    default:
+                                        kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+                                        break;
+                                }
+                                break;
+                            default:
+                                break;
+                        }
                     }
                     break;
             }
@@ -6019,11 +6345,71 @@ static void decode_RV32_64C2(CPUState *env, DisasContext *dc)
                 }
             }
             break;
-        case 5:
-            /* C.FSDSP -> fsd rs2, offset[8:3](x2)*/
-            gen_fp_store(dc, OPC_RISC_FSD, 2, GET_C_RS2(dc->opcode), GET_C_SDSP_IMM(dc->opcode));
-            /* C.SQSP */
+        case 5: {
+            if(!riscv_has_additional_ext(cpu, RISCV_FEATURE_ZCMT)) {
+                /* C.FSDSP -> fsd rs2, offset[8:3](x2)*/
+                gen_fp_store(dc, OPC_RISC_FSD, 2, GET_C_RS2(dc->opcode), GET_C_SDSP_IMM(dc->opcode));
+                /* C.SQSP */
+                break;
+            }
+            uint8_t funct5 = extract32(dc->opcode, 8, 5);
+            uint8_t funct5_high = extract32(dc->opcode, 10, 3);
+            uint8_t funct2 = extract32(dc->opcode, 5, 2);
+
+            //  Zcmp C.PUSH, C.POP, C.POPRET and C.POPRETZ
+            if(funct5 == 0x18 || funct5 == 0x1A || funct5 == 0x1E || funct5 == 0x1C) {
+                uint8_t rlist = GET_C_PUSHPOP_RLIST(dc->opcode);
+                target_ulong spimm = GET_C_PUSHPOP_SPIMM(dc->opcode);
+
+                //  rlist values 0 to 3 are reserved for a future EABI variant called cm.push.e
+                if(rlist < 4) {
+                    kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+                }
+
+                //  Check for RISC-V Zcmp extension instructions
+                if(funct5 == 0x18) {  //  C.PUSH - save registers to stack
+                    gen_push(dc, rlist, spimm);
+                } else if(funct5 == 0x1A) {  //  C.POP - restore registers from stack
+                    gen_pop(dc, rlist, spimm);
+                } else if(funct5 == 0x1E) {  //  C.POPRET - restore registers and return
+                    gen_popret(dc, rlist, spimm);
+                } else if(funct5 == 0x1C) {  //  C.POPRETZ - restore registers, set a0=0, and return
+                    gen_popretz(dc, rlist, spimm);
+                }
+            } else if(funct5_high == 0x3  //  Zcmp C.MVSA01/C.MVA01S
+                      && (funct2 == 0x1 || funct2 == 0x3)) {
+                uint8_t r1sc = GET_C_MVSA01_R1S(dc->opcode);
+                uint8_t r2sc = GET_C_MVSA01_R2S(dc->opcode);
+
+                //  Check illegal conditions:
+                //  - CM.MVSA01: r1s', r2s' must be different
+                //  - RV32E constraint: only s0,s1 exist
+                if((funct2 == 0x1 && r1sc == r2sc) || (riscv_has_ext(env, RISCV_FEATURE_RVE) && (r1sc > 1 || r2sc > 1))) {
+                    kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+                    break;
+                }
+
+                //  Map s-register selectors to architectural x-register numbers
+                uint8_t xreg1 = sreg_selector_to_xreg(r1sc);
+                uint8_t xreg2 = sreg_selector_to_xreg(r2sc);
+
+                //  Execute moves based on funct2
+                if(funct2 == 0x1) {                             /* CM.MVSA01: copy a0 → r1s' and a1 → r2s' */
+                    gen_arith(dc, OPC_RISC_ADD, xreg1, 10, 0);  //  mv r1s', a0
+                    gen_arith(dc, OPC_RISC_ADD, xreg2, 11, 0);  //  mv r2s', a1
+                } else {                                        /* CM.MVA01S: copy r1s' → a0 and r2s' → a1 */
+                    gen_arith(dc, OPC_RISC_ADD, 10, xreg1, 0);  //  mv a0, r1s'
+                    gen_arith(dc, OPC_RISC_ADD, 11, xreg2, 0);  //  mv a1, r2s'
+                }
+            } else if(funct5_high == 0x0) {  //  Zcmt: C.JT, C.JALT
+                uint8_t index = GET_C_JT_INDEX(dc->opcode);
+                //  JT: index<32, JALT: index>=32
+                gen_jt(dc, index, (index >= 32));
+            } else {
+                kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
+            }
             break;
+        }
         case 6: /* C.SWSP -> sw rs2, offset[7:2](x2)*/
             gen_store(dc, OPC_RISC_SW, 2, GET_C_RS2(dc->opcode), GET_C_SWSP_IMM(dc->opcode));
             break;
