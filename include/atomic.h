@@ -2,6 +2,7 @@
 
 #include <pthread.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include "targphys.h"
 
 #define MAX_NUMBER_OF_CPUS 32
@@ -36,6 +37,8 @@ typedef struct atomic_memory_state_t {
     pthread_cond_t global_cond;
 
 } atomic_memory_state_t;
+
+bool are_multiple_cpus_registered();
 
 int32_t register_in_atomic_memory_state(atomic_memory_state_t *sm, int32_t atomic_id);
 

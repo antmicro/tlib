@@ -6,8 +6,13 @@
 //  We only need to lock if there are multiple CPUs registered in the `atomic_memory_state`.
 //  Reservations should be made regardless of it; atomic instructions need them even with a single CPU.
 //  False is returned if `atomic_memory_state` hasn't been initialized at all.
-static inline bool are_multiple_cpus_registered()
+inline bool are_multiple_cpus_registered()
 {
+#if DEBUG
+    if(env->atomic_memory_state != NULL && env->atomic_memory_state->number_of_registered_cpus > 1) {
+        tlib_printf(LOG_LEVEL_NOISY, "%s: Only one CPU registered", __func__);
+    }
+#endif
     return env->atomic_memory_state != NULL && env->atomic_memory_state->number_of_registered_cpus > 1;
 }
 
