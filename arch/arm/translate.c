@@ -3006,6 +3006,8 @@ static int generate_vsel_insn(CPUState *env, DisasContext *s, uint32_t insn)
     return 0;
 }
 
+static void gen_exception_insn(DisasContext *s, int offset, int excp);
+
 /* Disassemble a VFP instruction.  Returns nonzero if an error occurred
    (ie. an undefined instruction).  */
 static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
@@ -3023,7 +3025,13 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
     if(!s->vfp_enabled) {
         /* VFP disabled.  Only allow fmxr/fmrx to/from some control regs.  */
         if((insn & 0x0fe00fff) != 0x0ee00a10) {
+#ifdef TARGET_PROTO_ARM_M
+            gen_exception_insn(s, 4, EXCP_NOCP);
+            LOCK_TB(s->base.tb);
+            return 0;
+#else
             return 1;
+#endif
         }
         rn = (insn >> 16) & 0xf;
 
