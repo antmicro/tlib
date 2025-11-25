@@ -9485,7 +9485,7 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     } else {
                         /* srs */
                         op = (insn & 0x1f);
-                        addr = tcg_temp_new_i32();
+                        addr = tcg_temp_local_new_i32();
                         tmp = tcg_const_i32(op);
                         gen_helper_get_r13_banked(addr, cpu_env, tmp);
                         tcg_temp_free_i32(tmp);
