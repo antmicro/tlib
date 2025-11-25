@@ -1227,7 +1227,7 @@ static void do_interrupt_v7m(CPUState *env)
             return;
         case EXCP_NOCP:
             tlib_nvic_set_pending_irq(env->secure ? BANKED_SECURE_EXCP(ARMV7M_EXCP_USAGE) : ARMV7M_EXCP_USAGE);
-            env->v7m.fault_status[env->secure] |= USAGE_FAULT_NOPC;
+            env->v7m.fault_status[env->secure] |= USAGE_FAULT_NOCP;
             return;
         case EXCP_INVSTATE:
             tlib_nvic_set_pending_irq(env->secure ? BANKED_SECURE_EXCP(ARMV7M_EXCP_USAGE) : ARMV7M_EXCP_USAGE);
