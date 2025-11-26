@@ -104,6 +104,12 @@ uint32_t get_core_id(CPUState *env)
 /*  Result is 1 if check succeeds, 0 otherwise. */
 void gen_store_table_check(CPUState *env, TCGv result, TCGv_guestptr guest_address)
 {
+    //  Check will always succeed when there is only one core present, as there is no other core to access the reserved address.
+    if(!are_multiple_cpus_registered()) {
+        tcg_gen_movi_tl(result, 1);
+        return;
+    }
+
     TCGv_hostptr hashed_address = tcg_temp_new_hostptr();
     gen_hash_address(env, hashed_address, guest_address);
 
@@ -152,6 +158,12 @@ void ensure_entry_locked(CPUState *env, TCGv_guestptr guest_address, const char 
 
 void gen_store_table_set(CPUState *env, TCGv_guestptr guest_address)
 {
+    //  There's no need for updating the hash table when there's only a single core present, since it already tracks its own
+    //  reservations.
+    if(!are_multiple_cpus_registered()) {
+        return;
+    }
+
     ensure_entry_locked(env, guest_address, __func__);
 
     TCGv_hostptr hashed_address = tcg_temp_local_new_hostptr();
@@ -172,6 +184,11 @@ void gen_store_table_set(CPUState *env, TCGv_guestptr guest_address)
 
 static void gen_store_table_lock_address(CPUState *env, TCGv_guestptr guest_address, tcg_target_long locked_address_offset)
 {
+    //  Skip the hash table locks when there is only one core present, since no synchronization is necessary.
+    if(!are_multiple_cpus_registered()) {
+        return;
+    }
+
     TCGv_hostptr hashed_address = tcg_temp_local_new_hostptr();
     gen_hash_address(env, hashed_address, guest_address);
 
@@ -244,6 +261,11 @@ void gen_store_table_lock(CPUState *env, TCGv_guestptr guest_address)
 
 static void gen_store_table_unlock_address(CPUState *env, TCGv_guestptr guest_address, tcg_target_long locked_address_offset)
 {
+    //  There is no reason to unlock address when there is only one core present, as it was never locked to begin with.
+    if(!are_multiple_cpus_registered()) {
+        return;
+    }
+
     ensure_entry_locked(env, guest_address, __func__);
 
     TCGv_hostptr hashed_address = tcg_temp_new_hostptr();
