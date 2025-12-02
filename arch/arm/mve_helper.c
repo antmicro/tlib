@@ -50,6 +50,94 @@ static uint16_t mve_eci_mask(CPUState *env)
     }
 }
 
+static uint16_t mve_element_mask(CPUState *env)
+{
+    /*
+     * Return the mask of which elements in the MVE vector should be
+     * updated. This is a combination of multiple things:
+     *  (1) by default, we update every lane in the vector
+     *  (2) VPT predication stores its state in the VPR register;
+     *  (3) low-overhead-branch tail predication will mask out part
+     *      the vector on the final iteration of the loop
+     *  (4) if EPSR.ECI is set then we must execute only some beats
+     *      of the insn
+     * We combine all these into a 16-bit result with the same semantics
+     * as VPR.P0: 0 to mask the lane, 1 if it is active.
+     * 8-bit vector ops will look at all bits of the result;
+     * 16-bit ops will look at bits 0, 2, 4, ...;
+     * 32-bit ops will look at bits 0, 4, 8 and 12.
+     * Compare pseudocode GetCurInstrBeat(), though that only returns
+     * the 4-bit slice of the mask corresponding to a single beat.
+     */
+    uint16_t mask = FIELD_EX32(env->v7m.vpr, V7M_VPR, P0);
+
+    if(!(env->v7m.vpr & __REGISTER_V7M_VPR_MASK01_MASK)) {
+        mask |= 0xff;
+    }
+    if(!(env->v7m.vpr & __REGISTER_V7M_VPR_MASK23_MASK)) {
+        mask |= 0xff00;
+    }
+
+    if(env->v7m.ltpsize < 4 && env->regs[14] <= (1 << (4 - env->v7m.ltpsize))) {
+        /*
+         * Tail predication active, and this is the last loop iteration.
+         * The element size is (1 << ltpsize), and we only want to process
+         * loopcount elements, so we want to retain the least significant
+         * (loopcount * esize) predicate bits and zero out bits above that.
+         */
+        int masklen = env->regs[14] << env->v7m.ltpsize;
+        assert(masklen <= 16);
+        mask &= masklen ? MAKE_64BIT_MASK(0, masklen) : 0;
+    }
+
+    /*
+     * ECI bits indicate which beats are already executed;
+     * we handle this by effectively predicating them out.
+     */
+    mask &= mve_eci_mask(env);
+    return mask;
+}
+
+static void mve_advance_vpt(CPUState *env)
+{
+    /* Advance the VPT and ECI state if necessary */
+    uint32_t vpr = env->v7m.vpr;
+    unsigned mask01, mask23;
+    uint16_t inv_mask;
+    uint16_t eci_mask = mve_eci_mask(env);
+
+    if((env->condexec_bits & 0xf) == 0) {
+        env->condexec_bits = (env->condexec_bits == (ECI_A0A1A2B0 << 4)) ? (ECI_A0 << 4) : (ECI_NONE << 4);
+    }
+
+    if(!(vpr & (__REGISTER_V7M_VPR_MASK01_MASK | __REGISTER_V7M_VPR_MASK23_MASK))) {
+        /* VPT not enabled, nothing to do */
+        return;
+    }
+
+    /* Invert P0 bits if needed, but only for beats we actually executed */
+    mask01 = FIELD_EX32(vpr, V7M_VPR, MASK01);
+    mask23 = FIELD_EX32(vpr, V7M_VPR, MASK23);
+    /* Start by assuming we invert all bits corresponding to executed beats */
+    inv_mask = eci_mask;
+    if(mask01 <= 8) {
+        /* MASK01 says don't invert low half of P0 */
+        inv_mask &= ~0xff;
+    }
+    if(mask23 <= 8) {
+        /* MASK23 says don't invert high half of P0 */
+        inv_mask &= ~0xff00;
+    }
+    vpr ^= inv_mask;
+    /* Only update MASK01 if beat 1 executed */
+    if(eci_mask & 0xf0) {
+        vpr = FIELD_DP32(vpr, V7M_VPR, MASK01, mask01 << 1);
+    }
+    /* Beat 3 always executes, so update MASK23 */
+    vpr = FIELD_DP32(vpr, V7M_VPR, MASK23, mask23 << 1);
+    env->v7m.vpr = vpr;
+}
+
 #define DO_VLD4B(OP, O1, O2, O3, O4)                                          \
     void glue(gen_mve_, OP)(DisasContext * s, uint32_t qnindx, TCGv_i32 base) \
     {                                                                         \
