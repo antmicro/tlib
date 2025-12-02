@@ -1011,12 +1011,16 @@ static inline uint32_t pmsav8_idau_sau_get_flags(uint32_t rbar_or_rlar)
 
 #endif  //  TARGET_PROTO_ARM_M
 
+#define MAKE_64BIT_MASK(shift, length) (((~0ULL) >> (64 - (length))) << (shift))
+
 //  FIELD expands to constants:
 //  * __REGISTER_<register>_<field>_START,
 //  * __REGISTER_<register>_<field>_WIDTH.
+//  * __REGISTER_<register>_<field>_MASK.
 #define FIELD(register, field, start_bit, width)                               \
     static const unsigned __REGISTER_##register##_##field##_START = start_bit; \
-    static const unsigned __REGISTER_##register##_##field##_WIDTH = width;
+    static const unsigned __REGISTER_##register##_##field##_WIDTH = width;     \
+    static const unsigned __REGISTER_##register##_##field##_MASK = MAKE_64BIT_MASK(start_bit, width);
 
 #define FIELD_DP32(variable, register, field, value) \
     deposit32(variable, __REGISTER_##register##_##field##_START, __REGISTER_##register##_##field##_WIDTH, value)
