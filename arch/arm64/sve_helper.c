@@ -20,6 +20,7 @@
 #include "cpu.h"
 #include "osdep.h"
 #include "helper.h"
+#include "vec_common.h"
 #include "vec_internal.h"
 #include "sve_ldst_internal.h"
 #include "int128.h"
@@ -99,17 +100,6 @@ uint32_t HELPER(sve_predtest)(void *vd, void *vg, uint32_t words)
     } while(++i < words);
 
     return flags;
-}
-
-/* Similarly for single word elements.  */
-static inline uint64_t expand_pred_s(uint8_t byte)
-{
-    static const uint64_t word[] = {
-        [0x01] = 0x00000000ffffffffull,
-        [0x10] = 0xffffffff00000000ull,
-        [0x11] = 0xffffffffffffffffull,
-    };
-    return word[byte & 0x11];
 }
 
 #define LOGICAL_PPPP(NAME, FUNC)                                             \
