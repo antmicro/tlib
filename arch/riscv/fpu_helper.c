@@ -78,6 +78,14 @@ typedef enum {
     riscv_float_round_ties_away = 4
 } riscv_float_round_mode;
 
+typedef enum {
+    riscv_float_exception_inexact = 1,             //  NX
+    riscv_float_exception_underflow = 2,           //  UF
+    riscv_float_exception_overflow = 4,            //  OF
+    riscv_float_exception_divide_by_zero = 8,      //  DZ
+    riscv_float_exception_invalid_operation = 16,  //  NV
+} riscv_float_exception_flag;
+
 /* convert RISC-V Vector Fixed-Point Rounding Mode to IEEE library numbers */
 unsigned int ieee_vxrm[] = { float_round_up, float_round_nearest_even, float_round_down };
 
@@ -126,22 +134,22 @@ union ui64_f64 {
 unsigned int softfloat_flags_to_riscv(unsigned int flags)
 {
     int rv_flags = 0;
-    rv_flags |= (flags & float_flag_inexact) ? 1 : 0;
-    rv_flags |= (flags & float_flag_underflow) ? 2 : 0;
-    rv_flags |= (flags & float_flag_overflow) ? 4 : 0;
-    rv_flags |= (flags & float_flag_divbyzero) ? 8 : 0;
-    rv_flags |= (flags & float_flag_invalid) ? 16 : 0;
+    rv_flags |= (flags & float_flag_inexact) ? riscv_float_exception_inexact : 0;
+    rv_flags |= (flags & float_flag_underflow) ? riscv_float_exception_underflow : 0;
+    rv_flags |= (flags & float_flag_overflow) ? riscv_float_exception_overflow : 0;
+    rv_flags |= (flags & float_flag_divbyzero) ? riscv_float_exception_divide_by_zero : 0;
+    rv_flags |= (flags & float_flag_invalid) ? riscv_float_exception_invalid_operation : 0;
     return rv_flags;
 }
 
 unsigned int softfloat3_flags_to_riscv(unsigned int flags)
 {
     int rv_flags = 0;
-    rv_flags |= (flags & softfloat_flag_inexact) ? 1 : 0;
-    rv_flags |= (flags & softfloat_flag_underflow) ? 2 : 0;
-    rv_flags |= (flags & softfloat_flag_overflow) ? 4 : 0;
-    rv_flags |= (flags & softfloat_flag_infinite) ? 8 : 0;
-    rv_flags |= (flags & softfloat_flag_invalid) ? 16 : 0;
+    rv_flags |= (flags & softfloat_flag_inexact) ? riscv_float_exception_inexact : 0;
+    rv_flags |= (flags & softfloat_flag_underflow) ? riscv_float_exception_underflow : 0;
+    rv_flags |= (flags & softfloat_flag_overflow) ? riscv_float_exception_overflow : 0;
+    rv_flags |= (flags & softfloat_flag_infinite) ? riscv_float_exception_divide_by_zero : 0;
+    rv_flags |= (flags & softfloat_flag_invalid) ? riscv_float_exception_invalid_operation : 0;
     return rv_flags;
 }
 
