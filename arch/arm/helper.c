@@ -255,10 +255,6 @@ static void cpu_reset_model_id(CPUState *env, uint32_t id)
             set_feature(env, ARM_FEATURE_MVE);
             break;
         case ARM_CPUID_CORTEXM7:
-            //  TODO: This should not be present on M7 processors,
-            //        but some of our samples break without it.
-            set_feature(env, ARM_FEATURE_VFP_FP16);
-
             //  TODO: Add DSP once it's available
             set_feature(env, ARM_FEATURE_VFP4);
             set_feature(env, ARM_FEATURE_VFP3);
@@ -275,10 +271,6 @@ static void cpu_reset_model_id(CPUState *env, uint32_t id)
             set_feature(env, ARM_FEATURE_THUMB_DIV);
             break;
         case ARM_CPUID_CORTEXM4:
-            //  TODO: This should not be present on M4 processors,
-            //        but some of our samples break without it.
-            set_feature(env, ARM_FEATURE_VFP_FP16);
-
             //  TODO: We don't yet implement the DSP (although it is available in our arm64).
             //        It should be added when available
             //  TODO: Remove FPU from non-f variant CPUs
