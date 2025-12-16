@@ -3393,10 +3393,11 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                         case 5:
                         case 6:
                         case 7:
-                            /* VCVTB, VCVTT: only present with the halfprec extension,
+                            /* VCVTB, VCVTT: only present with the halfprec extension.
+                             * As of FPv4 (ARM_FEATURE_VFP4) halfprec conversion is included.
                              * UNPREDICTABLE if bit 8 is set (we choose to UNDEF)
                              */
-                            if(dp || !arm_feature(env, ARM_FEATURE_VFP_FP16)) {
+                            if(dp || !(arm_feature(env, ARM_FEATURE_VFP_FP16) || arm_feature(env, ARM_FEATURE_VFP4))) {
                                 return 1;
                             }
                             /* Otherwise fall through */
