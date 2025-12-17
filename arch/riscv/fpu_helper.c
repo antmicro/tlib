@@ -227,9 +227,15 @@ uint64_t helper_fmadd_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t fr
 uint64_t helper_fmsub_s(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t frs3, uint64_t rm)
 {
     require_fp;
-    set_float_rounding_mode(RM, &env->fp_status);
-    frs1 = float32_muladd(frs1, frs2, frs3 ^ (uint32_t)INT32_MIN, 0, &env->fp_status);
-    set_fp_exceptions();
+    set_float3_rounding_mode(RM_3);
+
+    float32_t f1, f2, f3;
+    f1.v = (uint32_t)frs1;
+    f2.v = (uint32_t)frs2;
+    f3.v = (uint32_t)(frs3 ^ (uint64_t)INT32_MIN);
+    frs1 = f32_mulAdd(f1, f2, f3).v;
+
+    set_fp3_exceptions();
     mark_fs_dirty();
     return frs1;
 }
