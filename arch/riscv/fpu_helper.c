@@ -445,8 +445,13 @@ uint64_t helper_fmin_s(CPUState *env, uint64_t frs1, uint64_t frs2)
 uint64_t helper_fmax_s(CPUState *env, uint64_t frs1, uint64_t frs2)
 {
     require_fp;
-    frs1 = float32_maxnum(frs1, frs2, &env->fp_status);
-    set_fp_exceptions();
+
+    float32_t f1, f2;
+    f1.v = (uint32_t)frs1;
+    f2.v = (uint32_t)frs2;
+    frs1 = f32_max(f1, f2).v;
+
+    set_fp3_exceptions();
     mark_fs_dirty();
     return frs1;
 }
