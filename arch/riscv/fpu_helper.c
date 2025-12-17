@@ -473,8 +473,13 @@ uint64_t helper_fsqrt_s(CPUState *env, uint64_t frs1, uint64_t rm)
 target_ulong helper_fle_s(CPUState *env, uint64_t frs1, uint64_t frs2)
 {
     require_fp;
-    frs1 = float32_le(frs1, frs2, &env->fp_status);
-    set_fp_exceptions();
+
+    float32_t f1, f2;
+    f1.v = (uint32_t)frs1;
+    f2.v = (uint32_t)frs2;
+    frs1 = f32_le(f1, f2);
+
+    set_fp3_exceptions();
     return frs1;
 }
 
