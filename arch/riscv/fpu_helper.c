@@ -371,9 +371,14 @@ uint64_t helper_fnmadd_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t f
 uint64_t helper_fadd_s(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t rm)
 {
     require_fp;
-    set_float_rounding_mode(RM, &env->fp_status);
-    frs1 = float32_add(frs1, frs2, &env->fp_status);
-    set_fp_exceptions();
+    set_float3_rounding_mode(RM_3);
+
+    float32_t f1, f2;
+    f1.v = (uint32_t)frs1;
+    f2.v = (uint32_t)frs2;
+    frs1 = f32_add(f1, f2).v;
+
+    set_fp3_exceptions();
     mark_fs_dirty();
     return frs1;
 }
