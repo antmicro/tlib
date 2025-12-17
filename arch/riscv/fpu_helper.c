@@ -811,9 +811,13 @@ uint64_t helper_fcvt_d_s(CPUState *env, uint64_t rs1, uint64_t rm)
 uint64_t helper_fsqrt_d(CPUState *env, uint64_t frs1, uint64_t rm)
 {
     require_fp;
-    set_float_rounding_mode(RM, &env->fp_status);
-    frs1 = float64_sqrt(frs1, &env->fp_status);
-    set_fp_exceptions();
+    set_float3_rounding_mode(RM_3);
+
+    float64_t f1;
+    f1.v = frs1;
+    frs1 = f64_sqrt(f1).v;
+
+    set_fp3_exceptions();
     mark_fs_dirty();
     return frs1;
 }
