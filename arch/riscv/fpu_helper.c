@@ -715,9 +715,14 @@ uint64_t helper_fsub_d(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t rm)
 uint64_t helper_fmul_d(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t rm)
 {
     require_fp;
-    set_float_rounding_mode(RM, &env->fp_status);
-    frs1 = float64_mul(frs1, frs2, &env->fp_status);
-    set_fp_exceptions();
+    set_float3_rounding_mode(RM_3);
+
+    float64_t f1, f2;
+    f1.v = frs1;
+    f2.v = frs2;
+    frs1 = f64_mul(f1, f2).v;
+
+    set_fp3_exceptions();
     mark_fs_dirty();
     return frs1;
 }
