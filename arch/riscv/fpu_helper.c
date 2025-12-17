@@ -876,8 +876,13 @@ target_ulong helper_fgt_d(CPUState *env, uint64_t frs1, uint64_t frs2)
 target_ulong helper_feq_d(CPUState *env, uint64_t frs1, uint64_t frs2)
 {
     require_fp;
-    frs1 = float64_eq_quiet(frs1, frs2, &env->fp_status);
-    set_fp_exceptions();
+
+    float64_t f1, f2;
+    f1.v = frs1;
+    f2.v = frs2;
+    frs1 = f64_eq(f1, f2);
+
+    set_fp3_exceptions();
     return frs1;
 }
 
