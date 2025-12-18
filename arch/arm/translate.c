@@ -2872,38 +2872,15 @@ static TCGv gen_load_and_replicate(DisasContext *s, TCGv addr, int size)
     return tmp;
 }
 
-#define VSEL_INSN_MASK  0xff800c50
-#define VSEL_INSN_VALUE 0xfe000800
-
-static int generate_vsel_insn(CPUState *env, DisasContext *s, uint32_t insn)
+static int generate_vsel_insn(uint32_t insn, uint32_t rd, uint32_t rn, uint32_t rm, uint32_t size)
 {
-    uint32_t rn, rm, rd;
     uint32_t cc = extract32(insn, 20, 2);
-    uint32_t size = extract32(insn, 8, 2);
-
-    switch(size) {
-        case 1: /* 16-bit */
-        case 2: /* 32-bit */
-            rm = deposit32(extract32(insn, 5, 1), 1, 31, extract32(insn, 0, 4));
-            rn = deposit32(extract32(insn, 7, 1), 1, 31, extract32(insn, 16, 4));
-            rd = deposit32(extract32(insn, 22, 1), 1, 31, extract32(insn, 12, 4));
-            break;
-        case 3: /* 64-bit */
-            rm = deposit32(extract32(insn, 0, 4), 4, 28, extract32(insn, 5, 1));
-            rn = deposit32(extract32(insn, 16, 4), 4, 28, extract32(insn, 7, 1));
-            rd = deposit32(extract32(insn, 12, 4), 4, 28, extract32(insn, 22, 1));
-            break;
-        default:
-            /* Invalid size of the operation */
-            return 1;
-            break;
-    }
 
     TCGv cpu_zf = load_cpu_field(ZF);
     TCGv cpu_vf = load_cpu_field(VF);
     TCGv cpu_nf = load_cpu_field(NF);
 
-    if(size == 3) {
+    if(size == OP_64) {
         TCGv_i64 frn, frm, dest;
         TCGv_i64 tmp, zero, zf, nf, vf;
 
@@ -2918,29 +2895,29 @@ static int generate_vsel_insn(CPUState *env, DisasContext *s, uint32_t insn)
         vf = tcg_temp_new_i64();
 
         tcg_gen_extu_i32_i64(zf, cpu_zf);
-        tcg_gen_extu_i32_i64(nf, cpu_nf);
-        tcg_gen_extu_i32_i64(vf, cpu_vf);
+        tcg_gen_ext_i32_i64(nf, cpu_nf);
+        tcg_gen_ext_i32_i64(vf, cpu_vf);
 
         tcg_gen_ld_i64(frn, cpu_env, vfp_reg_offset(1, rn));
         tcg_gen_ld_i64(frm, cpu_env, vfp_reg_offset(1, rm));
 
         switch(cc) {
             case 0: /* Equal */
-                tcg_gen_movcond_i64(TCG_COND_EQ, dest, cpu_zf, zero, frn, frm);
+                tcg_gen_movcond_i64(TCG_COND_EQ, dest, zf, zero, frn, frm);
                 break;
             case 1: /* Less than */
-                tcg_gen_movcond_i64(TCG_COND_LT, dest, cpu_vf, zero, frn, frm);
+                tcg_gen_movcond_i64(TCG_COND_LT, dest, vf, zero, frn, frm);
                 break;
             case 2: /* Greater than or equal */
                 tmp = tcg_temp_new_i64();
-                tcg_gen_xor_i64(tmp, cpu_vf, cpu_nf);
+                tcg_gen_xor_i64(tmp, vf, nf);
                 tcg_gen_movcond_i64(TCG_COND_GE, dest, tmp, zero, frn, frm);
                 tcg_temp_free_i64(tmp);
                 break;
             case 3: /* Greater than */
-                tcg_gen_movcond_i64(TCG_COND_NE, dest, cpu_zf, zero, frn, frm);
+                tcg_gen_movcond_i64(TCG_COND_NE, dest, zf, zero, frn, frm);
                 tmp = tcg_temp_new_i64();
-                tcg_gen_xor_i64(tmp, cpu_vf, cpu_nf);
+                tcg_gen_xor_i64(tmp, vf, nf);
                 tcg_gen_movcond_i64(TCG_COND_GE, dest, tmp, zero, dest, frm);
                 tcg_temp_free_i64(tmp);
                 break;
@@ -2948,6 +2925,7 @@ static int generate_vsel_insn(CPUState *env, DisasContext *s, uint32_t insn)
 
         tcg_gen_st_i64(dest, cpu_env, vfp_reg_offset(1, rd));
 
+        tcg_temp_free_i64(zero);
         tcg_temp_free_i64(frn);
         tcg_temp_free_i64(frm);
         tcg_temp_free_i64(dest);
@@ -2991,7 +2969,7 @@ static int generate_vsel_insn(CPUState *env, DisasContext *s, uint32_t insn)
         }
 
         /* For fp16 the top half is always zeroes */
-        if(size == 1) {
+        if(size == OP_16) {
             tcg_gen_andi_i32(dest, dest, 0xffff);
         }
 
@@ -2999,12 +2977,13 @@ static int generate_vsel_insn(CPUState *env, DisasContext *s, uint32_t insn)
         tcg_temp_free_i32(dest);
         tcg_temp_free_i32(frn);
         tcg_temp_free_i32(frm);
+        tcg_temp_free_i32(zero);
     }
 
     tcg_temp_free(cpu_zf);
     tcg_temp_free(cpu_vf);
     tcg_temp_free(cpu_nf);
-    return 0;
+    return TRANS_STATUS_SUCCESS;
 }
 
 static int generate_vminmaxnm_insn(uint32_t insn, uint32_t rd, uint32_t rn, uint32_t rm, uint32_t size)
@@ -3080,7 +3059,10 @@ static int disas_fpv5_insn(CPUState *env, DisasContext *s, uint32_t insn)
         rm = VFP_SREG_M(insn);
     }
 
-    if(is_insn_vminmaxnm(insn)) {
+    if(is_insn_vsel(insn)) {
+        /* VSEL */
+        return generate_vsel_insn(insn, rd, rn, rm, size);
+    } else if(is_insn_vminmaxnm(insn)) {
         /* VMINNM, VMAXNM */
         abort_on_half_prec(insn, size);
         return generate_vminmaxnm_insn(insn, rd, rn, rm, size);
@@ -3131,9 +3113,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
     /* Lazy FP state preservation  */
     gen_helper_fp_lsp(cpu_env);
 #endif
-    if((insn & VSEL_INSN_MASK) == VSEL_INSN_VALUE) {
-        return generate_vsel_insn(env, s, insn);
-    } else if(extract32(insn, 28, 4) == 0xf) {
+    if(extract32(insn, 28, 4) == 0xf) {
         /* Encodings with T=1 (Thumb) or unconditional (ARM):
          * only used by the floating point extension version 5 (FPv5).
          */

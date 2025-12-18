@@ -23,3 +23,8 @@ static inline bool is_insn_vminmaxnm(uint32_t insn)
 {
     return (insn & 0x0fb00c10) == 0x0e800800;
 }
+
+static inline bool is_insn_vsel(uint32_t insn)
+{
+    return (insn & 0xff800c50) == 0xfe000800;
+}
