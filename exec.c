@@ -1289,7 +1289,7 @@ static inline void ensure_mmu_windows_sorted(CPUState *env)
 }
 
 int get_external_mmu_phys_addr(CPUState *env, uint64_t address, int access_type, target_phys_addr_t *phys_ptr, int *prot,
-                               int no_page_fault)
+                               int no_page_fault, void *retaddr)
 {
     int32_t first_try = 1;
 retry:
@@ -1485,7 +1485,7 @@ int tlb_fill(CPUState *env, target_ulong addr, int access_type, int mmu_idx, voi
     }
 
     if(env->external_mmu_position == EMMU_POS_BEFORE || env->external_mmu_position == EMMU_POS_REPLACE) {
-        TRY_FILL(get_external_mmu_phys_addr(env, iaddr, access_type, &paddr, &prot, no_page_fault));
+        TRY_FILL(get_external_mmu_phys_addr(env, iaddr, access_type, &paddr, &prot, no_page_fault, retaddr));
         iaddr = paddr;
     }
 
@@ -1495,7 +1495,7 @@ int tlb_fill(CPUState *env, target_ulong addr, int access_type, int mmu_idx, voi
 
     if(env->external_mmu_position == EMMU_POS_AFTER) {
         iaddr = paddr;
-        TRY_FILL(get_external_mmu_phys_addr(env, iaddr, access_type, &paddr, &prot, no_page_fault));
+        TRY_FILL(get_external_mmu_phys_addr(env, iaddr, access_type, &paddr, &prot, no_page_fault, retaddr));
     }
 
     tlb_set_page(env, addr & TARGET_PAGE_MASK, paddr & TARGET_PAGE_MASK, prot, mmu_idx, TARGET_PAGE_SIZE);

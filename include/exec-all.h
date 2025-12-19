@@ -87,7 +87,7 @@ int tlb_fill(CPUState *env, target_ulong addr, int is_write, int mmu_idx, void *
 void tlb_set_page(CPUState *env, target_ulong vaddr, target_phys_addr_t paddr, int prot, int mmu_idx, target_ulong size);
 void interrupt_current_translation_block(CPUState *env, int exception_type);
 int get_external_mmu_phys_addr(CPUState *env, uint64_t address, int access_type, target_phys_addr_t *phys_ptr, int *prot,
-                               int no_page_fault);
+                               int no_page_fault, void *retaddr);
 
 #define CODE_GEN_ALIGN 16 /* must be >= of the size of a icache line */
 
