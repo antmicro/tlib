@@ -86,8 +86,6 @@ enum {
     OPC_RISC_SH3ADD = OPC_RISC_ARITH | (0x6 << 12) | (0x10 << 25),
 
     /* Zbb: */
-    OPC_RISC_ZEXT_H_32 = OPC_RISC_ARITH | (0x4 << 12) | (0x80 << 20),
-
     OPC_RISC_ROL = OPC_RISC_ARITH | (0x1 << 12) | (0x30 << 25),
     OPC_RISC_ANDN = OPC_RISC_ARITH | (0x7 << 12) | (0x20 << 25),
     OPC_RISC_XNOR = OPC_RISC_ARITH | (0x4 << 12) | (0x20 << 25),
@@ -108,6 +106,10 @@ enum {
     OPC_RISC_BCLR = OPC_RISC_ARITH | (0x1 << 12) | (0x24 << 25),
     OPC_RISC_BINV = OPC_RISC_ARITH | (0x1 << 12) | (0x34 << 25),
     OPC_RISC_BEXT = OPC_RISC_ARITH | (0x5 << 12) | (0x24 << 25),
+
+    /* Zbkb: */
+    OPC_RISC_PACK = OPC_RISC_ARITH | (0x4 << 12) | (0x4 << 25),
+    OPC_RISC_PACKH = OPC_RISC_ARITH | (0x7 << 12) | (0x4 << 25),
 };
 
 #define MASK_OP_FENCE(op) (MASK_OP_MAJOR(op) | (op & (0x7 << 12)))
@@ -133,6 +135,10 @@ enum {
     OPC_RISC_CTZ = OPC_RISC_ARITH_IMM | (0x1 << 12) | (0x601 << 20),
     OPC_RISC_CPOP = OPC_RISC_ARITH_IMM | (0x1 << 12) | (0x602 << 20),
     OPC_RISC_SEXT_B = OPC_RISC_ARITH_IMM | (0x1 << 12) | (0x604 << 20),
+
+    /* Zbkb: */
+    OPC_RISC_ZIP = OPC_RISC_ARITH_IMM | (0x1 << 12) | (0x8F << 20),
+
     OPC_RISC_SEXT_H = OPC_RISC_ARITH_IMM | (0x1 << 12) | (0x605 << 20),
 };
 
@@ -142,6 +148,7 @@ enum {
     OPC_RISC_BSETI = OPC_RISC_ARITH_IMM | (0x1 << 12) | (0x0A << 26),
     OPC_RISC_BCLRI = OPC_RISC_ARITH_IMM | (0x1 << 12) | (0x12 << 26),
     OPC_RISC_BINVI = OPC_RISC_ARITH_IMM | (0x1 << 12) | (0x1A << 26),
+
 };
 
 #define MASK_OP_ARITH_IMM_ZB_5_12(op) (MASK_OP_MAJOR(op) | (op & (0x7 << 12)) | (op & (0xFFF << 20)))
@@ -150,6 +157,10 @@ enum {
     OPC_RISC_ORC_B = OPC_RISC_ARITH_IMM | (0x5 << 12) | (0x287 << 20),
     OPC_RISC_REV8_32 = OPC_RISC_ARITH_IMM | (0x5 << 12) | (0x698 << 20),
     OPC_RISC_REV8_64 = OPC_RISC_ARITH_IMM | (0x5 << 12) | (0x6B8 << 20),
+    OPC_RISC_BREV8 = OPC_RISC_ARITH_IMM | (0x5 << 12) | (0x687 << 20),
+
+    /* Zbkb: */
+    OPC_RISC_UNZIP = OPC_RISC_ARITH_IMM | (0x5 << 12) | (0x8F << 20),
 };
 
 #define MASK_OP_ARITH_IMM_ZB_5_12_SHAMT(op) (MASK_OP_MAJOR(op) | (op & (0x7 << 12)) | (op & (0x3F << 26)))
@@ -213,6 +224,7 @@ enum {
 
     /* Zbb: */
     OPC_RISC_ZEXT_H_64 = OPC_RISC_ARITH_W | (0x4 << 12) | (0x80 << 20),
+    OPC_RISC_PACKW = OPC_RISC_ARITH_W | (0x4 << 12) | (0x4 << 25),
 
     OPC_RISC_ROLW = OPC_RISC_ARITH_W | (0x1 << 12) | (0x30 << 25),
     OPC_RISC_RORW = OPC_RISC_ARITH_W | (0x5 << 12) | (0x30 << 25),

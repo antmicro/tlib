@@ -26,6 +26,7 @@
 #include "atomic-intrinsics.h"
 #include "tcg-op-atomic.h"
 #include "hash-table-store-test.h"
+#include "tcg-op.h"
 
 /* global register indices */
 static TCGv cpu_gpr[32], cpu_pc, cpu_opcode;
@@ -85,6 +86,7 @@ static inline void kill_unknown(DisasContext *dc, int excp);
 #else
 #define CASE_OP_32_64(X)    case X
 #define BITMANIP_SHAMT_MASK 0x1F
+#define BITMANIP_ZIP_GROUP  0x8F
 #endif
 
 //  RISC-V User ISA, Release 2.2, section 1.2 Instruction Length Encoding
@@ -867,6 +869,7 @@ static void gen_fsgnj(DisasContext *dc, uint32_t rd, uint32_t rs1, uint32_t rs2,
 static void gen_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
 {
     TCGv source1, source2, cond1, cond2, zeroreg, resultopt1;
+    target_ulong mask;
     source1 = tcg_temp_local_new();
     source2 = tcg_temp_local_new();
     gen_get_gpr(source1, rs1);
@@ -1114,21 +1117,21 @@ static void gen_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
             tcg_gen_add_tl(source1, source1, source2);
             break;
         case OPC_RISC_ANDN:
-            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
+            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB) && !ensure_additional_extension(dc, RISCV_FEATURE_ZBKB)) {
                 return;
             }
             tcg_gen_not_tl(source2, source2);
             tcg_gen_and_tl(source1, source1, source2);
             break;
         case OPC_RISC_ORN:
-            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
+            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB) && !ensure_additional_extension(dc, RISCV_FEATURE_ZBKB)) {
                 return;
             }
             tcg_gen_not_tl(source2, source2);
             tcg_gen_or_tl(source1, source1, source2);
             break;
         case OPC_RISC_XNOR:
-            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
+            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB) && !ensure_additional_extension(dc, RISCV_FEATURE_ZBKB)) {
                 return;
             }
             tcg_gen_xor_tl(source1, source1, source2);
@@ -1174,15 +1177,72 @@ static void gen_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
             tcg_gen_umin_i64(source1, source1, source2);
 #endif
             break;
-        case OPC_RISC_ZEXT_H_32:
-        case OPC_RISC_ZEXT_H_64:
-            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
+        case OPC_RISC_PACK:
+#if defined(TARGET_RISCV32)
+            //  On RV32 `pack rd, rs1, x0` is encoded the same way as `zext.h rd, rs1`
+            //  so a core with only Zbb can only use the zext.h variant,
+            //  while a core with Zbkb can use the full version
+            if(!riscv_has_additional_ext(cpu, RISCV_FEATURE_ZBKB)) {
+                if(rs2 == 0) {
+                    if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
+                        return;
+                    }
+                } else {
+                    if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBKB)) {
+                        return;
+                    }
+                }
+            }
+#elif defined(TARGET_RISCV64)
+            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBKB)) {
                 return;
             }
-            tcg_gen_andi_tl(source1, source1, 0xFFFF);
+#endif
+#if defined(TARGET_RISCV32)
+            mask = 0xFFFF;
+#elif defined(TARGET_RISCV64)
+            mask = 0xFFFFFFFF;
+#endif
+            tcg_gen_andi_tl(source1, source1, mask);
+            tcg_gen_andi_tl(source2, source2, mask);
+            tcg_gen_shli_tl(source2, source2, TARGET_LONG_BITS / 2);
+            tcg_gen_or_tl(source1, source1, source2);
             break;
+        case OPC_RISC_PACKH:
+            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBKB)) {
+                return;
+            }
+            mask = 0xFF;
+            tcg_gen_andi_tl(source1, source1, mask);
+            tcg_gen_andi_tl(source2, source2, mask);
+            tcg_gen_shli_tl(source2, source2, 8);
+            tcg_gen_or_tl(source1, source1, source2);
+            break;
+#if defined(TARGET_RISCV64)
+        case OPC_RISC_PACKW:
+            //  On RV64 `packw rd, rs1, x0` is encoded the same way as `zext.h rd, rs1`
+            //  so a core with only Zbb can only use the zext.h variant,
+            //  while a core with Zbkb can use the full version
+            if(!riscv_has_additional_ext(cpu, RISCV_FEATURE_ZBKB)) {
+                if(rs2 == 0) {
+                    if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
+                        return;
+                    }
+                } else {
+                    if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBKB)) {
+                        return;
+                    }
+                }
+            }
+            mask = 0xFFFF;
+            tcg_gen_andi_tl(source1, source1, mask);
+            tcg_gen_andi_tl(source2, source2, mask);
+            tcg_gen_shli_tl(source2, source2, 16);
+            tcg_gen_or_tl(source1, source1, source2);
+            break;
+#endif
         case OPC_RISC_ROL:
-            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
+            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB) && !ensure_additional_extension(dc, RISCV_FEATURE_ZBKB)) {
                 return;
             }
             cond1 = tcg_temp_new();
@@ -1191,7 +1251,7 @@ static void gen_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
             tcg_temp_free(cond1);
             break;
         case OPC_RISC_ROLW:
-            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
+            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB) && !ensure_additional_extension(dc, RISCV_FEATURE_ZBKB)) {
                 return;
             }
             cond1 = tcg_temp_new_i64();
@@ -1205,13 +1265,13 @@ static void gen_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
             break;
 
         case OPC_RISC_ROR:
-            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
+            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB) && !ensure_additional_extension(dc, RISCV_FEATURE_ZBKB)) {
                 return;
             }
             tcg_gen_rotr_tl(source1, source1, source2);
             break;
         case OPC_RISC_RORW:
-            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
+            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB) && !ensure_additional_extension(dc, RISCV_FEATURE_ZBKB)) {
                 return;
             }
             cond1 = tcg_temp_new_i64();
@@ -1346,10 +1406,19 @@ static void gen_synch(DisasContext *dc, uint32_t opc)
 
 static void gen_arith_bitmanip(DisasContext *dc, int rd, int rs1, target_long imm, TCGv source1)
 {
-    TCGv_i64 t0;
+    TCGv_i64 t0, t1;
+#if defined(TARGET_RISCV32)
+    TCGv result, temp;
+#endif
     uint32_t opc = 0;
     switch((dc->opcode >> 12) & 0x7) {
         case 0x1:
+#if defined(TARGET_RISCV32)
+            if(dc->opcode >> 20 == BITMANIP_ZIP_GROUP) {
+                opc = MASK_OP_ARITH_IMM_ZB_1_12(dc->opcode);
+                break;
+            }
+#endif
             switch((dc->opcode >> 26) & BITMANIP_SHAMT_MASK) {
                 case 0b011000:
                     opc = MASK_OP_ARITH_IMM_ZB_1_12(dc->opcode);
@@ -1367,6 +1436,12 @@ static void gen_arith_bitmanip(DisasContext *dc, int rd, int rs1, target_long im
                 opc = MASK_OP_ARITH_IMM_ZB_5_12_SHAMT_LAST_7(dc->opcode);
                 break;
             }
+#if defined(TARGET_RISCV32)
+            if(dc->opcode >> 20 == BITMANIP_ZIP_GROUP) {
+                opc = MASK_OP_ARITH_IMM_ZB_1_12(dc->opcode);
+                break;
+            }
+#endif
             switch((dc->opcode >> 26) & BITMANIP_SHAMT_MASK) {
                 case 0b001010:  //  orc.b
                 case 0b011010:  //  rev8
@@ -1392,13 +1467,13 @@ static void gen_arith_bitmanip(DisasContext *dc, int rd, int rs1, target_long im
             tcg_gen_ext32s_i64(source1, source1);
             break;
         case OPC_RISC_RORI:
-            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
+            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB) && !ensure_additional_extension(dc, RISCV_FEATURE_ZBKB)) {
                 return;
             }
             tcg_gen_rotri_tl(source1, source1, (imm & BITMANIP_SHAMT_MASK));
             break;
         case OPC_RISC_RORIW:
-            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
+            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB) && !ensure_additional_extension(dc, RISCV_FEATURE_ZBKB)) {
                 return;
             }
             t0 = tcg_temp_new_i64();
@@ -1416,18 +1491,53 @@ static void gen_arith_bitmanip(DisasContext *dc, int rd, int rs1, target_long im
             tcg_gen_shli_i64(source1, source1, (imm & BITMANIP_SHAMT_MASK));
             break;
         case OPC_RISC_REV8_32:
-            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
+            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB) && !ensure_additional_extension(dc, RISCV_FEATURE_ZBKB)) {
                 return;
             }
             tcg_gen_bswap32_i32(source1, source1);
             break;
         case OPC_RISC_REV8_64:
-            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
+            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB) && !ensure_additional_extension(dc, RISCV_FEATURE_ZBKB)) {
                 return;
             }
             tcg_gen_bswap64_i64(source1, source1);
             break;
 
+        case OPC_RISC_BREV8:
+            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBKB)) {
+                return;
+            }
+            t0 = tcg_temp_new_i64();
+            t1 = tcg_temp_new_i64();
+
+            /* Consider a 16bit value with bits indexed by a hex digit:
+             * FEDCBA9876543210
+             * After each step (and, shift, or) the indices change as follows:
+             * EFCDAB8976452301 first pairs of bits are swapped
+             * DCEF89AB45670123 then pairs of two bits are swapped
+             * 89ABCDEF01234567 last nibbles are swapped
+             */
+            tcg_gen_andi_i64(t0, source1, 0xAAAAAAAAAAAAAAAA);
+            tcg_gen_shri_i64(t0, t0, 1);
+            tcg_gen_andi_i64(t1, source1, 0x5555555555555555);
+            tcg_gen_shli_i64(t1, t1, 1);
+            tcg_gen_or_i64(source1, t0, t1);
+
+            tcg_gen_andi_i64(t0, source1, 0xCCCCCCCCCCCCCCCC);
+            tcg_gen_shri_i64(t0, t0, 2);
+            tcg_gen_andi_i64(t1, source1, 0x3333333333333333);
+            tcg_gen_shli_i64(t1, t1, 2);
+            tcg_gen_or_i64(source1, t0, t1);
+
+            tcg_gen_andi_i64(t0, source1, 0xF0F0F0F0F0F0F0F0);
+            tcg_gen_shri_i64(t0, t0, 4);
+            tcg_gen_andi_i64(t1, source1, 0x0F0F0F0F0F0F0F0F);
+            tcg_gen_shli_i64(t1, t1, 4);
+            tcg_gen_or_i64(source1, t0, t1);
+
+            tcg_temp_free_i64(t0);
+            tcg_temp_free_i64(t1);
+            break;
         case OPC_RISC_CTZ:
             if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
                 return;
@@ -1489,6 +1599,40 @@ static void gen_arith_bitmanip(DisasContext *dc, int rd, int rs1, target_long im
                 return;
             }
             tcg_gen_ori_tl(source1, source1, 1UL << (imm & BITMANIP_SHAMT_MASK));
+            break;
+        case OPC_RISC_ZIP:
+            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBKB)) {
+                return;
+            }
+            result = tcg_temp_new();
+            temp = tcg_temp_new();
+            for(target_ulong i = 0; i < TARGET_LONG_BITS / 2; i++) {
+                tcg_gen_extract_i32(temp, source1, i, 1);
+                tcg_gen_deposit_i32(result, result, temp, 2 * i, 1);
+
+                tcg_gen_extract_i32(temp, source1, i + (TARGET_LONG_BITS / 2), 1);
+                tcg_gen_deposit_i32(result, result, temp, (2 * i) + 1, 1);
+            }
+            tcg_gen_mov_tl(source1, result);
+            tcg_temp_free(temp);
+            tcg_temp_free(result);
+            break;
+        case OPC_RISC_UNZIP:
+            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBKB)) {
+                return;
+            }
+            result = tcg_temp_new();
+            temp = tcg_temp_new();
+            for(target_ulong i = 0; i < TARGET_LONG_BITS / 2; i++) {
+                tcg_gen_extract_i32(temp, source1, 2 * i, 1);
+                tcg_gen_deposit_i32(result, result, temp, i, 1);
+
+                tcg_gen_extract_i32(temp, source1, (2 * i) + 1, 1);
+                tcg_gen_deposit_i32(result, result, temp, i + (TARGET_LONG_BITS / 2), 1);
+            }
+            tcg_gen_mov_tl(source1, result);
+            tcg_temp_free(temp);
+            tcg_temp_free(result);
             break;
 #elif defined(TARGET_RISCV64)
         case OPC_RISC_CLZ:
