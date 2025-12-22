@@ -28,6 +28,7 @@
 #include "tcg.h"
 #include "osdep.h"
 #include "tlib-alloc.h"
+#include "exports.h"
 
 #define SMC_BITMAP_USE_THRESHOLD 10
 
@@ -1288,6 +1289,21 @@ static inline void ensure_mmu_windows_sorted(CPUState *env)
     }
 }
 
+//  Must match the same enum on the C# side
+typedef enum {
+    EXT_MMU_NO_FAULT = 0,
+    EXT_MMU_FAULT = 1,
+    EXT_MMU_FAULT_EXTERNAL_ABORT = 2,
+} ExternalMmuResult;
+
+__attribute__((weak)) TLIB_NORETURN void arch_raise_external_abort(CPUState *env, target_ulong address, int access_type,
+                                                                   void *retaddr)
+{
+    tlib_abortf("Reporting external aborts is not supported for guest architecture: %s", tlib_get_arch());
+    //  tlib_abortf should never return
+    tlib_assert_not_reached();
+}
+
 int get_external_mmu_phys_addr(CPUState *env, uint64_t address, int access_type, target_phys_addr_t *phys_ptr, int *prot,
                                int no_page_fault, void *retaddr)
 {
@@ -1337,7 +1353,7 @@ retry:
         }
     }
 
-    if(first_try && tlib_mmu_fault_external_handler(address, access_type, window_id, first_try)) {
+    if(first_try && (tlib_mmu_fault_external_handler(address, access_type, window_id, first_try) == EXT_MMU_NO_FAULT)) {
         first_try = 0;
         goto retry;
     }
@@ -1345,10 +1361,25 @@ retry:
     if(!no_page_fault) {
         //  The exit_request needs to be set to prevent the cpu_exec from trying to execute the block
         cpu->exit_request = 1;
-        cpu->mmu_fault = true;
-        tlib_mmu_fault_external_handler(address, access_type, window_id, /* first_try */ 0);
-        if(access_type != ACCESS_INST_FETCH && cpu->current_tb != NULL) {
-            interrupt_current_translation_block(cpu, MMU_EXTERNAL_FAULT);
+        int32_t result = tlib_mmu_fault_external_handler(address, access_type, window_id, /* first_try */ 0);
+        switch(result) {
+            case EXT_MMU_NO_FAULT:
+                if(env->current_tb != NULL) {
+                    cpu_restore_state_and_restore_instructions_count(env, env->current_tb, (uintptr_t)retaddr, false);
+                }
+                break;
+            case EXT_MMU_FAULT:
+                cpu->mmu_fault = true;
+                if(env->current_tb != NULL) {
+                    interrupt_current_translation_block(env, MMU_EXTERNAL_FAULT);
+                }
+                break;
+            case EXT_MMU_FAULT_EXTERNAL_ABORT:
+                arch_raise_external_abort(env, (target_ulong)address, access_type, retaddr);
+                break;
+            default:
+                tlib_abortf("Invalid external MMU fault result: %d", result);
+                break;
         }
     }
     return TRANSLATE_FAIL;

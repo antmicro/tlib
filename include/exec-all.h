@@ -88,6 +88,8 @@ void tlb_set_page(CPUState *env, target_ulong vaddr, target_phys_addr_t paddr, i
 void interrupt_current_translation_block(CPUState *env, int exception_type);
 int get_external_mmu_phys_addr(CPUState *env, uint64_t address, int access_type, target_phys_addr_t *phys_ptr, int *prot,
                                int no_page_fault, void *retaddr);
+/* Raises and external data/instruction fetch abort in an architecture specific way */
+void TLIB_NORETURN arch_raise_external_abort(CPUState *env, target_ulong address, int access_type, void *retaddr);
 
 #define CODE_GEN_ALIGN 16 /* must be >= of the size of a icache line */
 
