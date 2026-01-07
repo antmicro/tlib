@@ -3236,6 +3236,49 @@ uint32_t HELPER(set_rmode)(uint32_t rmode, void *fpstp)
    Single precition routines have a "s" suffix, double precision a
    "d" suffix.  */
 
+//  TODO: float16 HELPER(rinth_exact)(float16 x, void *fp_status) not supported by softfloat-2
+
+float32 HELPER(rints_exact)(float32 x, void *fp_status)
+{
+    return float32_round_to_int(x, fp_status);
+}
+
+float64 HELPER(rintd_exact)(float64 x, void *fp_status)
+{
+    return float64_round_to_int(x, fp_status);
+}
+
+//  TODO: float16 HELPER(rinth)(float16 x, void *fp_status) not supported by softfloat-2
+
+float32 HELPER(rints)(float32 x, void *fp_status)
+{
+    int old_flags = get_float_exception_flags(fp_status), new_flags;
+    float32 ret = float32_round_to_int(x, fp_status);
+
+    /* Suppress any inexact exceptions the conversion produced */
+    if(!(old_flags & float_flag_inexact)) {
+        new_flags = get_float_exception_flags(fp_status);
+        set_float_exception_flags(new_flags & ~float_flag_inexact, fp_status);
+    }
+
+    return ret;
+}
+
+float64 HELPER(rintd)(float64 x, void *fp_status)
+{
+    int old_flags = get_float_exception_flags(fp_status);
+    int new_flags = get_float_exception_flags(fp_status);
+    float64 ret = float64_round_to_int(x, fp_status);
+
+    /* Suppress any inexact exceptions the conversion produced */
+    if(!(old_flags & float_flag_inexact)) {
+        new_flags = get_float_exception_flags(fp_status);
+        set_float_exception_flags(new_flags & ~float_flag_inexact, fp_status);
+    }
+
+    return ret;
+}
+
 /* Convert host exception flags to vfp form.  */
 static inline int vfp_exceptbits_from_host(int host_bits)
 {

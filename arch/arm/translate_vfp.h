@@ -33,3 +33,8 @@ static inline bool is_insn_vcvt(uint32_t insn)
 {
     return (insn & 0x0fbc0c50) == 0x0ebc0840;
 }
+
+static inline bool is_insn_vrint(uint32_t insn)
+{
+    return (insn & 0x0fbc0cd0) == 0x0eb80840;
+}

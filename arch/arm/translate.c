@@ -3094,6 +3094,44 @@ static void abort_on_half_prec(uint32_t insn, uint32_t precision)
     }
 }
 
+static int generate_vrint_insn(uint32_t insn, uint32_t rd, uint32_t rm, uint32_t size)
+{
+    TCGv_ptr fpst = get_fpstatus_ptr(0);
+    uint32_t dp = (size == OP_64);
+
+    int rounding = extract32(insn, 16, 2);
+    TCGv_i32 tcg_rmode = tcg_const_i32(arm_rmode_to_sf(rounding));
+    gen_helper_set_rmode(tcg_rmode, tcg_rmode, fpst);
+
+    if(dp) {
+        TCGv_i64 tcg_op;
+        TCGv_i64 tcg_res;
+        tcg_op = tcg_temp_new_i64();
+        tcg_res = tcg_temp_new_i64();
+        tcg_gen_ld_f64(tcg_op, cpu_env, vfp_reg_offset(dp, rm));
+        gen_helper_rintd(tcg_res, tcg_op, fpst);
+        tcg_gen_st_f64(tcg_res, cpu_env, vfp_reg_offset(dp, rd));
+        tcg_temp_free_i64(tcg_op);
+        tcg_temp_free_i64(tcg_res);
+    } else {
+        TCGv_i32 tcg_op;
+        TCGv_i32 tcg_res;
+        tcg_op = tcg_temp_new_i32();
+        tcg_res = tcg_temp_new_i32();
+        tcg_gen_ld_f32(tcg_op, cpu_env, vfp_reg_offset(dp, rm));
+        gen_helper_rints(tcg_res, tcg_op, fpst);
+        tcg_gen_st_f32(tcg_res, cpu_env, vfp_reg_offset(dp, rd));
+        tcg_temp_free_i32(tcg_op);
+        tcg_temp_free_i32(tcg_res);
+    }
+
+    gen_helper_set_rmode(tcg_rmode, tcg_rmode, fpst);
+    tcg_temp_free_i32(tcg_rmode);
+
+    tcg_temp_free_ptr(fpst);
+    return TRANS_STATUS_SUCCESS;
+}
+
 static int disas_fpv5_insn(CPUState *env, DisasContext *s, uint32_t insn)
 {
     uint32_t rd, rn, rm, size = extract32(insn, 8, 2);
@@ -3123,6 +3161,10 @@ static int disas_fpv5_insn(CPUState *env, DisasContext *s, uint32_t insn)
         /* VCVTA, VCVTN, VCVTP, VCVTM */
         abort_on_half_prec(insn, size);
         return generate_vcvt_insn(insn, rd, rm, size);
+    } else if(is_insn_vrint(insn)) {
+        /* VRINTA, VRINTN, VRINTP, VRINTM */
+        abort_on_half_prec(insn, size);
+        return generate_vrint_insn(insn, rd, rm, size);
     }
     return TRANS_STATUS_ILLEGAL_INSN;
 }
