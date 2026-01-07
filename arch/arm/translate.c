@@ -3034,6 +3034,59 @@ static int generate_vminmaxnm_insn(uint32_t insn, uint32_t rd, uint32_t rn, uint
     return TRANS_STATUS_SUCCESS;
 }
 
+static int generate_vcvt_insn(uint32_t insn, uint32_t rd, uint32_t rm, uint32_t size)
+{
+    bool is_signed = extract32(insn, 7, 1);
+    TCGv_ptr fpst = get_fpstatus_ptr(0);
+
+    int rounding = extract32(insn, 16, 2);
+    TCGv_i32 tcg_rmode = tcg_const_i32(arm_rmode_to_sf(rounding));
+    gen_helper_set_rmode(tcg_rmode, tcg_rmode, fpst);
+
+    if(size == OP_64) {
+        TCGv_i64 tcg_double, tcg_res;
+        TCGv_i32 tcg_tmp;
+        /* Rd is encoded as a single precision register even when the source
+         * is double precision.
+         */
+        rd = ((rd << 1) & 0x1e) | ((rd >> 4) & 0x1);
+        tcg_double = tcg_temp_new_i64();
+        tcg_res = tcg_temp_new_i64();
+        tcg_tmp = tcg_temp_new_i32();
+        tcg_gen_ld_f64(tcg_double, cpu_env, vfp_reg_offset(1, rm));
+        if(is_signed) {
+            gen_helper_vfp_tosid(tcg_res, tcg_double, fpst);
+        } else {
+            gen_helper_vfp_touid(tcg_res, tcg_double, fpst);
+        }
+        tcg_gen_trunc_i64_i32(tcg_tmp, tcg_res);
+        tcg_gen_st_f32(tcg_tmp, cpu_env, vfp_reg_offset(0, rd));
+        tcg_temp_free_i32(tcg_tmp);
+        tcg_temp_free_i64(tcg_res);
+        tcg_temp_free_i64(tcg_double);
+    } else {
+        TCGv_i32 tcg_single, tcg_res;
+        tcg_single = tcg_temp_new_i32();
+        tcg_res = tcg_temp_new_i32();
+        tcg_gen_ld_f32(tcg_single, cpu_env, vfp_reg_offset(0, rm));
+        if(is_signed) {
+            gen_helper_vfp_tosis(tcg_res, tcg_single, fpst);
+        } else {
+            gen_helper_vfp_touis(tcg_res, tcg_single, fpst);
+        }
+        tcg_gen_st_f32(tcg_res, cpu_env, vfp_reg_offset(0, rd));
+        tcg_temp_free_i32(tcg_res);
+        tcg_temp_free_i32(tcg_single);
+    }
+
+    gen_helper_set_rmode(tcg_rmode, tcg_rmode, fpst);
+    tcg_temp_free_i32(tcg_rmode);
+
+    tcg_temp_free_ptr(fpst);
+
+    return TRANS_STATUS_SUCCESS;
+}
+
 static void abort_on_half_prec(uint32_t insn, uint32_t precision)
 {
     if(precision == OP_16) {
@@ -3066,6 +3119,10 @@ static int disas_fpv5_insn(CPUState *env, DisasContext *s, uint32_t insn)
         /* VMINNM, VMAXNM */
         abort_on_half_prec(insn, size);
         return generate_vminmaxnm_insn(insn, rd, rn, rm, size);
+    } else if(is_insn_vcvt(insn)) {
+        /* VCVTA, VCVTN, VCVTP, VCVTM */
+        abort_on_half_prec(insn, size);
+        return generate_vcvt_insn(insn, rd, rm, size);
     }
     return TRANS_STATUS_ILLEGAL_INSN;
 }
@@ -3716,14 +3773,6 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                                 case 28: /* ftosh */
                                     if(!arm_feature(env, ARM_FEATURE_VFP3)) {
                                         return 1;
-                                    }
-                                    //  Note: Dirty fix, bit 28 is ignored when decoding
-                                    if((insn >> 28) == 0xf) {  //  Instruction is actually vcvtp
-                                        if(!arm_feature(env, ARM_FEATURE_VFP5)) {
-                                            return 1;
-                                        }
-                                        gen_vfp_toui(dp, 0);
-                                        break;
                                     }
                                     gen_vfp_tosh(dp, 16 - rm, 0);
                                     break;

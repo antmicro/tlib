@@ -3196,6 +3196,42 @@ uint32_t HELPER(logicq_cc)(uint64_t val)
     return (val >> 32) | (val != 0);
 }
 
+/* Convert ARM rounding mode to softfloat */
+int arm_rmode_to_sf(int rmode)
+{
+    switch(rmode) {
+        case FPROUNDING_TIEAWAY:
+            rmode = float_round_ties_away;
+            break;
+        case FPROUNDING_TIEEVEN:
+            rmode = float_round_nearest_even;
+            break;
+        case FPROUNDING_POSINF:
+            rmode = float_round_up;
+            break;
+        case FPROUNDING_NEGINF:
+            rmode = float_round_down;
+            break;
+        default:
+            tlib_abortf("ARM FP rounding: invalid rounding mode %d", rmode);
+            __builtin_unreachable();
+    }
+    return rmode;
+}
+
+/* Set the current fp rounding mode and return the old one.
+ * The argument is a softfloat float_round_ value.
+ */
+uint32_t HELPER(set_rmode)(uint32_t rmode, void *fpstp)
+{
+    float_status *fp_status = fpstp;
+
+    uint32_t prev_rmode = get_float_rounding_mode(fp_status);
+    set_float_rounding_mode(rmode, fp_status);
+
+    return prev_rmode;
+}
+
 /* VFP support.  We follow the convention used for VFP instrunctions:
    Single precition routines have a "s" suffix, double precision a
    "d" suffix.  */

@@ -576,6 +576,13 @@ static inline bool attribution_is_secure(enum security_attribution attrib)
 uint32_t vfp_get_fpscr(CPUState *env);
 void vfp_set_fpscr(CPUState *env, uint32_t val);
 
+enum arm_fpdecoderm {
+    FPROUNDING_TIEAWAY,
+    FPROUNDING_TIEEVEN,
+    FPROUNDING_POSINF,
+    FPROUNDING_NEGINF,
+};
+
 enum arm_cpu_mode {
     ARM_CPU_MODE_USR = 0x10,
     ARM_CPU_MODE_FIQ = 0x11,

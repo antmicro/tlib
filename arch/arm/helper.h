@@ -7,6 +7,8 @@ bool is_impl_def_exempt_from_attribution(uint32_t address, bool *applies_to_whol
 bool try_get_impl_def_attr_exemption_region(uint32_t address, uint32_t start_at, uint32_t *found_index,
                                             bool *applies_to_whole_page);
 
+int arm_rmode_to_sf(int rmode);
+
 #include "def-helper.h"
 
 DEF_HELPER_1(clz, i32, i32)
@@ -65,6 +67,8 @@ DEF_HELPER_0(wfe, void)
 
 DEF_HELPER_2(cpsr_write, void, i32, i32)
 DEF_HELPER_0(cpsr_read, i32)
+
+DEF_HELPER_2(set_rmode, i32, i32, ptr)
 
 #ifdef TARGET_PROTO_ARM_M
 DEF_HELPER_3(v7m_msr, void, env, i32, i32)

@@ -28,3 +28,8 @@ static inline bool is_insn_vsel(uint32_t insn)
 {
     return (insn & 0xff800c50) == 0xfe000800;
 }
+
+static inline bool is_insn_vcvt(uint32_t insn)
+{
+    return (insn & 0x0fbc0c50) == 0x0ebc0840;
+}
