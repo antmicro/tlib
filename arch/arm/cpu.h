@@ -592,6 +592,12 @@ enum arm_cpu_mode {
     ARM_CPU_MODE_SVC26 = 0x03,
 };
 
+enum arm_op_size {
+    OP_16 = 1,
+    OP_32 = 2,
+    OP_64 = 3,
+};
+
 static inline bool in_user_mode(CPUState *env)
 {
 #ifdef TARGET_PROTO_ARM_M

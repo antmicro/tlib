@@ -36,6 +36,7 @@
 #include "debug.h"
 
 #include "common.h"
+#include "translate_vfp.h"
 
 #define abort()                                                   \
     do {                                                          \
@@ -3006,6 +3007,87 @@ static int generate_vsel_insn(CPUState *env, DisasContext *s, uint32_t insn)
     return 0;
 }
 
+static int generate_vminmaxnm_insn(uint32_t insn, uint32_t rd, uint32_t rn, uint32_t rm, uint32_t size)
+{
+    uint32_t vmin = extract32(insn, 6, 1);
+    TCGv_ptr fpst = get_fpstatus_ptr(0);
+    uint32_t dp = (size == OP_64);
+
+    if(dp) {
+        TCGv_i64 frn, frm, dest;
+
+        frn = tcg_temp_new_i64();
+        frm = tcg_temp_new_i64();
+        dest = tcg_temp_new_i64();
+
+        tcg_gen_ld_f64(frn, cpu_env, vfp_reg_offset(dp, rn));
+        tcg_gen_ld_f64(frm, cpu_env, vfp_reg_offset(dp, rm));
+        if(vmin) {
+            gen_helper_vfp_minnumd(dest, frn, frm, fpst);
+        } else {
+            gen_helper_vfp_maxnumd(dest, frn, frm, fpst);
+        }
+        tcg_gen_st_f64(dest, cpu_env, vfp_reg_offset(dp, rd));
+        tcg_temp_free_i64(frn);
+        tcg_temp_free_i64(frm);
+        tcg_temp_free_i64(dest);
+    } else {
+        TCGv_i32 frn, frm, dest;
+
+        frn = tcg_temp_new_i32();
+        frm = tcg_temp_new_i32();
+        dest = tcg_temp_new_i32();
+
+        tcg_gen_ld_f32(frn, cpu_env, vfp_reg_offset(dp, rn));
+        tcg_gen_ld_f32(frm, cpu_env, vfp_reg_offset(dp, rm));
+        if(vmin) {
+            gen_helper_vfp_minnums(dest, frn, frm, fpst);
+        } else {
+            gen_helper_vfp_maxnums(dest, frn, frm, fpst);
+        }
+        tcg_gen_st_f32(dest, cpu_env, vfp_reg_offset(dp, rd));
+        tcg_temp_free_i32(frn);
+        tcg_temp_free_i32(frm);
+        tcg_temp_free_i32(dest);
+    }
+
+    tcg_temp_free_ptr(fpst);
+    return TRANS_STATUS_SUCCESS;
+}
+
+static void abort_on_half_prec(uint32_t insn, uint32_t precision)
+{
+    if(precision == OP_16) {
+        tlib_abortf("Half-precision not yet supported for instruction with opcode: 0x%x\n", insn);
+    }
+}
+
+static int disas_fpv5_insn(CPUState *env, DisasContext *s, uint32_t insn)
+{
+    uint32_t rd, rn, rm, size = extract32(insn, 8, 2);
+
+    if(!arm_feature(env, ARM_FEATURE_VFP5)) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+
+    if(size == OP_64) {
+        VFP_DREG_D(rd, insn);
+        VFP_DREG_N(rn, insn);
+        VFP_DREG_M(rm, insn);
+    } else {
+        rd = VFP_SREG_D(insn);
+        rn = VFP_SREG_N(insn);
+        rm = VFP_SREG_M(insn);
+    }
+
+    if(is_insn_vminmaxnm(insn)) {
+        /* VMINNM, VMAXNM */
+        abort_on_half_prec(insn, size);
+        return generate_vminmaxnm_insn(insn, rd, rn, rm, size);
+    }
+    return TRANS_STATUS_ILLEGAL_INSN;
+}
+
 static void gen_exception_insn(DisasContext *s, int offset, int excp);
 
 /* Disassemble a VFP instruction.  Returns nonzero if an error occurred
@@ -3051,6 +3133,11 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
 #endif
     if((insn & VSEL_INSN_MASK) == VSEL_INSN_VALUE) {
         return generate_vsel_insn(env, s, insn);
+    } else if(extract32(insn, 28, 4) == 0xf) {
+        /* Encodings with T=1 (Thumb) or unconditional (ARM):
+         * only used by the floating point extension version 5 (FPv5).
+         */
+        return disas_fpv5_insn(env, s, insn);
     }
 
     dp = ((insn & 0xf00) == 0xb00);
@@ -7417,6 +7504,7 @@ static int disas_coproc_insn(CPUState *env, DisasContext *s, uint32_t insn)
                 return disas_dsp_insn(env, s, insn);
             }
             goto board;
+        case 9:
         case 10:
         case 11:
             return disas_vfp_insn(env, s, insn);

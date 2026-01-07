@@ -3363,6 +3363,8 @@ VFP_BINOP(add)
 VFP_BINOP(sub)
 VFP_BINOP(mul)
 VFP_BINOP(div)
+VFP_BINOP(maxnum)
+VFP_BINOP(minnum)
 #undef VFP_BINOP
 
 float32 VFP_HELPER(neg, s)(float32 a)
