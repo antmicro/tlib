@@ -111,7 +111,7 @@ enum {
     float_round_down = 1,
     float_round_up = 2,
     float_round_to_zero = 3,
-    float_round_ties_away = 4
+    float_round_ties_away = 4  //  This mode might not be implemented for all functions
 };
 
 /*----------------------------------------------------------------------------

@@ -1715,7 +1715,12 @@ float32 float32_round_to_int(float32 a STATUS_PARAM)
         aSign = extractFloat32Sign(a);
         switch(STATUS(float_rounding_mode)) {
             case float_round_nearest_even:
-                if((aExp == 0x7E) && extractFloat32Frac(a)) {
+                if(!extractFloat32Frac(a)) {
+                    break;
+                }
+                __attribute__((fallthrough));
+            case float_round_ties_away:
+                if(aExp == 0x7E) {
                     return packFloat32(aSign, 0x7F, 0);
                 }
                 break;
@@ -1736,6 +1741,8 @@ float32 float32_round_to_int(float32 a STATUS_PARAM)
         if((z & roundBitsMask) == 0) {
             z &= ~lastBitMask;
         }
+    } else if(roundingMode == float_round_ties_away) {
+        z += lastBitMask >> 1;
     } else if(roundingMode != float_round_to_zero) {
         if(extractFloat32Sign(make_float32(z)) ^ (roundingMode == float_round_up)) {
             z += roundBitsMask;
@@ -3338,7 +3345,12 @@ float64 float64_round_to_int(float64 a STATUS_PARAM)
         aSign = extractFloat64Sign(a);
         switch(STATUS(float_rounding_mode)) {
             case float_round_nearest_even:
-                if((aExp == 0x3FE) && extractFloat64Frac(a)) {
+                if(!extractFloat64Frac(a)) {
+                    break;
+                }
+                __attribute__((fallthrough));
+            case float_round_ties_away:
+                if(aExp == 0x3FE) {
                     return packFloat64(aSign, 0x3FF, 0);
                 }
                 break;
@@ -3359,6 +3371,8 @@ float64 float64_round_to_int(float64 a STATUS_PARAM)
         if((z & roundBitsMask) == 0) {
             z &= ~lastBitMask;
         }
+    } else if(roundingMode == float_round_ties_away) {
+        z += lastBitMask >> 1;
     } else if(roundingMode != float_round_to_zero) {
         if(extractFloat64Sign(make_float64(z)) ^ (roundingMode == float_round_up)) {
             z += roundBitsMask;
@@ -4617,6 +4631,7 @@ float128 floatx80_to_float128(floatx80 a STATUS_PARAM)
 
 floatx80 floatx80_round_to_int(floatx80 a STATUS_PARAM)
 {
+    //  float_round_ties_away rounding mode is not implemented for this function
     flag aSign;
     int32 aExp;
     uint64_t lastBitMask, roundBitsMask;
@@ -5656,6 +5671,7 @@ floatx80 float128_to_floatx80(float128 a STATUS_PARAM)
 
 float128 float128_round_to_int(float128 a STATUS_PARAM)
 {
+    //  float_round_ties_away rounding mode is not implemented for this function
     flag aSign;
     int32 aExp;
     uint64_t lastBitMask, roundBitsMask;
