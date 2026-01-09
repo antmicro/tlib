@@ -38,3 +38,8 @@ static inline bool is_insn_vrint(uint32_t insn)
 {
     return (insn & 0x0fbc0cd0) == 0x0eb80840;
 }
+
+static inline bool is_insn_vinsmovx(uint32_t insn)
+{
+    return (insn & 0x0fbf0f50) == 0x0eb00a40;
+}

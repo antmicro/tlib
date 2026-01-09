@@ -3132,6 +3132,37 @@ static int generate_vrint_insn(uint32_t insn, uint32_t rd, uint32_t rm, uint32_t
     return TRANS_STATUS_SUCCESS;
 }
 
+static int generate_vinsmovx_insn(uint32_t insn, uint32_t rd, uint32_t rm)
+{
+    if(!arm_feature(env, ARM_FEATURE_V8_1M)) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+
+    uint32_t vins = extract32(insn, 7, 1);
+
+    if(vins) {
+        /* Insert low half of Vm into high half of Vd */
+        TCGv_i32 tcg_op = tcg_temp_new_i32();
+        TCGv_i32 tcg_res = tcg_temp_new_i32();
+        tcg_gen_ld_f32(tcg_op, cpu_env, vfp_reg_offset(0, rm));
+        tcg_gen_ld_f32(tcg_res, cpu_env, vfp_reg_offset(0, rd));
+
+        tcg_gen_deposit_i32(tcg_res, tcg_res, tcg_op, 16, 16);
+        tcg_gen_st_f32(tcg_res, cpu_env, vfp_reg_offset(0, rd));
+        tcg_temp_free_i32(tcg_op);
+        tcg_temp_free_i32(tcg_res);
+    } else {
+        /* vmovx */
+        /* Set Vd to high half of Vm */
+        TCGv_i32 tcg_op = tcg_temp_new_i32();
+        tcg_gen_ld_f32(tcg_op, cpu_env, vfp_reg_offset(0, rm));
+        tcg_gen_shri_i32(tcg_op, tcg_op, 16);
+        tcg_gen_st_f32(tcg_op, cpu_env, vfp_reg_offset(0, rd));
+        tcg_temp_free_i32(tcg_op);
+    }
+    return TRANS_STATUS_SUCCESS;
+}
+
 static int disas_fpv5_insn(CPUState *env, DisasContext *s, uint32_t insn)
 {
     uint32_t rd, rn, rm, size = extract32(insn, 8, 2);
@@ -3165,6 +3196,9 @@ static int disas_fpv5_insn(CPUState *env, DisasContext *s, uint32_t insn)
         /* VRINTA, VRINTN, VRINTP, VRINTM */
         abort_on_half_prec(insn, size);
         return generate_vrint_insn(insn, rd, rm, size);
+    } else if(is_insn_vinsmovx(insn)) {
+        /* VINS, VMOVX */
+        return generate_vinsmovx_insn(insn, rd, rm);
     }
     return TRANS_STATUS_ILLEGAL_INSN;
 }
