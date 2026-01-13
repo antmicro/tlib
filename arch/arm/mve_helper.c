@@ -876,4 +876,26 @@ DO_VCMLA(vcmul270s, 4, float32, 3, DO_VCMULS)
 #undef DO_VCMULH
 #undef DO_VCMULS
 
+#define DO_1OP(OP, ESIZE, TYPE, FN)                                 \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vm) \
+    {                                                               \
+        TYPE *d = vd, *m = vm;                                      \
+        uint16_t mask = mve_element_mask(env);                      \
+        unsigned e;                                                 \
+        for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {           \
+            mergemask(&d[e], FN(m[e]), mask);                       \
+        }                                                           \
+        mve_advance_vpt(env);                                       \
+    }
+
+DO_1OP(vclzb, 1, uint8_t, clz_u8)
+DO_1OP(vclzh, 2, uint16_t, clz_u16)
+DO_1OP(vclzw, 4, uint32_t, __builtin_clz)
+
+DO_1OP(vclsb, 1, int8_t, cls_s8)
+DO_1OP(vclsh, 2, int16_t, cls_s16)
+DO_1OP(vclsw, 4, int32_t, __builtin_clrsb)
+
+#undef DO_1OP
+
 #endif

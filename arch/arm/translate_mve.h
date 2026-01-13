@@ -28,8 +28,11 @@ typedef void MVEGenScalarCmpFn(TCGv_ptr, TCGv_ptr, TCGv_i32);
 typedef void MVEGenVIDUPFn(TCGv_i32, TCGv_ptr, TCGv_ptr, TCGv_i32, TCGv_i32);
 typedef void MVEGenVIWDUPFn(TCGv_i32, TCGv_ptr, TCGv_ptr, TCGv_i32, TCGv_i32, TCGv_i32);
 typedef void MVEGenVADDVFn(TCGv_i32, TCGv_ptr, TCGv_ptr, TCGv_i32);
+typedef void MVEGenOneOpFn(TCGv_ptr, TCGv_ptr, TCGv_ptr);
+
 /* Note that the gvec expanders operate on offsets + sizes.  */
 typedef void GVecGen3Fn(unsigned, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
+typedef void GVecGen2Fn(unsigned, uint32_t, uint32_t, uint32_t, uint32_t);
 
 /*
  * Arguments of stores/loads:
@@ -134,6 +137,13 @@ typedef struct {
     int rda;
     int size;
 } arg_vmaxv;
+
+/* Arguments of 1 operand vector instruction */
+typedef struct {
+    int qd;
+    int qm;
+    int size;
+} arg_1op;
 
 void gen_mve_vld40b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld41b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
@@ -319,6 +329,16 @@ static inline bool is_insn_vcmul(uint32_t insn)
     return (insn & 0xEFB10F50) == 0xEE300E00;
 }
 
+static inline bool is_insn_vcls(uint32_t insn)
+{
+    return (insn & 0xFFB31FD1) == 0xFFB00440;
+}
+
+static inline bool is_insn_vclz(uint32_t insn)
+{
+    return (insn & 0xFFB31FD1) == 0xFFB004C0;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {
@@ -475,4 +495,12 @@ static void mve_extract_vmul(arg_2op *a, uint32_t insn)
      * where it expect size of 0 zero to mean F32.
      */
     a->size = extract32(insn, 28, 1) == 0 ? 1 : 0;
+}
+
+/* Extract arguments of 1-operand instruction */
+static void mve_extract_1op(arg_1op *a, uint32_t insn)
+{
+    a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));
+    a->size = extract32(insn, 18, 2);
 }

@@ -10101,6 +10101,48 @@ static int trans_vpsel(DisasContext *s, arg_2op *a)
     return do_2op(s, a, gen_helper_mve_vpsel);
 }
 
+static int do_1op_vec(DisasContext *s, arg_1op *a, MVEGenOneOpFn fn, GVecGen2Fn vecfn)
+{
+    TCGv_ptr qd, qm;
+
+    if(!mve_check_qreg_bank(a->qd | a->qm) || !fn) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    if(vecfn && mve_no_predication(s)) {
+        vecfn(a->size, mve_qreg_offset(a->qd), mve_qreg_offset(a->qm), 16, 16);
+    } else {
+        qd = mve_qreg_ptr(a->qd);
+        qm = mve_qreg_ptr(a->qm);
+        fn(cpu_env, qd, qm);
+        tcg_temp_free_i32(qd);
+        tcg_temp_free_i32(qm);
+    }
+    mve_update_eci(s);
+    return TRANS_STATUS_SUCCESS;
+}
+
+#define DO_1OP_VEC(INSN, FN, VECFN)                              \
+    static int glue(trans_, INSN)(DisasContext * s, arg_1op * a) \
+    {                                                            \
+        static MVEGenOneOpFn *const fns[] = {                    \
+            gen_helper_mve_##FN##b,                              \
+            gen_helper_mve_##FN##h,                              \
+            gen_helper_mve_##FN##w,                              \
+            NULL,                                                \
+        };                                                       \
+        return do_1op_vec(s, a, fns[a->size], VECFN);            \
+    }
+
+#define DO_1OP(INSN, FN) DO_1OP_VEC(INSN, FN, NULL)
+
+DO_1OP(vclz, vclz)
+DO_1OP(vcls, vcls)
+
 #endif
 
 /* Translate a 32-bit thumb instruction.  Returns nonzero if the instruction
@@ -10927,7 +10969,7 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
             op4 = (insn >> 6) & 0x7;
 
 #ifdef TARGET_PROTO_ARM_M
-            if(arm_feature(env, ARM_FEATURE_V8) && (insn & 0xE0000800) == 0xE0000800) {
+            if(arm_feature(env, ARM_FEATURE_V8)) {
                 if(is_insn_vld4(insn)) {
                     ARCH(MVE);
                     return trans_vld4(s, insn);
@@ -11196,6 +11238,18 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                         default:
                             g_assert_not_reached();
                     }
+                }
+                if(is_insn_vcls(insn)) {
+                    ARCH(MVE);
+                    arg_1op a;
+                    mve_extract_1op(&a, insn);
+                    return trans_vcls(s, &a);
+                }
+                if(is_insn_vclz(insn)) {
+                    ARCH(MVE);
+                    arg_1op a;
+                    mve_extract_1op(&a, insn);
+                    return trans_vclz(s, &a);
                 }
             }
 #endif
