@@ -422,6 +422,8 @@ static inline uint64_t get_c1_actlr(CPUState *env, const ARMCPRegInfo *info)
             return 1;
         case ARM_CPUID_CORTEXA5 &ARM_ARCHITECTURE_MASK:
             return 0;
+        case ARM_CPUID_CORTEXA7 &ARM_ARCHITECTURE_MASK:
+            return 0;
         case ARM_CPUID_CORTEXA8 &ARM_ARCHITECTURE_MASK:
             return 2;
         case ARM_CPUID_CORTEXA9 &ARM_ARCHITECTURE_MASK:
