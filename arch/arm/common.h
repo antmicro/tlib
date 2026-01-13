@@ -60,3 +60,45 @@ static inline long mve_qreg_offset(uint32_t reg)
 {
     return vfp_reg_offset(1, reg * 2);
 }
+
+static inline uint8_t clz_u8(uint8_t a)
+{
+    uint8_t count = 0;
+    while((a & 0x80) == 0 && count < 8) {
+        a <<= 1;
+        count++;
+    }
+    return count;
+}
+
+static inline uint16_t clz_u16(uint16_t a)
+{
+    uint16_t count = 0;
+    while((a & 0x8000) == 0 && count < 16) {
+        a <<= 1;
+        count++;
+    }
+    return count;
+}
+
+static inline uint8_t cls_s8(uint8_t a)
+{
+    uint8_t count = 0;
+    const uint8_t sign = !!(a & 0x80);
+    while(!!(a & 0x40) == sign && count < 7) {
+        a <<= 1;
+        count++;
+    }
+    return count;
+}
+
+static inline uint16_t cls_s16(uint16_t a)
+{
+    uint16_t count = 0;
+    const uint16_t sign = !!(a & 0x8000);
+    while(!!(a & 0x4000) == sign && count < 15) {
+        a <<= 1;
+        count++;
+    }
+    return count;
+}

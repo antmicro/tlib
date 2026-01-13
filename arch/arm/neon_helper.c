@@ -18,6 +18,7 @@
  * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 #include "cpu.h"
+#include "common.h"
 #include "helper.h"
 #include <math.h>
 
@@ -1751,16 +1752,6 @@ uint64_t HELPER(neon_qrshl_u64)(CPUState *env, uint64_t a, uint64_t b)
     return ret;
 }
 
-static uint8_t clz_u8(uint8_t a)
-{
-    uint8_t count = 0;
-    while((a & 0x80) == 0 && count < 8) {
-        a <<= 1;
-        count++;
-    }
-    return count;
-}
-
 uint32_t HELPER(neon_clz_u8)(uint32_t a)
 {
     const uint8_t out0 = clz_u8(U8_3(a));
@@ -1771,32 +1762,11 @@ uint32_t HELPER(neon_clz_u8)(uint32_t a)
     return out0 << 24 | out1 << 16 | out2 << 8 | out3;
 }
 
-static uint16_t clz_u16(uint16_t a)
-{
-    uint16_t count = 0;
-    while((a & 0x8000) == 0 && count < 16) {
-        a <<= 1;
-        count++;
-    }
-    return count;
-}
-
 uint32_t HELPER(neon_clz_u16)(uint32_t a)
 {
     const uint16_t hi = clz_u16(U16_1(a));
     const uint16_t lo = clz_u16(U16_0(a));
     return (hi << 16) | lo;
-}
-
-static uint8_t cls_s8(uint8_t a)
-{
-    uint8_t count = 0;
-    const uint8_t sign = !!(a & 0x80);
-    while(!!(a & 0x40) == sign && count < 7) {
-        a <<= 1;
-        count++;
-    }
-    return count;
 }
 
 uint32_t HELPER(neon_cls_s8)(uint32_t a)
@@ -1807,17 +1777,6 @@ uint32_t HELPER(neon_cls_s8)(uint32_t a)
     const uint8_t out3 = cls_s8(U8_0(a));
 
     return out0 << 24 | out1 << 16 | out2 << 8 | out3;
-}
-
-static uint16_t cls_s16(uint16_t a)
-{
-    uint16_t count = 0;
-    const uint16_t sign = !!(a & 0x8000);
-    while(!!(a & 0x4000) == sign && count < 15) {
-        a <<= 1;
-        count++;
-    }
-    return count;
 }
 
 uint32_t HELPER(neon_cls_s16)(uint32_t a)
