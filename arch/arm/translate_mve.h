@@ -359,6 +359,18 @@ static inline bool is_insn_vneg_fp(uint32_t insn)
     return (insn & 0xFFB31FD1) == 0xFFB107C0;
 }
 
+static inline bool is_insn_vmaxa(uint32_t insn)
+{
+    uint32_t size = extract32(insn, 18, 2);
+    return size != 3 && (insn & 0xFFB31FD1) == 0xEE330E81;
+}
+
+static inline bool is_insn_vmina(uint32_t insn)
+{
+    uint32_t size = extract32(insn, 18, 2);
+    return size != 3 && (insn & 0xFFB31FD1) == 0xEE331E81;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {

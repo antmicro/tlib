@@ -10169,6 +10169,9 @@ static int trans_vfneg(DisasContext *s, arg_1op *a)
     return do_1op_vec(s, a, fns[a->size], NULL);
 }
 
+DO_1OP(vmina, vmina)
+DO_1OP(vmaxa, vmaxa)
+
 #endif
 
 /* Translate a 32-bit thumb instruction.  Returns nonzero if the instruction
@@ -11300,6 +11303,18 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_1op a;
                     mve_extract_1op(&a, insn);
                     return trans_vfneg(s, &a);
+                }
+                if(is_insn_vmina(insn)) {
+                    ARCH(MVE);
+                    arg_1op a;
+                    mve_extract_1op(&a, insn);
+                    return trans_vmina(s, &a);
+                }
+                if(is_insn_vmaxa(insn)) {
+                    ARCH(MVE);
+                    arg_1op a;
+                    mve_extract_1op(&a, insn);
+                    return trans_vmaxa(s, &a);
                 }
             }
 #endif

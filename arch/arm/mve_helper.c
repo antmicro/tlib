@@ -920,6 +920,29 @@ DO_1OP(vfnegs, 8, uint64_t, DO_FNEGS)
 #undef DO_FABSS
 #undef DO_FABSH
 
+#define DO_VMAXMINA(OP, ESIZE, STYPE, UTYPE, FN)                    \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vm) \
+    {                                                               \
+        UTYPE *d = vd;                                              \
+        STYPE *m = vm;                                              \
+        uint16_t mask = mve_element_mask(env);                      \
+        unsigned e;                                                 \
+        for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {           \
+            UTYPE r = DO_ABS(m[e]);                                 \
+            r = FN(d[e], r);                                        \
+            mergemask(&d[e], r, mask);                              \
+        }                                                           \
+        mve_advance_vpt(env);                                       \
+    }
+
+DO_VMAXMINA(vmaxab, 1, int8_t, uint8_t, DO_MAX)
+DO_VMAXMINA(vmaxah, 2, int16_t, uint16_t, DO_MAX)
+DO_VMAXMINA(vmaxaw, 4, int32_t, uint32_t, DO_MAX)
+DO_VMAXMINA(vminab, 1, int8_t, uint8_t, DO_MIN)
+DO_VMAXMINA(vminah, 2, int16_t, uint16_t, DO_MIN)
+DO_VMAXMINA(vminaw, 4, int32_t, uint32_t, DO_MIN)
+#undef DO_VMAXMINA
+
 #undef DO_1OP
 
 #endif
