@@ -531,6 +531,12 @@ void cpu_reset(CPUState *env)
     fpccr_write(env, (fpccr_read(env, true) & ~ARM_FPCCR_LSPACT_MASK) | ARM_FPCCR_ASPEN_MASK | ARM_FPCCR_LSPEN_MASK, true);
 #endif
 
+#ifdef TARGET_PROTO_ARM_M
+    //  NOTE: This resets to 4 when MVE is present, and is UNKNOWN otherwise
+    //        We choose to always reset it to 4
+    env->v7m.ltpsize = 4;
+#endif
+
     env->vfp.xregs[ARM_VFP_FPEXC] = 0;
     env->cp15.c2_base_mask = 0xffffc000u;
     /* v7 performance monitor control register: same implementor
@@ -3310,7 +3316,14 @@ uint32_t HELPER(vfp_get_fpscr)(CPUState *env)
     int i;
     uint32_t fpscr;
 
-    fpscr = (env->vfp.xregs[ARM_VFP_FPSCR] & 0xffc8ffff) | (env->vfp.vec_len << 16) | (env->vfp.vec_stride << 20);
+    fpscr = (env->vfp.xregs[ARM_VFP_FPSCR] & 0xffc8ffff);
+    fpscr = FIELD_DP32(fpscr, VFP_FPSCR, VEC_STRIDE, env->vfp.vec_stride);
+
+#ifndef TARGET_PROTO_ARM_M
+    fpscr = FIELD_DP32(fpscr, VFP_FPSCR, VEC_LEN, env->vfp.vec_len);
+#else
+    fpscr = FIELD_DP32(fpscr, VFP_FPSCR, LTPSIZE, env->v7m.ltpsize);
+#endif  //  TARGET_PROTO_ARM_M
     i = get_float_exception_flags(&env->vfp.fp_status);
     i |= get_float_exception_flags(&env->vfp.standard_fp_status);
     fpscr |= vfp_exceptbits_from_host(i);
@@ -3385,8 +3398,13 @@ void HELPER(vfp_set_fpscr)(CPUState *env, uint32_t val)
 
     changed = env->vfp.xregs[ARM_VFP_FPSCR];
     env->vfp.xregs[ARM_VFP_FPSCR] = (val & 0xffc8ffff);
-    env->vfp.vec_len = (val >> 16) & 7;
-    env->vfp.vec_stride = (val >> 20) & 3;
+
+    env->vfp.vec_stride = FIELD_EX32(val, VFP_FPSCR, VEC_STRIDE);
+#ifndef TARGET_PROTO_ARM_M
+    env->vfp.vec_len = FIELD_EX32(val, VFP_FPSCR, VEC_LEN);
+#else
+    env->v7m.ltpsize = FIELD_EX32(val, VFP_FPSCR, LTPSIZE);
+#endif
 
     changed ^= val;
     if(changed & (3 << 22)) {

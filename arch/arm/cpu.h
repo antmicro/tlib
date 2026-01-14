@@ -830,10 +830,15 @@ enum mpu_result {
 };
 
 /* Bit usage in the TB flags field: */
-#define ARM_TBFLAG_THUMB_SHIFT     0
-#define ARM_TBFLAG_THUMB_MASK      (1 << ARM_TBFLAG_THUMB_SHIFT)
-#define ARM_TBFLAG_VECLEN_SHIFT    1
-#define ARM_TBFLAG_VECLEN_MASK     (0x7 << ARM_TBFLAG_VECLEN_SHIFT)
+#define ARM_TBFLAG_THUMB_SHIFT 0
+#define ARM_TBFLAG_THUMB_MASK  (1 << ARM_TBFLAG_THUMB_SHIFT)
+
+//  NOTE: VECLEN (Cortex-A) and LTPSIZE (Cortex-M) occupy the same place in TBFLAG
+#define ARM_TBFLAG_VECLEN_SHIFT  1
+#define ARM_TBFLAG_VECLEN_MASK   (0x7 << ARM_TBFLAG_VECLEN_SHIFT)
+#define ARM_TBFLAG_LTPSIZE_SHIFT 1
+#define ARM_TBFLAG_LTPSIZE_MASK  (0x7 << ARM_TBFLAG_LTPSIZE_SHIFT)
+
 #define ARM_TBFLAG_VECSTRIDE_SHIFT 4
 #define ARM_TBFLAG_VECSTRIDE_MASK  (0x3 << ARM_TBFLAG_VECSTRIDE_SHIFT)
 #define ARM_TBFLAG_PRIV_SHIFT      6
@@ -860,9 +865,14 @@ static inline void cpu_get_tb_cpu_state(CPUState *env, target_ulong *pc, target_
     int privmode;
     *pc = CPU_PC(env);
     *cs_base = 0;
-    *flags = (env->thumb << ARM_TBFLAG_THUMB_SHIFT) | (env->vfp.vec_len << ARM_TBFLAG_VECLEN_SHIFT) |
-             (env->vfp.vec_stride << ARM_TBFLAG_VECSTRIDE_SHIFT) | (env->condexec_bits << ARM_TBFLAG_CONDEXEC_SHIFT) |
-             (!env->secure << ARM_TBFLAG_NS_SHIFT);
+    *flags = (env->thumb << ARM_TBFLAG_THUMB_SHIFT) | (env->vfp.vec_stride << ARM_TBFLAG_VECSTRIDE_SHIFT) |
+             (env->condexec_bits << ARM_TBFLAG_CONDEXEC_SHIFT) | (!env->secure << ARM_TBFLAG_NS_SHIFT);
+
+#ifndef TARGET_PROTO_ARM_M
+    *flags |= (env->vfp.vec_len << ARM_TBFLAG_VECLEN_SHIFT);
+#else
+    *flags |= (env->v7m.ltpsize << ARM_TBFLAG_LTPSIZE_SHIFT);
+#endif
 
     privmode = !in_user_mode(env);
     if(privmode) {
@@ -1066,5 +1076,9 @@ FIELD(SCTLR, V, 13, 1)
 FIELD(V7M_VPR, P0, 0, 16)
 FIELD(V7M_VPR, MASK01, 16, 4)
 FIELD(V7M_VPR, MASK23, 20, 4)
+
+FIELD(VFP_FPSCR, VEC_LEN, 16, 3)
+FIELD(VFP_FPSCR, VEC_STRIDE, 20, 2)
+FIELD(VFP_FPSCR, LTPSIZE, 16, 3)
 
 #undef FIELD

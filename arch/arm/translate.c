@@ -12573,7 +12573,9 @@ void setup_disas_context(DisasContextBase *base, CPUState *env)
     dc->condexec_cond = ARM_TBFLAG_CONDEXEC(dc->base.tb->flags) >> 4;
     dc->user = (ARM_TBFLAG_PRIV(dc->base.tb->flags) == 0);
     dc->vfp_enabled = ARM_TBFLAG_VFPEN(dc->base.tb->flags);
+#ifndef TARGET_PROTO_ARM_M
     dc->vec_len = ARM_TBFLAG_VECLEN(dc->base.tb->flags);
+#endif  //  TARGET_PROTO_ARM_M
     dc->vec_stride = ARM_TBFLAG_VECSTRIDE(dc->base.tb->flags);
     dc->cp_regs = env->cp_regs;
     cpu_F0s = tcg_temp_local_new_i32();
