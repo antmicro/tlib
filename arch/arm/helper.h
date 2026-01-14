@@ -618,6 +618,14 @@ DEF_HELPER_3(mve_vclzw, void, env, ptr, ptr)
 DEF_HELPER_3(mve_vclsb, void, env, ptr, ptr)
 DEF_HELPER_3(mve_vclsh, void, env, ptr, ptr)
 DEF_HELPER_3(mve_vclsw, void, env, ptr, ptr)
+
+DEF_HELPER_3(mve_vabsb, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vabsh, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vabsw, void, env, ptr, ptr)
+
+DEF_HELPER_3(mve_vnegb, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vnegh, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vnegw, void, env, ptr, ptr)
 #endif
 
 #include "def-helper.h"

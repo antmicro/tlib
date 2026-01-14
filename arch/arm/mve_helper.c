@@ -28,6 +28,8 @@
 #define DO_ADD(N, M) ((N) + (M))
 #define DO_MAX(N, M) ((N) >= (M) ? (N) : (M))
 #define DO_MIN(N, M) ((N) >= (M) ? (M) : (N))
+#define DO_ABS(N)    ((N) < 0 ? -(N) : (N))
+#define DO_NEG(N)    (-(N))
 
 static uint16_t mve_eci_mask(CPUState *env)
 {
@@ -895,6 +897,14 @@ DO_1OP(vclzw, 4, uint32_t, __builtin_clz)
 DO_1OP(vclsb, 1, int8_t, cls_s8)
 DO_1OP(vclsh, 2, int16_t, cls_s16)
 DO_1OP(vclsw, 4, int32_t, __builtin_clrsb)
+
+DO_1OP(vabsb, 1, int8_t, DO_ABS)
+DO_1OP(vabsh, 2, int16_t, DO_ABS)
+DO_1OP(vabsw, 4, int32_t, DO_ABS)
+
+DO_1OP(vnegb, 1, int8_t, DO_NEG)
+DO_1OP(vnegh, 2, int16_t, DO_NEG)
+DO_1OP(vnegw, 4, int32_t, DO_NEG)
 
 #undef DO_1OP
 

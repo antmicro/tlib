@@ -10142,6 +10142,8 @@ static int do_1op_vec(DisasContext *s, arg_1op *a, MVEGenOneOpFn fn, GVecGen2Fn 
 
 DO_1OP(vclz, vclz)
 DO_1OP(vcls, vcls)
+DO_1OP_VEC(vabs, vabs, tcg_gen_gvec_abs)
+DO_1OP_VEC(vneg, vneg, tcg_gen_gvec_neg)
 
 #endif
 
@@ -11250,6 +11252,18 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_1op a;
                     mve_extract_1op(&a, insn);
                     return trans_vclz(s, &a);
+                }
+                if(is_insn_vabs(insn)) {
+                    ARCH(MVE);
+                    arg_1op a;
+                    mve_extract_1op(&a, insn);
+                    return trans_vabs(s, &a);
+                }
+                if(is_insn_vneg(insn)) {
+                    ARCH(MVE);
+                    arg_1op a;
+                    mve_extract_1op(&a, insn);
+                    return trans_vneg(s, &a);
                 }
             }
 #endif
