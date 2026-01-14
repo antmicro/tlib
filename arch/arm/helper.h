@@ -626,6 +626,12 @@ DEF_HELPER_3(mve_vabsw, void, env, ptr, ptr)
 DEF_HELPER_3(mve_vnegb, void, env, ptr, ptr)
 DEF_HELPER_3(mve_vnegh, void, env, ptr, ptr)
 DEF_HELPER_3(mve_vnegw, void, env, ptr, ptr)
+
+DEF_HELPER_3(mve_vfabss, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vfabsh, void, env, ptr, ptr)
+
+DEF_HELPER_3(mve_vfnegs, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vfnegh, void, env, ptr, ptr)
 #endif
 
 #include "def-helper.h"

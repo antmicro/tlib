@@ -902,9 +902,23 @@ DO_1OP(vabsb, 1, int8_t, DO_ABS)
 DO_1OP(vabsh, 2, int16_t, DO_ABS)
 DO_1OP(vabsw, 4, int32_t, DO_ABS)
 
+#define DO_FABSH(N) ((N) & dup_const(MO_16, 0x7fff))
+#define DO_FABSS(N) ((N) & dup_const(MO_32, 0x7fffffff))
+DO_1OP(vfabsh, 8, uint64_t, DO_FABSH)
+DO_1OP(vfabss, 8, uint64_t, DO_FABSS)
+#undef DO_FABSS
+#undef DO_FABSH
+
 DO_1OP(vnegb, 1, int8_t, DO_NEG)
 DO_1OP(vnegh, 2, int16_t, DO_NEG)
 DO_1OP(vnegw, 4, int32_t, DO_NEG)
+
+#define DO_FNEGH(N) ((N) ^ dup_const(MO_16, 0x8000))
+#define DO_FNEGS(N) ((N) ^ dup_const(MO_32, 0x80000000))
+DO_1OP(vfnegh, 8, uint64_t, DO_FNEGH)
+DO_1OP(vfnegs, 8, uint64_t, DO_FNEGS)
+#undef DO_FABSS
+#undef DO_FABSH
 
 #undef DO_1OP
 

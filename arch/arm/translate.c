@@ -10145,6 +10145,30 @@ DO_1OP(vcls, vcls)
 DO_1OP_VEC(vabs, vabs, tcg_gen_gvec_abs)
 DO_1OP_VEC(vneg, vneg, tcg_gen_gvec_neg)
 
+static int trans_vfabs(DisasContext *s, arg_1op *a)
+{
+    static MVEGenOneOpFn *const fns[] = {
+        NULL,
+        gen_helper_mve_vfabsh,
+        gen_helper_mve_vfabss,
+        NULL,
+    };
+
+    return do_1op_vec(s, a, fns[a->size], NULL);
+}
+
+static int trans_vfneg(DisasContext *s, arg_1op *a)
+{
+    static MVEGenOneOpFn *const fns[] = {
+        NULL,
+        gen_helper_mve_vfnegh,
+        gen_helper_mve_vfnegs,
+        NULL,
+    };
+
+    return do_1op_vec(s, a, fns[a->size], NULL);
+}
+
 #endif
 
 /* Translate a 32-bit thumb instruction.  Returns nonzero if the instruction
@@ -11264,6 +11288,18 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_1op a;
                     mve_extract_1op(&a, insn);
                     return trans_vneg(s, &a);
+                }
+                if(is_insn_vabs_fp(insn)) {
+                    ARCH(MVE);
+                    arg_1op a;
+                    mve_extract_1op(&a, insn);
+                    return trans_vfabs(s, &a);
+                }
+                if(is_insn_vneg_fp(insn)) {
+                    ARCH(MVE);
+                    arg_1op a;
+                    mve_extract_1op(&a, insn);
+                    return trans_vfneg(s, &a);
                 }
             }
 #endif
