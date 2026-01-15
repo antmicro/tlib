@@ -77,6 +77,17 @@ uint32_t *get_reg_pointer_32_with_security(int reg, bool is_secure)
             return &(cpu->v7m.faultmask[is_secure]);
         case FPSCR_32:
             return &(cpu->vfp.xregs[ARM_VFP_FPSCR]);
+        case S_0_32 ... S_31_32: {
+            int tmp_reg = reg - S_0_32;
+            CPU_DoubleU *d_reg_ref = (CPU_DoubleU *)&(cpu->vfp.regs[tmp_reg >> 1]);  //  S0...S31 are contained within D0...D15
+            if(tmp_reg & 1) {  //  We are using relative register number to ensure parity is correct. ie. we want reg & 1 == 0 for
+                               //  s0, s2, s4 etc.  which is not the case when S_0_32 is odd.
+                return &(d_reg_ref->l.upper);
+            } else {
+                return &(d_reg_ref->l.lower);
+            }
+        }
+
 #endif
         default:
             return NULL;
