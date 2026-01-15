@@ -371,6 +371,12 @@ static inline bool is_insn_vmina(uint32_t insn)
     return size != 3 && (insn & 0xFFB31FD1) == 0xEE331E81;
 }
 
+static inline bool is_insn_vrev(uint32_t insn)
+{
+    uint32_t mask = extract32(insn, 7, 2);
+    return mask != 3 && (insn & 0xFFB31E51) == 0xFFB00040;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {

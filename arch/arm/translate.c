@@ -10172,6 +10172,39 @@ static int trans_vfneg(DisasContext *s, arg_1op *a)
 DO_1OP(vmina, vmina)
 DO_1OP(vmaxa, vmaxa)
 
+static int trans_vrev16(DisasContext *s, arg_1op *a)
+{
+    static MVEGenOneOpFn *const fns[] = {
+        gen_helper_mve_vrev16b,
+        NULL,
+        NULL,
+        NULL,
+    };
+    return do_1op_vec(s, a, fns[a->size], NULL);
+}
+
+static int trans_vrev32(DisasContext *s, arg_1op *a)
+{
+    static MVEGenOneOpFn *const fns[] = {
+        gen_helper_mve_vrev32b,
+        gen_helper_mve_vrev32h,
+        NULL,
+        NULL,
+    };
+    return do_1op_vec(s, a, fns[a->size], NULL);
+}
+
+static int trans_vrev64(DisasContext *s, arg_1op *a)
+{
+    static MVEGenOneOpFn *const fns[] = {
+        gen_helper_mve_vrev64b,
+        gen_helper_mve_vrev64h,
+        gen_helper_mve_vrev64w,
+        NULL,
+    };
+    return do_1op_vec(s, a, fns[a->size], NULL);
+}
+
 #endif
 
 /* Translate a 32-bit thumb instruction.  Returns nonzero if the instruction
@@ -11315,6 +11348,23 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_1op a;
                     mve_extract_1op(&a, insn);
                     return trans_vmaxa(s, &a);
+                }
+                if(is_insn_vrev(insn)) {
+                    ARCH(MVE);
+                    arg_1op a;
+                    mve_extract_1op(&a, insn);
+
+                    uint32_t rev = extract32(insn, 7, 2);
+                    switch(rev) {
+                        case 0:
+                            return trans_vrev64(s, &a);
+                        case 1:
+                            return trans_vrev32(s, &a);
+                        case 2:
+                            return trans_vrev16(s, &a);
+                        default:
+                            g_assert_not_reached();
+                    }
                 }
             }
 #endif

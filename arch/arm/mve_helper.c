@@ -943,6 +943,30 @@ DO_VMAXMINA(vminah, 2, int16_t, uint16_t, DO_MIN)
 DO_VMAXMINA(vminaw, 4, int32_t, uint32_t, DO_MIN)
 #undef DO_VMAXMINA
 
+static inline uint32_t hswap32(uint32_t h)
+{
+    return rol32(h, 16);
+}
+
+static inline uint64_t hswap64(uint64_t h)
+{
+    uint64_t m = 0x0000ffff0000ffffull;
+    h = rol64(h, 32);
+    return ((h & m) << 16) | ((h >> 16) & m);
+}
+
+static inline uint64_t wswap64(uint64_t h)
+{
+    return rol64(h, 32);
+}
+
+DO_1OP(vrev16b, 2, uint16_t, bswap16)
+DO_1OP(vrev32b, 4, uint32_t, bswap32)
+DO_1OP(vrev32h, 4, uint32_t, hswap32)
+DO_1OP(vrev64b, 8, uint64_t, bswap64)
+DO_1OP(vrev64h, 8, uint64_t, hswap64)
+DO_1OP(vrev64w, 8, uint64_t, wswap64)
+
 #undef DO_1OP
 
 #endif

@@ -640,6 +640,13 @@ DEF_HELPER_3(mve_vmaxaw, void, env, ptr, ptr)
 DEF_HELPER_3(mve_vminab, void, env, ptr, ptr)
 DEF_HELPER_3(mve_vminah, void, env, ptr, ptr)
 DEF_HELPER_3(mve_vminaw, void, env, ptr, ptr)
+
+DEF_HELPER_3(mve_vrev16b, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vrev32b, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vrev32h, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vrev64b, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vrev64h, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vrev64w, void, env, ptr, ptr)
 #endif
 
 #include "def-helper.h"
