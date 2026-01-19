@@ -436,7 +436,6 @@ RW_FUNCTIONS(64, c1_actlr, get_c1_actlr(env, info), tlib_write_cp15_32(encode_as
 
 RW_FUNCTIONS(64, c10_tlb_lockdown, 0, tlib_write_cp15_32(encode_as_aarch32_32bit_register(info), value))
 
-RW_FUNCTIONS(64, read_cp15_write_ignore, tlib_read_cp15_32(encode_as_aarch32_32bit_register(info)), return)
 WRITE_FUNCTION(64, write_cp15, tlib_write_cp15_32(encode_as_aarch32_32bit_register(info), value))
 RW_FUNCTIONS(64, read_write_cp15, tlib_read_cp15_32(encode_as_aarch32_32bit_register(info)),
              tlib_write_cp15_32(encode_as_aarch32_32bit_register(info), value))
@@ -908,7 +907,7 @@ static ARMCPRegInfo cortex_r8_registers[] = {
 };
 
 static ARMCPRegInfo feature_generic_timer_registers[] = {
-    ARM32_CP_REG_DEFINE(GENERIC_TIMER,    15, ANY,  14, ANY, ANY,   1, RW | ARM_CP_IO, RW_FNS(read_cp15_write_ignore))     // Generic Timer
+    ARM32_CP_REG_DEFINE(GENERIC_TIMER,    15, ANY,  14, ANY, ANY,   1, RW | ARM_CP_IO, RW_FNS(read_write_cp15))     // Generic Timer
 };
 
 static ARMCPRegInfo feature_thumb2ee_registers[] = {
