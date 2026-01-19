@@ -286,7 +286,7 @@ static inline bool is_insn_viwdup(uint32_t insn)
     if(rm == 7) {
         return false;
     }
-    return (insn & 0xFF811F71) == 0xEE010F60;
+    return (insn & 0xFF811F70) == 0xEE010F60;
 }
 
 static inline bool is_insn_vdwdup(uint32_t insn)
