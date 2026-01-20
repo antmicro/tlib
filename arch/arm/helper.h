@@ -545,29 +545,19 @@ DEF_HELPER_3(mve_vstrh_w, void, env, ptr, i32)
 
 DEF_HELPER_3(mve_vdup, void, env, ptr, i32)
 
-DEF_HELPER_3(mve_vcmp_fp_eqs, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vfcmp_eqs, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vfcmp_nes, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vfcmp_ges, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vfcmp_les, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vfcmp_gts, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vfcmp_lts, void, env, ptr, ptr)
 
-DEF_HELPER_3(mve_vcmp_fp_nes, void, env, ptr, ptr)
-
-DEF_HELPER_3(mve_vcmp_fp_ges, void, env, ptr, ptr)
-
-DEF_HELPER_3(mve_vcmp_fp_les, void, env, ptr, ptr)
-
-DEF_HELPER_3(mve_vcmp_fp_gts, void, env, ptr, ptr)
-
-DEF_HELPER_3(mve_vcmp_fp_lts, void, env, ptr, ptr)
-
-DEF_HELPER_3(mve_vcmp_fp_eq_scalars, void, env, ptr, i32)
-
-DEF_HELPER_3(mve_vcmp_fp_ne_scalars, void, env, ptr, i32)
-
-DEF_HELPER_3(mve_vcmp_fp_ge_scalars, void, env, ptr, i32)
-
-DEF_HELPER_3(mve_vcmp_fp_le_scalars, void, env, ptr, i32)
-
-DEF_HELPER_3(mve_vcmp_fp_gt_scalars, void, env, ptr, i32)
-
-DEF_HELPER_3(mve_vcmp_fp_lt_scalars, void, env, ptr, i32)
+DEF_HELPER_3(mve_vfcmp_eq_scalars, void, env, ptr, i32)
+DEF_HELPER_3(mve_vfcmp_ne_scalars, void, env, ptr, i32)
+DEF_HELPER_3(mve_vfcmp_ge_scalars, void, env, ptr, i32)
+DEF_HELPER_3(mve_vfcmp_le_scalars, void, env, ptr, i32)
+DEF_HELPER_3(mve_vfcmp_gt_scalars, void, env, ptr, i32)
+DEF_HELPER_3(mve_vfcmp_lt_scalars, void, env, ptr, i32)
 
 DEF_HELPER_3(mve_vmaxvsb, i32, env, ptr, i32)
 DEF_HELPER_3(mve_vmaxvsh, i32, env, ptr, i32)

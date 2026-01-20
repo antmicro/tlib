@@ -622,12 +622,12 @@ void gen_mve_vpst(DisasContext *s, uint32_t mask)
 #define DO_GT16(X, Y, S) float16_lt(Y, X, S)
 #define DO_GT32(X, Y, S) float32_lt(Y, X, S)
 
-DO_VCMP_FP_BOTH(vcmp_fp_eqs, vcmp_fp_eq_scalars, 4, float32, float32_eq)
-DO_VCMP_FP_BOTH(vcmp_fp_nes, vcmp_fp_ne_scalars, 4, float32, !float32_eq)
-DO_VCMP_FP_BOTH(vcmp_fp_ges, vcmp_fp_ge_scalars, 4, float32, DO_GE32)
-DO_VCMP_FP_BOTH(vcmp_fp_lts, vcmp_fp_lt_scalars, 4, float32, !DO_GE32)
-DO_VCMP_FP_BOTH(vcmp_fp_gts, vcmp_fp_gt_scalars, 4, float32, DO_GT32)
-DO_VCMP_FP_BOTH(vcmp_fp_les, vcmp_fp_le_scalars, 4, float32, !DO_GT32)
+DO_VCMP_FP_BOTH(vfcmp_eqs, vfcmp_eq_scalars, 4, float32, float32_eq)
+DO_VCMP_FP_BOTH(vfcmp_nes, vfcmp_ne_scalars, 4, float32, !float32_eq)
+DO_VCMP_FP_BOTH(vfcmp_ges, vfcmp_ge_scalars, 4, float32, DO_GE32)
+DO_VCMP_FP_BOTH(vfcmp_lts, vfcmp_lt_scalars, 4, float32, !DO_GE32)
+DO_VCMP_FP_BOTH(vfcmp_gts, vfcmp_gt_scalars, 4, float32, DO_GT32)
+DO_VCMP_FP_BOTH(vfcmp_les, vfcmp_le_scalars, 4, float32, !DO_GT32)
 
 #undef DO_GT32
 #undef DO_GT16

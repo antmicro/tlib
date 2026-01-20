@@ -10002,12 +10002,12 @@ static inline int trans_vpst(DisasContext *s, arg_vpst *a)
         return do_vcmp_scalar(s, a, fns[a->size]);                              \
     }
 
-DO_TRANS_VCMP_FP(vcmp_fp_eq, vcmp_fp_eq)
-DO_TRANS_VCMP_FP(vcmp_fp_ne, vcmp_fp_ne)
-DO_TRANS_VCMP_FP(vcmp_fp_ge, vcmp_fp_ge)
-DO_TRANS_VCMP_FP(vcmp_fp_lt, vcmp_fp_lt)
-DO_TRANS_VCMP_FP(vcmp_fp_gt, vcmp_fp_gt)
-DO_TRANS_VCMP_FP(vcmp_fp_le, vcmp_fp_le)
+DO_TRANS_VCMP_FP(vfcmp_eq, vfcmp_eq)
+DO_TRANS_VCMP_FP(vfcmp_ne, vfcmp_ne)
+DO_TRANS_VCMP_FP(vfcmp_ge, vfcmp_ge)
+DO_TRANS_VCMP_FP(vfcmp_lt, vfcmp_lt)
+DO_TRANS_VCMP_FP(vfcmp_gt, vfcmp_gt)
+DO_TRANS_VCMP_FP(vfcmp_le, vfcmp_le)
 
 #undef DO_TRANS_VCMP_FP
 
@@ -11081,28 +11081,28 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     switch(cmp) {
                         //  fcA = 0; fcB = 0; fcC = 0
                         case 0:
-                            return trans_vcmp_fp_eq(s, &a);
+                            return trans_vfcmp_eq(s, &a);
                         //  fcA = 0; fcB = 0; fcC = 1
                         case 4:
-                            return trans_vcmp_fp_ne(s, &a);
+                            return trans_vfcmp_ne(s, &a);
                         //  fcA = 1; fcB = 0; fcC = 0
                         case 1:
-                            return trans_vcmp_fp_ge(s, &a);
+                            return trans_vfcmp_ge(s, &a);
                         //  fcA = 1; fcB = 0; fcC = 1
                         case 5:
-                            return trans_vcmp_fp_lt(s, &a);
+                            return trans_vfcmp_lt(s, &a);
                         //  fcA = 1; fcB = 1; fcC = 0
                         case 3:
-                            return trans_vcmp_fp_gt(s, &a);
+                            return trans_vfcmp_gt(s, &a);
                         //  fcA = 1; fcB = 1; fcC = 1
                         case 7:
-                            return trans_vcmp_fp_le(s, &a);
+                            return trans_vfcmp_le(s, &a);
                         //  This should never happen as other values are related encodings
                         default:
                             return TRANS_STATUS_ILLEGAL_INSN;
                     }
 
-                    return trans_vcmp_fp_eq(s, &a);
+                    return trans_vfcmp_eq(s, &a);
                 }
                 if(is_insn_vcmp_fp_scalar(insn)) {
                     ARCH(MVE);
@@ -11115,22 +11115,22 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     switch(cmp) {
                         //  fcA = 0; fcB = 0; fcC = 0
                         case 0:
-                            return trans_vcmp_fp_eq_scalar(s, &a);
+                            return trans_vfcmp_eq_scalar(s, &a);
                         //  fcA = 0; fcB = 0; fcC = 1
                         case 4:
-                            return trans_vcmp_fp_ge_scalar(s, &a);
+                            return trans_vfcmp_ge_scalar(s, &a);
                         //  fcA = 1; fcB = 0; fcC = 0
                         case 1:
-                            return trans_vcmp_fp_ne_scalar(s, &a);
+                            return trans_vfcmp_ne_scalar(s, &a);
                         //  fcA = 1; fcB = 0; fcC = 1
                         case 5:
-                            return trans_vcmp_fp_lt_scalar(s, &a);
+                            return trans_vfcmp_lt_scalar(s, &a);
                         //  fcA = 1; fcB = 1; fcC = 0
                         case 6:
-                            return trans_vcmp_fp_gt_scalar(s, &a);
+                            return trans_vfcmp_gt_scalar(s, &a);
                         //  fcA = 1; fcB = 1; fcC = 1
                         case 7:
-                            return trans_vcmp_fp_le_scalar(s, &a);
+                            return trans_vfcmp_le_scalar(s, &a);
                         //  This should never happen as other values are related encodings
                         default:
                             return TRANS_STATUS_ILLEGAL_INSN;
