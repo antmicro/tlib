@@ -1508,3 +1508,34 @@ void aarch64_sync_32_to_64(CPUARMState *env)
     env->xregs[29] = env->banked_r13[bank_number(ARM_CPU_MODE_FIQ)];
     env->xregs[30] = env->banked_r14[r14_bank_number(ARM_CPU_MODE_FIQ)];
 }
+
+void TLIB_NORETURN arch_raise_external_abort(CPUState *env, target_ulong address, int access_type, void *retaddr)
+{
+    if(is_a64(env)) {
+        //  Based on: Arm Architecture Reference Manual for A-profile architecture DDI0487
+        //  J1.1.2.18 AArch64.TakePhysicalSErrorException
+        env->exception.vaddress = address;
+        raise_exception(env, EXCP_SERR, syn_serror(), exception_target_el(env));
+    } else {
+        if(unlikely(arm_feature(env, ARM_FEATURE_M))) {
+            tlib_abortf("Signaling external aborts is not implemented for Cortex-M cores of the arm64 guest");
+            tlib_assert_not_reached();
+        }
+
+        //  Based on: Arm Architecture Reference Manual Supplement, Armv8, for the Armv8-R AArch32 architecture profile
+        //  DDI0568A.c, H1.2.2 aarch32/exceptions/asynch/AArch32.TakePhysicalSErrorException
+        int target_el = 1;
+        int current_el = arm_current_el(env);
+        if(arm_feature(env, ARM_FEATURE_EL2) && !arm_is_secure(env) &&
+           check_hcr_el2(arm_hcr_el2_eff(env), /*tge=*/1, /*amo=*/1, -1, -1, -1, -1)) {
+            target_el = 2;
+        }
+        set_mmu_fault_registers(ACCESS_DATA_LOAD, address, SERROR_FAULT);
+        env->exception.target_el = target_el;
+        if(target_el == 2 && current_el != 2) {
+            env->exception_index = EXCP_HYP_TRAP;
+        }
+        arch_raise_mmu_fault_exception(env, TRANSLATE_FAIL, access_type, address, retaddr);
+    }
+    tlib_assert_not_reached();
+}

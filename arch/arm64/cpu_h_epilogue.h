@@ -113,6 +113,7 @@ enum PMSAv8_FAULT_TYPE {
     BACKGROUND_FAULT = 0b000000,   //  Not in any region && background not allowed
     PERMISSION_FAULT = 0b001100,   //  Unsufficient permissions
     TRANSLATION_FAULT = 0b000100,  //  Occurs when more than one region contains requested address
+    SERROR_FAULT = 0b010001,       //  System error
     DEBUG_FAULT = 0b100010,        //  BKPT instruction, handled with the same flow as prefetch aborts
 };
 
