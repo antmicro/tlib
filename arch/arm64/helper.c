@@ -666,6 +666,10 @@ void do_interrupt_a64(CPUState *env)
         case EXCP_VFIQ:
             addr += 0x100;
             break;
+        case EXCP_SERR:
+            env->cp15.far_el[target_el] = env->exception.vaddress;
+            addr += 0x180;
+            break;
         case EXCP_VSERR:
             tlib_abortf("do_interrupt: unsupported SError exception");
             break;

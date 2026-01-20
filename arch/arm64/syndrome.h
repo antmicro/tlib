@@ -269,6 +269,11 @@ static inline uint32_t syn_swstep(bool same_el, uint32_t isv, uint32_t ex)
     return syndrome32_create(ec, 1, iss);
 }
 
+static inline uint32_t syn_serror()
+{
+    return syndrome32_create(SYN_EC_SERROR, 1, 0);
+}
+
 static inline uint32_t syn_aa32_svc(uint32_t imm16, bool is_16bit)
 {
     return syndrome32_create(SYN_EC_AA32_SVC, !is_16bit, imm16);

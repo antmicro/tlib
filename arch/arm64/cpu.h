@@ -103,6 +103,7 @@ uint64_t arm_sctlr(struct CPUState *env, int el);
 #define EXCP_UNALIGNED      22 /* v7M UNALIGNED UsageFault */
 #define EXCP_DIVBYZERO      23 /* v7M DIVBYZERO UsageFault */
 #define EXCP_VSERR          24
+#define EXCP_SERR           25 /* System Error */
 /* NB: add new EXCP_ defines to the array in arm_log_exception() too */
 
 #define ARMV7M_EXCP_RESET   1
