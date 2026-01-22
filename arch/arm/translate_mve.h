@@ -387,6 +387,16 @@ static inline bool is_insn_vminnm(uint32_t insn)
     return (insn & 0xFFA11F51) == 0xFF200F50;
 }
 
+static inline bool is_insn_vmaxnma(uint32_t insn)
+{
+    return (insn & 0xEFBF1FD1) == 0xEE3F0E81;
+}
+
+static inline bool is_insn_vminnma(uint32_t insn)
+{
+    return (insn & 0xEFBF1FD1) == 0xEE3F1E81;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {
@@ -519,6 +529,15 @@ static void mve_extract_vmaxnmv(arg_vmaxv *a, uint32_t insn)
 {
     a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));
     a->rda = extract32(insn, 12, 4);
+    a->size = extract32(insn, 28, 1);
+}
+
+/* Extract arguments of VMAXNMA/VMINNMA instructions */
+static void mve_extract_vmaxnma(arg_2op *a, uint32_t insn)
+{
+    a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));
+    a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    a->qn = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
     a->size = extract32(insn, 28, 1);
 }
 

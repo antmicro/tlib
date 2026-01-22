@@ -9860,6 +9860,8 @@ DO_TRANS_2OP_FP(vcmul180, vcmul180)
 DO_TRANS_2OP_FP(vcmul270, vcmul270)
 DO_TRANS_2OP_FP(vmaxnm, vmaxnm)
 DO_TRANS_2OP_FP(vminnm, vminnm)
+DO_TRANS_2OP_FP(vmaxnma, vmaxnma)
+DO_TRANS_2OP_FP(vminnma, vminnma)
 
 #define DO_TRANS_2OP_FP_SCALAR(INSN, FN)                     \
     static int trans_##INSN(DisasContext *s, arg_2scalar *a) \
@@ -11379,6 +11381,18 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_2op a;
                     mve_extract_2op_fp(&a, insn);
                     return trans_vminnm(s, &a);
+                }
+                if(is_insn_vmaxnma(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_vmaxnma(&a, insn);
+                    return trans_vmaxnma(s, &a);
+                }
+                if(is_insn_vminnma(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_vmaxnma(&a, insn);
+                    return trans_vminnma(s, &a);
                 }
             }
 #endif

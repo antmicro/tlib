@@ -440,6 +440,19 @@ DO_2OP_FP(vfmuls, 4, float32, float32_mul)
 DO_2OP_FP(vmaxnms, 4, float32, float32_maxnum)
 DO_2OP_FP(vminnms, 4, float32, float32_minnum)
 
+static inline float32 float32_maxnuma(float32 a, float32 b, float_status *s)
+{
+    return float32_maxnum(float32_abs(a), float32_abs(b), s);
+}
+
+static inline float32 float32_minnuma(float32 a, float32 b, float_status *s)
+{
+    return float32_minnum(float32_abs(a), float32_abs(b), s);
+}
+
+DO_2OP_FP(vmaxnmas, 4, float32, float32_maxnuma)
+DO_2OP_FP(vminnmas, 4, float32, float32_minnuma)
+
 #define DO_2OP_FP_ACC_SCALAR(OP, ESIZE, TYPE, FN)                                \
     void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vn, uint32_t rm) \
     {                                                                            \
