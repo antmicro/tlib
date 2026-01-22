@@ -437,6 +437,8 @@ DO_2OP_FP_SCALAR(vfmul_scalars, 4, float32, float32_mul)
 DO_2OP_FP(vfadds, 4, float32, float32_add)
 DO_2OP_FP(vfsubs, 4, float32, float32_sub)
 DO_2OP_FP(vfmuls, 4, float32, float32_mul)
+DO_2OP_FP(vmaxnms, 4, float32, float32_maxnum)
+DO_2OP_FP(vminnms, 4, float32, float32_minnum)
 
 #define DO_2OP_FP_ACC_SCALAR(OP, ESIZE, TYPE, FN)                                \
     void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vn, uint32_t rm) \

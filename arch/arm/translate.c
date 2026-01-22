@@ -9858,6 +9858,8 @@ DO_TRANS_2OP_FP(vcmul0, vcmul0)
 DO_TRANS_2OP_FP(vcmul90, vcmul90)
 DO_TRANS_2OP_FP(vcmul180, vcmul180)
 DO_TRANS_2OP_FP(vcmul270, vcmul270)
+DO_TRANS_2OP_FP(vmaxnm, vmaxnm)
+DO_TRANS_2OP_FP(vminnm, vminnm)
 
 #define DO_TRANS_2OP_FP_SCALAR(INSN, FN)                     \
     static int trans_##INSN(DisasContext *s, arg_2scalar *a) \
@@ -11365,6 +11367,18 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                         default:
                             g_assert_not_reached();
                     }
+                }
+                if(is_insn_vmaxnm(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op_fp(&a, insn);
+                    return trans_vmaxnm(s, &a);
+                }
+                if(is_insn_vminnm(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op_fp(&a, insn);
+                    return trans_vminnm(s, &a);
                 }
             }
 #endif
