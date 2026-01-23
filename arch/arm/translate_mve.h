@@ -456,7 +456,7 @@ static void mve_extract_2op_fp(arg_2op *a, uint32_t insn)
 /* Extract arguments for VDUP instruction */
 static void mve_extract_vdup(arg_vdup *a, uint32_t insn)
 {
-    a->size = deposit32(extract32(insn, 22, 1), 1, 31, extract32(insn, 5, 1));
+    a->size = deposit32(extract32(insn, 5, 1), 1, 31, extract32(insn, 22, 1));
     a->qd = deposit32(extract32(insn, 17, 3), 3, 29, extract32(insn, 7, 1));
     a->rt = extract32(insn, 12, 4);
 }
