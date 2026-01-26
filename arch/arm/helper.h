@@ -676,6 +676,11 @@ DEF_HELPER_4(mve_vmulb, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vmulh, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vmulw, void, env, ptr, ptr, ptr)
 
+DEF_HELPER_4(mve_vcvt_sf, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vcvt_uf, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vcvt_fs, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vcvt_fu, void, env, ptr, ptr, i32)
+
 #endif
 
 #include "def-helper.h"

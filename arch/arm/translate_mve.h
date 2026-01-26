@@ -22,6 +22,7 @@
 typedef void MVEGenLdStFn(TCGv_ptr, TCGv_ptr, TCGv_i32);
 typedef void MVEGenLdStIlFn(DisasContext *, uint32_t, TCGv_i32);
 typedef void MVEGenTwoOpScalarFn(TCGv_ptr, TCGv_ptr, TCGv_ptr, TCGv_i32);
+typedef void MVEGenTwoOpShiftFn(TCGv_ptr, TCGv_ptr, TCGv_ptr, TCGv_i32);
 typedef void MVEGenTwoOpFn(TCGv_ptr, TCGv_ptr, TCGv_ptr, TCGv_ptr);
 typedef void MVEGenCmpFn(TCGv_ptr, TCGv_ptr, TCGv_ptr);
 typedef void MVEGenScalarCmpFn(TCGv_ptr, TCGv_ptr, TCGv_i32);
@@ -144,6 +145,13 @@ typedef struct {
     int qm;
     int size;
 } arg_1op;
+
+typedef struct {
+    int qd;
+    int qm;
+    int shift;
+    int size;
+} arg_2shift;
 
 void gen_mve_vld40b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld41b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
@@ -431,6 +439,16 @@ static inline bool is_insn_vminnma(uint32_t insn)
     return (insn & 0xEFBF1FD1) == 0xEE3F1E81;
 }
 
+/* VCVT between floating and fixed point */
+static inline bool is_insn_vcvt_f_and_fixed(uint32_t insn)
+{
+    uint32_t upper_imm6 = extract32(insn, 19, 3);
+    uint32_t fsi = extract32(insn, 9, 1);
+    bool related_opcode = upper_imm6 == 0;
+    bool undefined = !(upper_imm6 & 0b100) || (!fsi && (upper_imm6 & 0b110) == 0b100);
+    return !related_opcode && !undefined && (insn & 0xEF801CD1) == 0xEF800C50;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {
@@ -622,4 +640,20 @@ static void mve_extract_1op(arg_1op *a, uint32_t insn)
     a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
     a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));
     a->size = extract32(insn, 18, 2);
+}
+
+/* Extract arguments of vcvt fixed instruction */
+static void mve_extract_vcvt_fixed(arg_2shift *a, uint32_t insn)
+{
+    /*
+     * From ARMv8-M C2.4.325 reference manual:
+     *
+     * <fbits>  The number of fraction bits in the fixed-point number. For 16-bit fixed-point, this number
+     *          must be in the range 1-16. For 32-bit fixed-point, this number must be in the range 1-32. The
+     *          value of (64 - <fbits>) is encoded in imm6.
+     */
+    a->shift = 64 - extract32(insn, 16, 6);
+    a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));
+    a->size = extract32(insn, 9, 1);
 }

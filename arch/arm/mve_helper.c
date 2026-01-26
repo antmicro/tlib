@@ -1031,4 +1031,36 @@ DO_1OP(vrev64w, 8, uint64_t, wswap64)
 
 #undef DO_1OP
 
+#define DO_VCVT_FIXED(OP, ESIZE, TYPE, FN)                                                         \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vm, uint32_t shift)                \
+    {                                                                                              \
+        TYPE *d = vd, *m = vm;                                                                     \
+        TYPE r;                                                                                    \
+        uint16_t mask = mve_element_mask(env);                                                     \
+        unsigned e;                                                                                \
+        float_status *fpst;                                                                        \
+        float_status scratch_fpst;                                                                 \
+        for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                                          \
+            if((mask & MAKE_64BIT_MASK(0, ESIZE)) == 0) {                                          \
+                continue;                                                                          \
+            }                                                                                      \
+            fpst = (ESIZE == 2) ? &env->vfp.standard_fp_status_f16 : &env->vfp.standard_fp_status; \
+            if(!(mask & 1)) {                                                                      \
+                /* We need the result but without updating flags */                                \
+                scratch_fpst = *fpst;                                                              \
+                fpst = &scratch_fpst;                                                              \
+            }                                                                                      \
+            r = FN(m[e], shift, fpst);                                                             \
+            mergemask(&d[e], r, mask);                                                             \
+        }                                                                                          \
+        mve_advance_vpt(env);                                                                      \
+    }
+
+DO_VCVT_FIXED(vcvt_sf, 4, int32_t, helper_vfp_sltos)
+DO_VCVT_FIXED(vcvt_uf, 4, uint32_t, helper_vfp_ultos)
+DO_VCVT_FIXED(vcvt_fs, 4, int32_t, helper_vfp_tosls)
+DO_VCVT_FIXED(vcvt_fu, 4, uint32_t, helper_vfp_touls)
+
+#undef DO_VCVT_FIXED
+
 #endif

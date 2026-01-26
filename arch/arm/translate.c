@@ -9841,6 +9841,53 @@ DO_VLDST_WIDE_NARROW(vldsth_w, vldrh_sw, vldrh_uw, vstrh_w, 2)
 #undef DO_VLDST_WIDE_NARROW
 #undef F
 
+static bool do_2shift(DisasContext *s, arg_2shift *a, MVEGenTwoOpShiftFn fn, bool negateshift)
+{
+    TCGv_ptr qd, qm;
+    TCGv_i32 shift_v;
+    int shift = a->shift;
+
+    if(!mve_check_qreg_bank(a->qd | a->qm) || !fn) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    /*
+     * When we handle a right shift insn using a left-shift helper
+     * which permits a negative shift count to indicate a right-shift,
+     * we must negate the shift count.
+     */
+    if(negateshift) {
+        shift = -shift;
+    }
+
+    qd = mve_qreg_ptr(a->qd);
+    qm = mve_qreg_ptr(a->qm);
+    shift_v = tcg_const_i32(shift);
+    fn(cpu_env, qd, qm, shift_v);
+
+    tcg_temp_free_ptr(qd);
+    tcg_temp_free_ptr(qm);
+    tcg_temp_free_i32(shift_v);
+    mve_update_eci(s);
+    return TRANS_STATUS_SUCCESS;
+}
+
+#define DO_2SHIFT_FP(INSN, FN)                               \
+    static bool trans_##INSN(DisasContext *s, arg_2shift *a) \
+    {                                                        \
+        return do_2shift(s, a, gen_helper_mve_##FN, false);  \
+    }
+
+DO_2SHIFT_FP(vcvt_sf_fixed, vcvt_sf)
+DO_2SHIFT_FP(vcvt_uf_fixed, vcvt_uf)
+DO_2SHIFT_FP(vcvt_fs_fixed, vcvt_fs)
+DO_2SHIFT_FP(vcvt_fu_fixed, vcvt_fu)
+
+#undef DO_2SHIFT_FP
+
 #define DO_TRANS_2OP_FP(INSN, FN)                                \
     static int glue(trans_, INSN)(DisasContext * s, arg_2op * a) \
     {                                                            \
@@ -11462,6 +11509,32 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_2op a;
                     mve_extract_vmaxnma(&a, insn);
                     return trans_vminnma(s, &a);
+                }
+                if(is_insn_vcvt_f_and_fixed(insn)) {
+                    ARCH(MVE);
+                    arg_2shift a;
+                    mve_extract_vcvt_fixed(&a, insn);
+                    uint32_t dt = extract32(insn, 8, 2) << 1 | extract32(insn, 28, 1);
+                    switch(dt) {
+                        //  vcvt_<from><to>, s = signed int, u = unsigned int, f = float
+                        case 0:
+                        case 1:
+                        case 2:
+                        case 3:
+                            tlib_abortf("VCVT between float and fixed-point not implemented for half-precision, opcode: %x",
+                                        insn);
+                            return TRANS_STATUS_ILLEGAL_INSN;
+                        case 4:
+                            return trans_vcvt_sf_fixed(s, &a);
+                        case 5:
+                            return trans_vcvt_uf_fixed(s, &a);
+                        case 6:
+                            return trans_vcvt_fs_fixed(s, &a);
+                        case 7:
+                            return trans_vcvt_fu_fixed(s, &a);
+                        default:
+                            g_assert_not_reached();
+                    }
                 }
             }
 #endif
