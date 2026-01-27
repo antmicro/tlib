@@ -10229,6 +10229,39 @@ DO_1OP(vcls, vcls)
 DO_1OP_VEC(vabs, vabs, tcg_gen_gvec_abs)
 DO_1OP_VEC(vneg, vneg, tcg_gen_gvec_neg)
 
+/*
+ * For simple float/int conversions we use the fixed-point
+ * conversion helpers with a zero shift count
+ */
+#define DO_VCVT(INSN, HFN, SFN)                                       \
+    static void gen_##INSN##h(TCGv_ptr env, TCGv_ptr qd, TCGv_ptr qm) \
+    {                                                                 \
+        return;                                                       \
+    }                                                                 \
+    static void gen_##INSN##s(TCGv_ptr env, TCGv_ptr qd, TCGv_ptr qm) \
+    {                                                                 \
+        TCGv_i32 zero_shift = tcg_const_i32(0);                       \
+        gen_helper_mve_##SFN(env, qd, qm, zero_shift);                \
+        tcg_temp_free_i32(zero_shift);                                \
+    }                                                                 \
+    static bool trans_##INSN(DisasContext *s, arg_1op *a)             \
+    {                                                                 \
+        static MVEGenOneOpFn *const fns[] = {                         \
+            NULL,                                                     \
+            gen_##INSN##h,                                            \
+            gen_##INSN##s,                                            \
+            NULL,                                                     \
+        };                                                            \
+        return do_1op_vec(s, a, fns[a->size], NULL);                  \
+    }
+
+DO_VCVT(vcvt_sf, vcvt_sh, vcvt_sf)
+DO_VCVT(vcvt_uf, vcvt_uh, vcvt_uf)
+DO_VCVT(vcvt_fs, vcvt_hs, vcvt_fs)
+DO_VCVT(vcvt_fu, vcvt_hu, vcvt_fu)
+
+#undef DO_VCVT
+
 static int trans_vfabs(DisasContext *s, arg_1op *a)
 {
     static MVEGenOneOpFn *const fns[] = {
@@ -11532,6 +11565,29 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                             return trans_vcvt_fs_fixed(s, &a);
                         case 7:
                             return trans_vcvt_fu_fixed(s, &a);
+                        default:
+                            g_assert_not_reached();
+                    }
+                }
+                if(is_insn_vcvt_f_and_i(insn)) {
+                    ARCH(MVE);
+                    arg_1op a;
+                    mve_extract_1op(&a, insn);
+                    if(a.size == 1) {
+                        tlib_abortf("VCVT between float and integer not implemented for half-precision, opcode: %x", insn);
+                        return TRANS_STATUS_ILLEGAL_INSN;
+                    }
+                    uint32_t op = extract32(insn, 7, 2);
+                    switch(op) {
+                        //  vcvt_<from><to>, s = signed int, u = unsigned int, f = float
+                        case 0:
+                            return trans_vcvt_sf(s, &a);
+                        case 1:
+                            return trans_vcvt_uf(s, &a);
+                        case 2:
+                            return trans_vcvt_fs(s, &a);
+                        case 3:
+                            return trans_vcvt_fu(s, &a);
                         default:
                             g_assert_not_reached();
                     }

@@ -449,6 +449,14 @@ static inline bool is_insn_vcvt_f_and_fixed(uint32_t insn)
     return !related_opcode && !undefined && (insn & 0xEF801CD1) == 0xEF800C50;
 }
 
+/* VCVT between floating-point and integer */
+static inline bool is_insn_vcvt_f_and_i(uint32_t insn)
+{
+    uint32_t size = extract32(insn, 18, 2);
+    bool undefined = size == 3 || size == 0;
+    return !undefined && (insn & 0xFFB31E51) == 0xFFB30640;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {
