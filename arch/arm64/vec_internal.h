@@ -20,28 +20,6 @@
 #pragma once
 
 /*
- * Note that vector data is stored in host-endian 64-bit chunks,
- * so addressing units smaller than that needs a host-endian fixup.
- *
- * The H<N> macros are used when indexing an array of elements of size N.
- *
- * The H1_<N> macros are used when performing byte arithmetic and then
- * casting the final pointer to a type of size N.
- */
-#if HOST_WORDS_BIGENDIAN
-#define H1(x)   ((x) ^ 7)
-#define H1_2(x) ((x) ^ 6)
-#define H1_4(x) ((x) ^ 4)
-#define H2(x)   ((x) ^ 3)
-#define H4(x)   ((x) ^ 1)
-#else
-#define H1(x)   (x)
-#define H1_2(x) (x)
-#define H1_4(x) (x)
-#define H2(x)   (x)
-#define H4(x)   (x)
-#endif
-/*
  * Access to 64-bit elements isn't host-endian dependent; we provide H8
  * and H1_8 so that when a function is being generated from a macro we
  * can pass these rather than an empty macro argument, for clarity.

@@ -20,6 +20,7 @@
 #include "cpu.h"
 #include "helper.h"
 #include "osdep.h"
+#include "vec_common.h"
 #include "vec_internal.h"
 #include "int128.h"
 #include "tcg-gvec-desc.h"
