@@ -234,6 +234,29 @@ DO_2OP_U(vadd, DO_ADD)
 DO_2OP_U(vsub, DO_SUB)
 DO_2OP_U(vmul, DO_MUL)
 
+#define DO_2OP_SCALAR(OP, ESIZE, TYPE, FN)                                       \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vn, uint32_t rm) \
+    {                                                                            \
+        TYPE *d = vd, *n = vn;                                                   \
+        TYPE m = rm;                                                             \
+        uint16_t mask = mve_element_mask(env);                                   \
+        unsigned e;                                                              \
+        for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                        \
+            mergemask(&d[H##ESIZE(e)], FN(n[H##ESIZE(e)], m), mask);             \
+        }                                                                        \
+        mve_advance_vpt(env);                                                    \
+    }
+
+/* provide unsigned 2-op scalar helpers for all sizes */
+#define DO_2OP_SCALAR_U(OP, FN)           \
+    DO_2OP_SCALAR(OP##b, 1, uint8_t, FN)  \
+    DO_2OP_SCALAR(OP##h, 2, uint16_t, FN) \
+    DO_2OP_SCALAR(OP##w, 4, uint32_t, FN)
+
+DO_2OP_SCALAR_U(vadd_scalar, DO_ADD)
+DO_2OP_SCALAR_U(vsub_scalar, DO_SUB)
+DO_2OP_SCALAR_U(vmul_scalar, DO_MUL)
+
 /* For loads, predicated lanes are zeroed instead of keeping their old values */
 #define DO_VLDR(OP, TYPE, ESIZE, MSIZE, LD_TYPE)                                                 \
     void HELPER(glue(mve_, OP))(CPUState * env, void *vd, uint32_t addr)                         \

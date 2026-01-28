@@ -656,6 +656,18 @@ DEF_HELPER_4(mve_vaddb, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vaddh, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vaddw, void, env, ptr, ptr, ptr)
 
+DEF_HELPER_4(mve_vadd_scalarb, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vadd_scalarh, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vadd_scalarw, void, env, ptr, ptr, i32)
+
+DEF_HELPER_4(mve_vsub_scalarb, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vsub_scalarh, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vsub_scalarw, void, env, ptr, ptr, i32)
+
+DEF_HELPER_4(mve_vmul_scalarb, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vmul_scalarh, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vmul_scalarw, void, env, ptr, ptr, i32)
+
 DEF_HELPER_4(mve_vsubb, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vsubh, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vsubw, void, env, ptr, ptr, ptr)
