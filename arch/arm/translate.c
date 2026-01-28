@@ -10097,6 +10097,22 @@ DO_TRANS_V_MAXMIN_V_FP(vminnmv, vminnmv)
 DO_TRANS_V_MAXMIN_V_FP(vmaxnmav, vmaxnmav)
 DO_TRANS_V_MAXMIN_V_FP(vminnmav, vminnmav)
 
+#define DO_TRANS_2OP(INSN, FN)                            \
+    static bool trans_##INSN(DisasContext *s, arg_2op *a) \
+    {                                                     \
+        static MVEGenTwoOpFn *const fns[] = {             \
+            gen_helper_mve_##FN##b,                       \
+            gen_helper_mve_##FN##h,                       \
+            gen_helper_mve_##FN##w,                       \
+            NULL,                                         \
+        };                                                \
+        return do_2op(s, a, fns[a->size]);                \
+    }
+
+DO_TRANS_2OP(vadd, vadd)
+DO_TRANS_2OP(vsub, vsub)
+DO_TRANS_2OP(vmul, vmul)
+
 static int trans_vpsel(DisasContext *s, arg_2op *a)
 {
     //  TODO(MVE): We may want to use a different method here or drop it entirely.
@@ -11069,6 +11085,24 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                             return trans_vldsth_w(s, &a);
                         }
                     }
+                }
+                if(is_insn_vadd(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op(&a, insn);
+                    return trans_vadd(s, &a);
+                }
+                if(is_insn_vsub(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op(&a, insn);
+                    return trans_vsub(s, &a);
+                }
+                if(is_insn_vmul(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op(&a, insn);
+                    return trans_vmul(s, &a);
                 }
                 if(is_insn_vldr_vstr(insn)) {
                     ARCH(MVE);

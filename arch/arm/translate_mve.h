@@ -182,6 +182,12 @@ static inline bool is_insn_vldr_vstr(uint32_t insn)
     return false;
 }
 
+static inline bool is_insn_vadd(uint32_t insn)
+{
+    uint32_t size = extract32(insn, 20, 2);
+    return size != 3 && (insn & 0xFF811F51) == 0xEF000840;
+}
+
 static inline bool is_insn_vadd_fp(uint32_t insn)
 {
     return (insn & 0xFFA11F51) == 0xEF000D40;
@@ -192,6 +198,12 @@ static inline bool is_insn_vadd_fp_scalar(uint32_t insn)
     return (insn & 0xEFB11F70) == 0xEE300F40;
 }
 
+static inline bool is_insn_vsub(uint32_t insn)
+{
+    uint32_t size = extract32(insn, 20, 2);
+    return size != 3 && (insn & 0xFF811F51) == 0xFF000840;
+}
+
 static inline bool is_insn_vsub_fp(uint32_t insn)
 {
     return (insn & 0xFFA11F51) == 0xEF200D40;
@@ -200,6 +212,12 @@ static inline bool is_insn_vsub_fp(uint32_t insn)
 static inline bool is_insn_vsub_fp_scalar(uint32_t insn)
 {
     return (insn & 0xEFB11F70) == 0xEE301F40;
+}
+
+static inline bool is_insn_vmul(uint32_t insn)
+{
+    uint32_t size = extract32(insn, 20, 2);
+    return size != 3 && (insn & 0xFF811F51) == 0xEF000950;
 }
 
 static inline bool is_insn_vmul_fp(uint32_t insn)
@@ -446,6 +464,15 @@ static void mve_extract_2op_fp_scalar(arg_2scalar *a, uint32_t insn)
 static void mve_extract_2op_fp(arg_2op *a, uint32_t insn)
 {
     a->size = extract32(insn, 20, 1);
+    a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    a->qn = deposit32(extract32(insn, 17, 3), 3, 29, extract32(insn, 7, 1));
+    a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));
+}
+
+/* Extract arguments of 2 operand vector operations */
+static void mve_extract_2op(arg_2op *a, uint32_t insn)
+{
+    a->size = extract32(insn, 20, 2);
     a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
     a->qn = deposit32(extract32(insn, 17, 3), 3, 29, extract32(insn, 7, 1));
     a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));

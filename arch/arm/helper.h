@@ -651,6 +651,19 @@ DEF_HELPER_3(mve_vrev32h, void, env, ptr, ptr)
 DEF_HELPER_3(mve_vrev64b, void, env, ptr, ptr)
 DEF_HELPER_3(mve_vrev64h, void, env, ptr, ptr)
 DEF_HELPER_3(mve_vrev64w, void, env, ptr, ptr)
+
+DEF_HELPER_4(mve_vaddb, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vaddh, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vaddw, void, env, ptr, ptr, ptr)
+
+DEF_HELPER_4(mve_vsubb, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vsubh, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vsubw, void, env, ptr, ptr, ptr)
+
+DEF_HELPER_4(mve_vmulb, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vmulh, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vmulw, void, env, ptr, ptr, ptr)
+
 #endif
 
 #include "def-helper.h"

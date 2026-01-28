@@ -26,6 +26,8 @@
 #include "softfloat-2.h"
 
 #define DO_ADD(N, M) ((N) + (M))
+#define DO_SUB(N, M) ((N) - (M))
+#define DO_MUL(N, M) ((N) * (M))
 #define DO_MAX(N, M) ((N) >= (M) ? (N) : (M))
 #define DO_MIN(N, M) ((N) >= (M) ? (M) : (N))
 #define DO_ABS(N)    ((N) < 0 ? -(N) : (N))
@@ -209,6 +211,28 @@ static void mergemask_sq(int64_t *d, int64_t r, uint16_t mask)
         int32_t *: mergemask_sw,  \
         uint64_t *: mergemask_uq, \
         int64_t *: mergemask_sq)(D, R, M)
+
+#define DO_2OP(OP, ESIZE, TYPE, FN)                                               \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vn, void *vm)     \
+    {                                                                             \
+        TYPE *d = vd, *n = vn, *m = vm;                                           \
+        uint16_t mask = mve_element_mask(env);                                    \
+        unsigned e;                                                               \
+        for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                         \
+            mergemask(&d[H##ESIZE(e)], FN(n[H##ESIZE(e)], m[H##ESIZE(e)]), mask); \
+        }                                                                         \
+        mve_advance_vpt(env);                                                     \
+    }
+
+/* provide unsigned 2-op helpers for all sizes */
+#define DO_2OP_U(OP, FN)           \
+    DO_2OP(OP##b, 1, uint8_t, FN)  \
+    DO_2OP(OP##h, 2, uint16_t, FN) \
+    DO_2OP(OP##w, 4, uint32_t, FN)
+
+DO_2OP_U(vadd, DO_ADD)
+DO_2OP_U(vsub, DO_SUB)
+DO_2OP_U(vmul, DO_MUL)
 
 /* For loads, predicated lanes are zeroed instead of keeping their old values */
 #define DO_VLDR(OP, TYPE, ESIZE, MSIZE, LD_TYPE)                                                 \
