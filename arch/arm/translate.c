@@ -10329,6 +10329,43 @@ static int trans_vrev64(DisasContext *s, arg_1op *a)
     return do_1op_vec(s, a, fns[a->size], NULL);
 }
 
+static bool do_1imm(DisasContext *s, arg_1imm *a, MVEGenOneOpImmFn *fn, GVecGen2iFn *vecfn)
+{
+    TCGv_ptr qd;
+    uint64_t imm;
+
+    if(!mve_check_qreg_bank(a->qd) || !fn) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    imm = decode_simd_immediate(a->imm, a->cmode, a->op);
+
+    if(vecfn && mve_no_predication(s)) {
+        vecfn(MO_64, mve_qreg_offset(a->qd), mve_qreg_offset(a->qd), imm, 16, 16);
+    } else {
+        qd = mve_qreg_ptr(a->qd);
+        TCGv_i64 imm_const = tcg_const_i64(imm);
+        fn(cpu_env, qd, imm_const);
+        tcg_temp_free_i32(imm_const);
+    }
+    mve_update_eci(s);
+    return TRANS_STATUS_SUCCESS;
+}
+
+static void gen_gvec_vmovi(unsigned vece, uint32_t dofs, uint32_t aofs, int64_t c, uint32_t oprsz, uint32_t maxsz)
+{
+    tcg_gen_gvec_dup_imm(vece, dofs, oprsz, maxsz, c);
+}
+
+static int trans_vmovi(DisasContext *s, arg_1imm *a)
+{
+    //  NOTE: This implements both VMOV and VMVN due to behaviour of decode_simd_immediate
+    return do_1imm(s, a, gen_helper_mve_vmovi, gen_gvec_vmovi);
+}
+
 #endif
 
 /* Translate a 32-bit thumb instruction.  Returns nonzero if the instruction
@@ -11598,6 +11635,12 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                         default:
                             g_assert_not_reached();
                     }
+                }
+                if(is_insn_vmovi(insn)) {
+                    ARCH(MVE);
+                    arg_1imm a;
+                    mve_extract_1imm(&a, insn);
+                    return trans_vmovi(s, &a);
                 }
             }
 #endif

@@ -1063,4 +1063,22 @@ DO_VCVT_FIXED(vcvt_fu, 4, uint32_t, helper_vfp_touls)
 
 #undef DO_VCVT_FIXED
 
+#define DO_1OP_IMM(OP, FN)                                               \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vda, uint64_t imm) \
+    {                                                                    \
+        uint64_t *da = vda;                                              \
+        uint16_t mask = mve_element_mask(env);                           \
+        unsigned e;                                                      \
+        for(e = 0; e < 16 / 8; e++, mask >>= 8) {                        \
+            mergemask(&da[e], FN(da[e], imm), mask);                     \
+        }                                                                \
+        mve_advance_vpt(env);                                            \
+    }
+
+#define DO_MOVI(N, I) (I)
+DO_1OP_IMM(vmovi, DO_MOVI)
+#undef DO_MOVI
+
+#undef DO_1OP_IMM
+
 #endif

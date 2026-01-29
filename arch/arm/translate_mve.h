@@ -30,10 +30,12 @@ typedef void MVEGenVIDUPFn(TCGv_i32, TCGv_ptr, TCGv_ptr, TCGv_i32, TCGv_i32);
 typedef void MVEGenVIWDUPFn(TCGv_i32, TCGv_ptr, TCGv_ptr, TCGv_i32, TCGv_i32, TCGv_i32);
 typedef void MVEGenVADDVFn(TCGv_i32, TCGv_ptr, TCGv_ptr, TCGv_i32);
 typedef void MVEGenOneOpFn(TCGv_ptr, TCGv_ptr, TCGv_ptr);
+typedef void MVEGenOneOpImmFn(TCGv_ptr, TCGv_ptr, TCGv_i64);
 
 /* Note that the gvec expanders operate on offsets + sizes.  */
 typedef void GVecGen3Fn(unsigned, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
 typedef void GVecGen2Fn(unsigned, uint32_t, uint32_t, uint32_t, uint32_t);
+typedef void GVecGen2iFn(unsigned, uint32_t, uint32_t, int64_t, uint32_t, uint32_t);
 
 /*
  * Arguments of stores/loads:
@@ -152,6 +154,14 @@ typedef struct {
     int shift;
     int size;
 } arg_2shift;
+
+/* Arguments of immediate value vector instruction */
+typedef struct {
+    int qd;
+    int imm;
+    int cmode;
+    int op;
+} arg_1imm;
 
 void gen_mve_vld40b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld41b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
@@ -457,6 +467,22 @@ static inline bool is_insn_vcvt_f_and_i(uint32_t insn)
     return !undefined && (insn & 0xFFB31E51) == 0xFFB30640;
 }
 
+static inline bool is_insn_vmovi(uint32_t insn)
+{
+    uint32_t cmode = extract32(insn, 8, 4);
+    /* cmode & 1 && cmode < 12 is related encoding */
+    if((cmode & 1) > 0 && cmode < 12) {
+        return false;
+    }
+
+    uint32_t op = extract32(insn, 5, 1);
+    if(cmode == 15 && op == 1) {
+        return false;
+    }
+
+    return (insn & 0xEFB810D0) == 0xEF800050;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {
@@ -664,4 +690,13 @@ static void mve_extract_vcvt_fixed(arg_2shift *a, uint32_t insn)
     a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
     a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));
     a->size = extract32(insn, 9, 1);
+}
+
+/* Extract arguments of immediate value instruction */
+static void mve_extract_1imm(arg_1imm *a, uint32_t insn)
+{
+    a->imm = deposit32(deposit32(extract32(insn, 0, 4), 4, 28, extract32(insn, 16, 3)), 7, 25, extract32(insn, 28, 1));
+    a->op = extract32(insn, 5, 1);
+    a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    a->cmode = extract32(insn, 8, 4);
 }
