@@ -10366,6 +10366,16 @@ static int trans_vmovi(DisasContext *s, arg_1imm *a)
     return do_1imm(s, a, gen_helper_mve_vmovi, gen_gvec_vmovi);
 }
 
+static int trans_vandi(DisasContext *s, arg_1imm *a)
+{
+    return do_1imm(s, a, gen_helper_mve_vandi, tcg_gen_gvec_andi);
+}
+
+static int trans_vorri(DisasContext *s, arg_1imm *a)
+{
+    return do_1imm(s, a, gen_helper_mve_vorri, tcg_gen_gvec_ori);
+}
+
 #endif
 
 /* Translate a 32-bit thumb instruction.  Returns nonzero if the instruction
@@ -11641,6 +11651,19 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_1imm a;
                     mve_extract_1imm(&a, insn);
                     return trans_vmovi(s, &a);
+                }
+                if(is_insn_vandi_vorri(insn)) {
+                    ARCH(MVE);
+                    arg_1imm a;
+                    mve_extract_1imm(&a, insn);
+
+                    if(a.op) {
+                        //  NOTE: This really describes VBIC (immediate), but because of op=1 this
+                        //        will in fact degenerate to logical AND
+                        return trans_vandi(s, &a);
+                    } else {
+                        return trans_vorri(s, &a);
+                    }
                 }
             }
 #endif

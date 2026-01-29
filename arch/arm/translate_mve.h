@@ -483,6 +483,16 @@ static inline bool is_insn_vmovi(uint32_t insn)
     return (insn & 0xEFB810D0) == 0xEF800050;
 }
 
+static inline bool is_insn_vandi_vorri(uint32_t insn)
+{
+    uint32_t cmode = extract32(insn, 8, 4);
+    /* !(cmode & 1) || cmode > 12 is related encoding */
+    if((cmode & 1) == 0 || cmode > 12) {
+        return false;
+    }
+    return (insn & 0xEFB810D0) == 0xEF800050;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {

@@ -1076,7 +1076,13 @@ DO_VCVT_FIXED(vcvt_fu, 4, uint32_t, helper_vfp_touls)
     }
 
 #define DO_MOVI(N, I) (I)
+#define DO_ANDI(N, I) ((N) & (I))
+#define DO_ORRI(N, I) ((N) | (I))
 DO_1OP_IMM(vmovi, DO_MOVI)
+DO_1OP_IMM(vandi, DO_ANDI)
+DO_1OP_IMM(vorri, DO_ORRI)
+#undef DO_ORRI
+#undef DO_ANDI
 #undef DO_MOVI
 
 #undef DO_1OP_IMM

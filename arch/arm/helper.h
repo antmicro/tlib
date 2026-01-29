@@ -682,6 +682,8 @@ DEF_HELPER_4(mve_vcvt_fs, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vcvt_fu, void, env, ptr, ptr, i32)
 
 DEF_HELPER_3(mve_vmovi, void, env, ptr, i64)
+DEF_HELPER_3(mve_vandi, void, env, ptr, i64)
+DEF_HELPER_3(mve_vorri, void, env, ptr, i64)
 #endif
 
 #include "def-helper.h"
