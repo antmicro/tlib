@@ -186,6 +186,63 @@ static void store_reg(DisasContext *s, int reg, TCGv var)
     tcg_temp_free_i32(var);
 }
 
+uint64_t decode_simd_immediate(uint32_t imm, int op, bool invert)
+{
+    /* Note that op = 2,3,4,5,6,7,10,11,12,13 imm=0 is UNPREDICTABLE.
+     * We choose to not special-case this and will behave as if a
+     * valid constant encoding of 0 had been given.
+     */
+    switch(op) {
+        case 0:
+        case 1:
+            /* no-op */
+            break;
+        case 2:
+        case 3:
+            imm <<= 8;
+            break;
+        case 4:
+        case 5:
+            imm <<= 16;
+            break;
+        case 6:
+        case 7:
+            imm <<= 24;
+            break;
+        case 8:
+        case 9:
+            imm |= imm << 16;
+            break;
+        case 10:
+        case 11:
+            imm = (imm << 8) | (imm << 24);
+            break;
+        case 12:
+            imm = (imm << 8) | 0xff;
+            break;
+        case 13:
+            imm = (imm << 16) | 0xffff;
+            break;
+        case 14:
+            imm |= (imm << 8) | (imm << 16) | (imm << 24);
+            if(invert) {
+                imm = ~imm;
+            }
+            break;
+        case 15:
+            if(invert) {
+                return 1;
+            }
+            imm = ((imm & 0x80) << 24) | ((imm & 0x3f) << 19) | ((imm & 0x40) ? (0x1f << 25) : (1 << 30));
+            break;
+    }
+    if(invert) {
+        imm = ~imm;
+    }
+
+    return dup_const(MO_32, imm);
+}
+
 /* Value extensions.  */
 #define gen_uxtb(var) tcg_gen_ext8u_i32(var, var)
 #define gen_uxth(var) tcg_gen_ext16u_i32(var, var)
@@ -6268,57 +6325,7 @@ static int disas_neon_data_insn(CPUState *env, DisasContext *s, uint32_t insn)
             /* One register and immediate.  */
             imm = (u << 7) | ((insn >> 12) & 0x70) | (insn & 0xf);
             invert = (insn & (1 << 5)) != 0;
-            /* Note that op = 2,3,4,5,6,7,10,11,12,13 imm=0 is UNPREDICTABLE.
-             * We choose to not special-case this and will behave as if a
-             * valid constant encoding of 0 had been given.
-             */
-            switch(op) {
-                case 0:
-                case 1:
-                    /* no-op */
-                    break;
-                case 2:
-                case 3:
-                    imm <<= 8;
-                    break;
-                case 4:
-                case 5:
-                    imm <<= 16;
-                    break;
-                case 6:
-                case 7:
-                    imm <<= 24;
-                    break;
-                case 8:
-                case 9:
-                    imm |= imm << 16;
-                    break;
-                case 10:
-                case 11:
-                    imm = (imm << 8) | (imm << 24);
-                    break;
-                case 12:
-                    imm = (imm << 8) | 0xff;
-                    break;
-                case 13:
-                    imm = (imm << 16) | 0xffff;
-                    break;
-                case 14:
-                    imm |= (imm << 8) | (imm << 16) | (imm << 24);
-                    if(invert) {
-                        imm = ~imm;
-                    }
-                    break;
-                case 15:
-                    if(invert) {
-                        return 1;
-                    }
-                    imm = ((imm & 0x80) << 24) | ((imm & 0x3f) << 19) | ((imm & 0x40) ? (0x1f << 25) : (1 << 30));
-                    break;
-            }
-            if(invert) {
-                imm = ~imm;
-            }
+            imm = decode_simd_immediate(imm, op, invert);
 
             for(pass = 0; pass < (q ? 4 : 2); pass++) {
                 if(op & 1 && op < 12) {
