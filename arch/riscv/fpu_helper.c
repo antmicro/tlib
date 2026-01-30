@@ -840,9 +840,13 @@ uint64_t helper_fmax_d(CPUState *env, uint64_t frs1, uint64_t frs2)
 uint64_t helper_fcvt_s_d(CPUState *env, uint64_t rs1, uint64_t rm)
 {
     require_fp;
-    set_float_rounding_mode(RM, &env->fp_status);
-    rs1 = float64_to_float32(rs1, &env->fp_status);
-    set_fp_exceptions();
+    set_float3_rounding_mode(RM_3);
+
+    float64_t f1;
+    f1.v = rs1;
+    rs1 = f64_to_f32(f1).v;
+
+    set_fp3_exceptions();
     return rs1;
 }
 
