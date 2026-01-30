@@ -965,9 +965,13 @@ uint64_t helper_fcvt_l_d(CPUState *env, uint64_t frs1, uint64_t rm)
 uint64_t helper_fcvt_lu_d(CPUState *env, uint64_t frs1, uint64_t rm)
 {
     require_fp;
-    set_float_rounding_mode(RM, &env->fp_status);
-    frs1 = (!isNaNF64UI(frs1) && signF64UI(frs1)) ? 0 : float64_to_uint64(frs1, &env->fp_status);
-    set_fp_exceptions();
+    set_float3_rounding_mode(RM_3);
+
+    float64_t f1;
+    f1.v = frs1;
+    frs1 = f64_to_ui64(f1, RM_3, true);
+
+    set_fp3_exceptions();
     mark_fs_dirty();
     return frs1;
 }
