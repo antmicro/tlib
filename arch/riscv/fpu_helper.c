@@ -853,9 +853,13 @@ uint64_t helper_fcvt_s_d(CPUState *env, uint64_t rs1, uint64_t rm)
 uint64_t helper_fcvt_d_s(CPUState *env, uint64_t rs1, uint64_t rm)
 {
     require_fp;
-    set_float_rounding_mode(RM, &env->fp_status);
-    rs1 = float32_to_float64(rs1, &env->fp_status);
-    set_fp_exceptions();
+    set_float3_rounding_mode(RM_3);
+
+    float32_t f1;
+    f1.v = (uint32_t)rs1;
+    rs1 = f32_to_f64(f1).v;
+
+    set_fp3_exceptions();
     mark_fs_dirty();
     return rs1;
 }
