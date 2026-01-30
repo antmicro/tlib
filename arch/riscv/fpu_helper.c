@@ -930,9 +930,13 @@ target_ulong helper_feq_d(CPUState *env, uint64_t frs1, uint64_t frs2)
 target_ulong helper_fcvt_w_d(CPUState *env, uint64_t frs1, uint64_t rm)
 {
     require_fp;
-    set_float_rounding_mode(RM, &env->fp_status);
-    frs1 = (int64_t)((int32_t)float64_to_int32(frs1, &env->fp_status));
-    set_fp_exceptions();
+    set_float3_rounding_mode(RM_3);
+
+    float64_t f1;
+    f1.v = frs1;
+    frs1 = (int64_t)(f64_to_i32(f1, RM_3, true));
+
+    set_fp3_exceptions();
     return frs1;
 }
 
