@@ -1128,6 +1128,56 @@ DO_1OP_IMM(vorri, DO_ORRI)
 
 #undef DO_1OP_IMM
 
+/* Shifts by immediate */
+#define DO_2SHIFT(OP, ESIZE, TYPE, FN)                                              \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vm, uint32_t shift) \
+    {                                                                               \
+        TYPE *d = vd, *m = vm;                                                      \
+        uint16_t mask = mve_element_mask(env);                                      \
+        unsigned e;                                                                 \
+        for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                           \
+            mergemask(&d[H##ESIZE(e)], FN(shift, m[H##ESIZE(e)]), mask);            \
+        }                                                                           \
+        mve_advance_vpt(env);                                                       \
+    }
+
+#define DO_2SHIFT_SAT(OP, ESIZE, TYPE, FN)                                          \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vm, uint32_t shift) \
+    {                                                                               \
+        TYPE *d = vd, *m = vm;                                                      \
+        uint16_t mask = mve_element_mask(env);                                      \
+        unsigned e;                                                                 \
+        bool qc = false;                                                            \
+        for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                           \
+            bool sat = false;                                                       \
+            mergemask(&d[H##ESIZE(e)], FN(shift, m[H##ESIZE(e)], &sat), mask);      \
+            qc |= sat & mask & 1;                                                   \
+        }                                                                           \
+        if(qc) {                                                                    \
+            env->vfp.qc = qc;                                                       \
+        }                                                                           \
+        mve_advance_vpt(env);                                                       \
+    }
+
+#define DO_2OP_SAT(OP, ESIZE, TYPE, FN)                                       \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vn, void *vm) \
+    {                                                                         \
+        TYPE *d = vd, *n = vn, *m = vm;                                       \
+        uint16_t mask = mve_element_mask(env);                                \
+        unsigned e;                                                           \
+        bool qc = false;                                                      \
+        for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                     \
+            bool sat = false;                                                 \
+            TYPE r_ = FN(n[H##ESIZE(e)], m[H##ESIZE(e)], &sat);               \
+            mergemask(&d[H##ESIZE(e)], r_, mask);                             \
+            qc |= sat & mask & 1;                                             \
+        }                                                                     \
+        if(qc) {                                                              \
+            env->vfp.qc = qc;                                                 \
+        }                                                                     \
+        mve_advance_vpt(env);                                                 \
+    }
+
 #define DO_VCADD(OP, ESIZE, TYPE, FN0, FN1)                                   \
     void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vn, void *vm) \
     {                                                                         \
@@ -1161,5 +1211,77 @@ DO_VCADD_ALL(vhcadd270, do_vhadd_s, do_vhsub_s)
 
 #undef DO_VCADD
 #undef DO_VCADD_ALL
+/* provide unsigned 2-op helpers for all sizes */
+#define DO_2OP_SAT_U(OP, FN)           \
+    DO_2OP_SAT(OP##b, 1, uint8_t, FN)  \
+    DO_2OP_SAT(OP##h, 2, uint16_t, FN) \
+    DO_2OP_SAT(OP##w, 4, uint32_t, FN)
+
+/* provide signed 2-op helpers for all sizes */
+#define DO_2OP_SAT_S(OP, FN)          \
+    DO_2OP_SAT(OP##b, 1, int8_t, FN)  \
+    DO_2OP_SAT(OP##h, 2, int16_t, FN) \
+    DO_2OP_SAT(OP##w, 4, int32_t, FN)
+
+/*
+ * This wrapper fixes up the impedance mismatch between the shift functions
+ * returning uint32_t* and the DO_2SHIFT_SAT expecting a bool*.
+ */
+#define WRAP_QRSHL_HELPER(FN, N, M, ROUND, satp)                               \
+    ({                                                                         \
+        uint32_t su32 = 0;                                                     \
+        typeof(N) qrshl_ret = FN(M, (int8_t)(N), sizeof(M) * 8, ROUND, &su32); \
+        if(su32) {                                                             \
+            *satp = true;                                                      \
+        }                                                                      \
+        qrshl_ret;                                                             \
+    })
+
+#define DO_VSHLS(N, M)  do_sqrshl_bhs(M, (int8_t)(N), sizeof(M) * 8, false, NULL)
+#define DO_VSHLU(N, M)  do_uqrshl_bhs(M, (int8_t)(N), sizeof(M) * 8, false, NULL)
+#define DO_VRSHLS(N, M) do_sqrshl_bhs(M, (int8_t)(N), sizeof(M) * 8, true, NULL)
+#define DO_VRSHLU(N, M) do_uqrshl_bhs(M, (int8_t)(N), sizeof(M) * 8, true, NULL)
+
+#define DO_SQSHL_OP(N, M, satp)  WRAP_QRSHL_HELPER(do_sqrshl_bhs, N, M, false, satp)
+#define DO_UQSHL_OP(N, M, satp)  WRAP_QRSHL_HELPER(do_uqrshl_bhs, N, M, false, satp)
+#define DO_SUQSHL_OP(N, M, satp) WRAP_QRSHL_HELPER(do_suqrshl_bhs, N, M, false, satp)
+#define DO_UQRSHL_OP(N, M, satp) WRAP_QRSHL_HELPER(do_uqrshl_bhs, N, M, true, satp)
+#define DO_SQRSHL_OP(N, M, satp) WRAP_QRSHL_HELPER(do_sqrshl_bhs, N, M, true, satp)
+
+/* provide unsigned 2-op shift helpers for all sizes */
+#define DO_2SHIFT_U(OP, FN)           \
+    DO_2SHIFT(OP##b, 1, uint8_t, FN)  \
+    DO_2SHIFT(OP##h, 2, uint16_t, FN) \
+    DO_2SHIFT(OP##w, 4, uint32_t, FN)
+#define DO_2SHIFT_S(OP, FN)          \
+    DO_2SHIFT(OP##b, 1, int8_t, FN)  \
+    DO_2SHIFT(OP##h, 2, int16_t, FN) \
+    DO_2SHIFT(OP##w, 4, int32_t, FN)
+#define DO_2SHIFT_SAT_U(OP, FN)           \
+    DO_2SHIFT_SAT(OP##b, 1, uint8_t, FN)  \
+    DO_2SHIFT_SAT(OP##h, 2, uint16_t, FN) \
+    DO_2SHIFT_SAT(OP##w, 4, uint32_t, FN)
+#define DO_2SHIFT_SAT_S(OP, FN)          \
+    DO_2SHIFT_SAT(OP##b, 1, int8_t, FN)  \
+    DO_2SHIFT_SAT(OP##h, 2, int16_t, FN) \
+    DO_2SHIFT_SAT(OP##w, 4, int32_t, FN)
+
+DO_2OP_S(vshls, DO_VSHLS)
+DO_2OP_U(vshlu, DO_VSHLU)
+DO_2OP_S(vrshls, DO_VRSHLS)
+DO_2OP_U(vrshlu, DO_VRSHLU)
+DO_2OP_SAT_S(vqshls, DO_SQSHL_OP)
+DO_2OP_SAT_U(vqshlu, DO_UQSHL_OP)
+DO_2OP_SAT_S(vqrshls, DO_SQRSHL_OP)
+DO_2OP_SAT_U(vqrshlu, DO_UQRSHL_OP)
+
+#undef DO_VSHLS
+#undef DO_VSHLU
+#undef DO_2OP_U
+#undef DO_2OP_S
+#undef DO_2SHIFT_U
+#undef DO_2SHIFT_S
+#undef DO_2SHIFT_SAT_U
+#undef DO_2SHIFT_SAT_S
 
 #endif

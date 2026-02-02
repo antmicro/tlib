@@ -10280,6 +10280,14 @@ DO_TRANS_2OP(vcadd90, vcadd90)
 DO_TRANS_2OP(vcadd270, vcadd270)
 DO_TRANS_2OP(vhcadd90, vhcadd90)
 DO_TRANS_2OP(vhcadd270, vhcadd270)
+DO_TRANS_2OP(vshl_s, vshls)
+DO_TRANS_2OP(vshl_u, vshlu)
+DO_TRANS_2OP(vrshl_s, vrshls)
+DO_TRANS_2OP(vrshl_u, vrshlu)
+DO_TRANS_2OP(vqshl_s, vqshls)
+DO_TRANS_2OP(vqshl_u, vqshlu)
+DO_TRANS_2OP(vqrshl_s, vqrshls)
+DO_TRANS_2OP(vqrshl_u, vqrshlu)
 
 static int trans_vpsel(DisasContext *s, arg_2op *a)
 {
@@ -12064,6 +12072,54 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_2op args;
                     mve_extract_2op(&args, insn);
                     return trans_vhcadd270(s, &args);
+                }
+                if(is_insn_vshl_s(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op(&a, insn);
+                    return trans_vshl_s(s, &a);
+                }
+                if(is_insn_vshl_u(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op(&a, insn);
+                    return trans_vshl_u(s, &a);
+                }
+                if(is_insn_vrshl_s(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op(&a, insn);
+                    return trans_vrshl_s(s, &a);
+                }
+                if(is_insn_vrshl_u(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op(&a, insn);
+                    return trans_vrshl_u(s, &a);
+                }
+                if(is_insn_vqshl_s(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op(&a, insn);
+                    return trans_vqshl_s(s, &a);
+                }
+                if(is_insn_vqshl_u(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op(&a, insn);
+                    return trans_vqshl_u(s, &a);
+                }
+                if(is_insn_vqrshl_s(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op(&a, insn);
+                    return trans_vqrshl_s(s, &a);
+                }
+                if(is_insn_vqrshl_u(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op(&a, insn);
+                    return trans_vqrshl_u(s, &a);
                 }
             }
 #endif

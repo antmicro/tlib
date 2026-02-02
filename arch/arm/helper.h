@@ -730,6 +730,39 @@ DEF_HELPER_4(mve_vcvt_fu, void, env, ptr, ptr, i32)
 DEF_HELPER_3(mve_vmovi, void, env, ptr, i64)
 DEF_HELPER_3(mve_vandi, void, env, ptr, i64)
 DEF_HELPER_3(mve_vorri, void, env, ptr, i64)
+
+DEF_HELPER_4(mve_vshlsb, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vshlsh, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vshlsw, void, env, ptr, ptr, ptr)
+
+DEF_HELPER_4(mve_vshlub, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vshluh, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vshluw, void, env, ptr, ptr, ptr)
+
+DEF_HELPER_4(mve_vrshlsb, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vrshlsh, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vrshlsw, void, env, ptr, ptr, ptr)
+
+DEF_HELPER_4(mve_vrshlub, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vrshluh, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vrshluw, void, env, ptr, ptr, ptr)
+
+DEF_HELPER_4(mve_vqshlsb, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vqshlsh, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vqshlsw, void, env, ptr, ptr, ptr)
+
+DEF_HELPER_4(mve_vqshlub, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vqshluh, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vqshluw, void, env, ptr, ptr, ptr)
+
+DEF_HELPER_4(mve_vqrshlsb, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vqrshlsh, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vqrshlsw, void, env, ptr, ptr, ptr)
+
+DEF_HELPER_4(mve_vqrshlub, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vqrshluh, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vqrshluw, void, env, ptr, ptr, ptr)
+
 #endif
 
 #include "def-helper.h"

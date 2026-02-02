@@ -582,6 +582,46 @@ static inline bool is_insn_vhcadd270(uint32_t insn)
     return (insn & 0xFF811F51) == 0xEE001F00;
 }
 
+static inline bool is_insn_vshl_s(uint32_t insn)
+{
+    return (insn & 0xFF811F51) == 0xEF000440;
+}
+
+static inline bool is_insn_vshl_u(uint32_t insn)
+{
+    return (insn & 0xFF811F51) == 0xFF000440;
+}
+
+static inline bool is_insn_vrshl_s(uint32_t insn)
+{
+    return (insn & 0xFF811F51) == 0xEF000540;
+}
+
+static inline bool is_insn_vrshl_u(uint32_t insn)
+{
+    return (insn & 0xFF811F51) == 0xFF000540;
+}
+
+static inline bool is_insn_vqshl_s(uint32_t insn)
+{
+    return (insn & 0xFF811F51) == 0xEF000450;
+}
+
+static inline bool is_insn_vqshl_u(uint32_t insn)
+{
+    return (insn & 0xFF811F51) == 0xFF000450;
+}
+
+static inline bool is_insn_vqrshl_s(uint32_t insn)
+{
+    return (insn & 0xFF811F51) == 0xEF000550;
+}
+
+static inline bool is_insn_vqrshl_u(uint32_t insn)
+{
+    return (insn & 0xFF811F51) == 0xFF000550;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {
