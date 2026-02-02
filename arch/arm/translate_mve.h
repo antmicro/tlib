@@ -163,6 +163,15 @@ typedef struct {
     int op;
 } arg_1imm;
 
+/* Arguments of VMOV 2-GP<->2 V-lanes */
+typedef struct {
+    int rt2;
+    int idx;
+    int rt;
+    int qd;
+    int from;
+} arg_vmov_2gp;
+
 void gen_mve_vld40b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld41b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld42b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
@@ -493,6 +502,11 @@ static inline bool is_insn_vandi_vorri(uint32_t insn)
     return (insn & 0xEFB810D0) == 0xEF800050;
 }
 
+static inline bool is_insn_vmov_2gp(uint32_t insn)
+{
+    return (insn & 0xFFA01FE0) == 0xEC000F00;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {
@@ -709,4 +723,14 @@ static void mve_extract_1imm(arg_1imm *a, uint32_t insn)
     a->op = extract32(insn, 5, 1);
     a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
     a->cmode = extract32(insn, 8, 4);
+}
+
+/* Extract arguments of VMOV 2-GP<->V-lane instruction */
+static void mve_extract_vmov_2gp(arg_vmov_2gp *a, uint32_t insn)
+{
+    a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    a->rt2 = extract32(insn, 16, 4);
+    a->rt = extract32(insn, 0, 4);
+    a->idx = extract32(insn, 4, 1);
+    a->from = extract32(insn, 20, 1);
 }

@@ -1254,6 +1254,68 @@ static inline void neon_store_reg64(TCGv_i64 var, int reg)
     tcg_gen_st_i64(var, cpu_env, vfp_reg_offset(1, reg));
 }
 
+//  NOTE: Following neon code has been copied verbatim from arm64 arch
+long neon_element_offset(int reg, int element, TCGMemOp memop)
+{
+    int element_size = 1 << (memop & MO_SIZE);
+    int ofs = element * element_size;
+#if HOST_WORDS_BIGENDIAN
+    /*
+     * Calculate the offset assuming fully little-endian,
+     * then XOR to account for the order of the 8-byte units.
+     */
+    if(element_size < 8) {
+        ofs ^= 8 - element_size;
+    }
+#endif
+    return vfp_reg_offset(1, reg) + ofs;
+}
+
+void read_neon_element32(TCGv_i32 dest, int reg, int ele, TCGMemOp memop)
+{
+    long off = neon_element_offset(reg, ele, memop);
+
+    switch(memop) {
+        case MO_SB:
+            tcg_gen_ld8s_i32(dest, cpu_env, off);
+            break;
+        case MO_UB:
+            tcg_gen_ld8u_i32(dest, cpu_env, off);
+            break;
+        case MO_SW:
+            tcg_gen_ld16s_i32(dest, cpu_env, off);
+            break;
+        case MO_UW:
+            tcg_gen_ld16u_i32(dest, cpu_env, off);
+            break;
+        case MO_UL:
+        case MO_SL:
+            tcg_gen_ld_i32(dest, cpu_env, off);
+            break;
+        default:
+            g_assert_not_reached();
+    }
+}
+
+void write_neon_element32(TCGv_i32 src, int reg, int ele, TCGMemOp memop)
+{
+    long off = neon_element_offset(reg, ele, memop);
+
+    switch(memop) {
+        case MO_8:
+            tcg_gen_st8_i32(src, cpu_env, off);
+            break;
+        case MO_16:
+            tcg_gen_st16_i32(src, cpu_env, off);
+            break;
+        case MO_32:
+            tcg_gen_st_i32(src, cpu_env, off);
+            break;
+        default:
+            g_assert_not_reached();
+    }
+}
+
 #define tcg_gen_ld_f32 tcg_gen_ld_i32
 #define tcg_gen_ld_f64 tcg_gen_ld_i64
 #define tcg_gen_st_f32 tcg_gen_st_i32
@@ -10376,6 +10438,126 @@ static int trans_vorri(DisasContext *s, arg_1imm *a)
     return do_1imm(s, a, gen_helper_mve_vorri, tcg_gen_gvec_ori);
 }
 
+bool mve_skip_vmov(DisasContext *s, int vn, int index, int size)
+{
+    /*
+     * In a CPU with MVE, the VMOV (vector lane to general-purpose register)
+     * and VMOV (general-purpose register to vector lane) insns are not
+     * predicated, but they are subject to beatwise execution if they are
+     * not in an IT block.
+     *
+     * Since our implementation always executes all 4 beats in one tick,
+     * this means only that if PSR.ECI says we should not be executing
+     * the beat corresponding to the lane of the vector register being
+     * accessed then we should skip performing the move, and that we need
+     * to do the usual check for bad ECI state and advance of ECI state.
+     *
+     * Note that if PSR.ECI is non-zero then we cannot be in an IT block.
+     *
+     * Return true if this VMOV scalar <-> gpreg should be skipped because
+     * the MVE PSR.ECI state says we skip the beat where the store happens.
+     */
+
+    /* Calculate the byte offset into Qn which we're going to access */
+    int ofs = (index << size) + ((vn & 1) * 8);
+
+    switch(s->eci) {
+        case ECI_NONE:
+            return false;
+        case ECI_A0:
+            return ofs < 4;
+        case ECI_A0A1:
+            return ofs < 8;
+        case ECI_A0A1A2:
+        case ECI_A0A1A2B0:
+            return ofs < 12;
+        default:
+            g_assert_not_reached();
+    }
+}
+
+static bool trans_vmov_to_2gp(DisasContext *s, arg_vmov_2gp *a)
+{
+    /*
+     * VMOV two 32-bit vector lanes to two general-purpose registers.
+     * This insn is not predicated but it is subject to beat-wise
+     * execution if it is not in an IT block. For us this means
+     * only that if PSR.ECI says we should not be executing the beat
+     * corresponding to the lane of the vector register being accessed
+     * then we should skip performing the move, and that we need to do
+     * the usual check for bad ECI state and advance of ECI state.
+     * (If PSR.ECI is non-zero then we cannot be in an IT block.)
+     */
+    TCGv_i32 tmp;
+    int vd;
+
+    if(!mve_check_qreg_bank(a->qd) || a->rt == 13 || a->rt == 15 || a->rt2 == 13 || a->rt2 == 15 || a->rt == a->rt2) {
+        /* Rt/Rt2 cases are UNPREDICTABLE */
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    /* Convert Qreg index to Dreg for read_neon_element32() etc */
+    vd = a->qd * 2;
+
+    if(!mve_skip_vmov(s, vd, a->idx, MO_32)) {
+        tmp = tcg_temp_new_i32();
+        read_neon_element32(tmp, vd, a->idx, MO_32);
+        store_reg(s, a->rt, tmp);
+    }
+    if(!mve_skip_vmov(s, vd + 1, a->idx, MO_32)) {
+        tmp = tcg_temp_new_i32();
+        read_neon_element32(tmp, vd + 1, a->idx, MO_32);
+        store_reg(s, a->rt2, tmp);
+    }
+
+    mve_update_and_store_eci(s);
+    return TRANS_STATUS_SUCCESS;
+}
+
+static bool trans_vmov_from_2gp(DisasContext *s, arg_vmov_2gp *a)
+{
+    /*
+     * VMOV two general-purpose registers to two 32-bit vector lanes.
+     * This insn is not predicated but it is subject to beat-wise
+     * execution if it is not in an IT block. For us this means
+     * only that if PSR.ECI says we should not be executing the beat
+     * corresponding to the lane of the vector register being accessed
+     * then we should skip performing the move, and that we need to do
+     * the usual check for bad ECI state and advance of ECI state.
+     * (If PSR.ECI is non-zero then we cannot be in an IT block.)
+     */
+    TCGv_i32 tmp;
+    int vd;
+
+    if(!mve_check_qreg_bank(a->qd) || a->rt == 13 || a->rt == 15 || a->rt2 == 13 || a->rt2 == 15) {
+        /* Rt/Rt2 cases are UNPREDICTABLE */
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    /* Convert Qreg idx to Dreg for read_neon_element32() etc */
+    vd = a->qd * 2;
+
+    if(!mve_skip_vmov(s, vd, a->idx, MO_32)) {
+        tmp = load_reg(s, a->rt);
+        write_neon_element32(tmp, vd, a->idx, MO_32);
+        tcg_temp_free_i32(tmp);
+    }
+    if(!mve_skip_vmov(s, vd + 1, a->idx, MO_32)) {
+        tmp = load_reg(s, a->rt2);
+        write_neon_element32(tmp, vd + 1, a->idx, MO_32);
+        tcg_temp_free_i32(tmp);
+    }
+
+    mve_update_and_store_eci(s);
+    return TRANS_STATUS_SUCCESS;
+}
+
 #endif
 
 /* Translate a 32-bit thumb instruction.  Returns nonzero if the instruction
@@ -11663,6 +11845,17 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                         return trans_vandi(s, &a);
                     } else {
                         return trans_vorri(s, &a);
+                    }
+                }
+                if(is_insn_vmov_2gp(insn)) {
+                    ARCH(MVE);
+                    arg_vmov_2gp a;
+                    mve_extract_vmov_2gp(&a, insn);
+
+                    if(a.from) {
+                        return trans_vmov_from_2gp(s, &a);
+                    } else {
+                        return trans_vmov_to_2gp(s, &a);
                     }
                 }
             }
