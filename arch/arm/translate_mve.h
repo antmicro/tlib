@@ -202,13 +202,11 @@ static inline bool is_insn_vsub_fp_scalar(uint32_t insn)
     return (insn & 0xEFB11F70) == 0xEE301F40;
 }
 
-/* VMUL (floating-point) T1 */
 static inline bool is_insn_vmul_fp(uint32_t insn)
 {
     return (insn & 0xFFAF1F51) == 0xFF000D50;
 }
 
-/* VMUL (floating-point) T2 */
 static inline bool is_insn_vmul_fp_scalar(uint32_t insn)
 {
     return (insn & 0xEFB11F70) == 0xEE310E60;
