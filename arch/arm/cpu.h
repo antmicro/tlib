@@ -765,6 +765,7 @@ static inline int arm_feature(const CPUState *env, int feature)
 #define ARM_CPUID_CORTEXM3    0x410fc231
 #define ARM_CPUID_CORTEXM33   0x411fd210
 #define ARM_CPUID_CORTEXM4    0x410fc240
+#define ARM_CPUID_CORTEXM55   0x411fd221
 #define ARM_CPUID_CORTEXM7    0x411fc272
 #define ARM_CPUID_CORTEXM85   0x411fd230
 #define ARM_CPUID_CORTEXR5    0x410fc150

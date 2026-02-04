@@ -272,6 +272,27 @@ static void cpu_reset_model_id(CPUState *env, uint32_t id)
             set_feature(env, ARM_FEATURE_THUMB2);
             set_feature(env, ARM_FEATURE_THUMB_DIV);
             break;
+        case ARM_CPUID_CORTEXM55:
+            //  TODO: Add DSP once it's available
+            set_feature(env, ARM_FEATURE_VFP_FP16);
+            set_feature(env, ARM_FEATURE_VFP5);
+            set_feature(env, ARM_FEATURE_VFP4);
+            set_feature(env, ARM_FEATURE_VFP3);
+            set_feature(env, ARM_FEATURE_VFP);
+
+            set_feature(env, ARM_FEATURE_V8_1M);
+            set_feature(env, ARM_FEATURE_V8);
+            set_feature(env, ARM_FEATURE_V7);
+            set_feature(env, ARM_FEATURE_V6);
+            set_feature(env, ARM_FEATURE_V5);
+            set_feature(env, ARM_FEATURE_V4T);
+
+            set_feature(env, ARM_FEATURE_MPU);
+
+            set_feature(env, ARM_FEATURE_THUMB_DIV);
+            set_feature(env, ARM_FEATURE_THUMB2);
+            set_feature(env, ARM_FEATURE_MVE);
+            break;
         case ARM_CPUID_CORTEXM4:
             //  TODO: We don't yet implement the DSP (although it is available in our arm64).
             //        It should be added when available
@@ -597,6 +618,7 @@ static const struct arm_cpu_t arm_cpu_names[] = {
     //  TODO: M4F should be separate from M4.
     { ARM_CPUID_CORTEXM4,    "cortex-m4"   },
     { ARM_CPUID_CORTEXM7,    "cortex-m4f"  },
+    { ARM_CPUID_CORTEXM55,   "cortex-m55"  },
     { ARM_CPUID_CORTEXM7,    "cortex-m7"   },
     { ARM_CPUID_CORTEXM85,   "cortex-m85"  },
 
