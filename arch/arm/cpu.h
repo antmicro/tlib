@@ -703,6 +703,7 @@ enum arm_features {
     ARM_FEATURE_GENERIC_TIMER,
     ARM_FEATURE_V8, /* implies PMSAv8 MPU and VFP5 if a FPU is present*/
     ARM_FEATURE_PMSA,
+    ARM_FEATURE_DSP,
     ARM_FEATURE_MVE,
     ARM_FEATURE_CBAR_RO, /* has cp15 CBAR and it is read-only */
     ARM_FEATURE_LPAE,    /* v7 Only, Large Physical Address Extension */
