@@ -9933,7 +9933,7 @@ DO_VLDST_WIDE_NARROW(vldsth_w, vldrh_sw, vldrh_uw, vstrh_w, 2)
 #undef DO_VLDST_WIDE_NARROW
 #undef F
 
-static bool do_2shift(DisasContext *s, arg_2shift *a, MVEGenTwoOpShiftFn fn, bool negateshift)
+static bool do_2shift_vec(DisasContext *s, arg_2shift *a, MVEGenTwoOpShiftFn fn, bool negateshift, GVecGen2iFn vecfn)
 {
     TCGv_ptr qd, qm;
     TCGv_i32 shift_v;
@@ -9955,16 +9955,24 @@ static bool do_2shift(DisasContext *s, arg_2shift *a, MVEGenTwoOpShiftFn fn, boo
         shift = -shift;
     }
 
-    qd = mve_qreg_ptr(a->qd);
-    qm = mve_qreg_ptr(a->qm);
-    shift_v = tcg_const_i32(shift);
-    fn(cpu_env, qd, qm, shift_v);
-
-    tcg_temp_free_ptr(qd);
-    tcg_temp_free_ptr(qm);
-    tcg_temp_free_i32(shift_v);
+    if(vecfn && mve_no_predication(s)) {
+        vecfn(a->size, mve_qreg_offset(a->qd), mve_qreg_offset(a->qm), shift, 16, 16);
+    } else {
+        qd = mve_qreg_ptr(a->qd);
+        qm = mve_qreg_ptr(a->qm);
+        shift_v = tcg_const_i32(shift);
+        fn(cpu_env, qd, qm, shift_v);
+        tcg_temp_free_ptr(qd);
+        tcg_temp_free_ptr(qm);
+        tcg_temp_free_i32(shift_v);
+    }
     mve_update_eci(s);
     return TRANS_STATUS_SUCCESS;
+}
+
+static bool do_2shift(DisasContext *s, arg_2shift *a, MVEGenTwoOpShiftFn fn, bool negateshift)
+{
+    return do_2shift_vec(s, a, fn, negateshift, NULL);
 }
 
 #define DO_2SHIFT_FP(INSN, FN)                               \
@@ -10288,6 +10296,31 @@ DO_TRANS_2OP(vqshl_s, vqshls)
 DO_TRANS_2OP(vqshl_u, vqshlu)
 DO_TRANS_2OP(vqrshl_s, vqrshls)
 DO_TRANS_2OP(vqrshl_u, vqrshlu)
+
+#define DO_TRANS_2SHIFT_VEC(INSN, FN, NEGATESHIFT, VECFN)             \
+    static bool trans_##INSN(DisasContext *s, arg_2shift *a)          \
+    {                                                                 \
+        static MVEGenTwoOpShiftFn *const fns[] = {                    \
+            gen_helper_mve_##FN##b,                                   \
+            gen_helper_mve_##FN##h,                                   \
+            gen_helper_mve_##FN##w,                                   \
+            NULL,                                                     \
+        };                                                            \
+        return do_2shift_vec(s, a, fns[a->size], NEGATESHIFT, VECFN); \
+    }
+
+#define DO_TRANS_2SHIFT(INSN, FN, NEGATESHIFT) DO_TRANS_2SHIFT_VEC(INSN, FN, NEGATESHIFT, NULL)
+
+DO_TRANS_2SHIFT_VEC(vshli, vshli_u, false, tcg_gen_gvec_shli)
+DO_TRANS_2SHIFT(vqshli_s, vqshli_s, false)
+DO_TRANS_2SHIFT(vqshli_u, vqshli_u, false)
+DO_TRANS_2SHIFT(vqshlui_s, vqshlui_s, false)
+
+/* These right shifts use a left-shift helper with negated shift count */
+DO_TRANS_2SHIFT(vshri_s, vshli_s, true)
+DO_TRANS_2SHIFT(vshri_u, vshli_u, true)
+DO_TRANS_2SHIFT(vrshri_s, vrshli_s, true)
+DO_TRANS_2SHIFT(vrshri_u, vrshli_u, true)
 
 static int trans_vpsel(DisasContext *s, arg_2op *a)
 {
@@ -12120,6 +12153,54 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_2op a;
                     mve_extract_2op(&a, insn);
                     return trans_vqrshl_u(s, &a);
+                }
+                if(is_insn_vshli(insn)) {
+                    ARCH(MVE);
+                    arg_2shift a;
+                    mve_extract_lshift_imm(&a, insn);
+                    return trans_vshli(s, &a);
+                }
+                if(is_insn_vqshli_s(insn)) {
+                    ARCH(MVE);
+                    arg_2shift a;
+                    mve_extract_lshift_imm(&a, insn);
+                    return trans_vqshli_s(s, &a);
+                }
+                if(is_insn_vqshli_u(insn)) {
+                    ARCH(MVE);
+                    arg_2shift a;
+                    mve_extract_lshift_imm(&a, insn);
+                    return trans_vqshli_u(s, &a);
+                }
+                if(is_insn_vqshlui_s(insn)) {
+                    ARCH(MVE);
+                    arg_2shift a;
+                    mve_extract_lshift_imm(&a, insn);
+                    return trans_vqshlui_s(s, &a);
+                }
+                if(is_insn_vshri_s(insn)) {
+                    ARCH(MVE);
+                    arg_2shift a;
+                    mve_extract_rshift_imm(&a, insn);
+                    return trans_vshri_s(s, &a);
+                }
+                if(is_insn_vshri_u(insn)) {
+                    ARCH(MVE);
+                    arg_2shift a;
+                    mve_extract_rshift_imm(&a, insn);
+                    return trans_vshri_u(s, &a);
+                }
+                if(is_insn_vrshri_s(insn)) {
+                    ARCH(MVE);
+                    arg_2shift a;
+                    mve_extract_rshift_imm(&a, insn);
+                    return trans_vrshri_s(s, &a);
+                }
+                if(is_insn_vrshri_u(insn)) {
+                    ARCH(MVE);
+                    arg_2shift a;
+                    mve_extract_rshift_imm(&a, insn);
+                    return trans_vrshri_u(s, &a);
                 }
             }
 #endif

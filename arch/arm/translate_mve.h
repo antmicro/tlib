@@ -622,6 +622,46 @@ static inline bool is_insn_vqrshl_u(uint32_t insn)
     return (insn & 0xFF811F51) == 0xFF000550;
 }
 
+static inline bool is_insn_vshli(uint32_t insn)
+{
+    return (insn & 0xFF801FD1) == 0xEF800550;
+}
+
+static inline bool is_insn_vqshli_s(uint32_t insn)
+{
+    return (insn & 0xFF801FD1) == 0xEF800750;
+}
+
+static inline bool is_insn_vqshli_u(uint32_t insn)
+{
+    return (insn & 0xFF801FD1) == 0xFF800750;
+}
+
+static inline bool is_insn_vqshlui_s(uint32_t insn)
+{
+    return (insn & 0xFF801FD1) == 0xFF800650;
+}
+
+static inline bool is_insn_vshri_s(uint32_t insn)
+{
+    return (insn & 0xFF801FD1) == 0xEF800050;
+}
+
+static inline bool is_insn_vshri_u(uint32_t insn)
+{
+    return (insn & 0xFF801FD1) == 0xFF800050;
+}
+
+static inline bool is_insn_vrshri_s(uint32_t insn)
+{
+    return (insn & 0xFF801FD1) == 0xFF800250;
+}
+
+static inline bool is_insn_vrshri_u(uint32_t insn)
+{
+    return (insn & 0xFF801FD1) == 0xFF800250;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {
@@ -859,4 +899,45 @@ static void mve_extract_vmov_gp(arg_vmov_gp *a, uint32_t insn)
     a->op2 = extract32(insn, 5, 2);
     a->h = extract32(insn, 16, 1);
     a->u = extract32(insn, 23, 1);
+}
+/* Extract arguments of left shift immediate instruction */
+static void mve_extract_lshift_imm(arg_2shift *a, uint32_t insn)
+{
+    a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));
+    uint32_t sz = extract32(insn, 19, 3);
+    uint32_t imm6 = extract32(insn, 16, 6);
+    if((sz & 0b111) == 0b001) {
+        a->size = 0;
+        a->shift = imm6 - 8;
+    } else if((sz & 0b110) == 0b010) {
+        a->size = 1;
+        a->shift = imm6 - 16;
+    } else if((sz & 0b100) == 0b100) {
+        a->size = 2;
+        a->shift = imm6 - 32;
+    } else {
+        __builtin_unreachable();
+    }
+}
+
+/* Extract arguments of right shift immediate instruction */
+static void mve_extract_rshift_imm(arg_2shift *a, uint32_t insn)
+{
+    a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));
+    uint32_t sz = extract32(insn, 19, 3);
+    uint32_t imm6 = deposit32(extract32(insn, 16, 3), 3, 29, extract32(insn, 19, 3));
+    if((sz & 0b111) == 0b001) {
+        a->size = 0;
+        a->shift = 16 - imm6;
+    } else if((sz & 0b110) == 0b010) {
+        a->size = 1;
+        a->shift = 32 - imm6;
+    } else if((sz & 0b100) == 0b100) {
+        a->size = 2;
+        a->shift = 64 - imm6;
+    } else {
+        __builtin_unreachable();
+    }
 }

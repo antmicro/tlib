@@ -1275,6 +1275,14 @@ DO_2OP_SAT_U(vqshlu, DO_UQSHL_OP)
 DO_2OP_SAT_S(vqrshls, DO_SQRSHL_OP)
 DO_2OP_SAT_U(vqrshlu, DO_UQRSHL_OP)
 
+DO_2SHIFT_U(vshli_u, DO_VSHLU)
+DO_2SHIFT_S(vshli_s, DO_VSHLS)
+DO_2SHIFT_U(vrshli_u, DO_VRSHLU)
+DO_2SHIFT_S(vrshli_s, DO_VRSHLS)
+DO_2SHIFT_SAT_U(vqshli_u, DO_UQSHL_OP)
+DO_2SHIFT_SAT_S(vqshli_s, DO_SQSHL_OP)
+DO_2SHIFT_SAT_S(vqshlui_s, DO_SUQSHL_OP)
+
 #undef DO_VSHLS
 #undef DO_VSHLU
 #undef DO_2OP_U
