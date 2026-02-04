@@ -20,3 +20,5 @@ enum {
     M_REG_S = 1,
     M_REG_NUM_BANKS = 2,
 };
+
+#define MAKE_64BIT_MASK(shift, length) (((~0ULL) >> (64 - (length))) << (shift))

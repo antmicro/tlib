@@ -1045,8 +1045,6 @@ static inline uint32_t pmsav8_idau_sau_get_flags(uint32_t rbar_or_rlar)
 
 #endif  //  TARGET_PROTO_ARM_M
 
-#define MAKE_64BIT_MASK(shift, length) (((~0ULL) >> (64 - (length))) << (shift))
-
 //  FIELD expands to constants:
 //  * __REGISTER_<register>_<field>_START,
 //  * __REGISTER_<register>_<field>_WIDTH.

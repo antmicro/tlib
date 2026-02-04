@@ -1,6 +1,9 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
+#include "bit_helper.h"
+#include "cpu_common.h"
 
 /*
  * Note that vector data is stored in host-endian 64-bit chunks,
@@ -51,3 +54,7 @@ static inline uint64_t expand_pred_s(uint8_t byte)
     };
     return word[byte & 0x11];
 }
+
+int32_t do_sqrshl_bhs(int32_t src, int32_t shift, int bits, bool round, uint32_t *sat);
+uint32_t do_uqrshl_bhs(uint32_t src, int32_t shift, int bits, bool round, uint32_t *sat);
+int32_t do_suqrshl_bhs(int32_t src, int32_t shift, int bits, bool round, uint32_t *sat);

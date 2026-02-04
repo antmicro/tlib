@@ -80,3 +80,76 @@ const uint64_t expand_pred_h_data[0x55 + 1] = {
     [0x41] = 0xffff00000000ffff, [0x44] = 0xffff0000ffff0000, [0x45] = 0xffff0000ffffffff, [0x50] = 0xffffffff00000000,
     [0x51] = 0xffffffff0000ffff, [0x54] = 0xffffffffffff0000, [0x55] = 0xffffffffffffffff,
 };
+
+int32_t do_sqrshl_bhs(int32_t src, int32_t shift, int bits, bool round, uint32_t *sat)
+{
+    if(shift <= -bits) {
+        /* Rounding the sign bit always produces 0. */
+        if(round) {
+            return 0;
+        }
+        return src >> 31;
+    } else if(shift < 0) {
+        if(round) {
+            src >>= -shift - 1;
+            return (src >> 1) + (src & 1);
+        }
+        return src >> -shift;
+    } else if(shift < bits) {
+        int32_t val = src << shift;
+        if(bits == 32) {
+            if(!sat || val >> shift == src) {
+                return val;
+            }
+        } else {
+            int32_t extval = sextract32(val, 0, bits);
+            if(!sat || val == extval) {
+                return extval;
+            }
+        }
+    } else if(!sat || src == 0) {
+        return 0;
+    }
+
+    *sat = 1;
+    return (1u << (bits - 1)) - (src >= 0);
+}
+
+uint32_t do_uqrshl_bhs(uint32_t src, int32_t shift, int bits, bool round, uint32_t *sat)
+{
+    if(shift <= -(bits + round)) {
+        return 0;
+    } else if(shift < 0) {
+        if(round) {
+            src >>= -shift - 1;
+            return (src >> 1) + (src & 1);
+        }
+        return src >> -shift;
+    } else if(shift < bits) {
+        uint32_t val = src << shift;
+        if(bits == 32) {
+            if(!sat || val >> shift == src) {
+                return val;
+            }
+        } else {
+            uint32_t extval = extract32(val, 0, bits);
+            if(!sat || val == extval) {
+                return extval;
+            }
+        }
+    } else if(!sat || src == 0) {
+        return 0;
+    }
+
+    *sat = 1;
+    return MAKE_64BIT_MASK(0, bits);
+}
+
+int32_t do_suqrshl_bhs(int32_t src, int32_t shift, int bits, bool round, uint32_t *sat)
+{
+    if(sat && src < 0) {
+        *sat = 1;
+        return 0;
+    }
+    return do_uqrshl_bhs(src, shift, bits, round, sat);
+}
