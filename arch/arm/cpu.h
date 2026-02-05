@@ -417,6 +417,7 @@ typedef struct CPUState {
 
         uint32_t xregs[16];
         /* We store these fpcsr fields separately for convenience.  */
+        uint32_t qc;
         int vec_len;
         int vec_stride;
 
@@ -1081,5 +1082,6 @@ FIELD(V7M_VPR, MASK23, 20, 4)
 FIELD(VFP_FPSCR, VEC_LEN, 16, 3)
 FIELD(VFP_FPSCR, VEC_STRIDE, 20, 2)
 FIELD(VFP_FPSCR, LTPSIZE, 16, 3)
+FIELD(VFP_FPSCR, QC, 27, 1)
 
 #undef FIELD

@@ -3376,6 +3376,7 @@ uint32_t HELPER(vfp_get_fpscr)(CPUState *env)
 
     fpscr = (env->vfp.xregs[ARM_VFP_FPSCR] & 0xffc8ffff);
     fpscr = FIELD_DP32(fpscr, VFP_FPSCR, VEC_STRIDE, env->vfp.vec_stride);
+    fpscr = FIELD_DP32(fpscr, VFP_FPSCR, QC, env->vfp.qc);
 
 #ifndef TARGET_PROTO_ARM_M
     fpscr = FIELD_DP32(fpscr, VFP_FPSCR, VEC_LEN, env->vfp.vec_len);
@@ -3463,6 +3464,7 @@ void HELPER(vfp_set_fpscr)(CPUState *env, uint32_t val)
 #else
     env->v7m.ltpsize = FIELD_EX32(val, VFP_FPSCR, LTPSIZE);
 #endif
+    env->vfp.qc = FIELD_EX32(val, VFP_FPSCR, QC);
 
     changed ^= val;
     if(changed & (3 << 22)) {
