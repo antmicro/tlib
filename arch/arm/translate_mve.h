@@ -82,6 +82,13 @@ typedef struct {
     int size;
 } arg_2scalar;
 
+/* Arguments of 1 operand scalar instructions */
+typedef struct {
+    int qda;
+    int rm;
+    int size;
+} arg_shl_scalar;
+
 /* Arguments of VDUP instruction */
 typedef struct {
     int qd;
@@ -662,6 +669,46 @@ static inline bool is_insn_vrshri_u(uint32_t insn)
     return (insn & 0xFF801FD1) == 0xFF800250;
 }
 
+static inline bool is_insn_vshl_s_scalar(uint32_t insn)
+{
+    return (insn & 0xFFB31FF0) == 0xEE311E60;
+}
+
+static inline bool is_insn_vrshl_s_scalar(uint32_t insn)
+{
+    return (insn & 0xFFB31FF0) == 0xEE331E60;
+}
+
+static inline bool is_insn_vqshl_s_scalar(uint32_t insn)
+{
+    return (insn & 0xFFB31FF0) == 0xEE311EE0;
+}
+
+static inline bool is_insn_vqrshl_s_scalar(uint32_t insn)
+{
+    return (insn & 0xFFB31FF0) == 0xEE331EE0;
+}
+
+static inline bool is_insn_vshl_u_scalar(uint32_t insn)
+{
+    return (insn & 0xFFB31FF0) == 0xFE311E60;
+}
+
+static inline bool is_insn_vrshl_u_scalar(uint32_t insn)
+{
+    return (insn & 0xFFB31FF0) == 0xFE331E60;
+}
+
+static inline bool is_insn_vqshl_u_scalar(uint32_t insn)
+{
+    return (insn & 0xFFB31FF0) == 0xFE311EE0;
+}
+
+static inline bool is_insn_vqrshl_u_scalar(uint32_t insn)
+{
+    return (insn & 0xFFB31FF0) == 0xFE331EE0;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {
@@ -940,4 +987,12 @@ static void mve_extract_rshift_imm(arg_2shift *a, uint32_t insn)
     } else {
         __builtin_unreachable();
     }
+}
+
+/* Extract arguments of 2-shift scalar instruction */
+static void mve_extract_2shift_scalar(arg_shl_scalar *a, uint32_t insn)
+{
+    a->qda = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    a->rm = extract32(insn, 0, 4);
+    a->size = extract32(insn, 18, 2);
 }

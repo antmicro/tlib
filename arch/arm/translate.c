@@ -10322,6 +10322,49 @@ DO_TRANS_2SHIFT(vshri_u, vshli_u, true)
 DO_TRANS_2SHIFT(vrshri_s, vrshli_s, true)
 DO_TRANS_2SHIFT(vrshri_u, vrshli_u, true)
 
+static bool do_2shift_scalar(DisasContext *s, arg_shl_scalar *a, MVEGenTwoOpShiftFn *fn)
+{
+    TCGv_ptr qda;
+    TCGv_i32 rm;
+
+    if(!mve_check_qreg_bank(a->qda) || a->rm == 13 || a->rm == 15 || !fn) {
+        /* Rm cases are UNPREDICTABLE */
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    qda = mve_qreg_ptr(a->qda);
+    rm = load_reg(s, a->rm);
+    fn(cpu_env, qda, qda, rm);
+    tcg_temp_free_ptr(qda);
+    tcg_temp_free_i32(rm);
+    mve_update_eci(s);
+    return TRANS_STATUS_SUCCESS;
+}
+
+#define DO_TRANS_2SHIFT_SCALAR(INSN, FN)                         \
+    static bool trans_##INSN(DisasContext *s, arg_shl_scalar *a) \
+    {                                                            \
+        static MVEGenTwoOpShiftFn *const fns[] = {               \
+            gen_helper_mve_##FN##b,                              \
+            gen_helper_mve_##FN##h,                              \
+            gen_helper_mve_##FN##w,                              \
+            NULL,                                                \
+        };                                                       \
+        return do_2shift_scalar(s, a, fns[a->size]);             \
+    }
+
+DO_TRANS_2SHIFT_SCALAR(vshl_s_scalar, vshli_s)
+DO_TRANS_2SHIFT_SCALAR(vshl_u_scalar, vshli_u)
+DO_TRANS_2SHIFT_SCALAR(vrshl_s_scalar, vrshli_s)
+DO_TRANS_2SHIFT_SCALAR(vrshl_u_scalar, vrshli_u)
+DO_TRANS_2SHIFT_SCALAR(vqshl_s_scalar, vqshli_s)
+DO_TRANS_2SHIFT_SCALAR(vqshl_u_scalar, vqshli_u)
+DO_TRANS_2SHIFT_SCALAR(vqrshl_s_scalar, vqrshli_s)
+DO_TRANS_2SHIFT_SCALAR(vqrshl_u_scalar, vqrshli_u)
+
 static int trans_vpsel(DisasContext *s, arg_2op *a)
 {
     //  TODO(MVE): We may want to use a different method here or drop it entirely.
@@ -12201,6 +12244,54 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_2shift a;
                     mve_extract_rshift_imm(&a, insn);
                     return trans_vrshri_u(s, &a);
+                }
+                if(is_insn_vshl_s_scalar(insn)) {
+                    ARCH(MVE);
+                    arg_shl_scalar a;
+                    mve_extract_2shift_scalar(&a, insn);
+                    return trans_vshl_s_scalar(s, &a);
+                }
+                if(is_insn_vshl_u_scalar(insn)) {
+                    ARCH(MVE);
+                    arg_shl_scalar a;
+                    mve_extract_2shift_scalar(&a, insn);
+                    return trans_vshl_u_scalar(s, &a);
+                }
+                if(is_insn_vrshl_s_scalar(insn)) {
+                    ARCH(MVE);
+                    arg_shl_scalar a;
+                    mve_extract_2shift_scalar(&a, insn);
+                    return trans_vrshl_s_scalar(s, &a);
+                }
+                if(is_insn_vrshl_u_scalar(insn)) {
+                    ARCH(MVE);
+                    arg_shl_scalar a;
+                    mve_extract_2shift_scalar(&a, insn);
+                    return trans_vrshl_u_scalar(s, &a);
+                }
+                if(is_insn_vqshl_s_scalar(insn)) {
+                    ARCH(MVE);
+                    arg_shl_scalar a;
+                    mve_extract_2shift_scalar(&a, insn);
+                    return trans_vqshl_s_scalar(s, &a);
+                }
+                if(is_insn_vqshl_u_scalar(insn)) {
+                    ARCH(MVE);
+                    arg_shl_scalar a;
+                    mve_extract_2shift_scalar(&a, insn);
+                    return trans_vqshl_u_scalar(s, &a);
+                }
+                if(is_insn_vqrshl_s_scalar(insn)) {
+                    ARCH(MVE);
+                    arg_shl_scalar a;
+                    mve_extract_2shift_scalar(&a, insn);
+                    return trans_vqrshl_s_scalar(s, &a);
+                }
+                if(is_insn_vqrshl_u_scalar(insn)) {
+                    ARCH(MVE);
+                    arg_shl_scalar a;
+                    mve_extract_2shift_scalar(&a, insn);
+                    return trans_vqrshl_u_scalar(s, &a);
                 }
             }
 #endif
