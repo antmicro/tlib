@@ -195,6 +195,13 @@ uint32_t tlib_is_feature_allowed(uint32_t feature_bit)
 
 EXC_INT_1(uint32_t, tlib_is_feature_allowed, uint32_t, feature_bit)
 
+uint32_t tlib_is_additional_feature_enabled(uint32_t feature_bit)
+{
+    return (cpu->additional_extensions & (1L << feature_bit)) != 0;
+}
+
+EXC_INT_1(uint32_t, tlib_is_additional_feature_enabled, uint32_t, feature_bit)
+
 void tlib_set_privilege_architecture(int32_t privilege_architecture)
 {
     if(privilege_architecture > RISCV_PRIV1_12 && privilege_architecture != RISCV_PRIV_UNRATIFIED) {
