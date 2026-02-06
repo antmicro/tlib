@@ -172,6 +172,16 @@ typedef struct {
     int from;
 } arg_vmov_2gp;
 
+/* Arguments of VMOV GP<->V-lane */
+typedef struct {
+    int qn;
+    int rt;
+    int op1;
+    int op2;
+    int h;  //  high (upper) d-register
+    int u;  //  unsigned
+} arg_vmov_gp;
+
 void gen_mve_vld40b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld41b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld42b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
@@ -547,6 +557,11 @@ static inline bool is_insn_vhsub_u_scalar(uint32_t insn)
     return (insn & 0xFF811F70) == 0xFE001F40;
 }
 
+static inline bool is_insn_vmov_gp(uint32_t insn)
+{
+    return (insn & 0xFF000F1F) == 0xEE000B10;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {
@@ -773,4 +788,15 @@ static void mve_extract_vmov_2gp(arg_vmov_2gp *a, uint32_t insn)
     a->rt = extract32(insn, 0, 4);
     a->idx = extract32(insn, 4, 1);
     a->from = extract32(insn, 20, 1);
+}
+
+/* Extract arguments of VMOV GP<->V-lane instruction */
+static void mve_extract_vmov_gp(arg_vmov_gp *a, uint32_t insn)
+{
+    a->qn = deposit32(extract32(insn, 17, 3), 3, 29, extract32(insn, 7, 1));
+    a->rt = extract32(insn, 12, 4);
+    a->op1 = extract32(insn, 21, 2);
+    a->op2 = extract32(insn, 5, 2);
+    a->h = extract32(insn, 16, 1);
+    a->u = extract32(insn, 23, 1);
 }

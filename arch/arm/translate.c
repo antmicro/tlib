@@ -10566,6 +10566,100 @@ static bool trans_vmov_from_2gp(DisasContext *s, arg_vmov_2gp *a)
     return TRANS_STATUS_SUCCESS;
 }
 
+/*
+ * This function handles the instructions moving from a general-purpose register to a vector lane and
+ * from a vector lane to a general-purpose register (bidirectional)
+ */
+static bool trans_vmov_between_gp_vec(DisasContext *s, arg_vmov_gp *a, bool from_gp)
+{
+    TCGv_i32 tmp;
+    bool is_mve;
+    TCGMemOp esize;
+    int elemidx;
+
+    if(!mve_check_qreg_bank(a->qn)) {
+        /* Undefined */
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    /* The VMOV GP -> vec does not have a bit for signage, but is always zero which is why it works here anyway */
+    int conf = (a->u << 5) | (a->h << 4) | (a->op1 << 2) | (a->op2 << 0);
+
+    if((conf & 8) == 8 /* xx1xxx */) {
+        is_mve = true;
+        esize = MO_8;
+        elemidx = conf & 0x3;
+    } else if((conf & 9) == 1 /* xx0xx1 */) {
+        is_mve = true;
+        esize = MO_16;
+        elemidx = (conf >> 1) & 1;
+    } else if((conf & 43) == 0 /* 0x0x00 */) {
+        is_mve = false;
+        esize = MO_32;
+        elemidx = 0;
+    } else {
+        /* Undefined */
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+
+    if(!ENABLE_ARCH_MVE || (!is_mve && !arm_feature(env, ARM_FEATURE_VFP))) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+
+    int beat = (a->h << 1) | (a->op1 & 1);
+    int vd = a->qn * 2 + beat / 2;
+    int neon_index;
+
+    switch(esize) {
+        case MO_8:
+            neon_index = elemidx + (beat % 2) * 4;
+            break;
+        case MO_16:
+            neon_index = elemidx + (beat % 2) * 2;
+            break;
+        case MO_32:
+            neon_index = elemidx + (beat % 2) * 1;
+            break;
+        default:
+            g_assert_not_reached();
+    }
+
+    if(!mve_skip_vmov(s, vd, neon_index, esize) || !ENABLE_ARCH_MVE) {
+        if(from_gp) {
+            tmp = load_reg(s, a->rt);
+            write_neon_element32(tmp, vd, neon_index, esize);
+            tcg_temp_free_i32(tmp);
+        } else {
+            tmp = tcg_temp_new_i32();
+            read_neon_element32(tmp, vd, neon_index, esize);
+
+            if(!a->u) {
+                /* sign extend */
+                switch(esize) {
+                    case MO_8:
+                        gen_sxtb(tmp);
+                        break;
+                    case MO_16:
+                        gen_sxth(tmp);
+                        break;
+                    default:
+                        /* Do nothing */
+                        break;
+                }
+            }
+
+            store_reg(s, a->rt, tmp);
+        }
+    }
+
+    mve_update_and_store_eci(s);
+    return TRANS_STATUS_SUCCESS;
+}
+
 #endif
 
 /* Translate a 32-bit thumb instruction.  Returns nonzero if the instruction
@@ -11913,6 +12007,12 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_2scalar args;
                     mve_extract_2op_scalar(&args, insn);
                     return trans_vhsub_u_scalar(s, &args);
+                }
+                if(is_insn_vmov_gp(insn)) {
+                    arg_vmov_gp a;
+                    mve_extract_vmov_gp(&a, insn);
+                    int from_gp = extract32(insn, 20, 1) == 0;
+                    return trans_vmov_between_gp_vec(s, &a, from_gp);
                 }
             }
 #endif
