@@ -235,7 +235,6 @@ static void cpu_reset_model_id(CPUState *env, uint32_t id)
             break;
 #ifdef TARGET_PROTO_ARM_M
         case ARM_CPUID_CORTEXM85:
-            //  TODO: Add DSP once it's available
             set_feature(env, ARM_FEATURE_VFP_FP16);
             set_feature(env, ARM_FEATURE_VFP5);
             set_feature(env, ARM_FEATURE_VFP4);
@@ -254,9 +253,9 @@ static void cpu_reset_model_id(CPUState *env, uint32_t id)
             set_feature(env, ARM_FEATURE_THUMB_DIV);
             set_feature(env, ARM_FEATURE_THUMB2);
             set_feature(env, ARM_FEATURE_MVE);
+            set_feature(env, ARM_FEATURE_DSP);
             break;
         case ARM_CPUID_CORTEXM7:
-            //  TODO: Add DSP once it's available
             set_feature(env, ARM_FEATURE_VFP5);
             set_feature(env, ARM_FEATURE_VFP4);
             set_feature(env, ARM_FEATURE_VFP3);
@@ -271,9 +270,9 @@ static void cpu_reset_model_id(CPUState *env, uint32_t id)
 
             set_feature(env, ARM_FEATURE_THUMB2);
             set_feature(env, ARM_FEATURE_THUMB_DIV);
+            set_feature(env, ARM_FEATURE_DSP);
             break;
         case ARM_CPUID_CORTEXM55:
-            //  TODO: Add DSP once it's available
             set_feature(env, ARM_FEATURE_VFP_FP16);
             set_feature(env, ARM_FEATURE_VFP5);
             set_feature(env, ARM_FEATURE_VFP4);
@@ -292,10 +291,9 @@ static void cpu_reset_model_id(CPUState *env, uint32_t id)
             set_feature(env, ARM_FEATURE_THUMB_DIV);
             set_feature(env, ARM_FEATURE_THUMB2);
             set_feature(env, ARM_FEATURE_MVE);
+            set_feature(env, ARM_FEATURE_DSP);
             break;
         case ARM_CPUID_CORTEXM4:
-            //  TODO: We don't yet implement the DSP (although it is available in our arm64).
-            //        It should be added when available
             //  TODO: Remove FPU from non-f variant CPUs
             set_feature(env, ARM_FEATURE_VFP4);
             set_feature(env, ARM_FEATURE_VFP3);
@@ -310,6 +308,7 @@ static void cpu_reset_model_id(CPUState *env, uint32_t id)
 
             set_feature(env, ARM_FEATURE_THUMB_DIV);
             set_feature(env, ARM_FEATURE_THUMB2);
+            set_feature(env, ARM_FEATURE_DSP);
             break;
         case ARM_CPUID_CORTEXM33:
             set_feature(env, ARM_FEATURE_VFP5);
@@ -327,6 +326,7 @@ static void cpu_reset_model_id(CPUState *env, uint32_t id)
 
             set_feature(env, ARM_FEATURE_THUMB_DIV);
             set_feature(env, ARM_FEATURE_THUMB2);
+            set_feature(env, ARM_FEATURE_DSP);
             break;
         case ARM_CPUID_CORTEXM3:
             set_feature(env, ARM_FEATURE_V7);
