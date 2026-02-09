@@ -44,21 +44,22 @@ static inline TCGv gen_ld32(TCGv addr, int index)
     return tmp;
 }
 
-static inline long vfp_reg_offset(int dp, int reg)
+static inline long vfp_reg_offset(enum arm_fp_precision precision, int reg)
 {
-    if(dp) {
+    if(precision == DOUBLE_PRECISION) {
         return offsetof(CPUState, vfp.regs[reg]);
     } else if(reg & 1) {
         return offsetof(CPUState, vfp.regs[reg >> 1]) + offsetof(CPU_DoubleU, l.upper);
     } else {
         return offsetof(CPUState, vfp.regs[reg >> 1]) + offsetof(CPU_DoubleU, l.lower);
     }
+    //  TODO: check halfprecision if applies
 }
 
 /* Return the offset of a Qn register */
 static inline long mve_qreg_offset(uint32_t reg)
 {
-    return vfp_reg_offset(1, reg * 2);
+    return vfp_reg_offset(DOUBLE_PRECISION, reg * 2);
 }
 
 static inline uint8_t clz_u8(uint8_t a)

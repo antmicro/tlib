@@ -1052,11 +1052,12 @@ static TCGv_ptr get_fpstatus_ptr(int neon)
     return statusptr;
 }
 
+//  TODO: check halfprecision if applies
 #define VFP_OP2(name)                                                  \
-    static inline void gen_vfp_##name(int dp)                          \
+    static inline void gen_vfp_##name(enum arm_fp_precision precision) \
     {                                                                  \
         TCGv_ptr fpst = get_fpstatus_ptr(0);                           \
-        if(dp) {                                                       \
+        if(precision == DOUBLE_PRECISION) {                            \
             gen_helper_vfp_##name##d(cpu_F0d, cpu_F0d, cpu_F1d, fpst); \
         } else {                                                       \
             gen_helper_vfp_##name##s(cpu_F0s, cpu_F0s, cpu_F1s, fpst); \
@@ -1071,109 +1072,119 @@ VFP_OP2(div)
 
 #undef VFP_OP2
 
-static inline void gen_vfp_F1_mul(int dp)
+static inline void gen_vfp_F1_mul(enum arm_fp_precision precision)
 {
     /* Like gen_vfp_mul() but put result in F1 */
     TCGv_ptr fpst = get_fpstatus_ptr(0);
-    if(dp) {
+    if(precision == DOUBLE_PRECISION) {
         gen_helper_vfp_muld(cpu_F1d, cpu_F0d, cpu_F1d, fpst);
     } else {
         gen_helper_vfp_muls(cpu_F1s, cpu_F0s, cpu_F1s, fpst);
     }
     tcg_temp_free_ptr(fpst);
+    //  TODO: check halfprecision if applies
 }
 
-static inline void gen_vfp_F1_neg(int dp)
+static inline void gen_vfp_F1_neg(enum arm_fp_precision precision)
 {
     /* Like gen_vfp_neg() but put result in F1 */
-    if(dp) {
+    if(precision == DOUBLE_PRECISION) {
         gen_helper_vfp_negd(cpu_F1d, cpu_F0d);
     } else {
         gen_helper_vfp_negs(cpu_F1s, cpu_F0s);
     }
+    //  TODO: check halfprecision if applies
 }
 
-static inline void gen_vfp_abs(int dp)
+static inline void gen_vfp_abs(enum arm_fp_precision precision)
 {
-    if(dp) {
+    if(precision == DOUBLE_PRECISION) {
         gen_helper_vfp_absd(cpu_F0d, cpu_F0d);
     } else {
         gen_helper_vfp_abss(cpu_F0s, cpu_F0s);
     }
+    //  TODO: check halfprecision if applies
 }
 
-static inline void gen_vfp_neg(int dp)
+static inline void gen_vfp_neg(enum arm_fp_precision precision)
 {
-    if(dp) {
+    if(precision == DOUBLE_PRECISION) {
         gen_helper_vfp_negd(cpu_F0d, cpu_F0d);
     } else {
         gen_helper_vfp_negs(cpu_F0s, cpu_F0s);
     }
+    //  TODO: check halfprecision if applies
 }
 
-static inline void gen_vfp_sqrt(int dp)
+static inline void gen_vfp_sqrt(enum arm_fp_precision precision)
 {
-    if(dp) {
+    if(precision == DOUBLE_PRECISION) {
         gen_helper_vfp_sqrtd(cpu_F0d, cpu_F0d, cpu_env);
     } else {
         gen_helper_vfp_sqrts(cpu_F0s, cpu_F0s, cpu_env);
     }
+    //  TODO: check halfprecision if applies
 }
 
-static inline void gen_vfp_cmp(int dp)
+static inline void gen_vfp_cmp(enum arm_fp_precision precision)
 {
-    if(dp) {
+    if(precision == DOUBLE_PRECISION) {
         gen_helper_vfp_cmpd(cpu_F0d, cpu_F1d, cpu_env);
     } else {
         gen_helper_vfp_cmps(cpu_F0s, cpu_F1s, cpu_env);
     }
+    //  TODO: check halfprecision if applies
 }
 
-static inline void gen_vfp_cmpe(int dp)
+static inline void gen_vfp_cmpe(enum arm_fp_precision precision)
 {
-    if(dp) {
+    if(precision == DOUBLE_PRECISION) {
         gen_helper_vfp_cmped(cpu_F0d, cpu_F1d, cpu_env);
     } else {
         gen_helper_vfp_cmpes(cpu_F0s, cpu_F1s, cpu_env);
     }
+    //  TODO: check halfprecision if applies
 }
 
-static inline void gen_vfp_F1_ld0(int dp)
+static inline void gen_vfp_F1_ld0(enum arm_fp_precision precision)
 {
-    if(dp) {
+    if(precision == DOUBLE_PRECISION) {
         tcg_gen_movi_i64(cpu_F1d, 0);
     } else {
         tcg_gen_movi_i32(cpu_F1s, 0);
     }
+    //  TODO: check halfprecision if applies
 }
 
-#define VFP_GEN_ITOF(name)                                         \
-    static inline void gen_vfp_##name(int dp, int neon)            \
-    {                                                              \
-        TCGv_ptr statusptr = get_fpstatus_ptr(neon);               \
-        if(dp) {                                                   \
-            gen_helper_vfp_##name##d(cpu_F0d, cpu_F0s, statusptr); \
-        } else {                                                   \
-            gen_helper_vfp_##name##s(cpu_F0s, cpu_F0s, statusptr); \
-        }                                                          \
-        tcg_temp_free_ptr(statusptr);                              \
+#define VFP_GEN_ITOF(name)                                                       \
+    static inline void gen_vfp_##name(enum arm_fp_precision precision, int neon) \
+    {                                                                            \
+        TCGv_ptr statusptr = get_fpstatus_ptr(neon);                             \
+        if(precision == DOUBLE_PRECISION) {                                      \
+            gen_helper_vfp_##name##d(cpu_F0d, cpu_F0s, statusptr);               \
+        } else {                                                                 \
+            gen_helper_vfp_##name##s(cpu_F0s, cpu_F0s, statusptr);               \
+        }                                                                        \
+        tcg_temp_free_ptr(statusptr);                                            \
     }
+//  TODO: check halfprecision if applies
 
 VFP_GEN_ITOF(uito)
 VFP_GEN_ITOF(sito)
 #undef VFP_GEN_ITOF
 
-#define VFP_GEN_FTOI(name)                                         \
-    static inline void gen_vfp_##name(int dp, int neon)            \
-    {                                                              \
-        TCGv_ptr statusptr = get_fpstatus_ptr(neon);               \
-        if(dp) {                                                   \
-            gen_helper_vfp_##name##d(cpu_F0s, cpu_F0d, statusptr); \
-        } else {                                                   \
-            gen_helper_vfp_##name##s(cpu_F0s, cpu_F0s, statusptr); \
-        }                                                          \
-        tcg_temp_free_ptr(statusptr);                              \
+#define VFP_GEN_FTOI(name)                                                       \
+    static inline void gen_vfp_##name(enum arm_fp_precision precision, int neon) \
+    {                                                                            \
+        TCGv_ptr statusptr = get_fpstatus_ptr(neon);                             \
+        if(precision == DOUBLE_PRECISION) {                                      \
+            gen_helper_vfp_##name##d(cpu_F0s, cpu_F0d, statusptr);               \
+        } else {                                                                 \
+            gen_helper_vfp_##name##s(cpu_F0s, cpu_F0s, statusptr);               \
+        }                                                                        \
+        tcg_temp_free_ptr(statusptr);                                            \
     }
+//  TODO: check halfprecision if applies
 
 VFP_GEN_FTOI(toui)
 VFP_GEN_FTOI(touiz)
@@ -1181,19 +1192,21 @@ VFP_GEN_FTOI(tosi)
 VFP_GEN_FTOI(tosiz)
 #undef VFP_GEN_FTOI
 
-#define VFP_GEN_FIX(name)                                                     \
-    static inline void gen_vfp_##name(int dp, int shift, int neon)            \
-    {                                                                         \
-        TCGv tmp_shift = tcg_const_i32(shift);                                \
-        TCGv_ptr statusptr = get_fpstatus_ptr(neon);                          \
-        if(dp) {                                                              \
-            gen_helper_vfp_##name##d(cpu_F0d, cpu_F0d, tmp_shift, statusptr); \
-        } else {                                                              \
-            gen_helper_vfp_##name##s(cpu_F0s, cpu_F0s, tmp_shift, statusptr); \
-        }                                                                     \
-        tcg_temp_free_i32(tmp_shift);                                         \
-        tcg_temp_free_ptr(statusptr);                                         \
+#define VFP_GEN_FIX(name)                                                                   \
+    static inline void gen_vfp_##name(enum arm_fp_precision precision, int shift, int neon) \
+    {                                                                                       \
+        TCGv tmp_shift = tcg_const_i32(shift);                                              \
+        TCGv_ptr statusptr = get_fpstatus_ptr(neon);                                        \
+        if(precision == DOUBLE_PRECISION) {                                                 \
+            gen_helper_vfp_##name##d(cpu_F0d, cpu_F0d, tmp_shift, statusptr);               \
+        } else {                                                                            \
+            gen_helper_vfp_##name##s(cpu_F0s, cpu_F0s, tmp_shift, statusptr);               \
+        }                                                                                   \
+        tcg_temp_free_i32(tmp_shift);                                                       \
+        tcg_temp_free_ptr(statusptr);                                                       \
     }
+//  TODO: check halfprecision if applies
+
 VFP_GEN_FIX(tosh)
 VFP_GEN_FIX(tosl)
 VFP_GEN_FIX(touh)
@@ -1204,22 +1217,24 @@ VFP_GEN_FIX(uhto)
 VFP_GEN_FIX(ulto)
 #undef VFP_GEN_FIX
 
-static inline void gen_vfp_ld(DisasContext *s, int dp, TCGv addr)
+static inline void gen_vfp_ld(DisasContext *s, enum arm_fp_precision precision, TCGv addr)
 {
-    if(dp) {
+    if(precision == DOUBLE_PRECISION) {
         tcg_gen_qemu_ld64(cpu_F0d, addr, context_to_mmu_index(s));
     } else {
         tcg_gen_qemu_ld32u(cpu_F0s, addr, context_to_mmu_index(s));
     }
+    //  TODO: check halfprecision if applies
 }
 
-static inline void gen_vfp_st(DisasContext *s, int dp, TCGv addr)
+static inline void gen_vfp_st(DisasContext *s, enum arm_fp_precision precision, TCGv addr)
 {
-    if(dp) {
+    if(precision == DOUBLE_PRECISION) {
         tcg_gen_qemu_st64(cpu_F0d, addr, context_to_mmu_index(s));
     } else {
         tcg_gen_qemu_st32(cpu_F0s, addr, context_to_mmu_index(s));
     }
+    //  TODO: check halfprecision if applies
 }
 
 /* Return the offset of a 32-bit piece of a NEON register.
@@ -1228,7 +1243,7 @@ static inline long neon_reg_offset(int reg, int n)
 {
     int sreg;
     sreg = reg * 2 + n;
-    return vfp_reg_offset(0, sreg);
+    return vfp_reg_offset(SINGLE_PRECISION, sreg);
 }
 
 static TCGv neon_load_reg(int reg, int pass)
@@ -1246,12 +1261,12 @@ static void neon_store_reg(int reg, int pass, TCGv var)
 
 static inline void neon_load_reg64(TCGv_i64 var, int reg)
 {
-    tcg_gen_ld_i64(var, cpu_env, vfp_reg_offset(1, reg));
+    tcg_gen_ld_i64(var, cpu_env, vfp_reg_offset(DOUBLE_PRECISION, reg));
 }
 
 static inline void neon_store_reg64(TCGv_i64 var, int reg)
 {
-    tcg_gen_st_i64(var, cpu_env, vfp_reg_offset(1, reg));
+    tcg_gen_st_i64(var, cpu_env, vfp_reg_offset(DOUBLE_PRECISION, reg));
 }
 
 //  NOTE: Following neon code has been copied verbatim from arm64 arch
@@ -1268,7 +1283,7 @@ long neon_element_offset(int reg, int element, TCGMemOp memop)
         ofs ^= 8 - element_size;
     }
 #endif
-    return vfp_reg_offset(1, reg) + ofs;
+    return vfp_reg_offset(DOUBLE_PRECISION, reg) + ofs;
 }
 
 void read_neon_element32(TCGv_i32 dest, int reg, int ele, TCGMemOp memop)
@@ -1321,31 +1336,34 @@ void write_neon_element32(TCGv_i32 src, int reg, int ele, TCGMemOp memop)
 #define tcg_gen_st_f32 tcg_gen_st_i32
 #define tcg_gen_st_f64 tcg_gen_st_i64
 
-static inline void gen_mov_F0_vreg(int dp, int reg)
+static inline void gen_mov_F0_vreg(enum arm_fp_precision precision, int reg)
 {
-    if(dp) {
-        tcg_gen_ld_f64(cpu_F0d, cpu_env, vfp_reg_offset(dp, reg));
+    if(precision == DOUBLE_PRECISION) {
+        tcg_gen_ld_f64(cpu_F0d, cpu_env, vfp_reg_offset(precision, reg));
     } else {
-        tcg_gen_ld_f32(cpu_F0s, cpu_env, vfp_reg_offset(dp, reg));
+        tcg_gen_ld_f32(cpu_F0s, cpu_env, vfp_reg_offset(precision, reg));
     }
+    //  TODO: check halfprecision if applies
 }
 
-static inline void gen_mov_F1_vreg(int dp, int reg)
+static inline void gen_mov_F1_vreg(enum arm_fp_precision precision, int reg)
 {
-    if(dp) {
-        tcg_gen_ld_f64(cpu_F1d, cpu_env, vfp_reg_offset(dp, reg));
+    if(precision == DOUBLE_PRECISION) {
+        tcg_gen_ld_f64(cpu_F1d, cpu_env, vfp_reg_offset(precision, reg));
     } else {
-        tcg_gen_ld_f32(cpu_F1s, cpu_env, vfp_reg_offset(dp, reg));
+        tcg_gen_ld_f32(cpu_F1s, cpu_env, vfp_reg_offset(precision, reg));
     }
+    //  TODO: check halfprecision if applies
 }
 
-static inline void gen_mov_vreg_F0(int dp, int reg)
+static inline void gen_mov_vreg_F0(enum arm_fp_precision precision, int reg)
 {
-    if(dp) {
-        tcg_gen_st_f64(cpu_F0d, cpu_env, vfp_reg_offset(dp, reg));
+    if(precision == DOUBLE_PRECISION) {
+        tcg_gen_st_f64(cpu_F0d, cpu_env, vfp_reg_offset(precision, reg));
     } else {
-        tcg_gen_st_f32(cpu_F0s, cpu_env, vfp_reg_offset(dp, reg));
+        tcg_gen_st_f32(cpu_F0s, cpu_env, vfp_reg_offset(precision, reg));
     }
+    //  TODO: check halfprecision if applies
 }
 
 #define ARM_CP_RW_BIT (1 << 20)
@@ -2991,7 +3009,7 @@ static TCGv gen_load_and_replicate(DisasContext *s, TCGv addr, int size)
     return tmp;
 }
 
-static int generate_vsel_insn(uint32_t insn, uint32_t rd, uint32_t rn, uint32_t rm, uint32_t size)
+static int generate_vsel_insn(uint32_t insn, uint32_t rd, uint32_t rn, uint32_t rm, enum arm_fp_precision precision)
 {
     uint32_t cc = extract32(insn, 20, 2);
 
@@ -2999,7 +3017,7 @@ static int generate_vsel_insn(uint32_t insn, uint32_t rd, uint32_t rn, uint32_t 
     TCGv cpu_vf = load_cpu_field(VF);
     TCGv cpu_nf = load_cpu_field(NF);
 
-    if(size == OP_64) {
+    if(precision == DOUBLE_PRECISION) {
         TCGv_i64 frn, frm, dest;
         TCGv_i64 tmp, zero, zf, nf, vf;
 
@@ -3017,8 +3035,8 @@ static int generate_vsel_insn(uint32_t insn, uint32_t rd, uint32_t rn, uint32_t 
         tcg_gen_ext_i32_i64(nf, cpu_nf);
         tcg_gen_ext_i32_i64(vf, cpu_vf);
 
-        tcg_gen_ld_i64(frn, cpu_env, vfp_reg_offset(1, rn));
-        tcg_gen_ld_i64(frm, cpu_env, vfp_reg_offset(1, rm));
+        tcg_gen_ld_i64(frn, cpu_env, vfp_reg_offset(DOUBLE_PRECISION, rn));
+        tcg_gen_ld_i64(frm, cpu_env, vfp_reg_offset(DOUBLE_PRECISION, rm));
 
         switch(cc) {
             case 0: /* Equal */
@@ -3042,7 +3060,7 @@ static int generate_vsel_insn(uint32_t insn, uint32_t rd, uint32_t rn, uint32_t 
                 break;
         }
 
-        tcg_gen_st_i64(dest, cpu_env, vfp_reg_offset(1, rd));
+        tcg_gen_st_i64(dest, cpu_env, vfp_reg_offset(DOUBLE_PRECISION, rd));
 
         tcg_temp_free_i64(zero);
         tcg_temp_free_i64(frn);
@@ -3062,8 +3080,8 @@ static int generate_vsel_insn(uint32_t insn, uint32_t rd, uint32_t rn, uint32_t 
         frm = tcg_temp_new_i32();
         dest = tcg_temp_new_i32();
 
-        tcg_gen_ld_i32(frn, cpu_env, vfp_reg_offset(0, rn));
-        tcg_gen_ld_i32(frm, cpu_env, vfp_reg_offset(0, rm));
+        tcg_gen_ld_i32(frn, cpu_env, vfp_reg_offset(SINGLE_PRECISION, rn));
+        tcg_gen_ld_i32(frm, cpu_env, vfp_reg_offset(SINGLE_PRECISION, rm));
 
         switch(cc) {
             case 0: /* Equal */
@@ -3088,11 +3106,11 @@ static int generate_vsel_insn(uint32_t insn, uint32_t rd, uint32_t rn, uint32_t 
         }
 
         /* For fp16 the top half is always zeroes */
-        if(size == OP_16) {
+        if(precision == HALF_PRECISION) {
             tcg_gen_andi_i32(dest, dest, 0xffff);
         }
 
-        tcg_gen_st_i32(dest, cpu_env, vfp_reg_offset(0, rd));
+        tcg_gen_st_i32(dest, cpu_env, vfp_reg_offset(SINGLE_PRECISION, rd));
         tcg_temp_free_i32(dest);
         tcg_temp_free_i32(frn);
         tcg_temp_free_i32(frm);
@@ -3105,27 +3123,26 @@ static int generate_vsel_insn(uint32_t insn, uint32_t rd, uint32_t rn, uint32_t 
     return TRANS_STATUS_SUCCESS;
 }
 
-static int generate_vminmaxnm_insn(uint32_t insn, uint32_t rd, uint32_t rn, uint32_t rm, uint32_t size)
+static int generate_vminmaxnm_insn(uint32_t insn, uint32_t rd, uint32_t rn, uint32_t rm, enum arm_fp_precision precision)
 {
     uint32_t vmin = extract32(insn, 6, 1);
     TCGv_ptr fpst = get_fpstatus_ptr(0);
-    uint32_t dp = (size == OP_64);
 
-    if(dp) {
+    if(precision == DOUBLE_PRECISION) {
         TCGv_i64 frn, frm, dest;
 
         frn = tcg_temp_new_i64();
         frm = tcg_temp_new_i64();
         dest = tcg_temp_new_i64();
 
-        tcg_gen_ld_f64(frn, cpu_env, vfp_reg_offset(dp, rn));
-        tcg_gen_ld_f64(frm, cpu_env, vfp_reg_offset(dp, rm));
+        tcg_gen_ld_f64(frn, cpu_env, vfp_reg_offset(precision, rn));
+        tcg_gen_ld_f64(frm, cpu_env, vfp_reg_offset(precision, rm));
         if(vmin) {
             gen_helper_vfp_minnumd(dest, frn, frm, fpst);
         } else {
             gen_helper_vfp_maxnumd(dest, frn, frm, fpst);
         }
-        tcg_gen_st_f64(dest, cpu_env, vfp_reg_offset(dp, rd));
+        tcg_gen_st_f64(dest, cpu_env, vfp_reg_offset(precision, rd));
         tcg_temp_free_i64(frn);
         tcg_temp_free_i64(frm);
         tcg_temp_free_i64(dest);
@@ -3136,14 +3153,14 @@ static int generate_vminmaxnm_insn(uint32_t insn, uint32_t rd, uint32_t rn, uint
         frm = tcg_temp_new_i32();
         dest = tcg_temp_new_i32();
 
-        tcg_gen_ld_f32(frn, cpu_env, vfp_reg_offset(dp, rn));
-        tcg_gen_ld_f32(frm, cpu_env, vfp_reg_offset(dp, rm));
+        tcg_gen_ld_f32(frn, cpu_env, vfp_reg_offset(precision, rn));
+        tcg_gen_ld_f32(frm, cpu_env, vfp_reg_offset(precision, rm));
         if(vmin) {
             gen_helper_vfp_minnums(dest, frn, frm, fpst);
         } else {
             gen_helper_vfp_maxnums(dest, frn, frm, fpst);
         }
-        tcg_gen_st_f32(dest, cpu_env, vfp_reg_offset(dp, rd));
+        tcg_gen_st_f32(dest, cpu_env, vfp_reg_offset(precision, rd));
         tcg_temp_free_i32(frn);
         tcg_temp_free_i32(frm);
         tcg_temp_free_i32(dest);
@@ -3153,7 +3170,7 @@ static int generate_vminmaxnm_insn(uint32_t insn, uint32_t rd, uint32_t rn, uint
     return TRANS_STATUS_SUCCESS;
 }
 
-static int generate_vcvt_insn(uint32_t insn, uint32_t rd, uint32_t rm, uint32_t size)
+static int generate_vcvt_insn(uint32_t insn, uint32_t rd, uint32_t rm, enum arm_fp_precision precision)
 {
     bool is_signed = extract32(insn, 7, 1);
     TCGv_ptr fpst = get_fpstatus_ptr(0);
@@ -3162,7 +3179,7 @@ static int generate_vcvt_insn(uint32_t insn, uint32_t rd, uint32_t rm, uint32_t 
     TCGv_i32 tcg_rmode = tcg_const_i32(arm_rmode_to_sf(rounding));
     gen_helper_set_rmode(tcg_rmode, tcg_rmode, fpst);
 
-    if(size == OP_64) {
+    if(precision == DOUBLE_PRECISION) {
         TCGv_i64 tcg_double, tcg_res;
         TCGv_i32 tcg_tmp;
         /* Rd is encoded as a single precision register even when the source
@@ -3172,14 +3189,14 @@ static int generate_vcvt_insn(uint32_t insn, uint32_t rd, uint32_t rm, uint32_t 
         tcg_double = tcg_temp_new_i64();
         tcg_res = tcg_temp_new_i64();
         tcg_tmp = tcg_temp_new_i32();
-        tcg_gen_ld_f64(tcg_double, cpu_env, vfp_reg_offset(1, rm));
+        tcg_gen_ld_f64(tcg_double, cpu_env, vfp_reg_offset(DOUBLE_PRECISION, rm));
         if(is_signed) {
             gen_helper_vfp_tosid(tcg_res, tcg_double, fpst);
         } else {
             gen_helper_vfp_touid(tcg_res, tcg_double, fpst);
         }
         tcg_gen_trunc_i64_i32(tcg_tmp, tcg_res);
-        tcg_gen_st_f32(tcg_tmp, cpu_env, vfp_reg_offset(0, rd));
+        tcg_gen_st_f32(tcg_tmp, cpu_env, vfp_reg_offset(SINGLE_PRECISION, rd));
         tcg_temp_free_i32(tcg_tmp);
         tcg_temp_free_i64(tcg_res);
         tcg_temp_free_i64(tcg_double);
@@ -3187,13 +3204,13 @@ static int generate_vcvt_insn(uint32_t insn, uint32_t rd, uint32_t rm, uint32_t 
         TCGv_i32 tcg_single, tcg_res;
         tcg_single = tcg_temp_new_i32();
         tcg_res = tcg_temp_new_i32();
-        tcg_gen_ld_f32(tcg_single, cpu_env, vfp_reg_offset(0, rm));
+        tcg_gen_ld_f32(tcg_single, cpu_env, vfp_reg_offset(SINGLE_PRECISION, rm));
         if(is_signed) {
             gen_helper_vfp_tosis(tcg_res, tcg_single, fpst);
         } else {
             gen_helper_vfp_touis(tcg_res, tcg_single, fpst);
         }
-        tcg_gen_st_f32(tcg_res, cpu_env, vfp_reg_offset(0, rd));
+        tcg_gen_st_f32(tcg_res, cpu_env, vfp_reg_offset(SINGLE_PRECISION, rd));
         tcg_temp_free_i32(tcg_res);
         tcg_temp_free_i32(tcg_single);
     }
@@ -3206,30 +3223,29 @@ static int generate_vcvt_insn(uint32_t insn, uint32_t rd, uint32_t rm, uint32_t 
     return TRANS_STATUS_SUCCESS;
 }
 
-static void abort_on_half_prec(uint32_t insn, uint32_t precision)
+static void abort_on_half_prec(uint32_t insn, enum arm_fp_precision precision)
 {
-    if(precision == OP_16) {
+    if(precision == HALF_PRECISION) {
         tlib_abortf("Half-precision not yet supported for instruction with opcode: 0x%x\n", insn);
     }
 }
 
-static int generate_vrint_insn(uint32_t insn, uint32_t rd, uint32_t rm, uint32_t size)
+static int generate_vrint_insn(uint32_t insn, uint32_t rd, uint32_t rm, enum arm_fp_precision precision)
 {
     TCGv_ptr fpst = get_fpstatus_ptr(0);
-    uint32_t dp = (size == OP_64);
 
     int rounding = extract32(insn, 16, 2);
     TCGv_i32 tcg_rmode = tcg_const_i32(arm_rmode_to_sf(rounding));
     gen_helper_set_rmode(tcg_rmode, tcg_rmode, fpst);
 
-    if(dp) {
+    if(precision == DOUBLE_PRECISION) {
         TCGv_i64 tcg_op;
         TCGv_i64 tcg_res;
         tcg_op = tcg_temp_new_i64();
         tcg_res = tcg_temp_new_i64();
-        tcg_gen_ld_f64(tcg_op, cpu_env, vfp_reg_offset(dp, rm));
+        tcg_gen_ld_f64(tcg_op, cpu_env, vfp_reg_offset(precision, rm));
         gen_helper_rintd(tcg_res, tcg_op, fpst);
-        tcg_gen_st_f64(tcg_res, cpu_env, vfp_reg_offset(dp, rd));
+        tcg_gen_st_f64(tcg_res, cpu_env, vfp_reg_offset(precision, rd));
         tcg_temp_free_i64(tcg_op);
         tcg_temp_free_i64(tcg_res);
     } else {
@@ -3237,9 +3253,9 @@ static int generate_vrint_insn(uint32_t insn, uint32_t rd, uint32_t rm, uint32_t
         TCGv_i32 tcg_res;
         tcg_op = tcg_temp_new_i32();
         tcg_res = tcg_temp_new_i32();
-        tcg_gen_ld_f32(tcg_op, cpu_env, vfp_reg_offset(dp, rm));
+        tcg_gen_ld_f32(tcg_op, cpu_env, vfp_reg_offset(precision, rm));
         gen_helper_rints(tcg_res, tcg_op, fpst);
-        tcg_gen_st_f32(tcg_res, cpu_env, vfp_reg_offset(dp, rd));
+        tcg_gen_st_f32(tcg_res, cpu_env, vfp_reg_offset(precision, rd));
         tcg_temp_free_i32(tcg_op);
         tcg_temp_free_i32(tcg_res);
     }
@@ -3263,34 +3279,34 @@ static int generate_vinsmovx_insn(uint32_t insn, uint32_t rd, uint32_t rm)
         /* Insert low half of Vm into high half of Vd */
         TCGv_i32 tcg_op = tcg_temp_new_i32();
         TCGv_i32 tcg_res = tcg_temp_new_i32();
-        tcg_gen_ld_f32(tcg_op, cpu_env, vfp_reg_offset(0, rm));
-        tcg_gen_ld_f32(tcg_res, cpu_env, vfp_reg_offset(0, rd));
+        tcg_gen_ld_f32(tcg_op, cpu_env, vfp_reg_offset(SINGLE_PRECISION, rm));
+        tcg_gen_ld_f32(tcg_res, cpu_env, vfp_reg_offset(SINGLE_PRECISION, rd));
 
         tcg_gen_deposit_i32(tcg_res, tcg_res, tcg_op, 16, 16);
-        tcg_gen_st_f32(tcg_res, cpu_env, vfp_reg_offset(0, rd));
+        tcg_gen_st_f32(tcg_res, cpu_env, vfp_reg_offset(SINGLE_PRECISION, rd));
         tcg_temp_free_i32(tcg_op);
         tcg_temp_free_i32(tcg_res);
     } else {
         /* vmovx */
         /* Set Vd to high half of Vm */
         TCGv_i32 tcg_op = tcg_temp_new_i32();
-        tcg_gen_ld_f32(tcg_op, cpu_env, vfp_reg_offset(0, rm));
+        tcg_gen_ld_f32(tcg_op, cpu_env, vfp_reg_offset(SINGLE_PRECISION, rm));
         tcg_gen_shri_i32(tcg_op, tcg_op, 16);
-        tcg_gen_st_f32(tcg_op, cpu_env, vfp_reg_offset(0, rd));
+        tcg_gen_st_f32(tcg_op, cpu_env, vfp_reg_offset(SINGLE_PRECISION, rd));
         tcg_temp_free_i32(tcg_op);
     }
     return TRANS_STATUS_SUCCESS;
 }
 
-static int disas_fpv5_insn(CPUState *env, DisasContext *s, uint32_t insn)
+static int disas_fpv5_insn(CPUState *env, DisasContext *s, enum arm_fp_precision precision, uint32_t insn)
 {
-    uint32_t rd, rn, rm, size = extract32(insn, 8, 2);
+    uint32_t rd, rn, rm;
 
     if(!arm_feature(env, ARM_FEATURE_VFP5)) {
         return TRANS_STATUS_ILLEGAL_INSN;
     }
 
-    if(size == OP_64) {
+    if(precision == DOUBLE_PRECISION) {
         VFP_DREG_D(rd, insn);
         VFP_DREG_N(rn, insn);
         VFP_DREG_M(rm, insn);
@@ -3302,19 +3318,19 @@ static int disas_fpv5_insn(CPUState *env, DisasContext *s, uint32_t insn)
 
     if(is_insn_vsel(insn)) {
         /* VSEL */
-        return generate_vsel_insn(insn, rd, rn, rm, size);
+        return generate_vsel_insn(insn, rd, rn, rm, precision);
     } else if(is_insn_vminmaxnm(insn)) {
         /* VMINNM, VMAXNM */
-        abort_on_half_prec(insn, size);
-        return generate_vminmaxnm_insn(insn, rd, rn, rm, size);
+        abort_on_half_prec(insn, precision);
+        return generate_vminmaxnm_insn(insn, rd, rn, rm, precision);
     } else if(is_insn_vcvt(insn)) {
         /* VCVTA, VCVTN, VCVTP, VCVTM */
-        abort_on_half_prec(insn, size);
-        return generate_vcvt_insn(insn, rd, rm, size);
+        abort_on_half_prec(insn, precision);
+        return generate_vcvt_insn(insn, rd, rm, precision);
     } else if(is_insn_vrint(insn)) {
         /* VRINTA, VRINTN, VRINTP, VRINTM */
-        abort_on_half_prec(insn, size);
-        return generate_vrint_insn(insn, rd, rm, size);
+        abort_on_half_prec(insn, precision);
+        return generate_vrint_insn(insn, rd, rm, precision);
     } else if(is_insn_vinsmovx(insn)) {
         /* VINS, VMOVX */
         return generate_vinsmovx_insn(insn, rd, rm);
@@ -3329,7 +3345,8 @@ static void gen_exception_insn(DisasContext *s, int offset, int excp);
 static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
 {
     uint32_t rd, rn, rm, op, i, n, offset, delta_d, delta_m, bank_mask;
-    int dp, veclen;
+    int veclen;
+    enum arm_fp_precision precision;
     TCGv addr;
     TCGv tmp;
     TCGv tmp2;
@@ -3365,20 +3382,22 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
     /* Lazy FP state preservation  */
     gen_helper_fp_lsp(cpu_env);
 #endif
+
+    precision = (enum arm_fp_precision)extract32(insn, 8, 2);
+
     if(extract32(insn, 28, 4) == 0xf) {
         /* Encodings with T=1 (Thumb) or unconditional (ARM):
          * only used by the floating point extension version 5 (FPv5).
          */
-        return disas_fpv5_insn(env, s, insn);
+        return disas_fpv5_insn(env, s, precision, insn);
     }
 
-    dp = ((insn & 0xf00) == 0xb00);
     switch((insn >> 24) & 0xf) {
         case 0xe:
             if(insn & (1 << 4)) {
                 /* single register transfer */
                 rd = (insn >> 12) & 0xf;
-                if(dp) {
+                if(precision == DOUBLE_PRECISION) {
                     int size;
                     int pass;
 
@@ -3469,7 +3488,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                             neon_store_reg(rn, pass, tmp);
                         }
                     }
-                } else { /* !dp */
+                } else { /* precision != DOUBLE_PRECISION */
                     if((insn & 0x6f) != 0x00) {
                         return 1;
                     }
@@ -3536,7 +3555,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                                     return 1;
                             }
                         } else {
-                            gen_mov_F0_vreg(0, rn);
+                            gen_mov_F0_vreg(SINGLE_PRECISION, rn);
                             tmp = gen_vfp_mrs();
                         }
                         if(rd == 15) {
@@ -3595,7 +3614,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                             }
                         } else {
                             gen_vfp_msr(tmp);
-                            gen_mov_vreg_F0(0, rn);
+                            gen_mov_vreg_F0(SINGLE_PRECISION, rn);
                         }
                     }
                 }
@@ -3603,7 +3622,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                 /* data processing */
                 /* The opcode is in bits 23, 21, 20 and 6.  */
                 op = ((insn >> 20) & 8) | ((insn >> 19) & 6) | ((insn >> 6) & 1);
-                if(dp) {
+                if(precision == DOUBLE_PRECISION) {
                     if(op == 15) {
                         /* rn is opcode */
                         rn = ((insn >> 15) & 0x1e) | ((insn >> 7) & 1);
@@ -3619,7 +3638,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                         VFP_DREG_D(rd, insn);
                     }
                     if(op == 15 && (((rn & 0x1c) == 0x10) || ((rn & 0x14) == 0x14))) {
-                        /* VCVT from int is always from S reg regardless of dp bit.
+                        /* VCVT from int is always from S reg regardless of precision bits.
                          * VCVT with immediate frac_bits has same format as SREG_M
                          */
                         rm = VFP_SREG_M(insn);
@@ -3651,7 +3670,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                 bank_mask = 0;
 
                 if(veclen > 0) {
-                    if(dp) {
+                    if(precision == DOUBLE_PRECISION) {
                         bank_mask = 0xc;
                     } else {
                         bank_mask = 0x18;
@@ -3662,7 +3681,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                         /* scalar */
                         veclen = 0;
                     } else {
-                        if(dp) {
+                        if(precision == DOUBLE_PRECISION) {
                             delta_d = (s->vec_stride >> 1) + 1;
                         } else {
                             delta_d = s->vec_stride + 1;
@@ -3684,19 +3703,19 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                         case 16:
                         case 17:
                             /* Integer source */
-                            gen_mov_F0_vreg(0, rm);
+                            gen_mov_F0_vreg(SINGLE_PRECISION, rm);
                             break;
                         case 8:
                         case 9:
                             /* Compare */
-                            gen_mov_F0_vreg(dp, rd);
-                            gen_mov_F1_vreg(dp, rm);
+                            gen_mov_F0_vreg(precision, rd);
+                            gen_mov_F1_vreg(precision, rm);
                             break;
                         case 10:
                         case 11:
                             /* Compare with zero */
-                            gen_mov_F0_vreg(dp, rd);
-                            gen_vfp_F1_ld0(dp);
+                            gen_mov_F0_vreg(precision, rd);
+                            gen_vfp_F1_ld0(precision);
                             break;
                         case 20:
                         case 21:
@@ -3707,7 +3726,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                         case 30:
                         case 31:
                             /* Source and destination the same.  */
-                            gen_mov_F0_vreg(dp, rd);
+                            gen_mov_F0_vreg(precision, rd);
                             break;
                         case 4:
                         case 5:
@@ -3717,7 +3736,8 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                              * As of FPv4 (ARM_FEATURE_VFP4) halfprec conversion is included.
                              * UNPREDICTABLE if bit 8 is set (we choose to UNDEF)
                              */
-                            if(dp || !(arm_feature(env, ARM_FEATURE_VFP_FP16) || arm_feature(env, ARM_FEATURE_VFP4))) {
+                            if(precision == DOUBLE_PRECISION ||
+                               !(arm_feature(env, ARM_FEATURE_VFP_FP16) || arm_feature(env, ARM_FEATURE_VFP4))) {
                                 return 1;
                             }
                             /* Otherwise fall through */
@@ -3725,13 +3745,13 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                         default:
                         case_default:
                             /* One source operand.  */
-                            gen_mov_F0_vreg(dp, rm);
+                            gen_mov_F0_vreg(precision, rm);
                             break;
                     }
                 } else {
                     /* Two source operands.  */
-                    gen_mov_F0_vreg(dp, rn);
-                    gen_mov_F1_vreg(dp, rm);
+                    gen_mov_F0_vreg(precision, rn);
+                    gen_mov_F1_vreg(precision, rm);
                 }
 
                 for(;;) {
@@ -3739,48 +3759,48 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                     switch(op) {
                         case 0: /* VMLA: fd + (fn * fm) */
                             /* Note that order of inputs to the add matters for NaNs */
-                            gen_vfp_F1_mul(dp);
-                            gen_mov_F0_vreg(dp, rd);
-                            gen_vfp_add(dp);
+                            gen_vfp_F1_mul(precision);
+                            gen_mov_F0_vreg(precision, rd);
+                            gen_vfp_add(precision);
                             break;
                         case 1: /* VMLS: fd + -(fn * fm) */
-                            gen_vfp_mul(dp);
-                            gen_vfp_F1_neg(dp);
-                            gen_mov_F0_vreg(dp, rd);
-                            gen_vfp_add(dp);
+                            gen_vfp_mul(precision);
+                            gen_vfp_F1_neg(precision);
+                            gen_mov_F0_vreg(precision, rd);
+                            gen_vfp_add(precision);
                             break;
                         case 2: /* VNMLS: -fd + (fn * fm) */
                             /* Note that it isn't valid to replace (-A + B) with (B - A)
                              * or similar plausible looking simplifications
                              * because this will give wrong results for NaNs.
                              */
-                            gen_vfp_F1_mul(dp);
-                            gen_mov_F0_vreg(dp, rd);
-                            gen_vfp_neg(dp);
-                            gen_vfp_add(dp);
+                            gen_vfp_F1_mul(precision);
+                            gen_mov_F0_vreg(precision, rd);
+                            gen_vfp_neg(precision);
+                            gen_vfp_add(precision);
                             break;
                         case 3: /* VNMLA: -fd + -(fn * fm) */
-                            gen_vfp_mul(dp);
-                            gen_vfp_F1_neg(dp);
-                            gen_mov_F0_vreg(dp, rd);
-                            gen_vfp_neg(dp);
-                            gen_vfp_add(dp);
+                            gen_vfp_mul(precision);
+                            gen_vfp_F1_neg(precision);
+                            gen_mov_F0_vreg(precision, rd);
+                            gen_vfp_neg(precision);
+                            gen_vfp_add(precision);
                             break;
                         case 4: /* mul: fn * fm */
-                            gen_vfp_mul(dp);
+                            gen_vfp_mul(precision);
                             break;
                         case 5: /* nmul: -(fn * fm) */
-                            gen_vfp_mul(dp);
-                            gen_vfp_neg(dp);
+                            gen_vfp_mul(precision);
+                            gen_vfp_neg(precision);
                             break;
                         case 6: /* add: fn + fm */
-                            gen_vfp_add(dp);
+                            gen_vfp_add(precision);
                             break;
                         case 7: /* sub: fn - fm */
-                            gen_vfp_sub(dp);
+                            gen_vfp_sub(precision);
                             break;
                         case 8: /* div: fn / fm */
-                            gen_vfp_div(dp);
+                            gen_vfp_div(precision);
                             break;
                         case 10: /* VFNMA : fd = muladd(-fd,  fn, fm) */
                         case 11: /* VFNMS : fd = muladd(-fd, -fn, fm) */
@@ -3796,7 +3816,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                             if(!arm_feature(env, ARM_FEATURE_VFP4)) {
                                 return 1;
                             }
-                            if(dp) {
+                            if(precision == DOUBLE_PRECISION) {
                                 TCGv_ptr fpst;
                                 TCGv_i64 frd;
                                 if(op & 1) {
@@ -3804,7 +3824,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                                     gen_helper_vfp_negd(cpu_F0d, cpu_F0d);
                                 }
                                 frd = tcg_temp_new_i64();
-                                tcg_gen_ld_f64(frd, cpu_env, vfp_reg_offset(dp, rd));
+                                tcg_gen_ld_f64(frd, cpu_env, vfp_reg_offset(precision, rd));
                                 if(op & 2) {
                                     /* VFNMA, VFNMS */
                                     gen_helper_vfp_negd(frd, frd);
@@ -3821,7 +3841,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                                     gen_helper_vfp_negs(cpu_F0s, cpu_F0s);
                                 }
                                 frd = tcg_temp_new_i32();
-                                tcg_gen_ld_f32(frd, cpu_env, vfp_reg_offset(dp, rd));
+                                tcg_gen_ld_f32(frd, cpu_env, vfp_reg_offset(precision, rd));
                                 if(op & 2) {
                                     gen_helper_vfp_negs(frd, frd);
                                 }
@@ -3838,7 +3858,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
 
                             n = (insn << 12) & 0x80000000;
                             i = ((insn >> 12) & 0x70) | (insn & 0xf);
-                            if(dp) {
+                            if(precision == DOUBLE_PRECISION) {
                                 if(i & 0x40) {
                                     i |= 0x3f80;
                                 } else {
@@ -3862,13 +3882,13 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                                     /* no-op */
                                     break;
                                 case 1: /* abs */
-                                    gen_vfp_abs(dp);
+                                    gen_vfp_abs(precision);
                                     break;
                                 case 2: /* neg */
-                                    gen_vfp_neg(dp);
+                                    gen_vfp_neg(precision);
                                     break;
                                 case 3: /* sqrt */
-                                    gen_vfp_sqrt(dp);
+                                    gen_vfp_sqrt(precision);
                                     break;
                                 case 4: /* vcvtb.f32.f16 */
                                     tmp = gen_vfp_mrs();
@@ -3885,7 +3905,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                                 case 6: /* vcvtb.f16.f32 */
                                     tmp = tcg_temp_new_i32();
                                     gen_helper_vfp_fcvt_f32_to_f16(tmp, cpu_F0s, cpu_env);
-                                    gen_mov_F0_vreg(0, rd);
+                                    gen_mov_F0_vreg(SINGLE_PRECISION, rd);
                                     tmp2 = gen_vfp_mrs();
                                     tcg_gen_andi_i32(tmp2, tmp2, 0xffff0000);
                                     tcg_gen_or_i32(tmp, tmp, tmp2);
@@ -3896,7 +3916,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                                     tmp = tcg_temp_new_i32();
                                     gen_helper_vfp_fcvt_f32_to_f16(tmp, cpu_F0s, cpu_env);
                                     tcg_gen_shli_i32(tmp, tmp, 16);
-                                    gen_mov_F0_vreg(0, rd);
+                                    gen_mov_F0_vreg(SINGLE_PRECISION, rd);
                                     tmp2 = gen_vfp_mrs();
                                     tcg_gen_ext16u_i32(tmp2, tmp2);
                                     tcg_gen_or_i32(tmp, tmp, tmp2);
@@ -3904,22 +3924,22 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                                     gen_vfp_msr(tmp);
                                     break;
                                 case 8: /* cmp */
-                                    gen_vfp_cmp(dp);
+                                    gen_vfp_cmp(precision);
                                     break;
                                 case 9: /* cmpe */
-                                    gen_vfp_cmpe(dp);
+                                    gen_vfp_cmpe(precision);
                                     break;
                                 case 10: /* cmpz */
-                                    gen_vfp_cmp(dp);
+                                    gen_vfp_cmp(precision);
                                     break;
                                 case 11: /* cmpez */
-                                    gen_vfp_F1_ld0(dp);
-                                    gen_vfp_cmpe(dp);
+                                    gen_vfp_F1_ld0(precision);
+                                    gen_vfp_cmpe(precision);
                                     break;
                                 case 12: /* vrintr */
                                 {
                                     TCGv_ptr fpst = get_fpstatus_ptr(0);
-                                    if(dp) {
+                                    if(precision == DOUBLE_PRECISION) {
                                         gen_helper_rintd(cpu_F0d, cpu_F0d, fpst);
                                     } else {
                                         gen_helper_rints(cpu_F0s, cpu_F0s, fpst);
@@ -3932,7 +3952,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                                     TCGv_ptr fpst = get_fpstatus_ptr(0);
                                     TCGv_i32 tcg_rmode = tcg_const_i32(float_round_to_zero);
                                     gen_helper_set_rmode(tcg_rmode, tcg_rmode, fpst);
-                                    if(dp) {
+                                    if(precision == DOUBLE_PRECISION) {
                                         gen_helper_rintd(cpu_F0d, cpu_F0d, fpst);
                                     } else {
                                         gen_helper_rints(cpu_F0s, cpu_F0s, fpst);
@@ -3945,7 +3965,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                                 case 14: /* vrintx */
                                 {
                                     TCGv_ptr fpst = get_fpstatus_ptr(0);
-                                    if(dp) {
+                                    if(precision == DOUBLE_PRECISION) {
                                         gen_helper_rintd_exact(cpu_F0d, cpu_F0d, fpst);
                                     } else {
                                         gen_helper_rints_exact(cpu_F0s, cpu_F0s, fpst);
@@ -3954,77 +3974,77 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                                     break;
                                 }
                                 case 15: /* single<->double conversion */
-                                    if(dp) {
+                                    if(precision == DOUBLE_PRECISION) {
                                         gen_helper_vfp_fcvtsd(cpu_F0s, cpu_F0d, cpu_env);
                                     } else {
                                         gen_helper_vfp_fcvtds(cpu_F0d, cpu_F0s, cpu_env);
                                     }
                                     break;
                                 case 16: /* fuito */
-                                    gen_vfp_uito(dp, 0);
+                                    gen_vfp_uito(precision, 0);
                                     break;
                                 case 17: /* fsito */
-                                    gen_vfp_sito(dp, 0);
+                                    gen_vfp_sito(precision, 0);
                                     break;
                                 case 20: /* fshto */
                                     if(!arm_feature(env, ARM_FEATURE_VFP3)) {
                                         return 1;
                                     }
-                                    gen_vfp_shto(dp, 16 - rm, 0);
+                                    gen_vfp_shto(precision, 16 - rm, 0);
                                     break;
                                 case 21: /* fslto */
                                     if(!arm_feature(env, ARM_FEATURE_VFP3)) {
                                         return 1;
                                     }
-                                    gen_vfp_slto(dp, 32 - rm, 0);
+                                    gen_vfp_slto(precision, 32 - rm, 0);
                                     break;
                                 case 22: /* fuhto */
                                     if(!arm_feature(env, ARM_FEATURE_VFP3)) {
                                         return 1;
                                     }
-                                    gen_vfp_uhto(dp, 16 - rm, 0);
+                                    gen_vfp_uhto(precision, 16 - rm, 0);
                                     break;
                                 case 23: /* fulto */
                                     if(!arm_feature(env, ARM_FEATURE_VFP3)) {
                                         return 1;
                                     }
-                                    gen_vfp_ulto(dp, 32 - rm, 0);
+                                    gen_vfp_ulto(precision, 32 - rm, 0);
                                     break;
                                 case 24: /* ftoui */
-                                    gen_vfp_toui(dp, 0);
+                                    gen_vfp_toui(precision, 0);
                                     break;
                                 case 25: /* ftouiz */
-                                    gen_vfp_touiz(dp, 0);
+                                    gen_vfp_touiz(precision, 0);
                                     break;
                                 case 26: /* ftosi */
-                                    gen_vfp_tosi(dp, 0);
+                                    gen_vfp_tosi(precision, 0);
                                     break;
                                 case 27: /* ftosiz */
-                                    gen_vfp_tosiz(dp, 0);
+                                    gen_vfp_tosiz(precision, 0);
                                     break;
                                 case 28: /* ftosh */
                                     if(!arm_feature(env, ARM_FEATURE_VFP3)) {
                                         return 1;
                                     }
-                                    gen_vfp_tosh(dp, 16 - rm, 0);
+                                    gen_vfp_tosh(precision, 16 - rm, 0);
                                     break;
                                 case 29: /* ftosl */
                                     if(!arm_feature(env, ARM_FEATURE_VFP3)) {
                                         return 1;
                                     }
-                                    gen_vfp_tosl(dp, 32 - rm, 0);
+                                    gen_vfp_tosl(precision, 32 - rm, 0);
                                     break;
                                 case 30: /* ftouh */
                                     if(!arm_feature(env, ARM_FEATURE_VFP3)) {
                                         return 1;
                                     }
-                                    gen_vfp_touh(dp, 16 - rm, 0);
+                                    gen_vfp_touh(precision, 16 - rm, 0);
                                     break;
                                 case 31: /* ftoul */
                                     if(!arm_feature(env, ARM_FEATURE_VFP3)) {
                                         return 1;
                                     }
-                                    gen_vfp_toul(dp, 32 - rm, 0);
+                                    gen_vfp_toul(precision, 32 - rm, 0);
                                     break;
                                 default: /* undefined */
                                     return 1;
@@ -4037,14 +4057,18 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                     /* Write back the result.  */
                     if(op == 15 && (rn >= 8 && rn <= 11)) {
                         ; /* Comparison, do nothing.  */
-                    } else if(op == 15 && dp && ((rn & 0x1c) == 0x18)) {
+                    } else if(op == 15 && precision == DOUBLE_PRECISION && ((rn & 0x1c) == 0x18)) {
                         /* VCVT double to int: always integer result. */
-                        gen_mov_vreg_F0(0, rd);
+                        gen_mov_vreg_F0(SINGLE_PRECISION, rd);
                     } else if(op == 15 && rn == 15) {
                         /* conversion */
-                        gen_mov_vreg_F0(!dp, rd);
+                        if(precision == DOUBLE_PRECISION) {
+                            gen_mov_vreg_F0(SINGLE_PRECISION, rd);
+                        } else {
+                            gen_mov_vreg_F0(DOUBLE_PRECISION, rd);
+                        }
                     } else {
-                        gen_mov_vreg_F0(dp, rd);
+                        gen_mov_vreg_F0(precision, rd);
                     }
 
                     /* break out of the loop if we have finished  */
@@ -4056,7 +4080,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                         /* single source one-many */
                         while(veclen--) {
                             rd = ((rd + delta_d) & (bank_mask - 1)) | (rd & bank_mask);
-                            gen_mov_vreg_F0(dp, rd);
+                            gen_mov_vreg_F0(precision, rd);
                         }
                         break;
                     }
@@ -4067,14 +4091,14 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                     if(op == 15) {
                         /* One source operand.  */
                         rm = ((rm + delta_m) & (bank_mask - 1)) | (rm & bank_mask);
-                        gen_mov_F0_vreg(dp, rm);
+                        gen_mov_F0_vreg(precision, rm);
                     } else {
                         /* Two source operands.  */
                         rn = ((rn + delta_d) & (bank_mask - 1)) | (rn & bank_mask);
-                        gen_mov_F0_vreg(dp, rn);
+                        gen_mov_F0_vreg(precision, rn);
                         if(delta_m) {
                             rm = ((rm + delta_m) & (bank_mask - 1)) | (rm & bank_mask);
-                            gen_mov_F1_vreg(dp, rm);
+                            gen_mov_F1_vreg(precision, rm);
                         }
                     }
                 }
@@ -4086,7 +4110,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                 /* two-register transfer */
                 rn = (insn >> 16) & 0xf;
                 rd = (insn >> 12) & 0xf;
-                if(dp) {
+                if(precision == DOUBLE_PRECISION) {
                     VFP_DREG_M(rm, insn);
                 } else {
                     rm = VFP_SREG_M(insn);
@@ -4094,43 +4118,43 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
 
                 if(insn & ARM_CP_RW_BIT) {
                     /* vfp->arm */
-                    if(dp) {
-                        gen_mov_F0_vreg(0, rm * 2);
+                    if(precision == DOUBLE_PRECISION) {
+                        gen_mov_F0_vreg(SINGLE_PRECISION, rm * 2);
                         tmp = gen_vfp_mrs();
                         store_reg(s, rd, tmp);
-                        gen_mov_F0_vreg(0, rm * 2 + 1);
+                        gen_mov_F0_vreg(SINGLE_PRECISION, rm * 2 + 1);
                         tmp = gen_vfp_mrs();
                         store_reg(s, rn, tmp);
                     } else {
-                        gen_mov_F0_vreg(0, rm);
+                        gen_mov_F0_vreg(SINGLE_PRECISION, rm);
                         tmp = gen_vfp_mrs();
                         store_reg(s, rd, tmp);
-                        gen_mov_F0_vreg(0, rm + 1);
+                        gen_mov_F0_vreg(SINGLE_PRECISION, rm + 1);
                         tmp = gen_vfp_mrs();
                         store_reg(s, rn, tmp);
                     }
                 } else {
                     /* arm->vfp */
-                    if(dp) {
+                    if(precision == DOUBLE_PRECISION) {
                         tmp = load_reg(s, rd);
                         gen_vfp_msr(tmp);
-                        gen_mov_vreg_F0(0, rm * 2);
+                        gen_mov_vreg_F0(SINGLE_PRECISION, rm * 2);
                         tmp = load_reg(s, rn);
                         gen_vfp_msr(tmp);
-                        gen_mov_vreg_F0(0, rm * 2 + 1);
+                        gen_mov_vreg_F0(SINGLE_PRECISION, rm * 2 + 1);
                     } else {
                         tmp = load_reg(s, rd);
                         gen_vfp_msr(tmp);
-                        gen_mov_vreg_F0(0, rm);
+                        gen_mov_vreg_F0(SINGLE_PRECISION, rm);
                         tmp = load_reg(s, rn);
                         gen_vfp_msr(tmp);
-                        gen_mov_vreg_F0(0, rm + 1);
+                        gen_mov_vreg_F0(SINGLE_PRECISION, rm + 1);
                     }
                 }
             } else {
                 /* Load/store */
                 rn = (insn >> 16) & 0xf;
-                if(dp) {
+                if(precision == DOUBLE_PRECISION) {
                     VFP_DREG_D(rd, insn);
                 } else {
                     rd = VFP_SREG_D(insn);
@@ -4148,7 +4172,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                     int reg_count = insn & 0xFF;
                     int first_reg = 0;
 
-                    if(dp) {
+                    if(precision == DOUBLE_PRECISION) {
                         reg_count >>= 1;
                         first_reg = (insn >> 18) | ((insn >> 12) & 0xf);
                     } else {
@@ -4156,20 +4180,20 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                     }
 
                     TCGv_i64 zero;
-                    if(dp) {
+                    if(precision == DOUBLE_PRECISION) {
                         zero = tcg_const_i64(0);
                     } else {
                         zero = tcg_const_i32(0);
                     }
                     for(int i = 0; i < reg_count; ++i) {
                         int currentReg = i + first_reg;
-                        if(dp) {
-                            tcg_gen_st_i64(zero, cpu_env, vfp_reg_offset(dp, currentReg));
+                        if(precision == DOUBLE_PRECISION) {
+                            tcg_gen_st_i64(zero, cpu_env, vfp_reg_offset(precision, currentReg));
                         } else {
-                            tcg_gen_st_i32(zero, cpu_env, vfp_reg_offset(dp, currentReg));
+                            tcg_gen_st_i32(zero, cpu_env, vfp_reg_offset(precision, currentReg));
                         }
                     }
-                    if(dp) {
+                    if(precision == DOUBLE_PRECISION) {
                         tcg_temp_free_i64(zero);
                     } else {
                         tcg_temp_free_i32(zero);
@@ -4197,17 +4221,17 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                     }
                     tcg_gen_addi_i32(addr, addr, offset);
                     if(insn & (1 << 20)) {
-                        gen_vfp_ld(s, dp, addr);
-                        gen_mov_vreg_F0(dp, rd);
+                        gen_vfp_ld(s, precision, addr);
+                        gen_mov_vreg_F0(precision, rd);
                     } else {
-                        gen_mov_F0_vreg(dp, rd);
-                        gen_vfp_st(s, dp, addr);
+                        gen_mov_F0_vreg(precision, rd);
+                        gen_vfp_st(s, precision, addr);
                     }
                     tcg_temp_free_i32(addr);
                 } else {
                     /* load/store multiple */
                     int w = insn & (1 << 21);
-                    if(dp) {
+                    if(precision == DOUBLE_PRECISION) {
                         n = (insn >> 1) & 0x7f;
                     } else {
                         n = insn & 0xff;
@@ -4217,7 +4241,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                         /* P == U , W == 1  => UNDEF */
                         return 1;
                     }
-                    if(n == 0 || (rd + n) > 32 || (dp && n > 16)) {
+                    if(n == 0 || (rd + n) > 32 || (precision == DOUBLE_PRECISION && n > 16)) {
                         /* UNPREDICTABLE cases for bad immediates: we choose to
                          * UNDEF to avoid generating huge numbers of TCG ops
                          */
@@ -4239,7 +4263,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                         tcg_gen_addi_i32(addr, addr, -((insn & 0xff) << 2));
                     }
 
-                    if(dp) {
+                    if(precision == DOUBLE_PRECISION) {
                         offset = 8;
                     } else {
                         offset = 4;
@@ -4247,12 +4271,12 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                     for(i = 0; i < n; i++) {
                         if(insn & ARM_CP_RW_BIT) {
                             /* load */
-                            gen_vfp_ld(s, dp, addr);
-                            gen_mov_vreg_F0(dp, rd + i);
+                            gen_vfp_ld(s, precision, addr);
+                            gen_mov_vreg_F0(precision, rd + i);
                         } else {
                             /* store */
-                            gen_mov_F0_vreg(dp, rd + i);
-                            gen_vfp_st(s, dp, addr);
+                            gen_mov_F0_vreg(precision, rd + i);
+                            gen_vfp_st(s, precision, addr);
                         }
                         tcg_gen_addi_i32(addr, addr, offset);
                     }
@@ -4260,7 +4284,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                         /* writeback */
                         if(insn & (1 << 24)) {
                             offset = -offset * n;
-                        } else if(dp && (insn & 1)) {
+                        } else if(precision == DOUBLE_PRECISION && (insn & 1)) {
                             offset = 4;
                         } else {
                             offset = 0;
@@ -6360,15 +6384,15 @@ static int disas_neon_data_insn(CPUState *env, DisasContext *s, uint32_t insn)
                     tcg_gen_ld_f32(cpu_F0s, cpu_env, neon_reg_offset(rm, pass));
                     if(!(op & 1)) {
                         if(u) {
-                            gen_vfp_ulto(0, shift, 1);
+                            gen_vfp_ulto(SINGLE_PRECISION, shift, 1);
                         } else {
-                            gen_vfp_slto(0, shift, 1);
+                            gen_vfp_slto(SINGLE_PRECISION, shift, 1);
                         }
                     } else {
                         if(u) {
-                            gen_vfp_toul(0, shift, 1);
+                            gen_vfp_toul(SINGLE_PRECISION, shift, 1);
                         } else {
-                            gen_vfp_tosl(0, shift, 1);
+                            gen_vfp_tosl(SINGLE_PRECISION, shift, 1);
                         }
                     }
                     tcg_gen_st_f32(cpu_F0s, cpu_env, neon_reg_offset(rd, pass));
@@ -7231,10 +7255,10 @@ static int disas_neon_data_insn(CPUState *env, DisasContext *s, uint32_t insn)
                                     break;
                                 }
                                 case NEON_2RM_VABS_F:
-                                    gen_vfp_abs(0);
+                                    gen_vfp_abs(SINGLE_PRECISION);
                                     break;
                                 case NEON_2RM_VNEG_F:
-                                    gen_vfp_neg(0);
+                                    gen_vfp_neg(SINGLE_PRECISION);
                                     break;
                                 case NEON_2RM_VSWP:
                                     tmp2 = neon_load_reg(rd, pass);
@@ -7267,16 +7291,16 @@ static int disas_neon_data_insn(CPUState *env, DisasContext *s, uint32_t insn)
                                     gen_helper_rsqrte_f32(cpu_F0s, cpu_F0s, cpu_env);
                                     break;
                                 case NEON_2RM_VCVT_FS: /* VCVT.F32.S32 */
-                                    gen_vfp_sito(0, 1);
+                                    gen_vfp_sito(SINGLE_PRECISION, 1);
                                     break;
                                 case NEON_2RM_VCVT_FU: /* VCVT.F32.U32 */
-                                    gen_vfp_uito(0, 1);
+                                    gen_vfp_uito(SINGLE_PRECISION, 1);
                                     break;
                                 case NEON_2RM_VCVT_SF: /* VCVT.S32.F32 */
-                                    gen_vfp_tosiz(0, 1);
+                                    gen_vfp_tosiz(SINGLE_PRECISION, 1);
                                     break;
                                 case NEON_2RM_VCVT_UF: /* VCVT.U32.F32 */
-                                    gen_vfp_touiz(0, 1);
+                                    gen_vfp_touiz(SINGLE_PRECISION, 1);
                                     break;
                                 default:
                                     /* Reserved op values were caught by the

@@ -599,10 +599,10 @@ enum arm_cpu_mode {
     ARM_CPU_MODE_SVC26 = 0x03,
 };
 
-enum arm_op_size {
-    OP_16 = 1,
-    OP_32 = 2,
-    OP_64 = 3,
+enum arm_fp_precision {
+    HALF_PRECISION = 1,
+    SINGLE_PRECISION = 2,
+    DOUBLE_PRECISION = 3,
 };
 
 static inline bool in_user_mode(CPUState *env)
