@@ -4145,11 +4145,10 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                     }
 
                     /* T1 encoding */
-                    bool double_precision = ((insn >> 8) & 1) > 0;
                     int reg_count = insn & 0xFF;
                     int first_reg = 0;
 
-                    if(double_precision) {
+                    if(dp) {
                         reg_count >>= 1;
                         first_reg = (insn >> 18) | ((insn >> 12) & 0xf);
                     } else {
@@ -4157,20 +4156,20 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                     }
 
                     TCGv_i64 zero;
-                    if(double_precision) {
+                    if(dp) {
                         zero = tcg_const_i64(0);
                     } else {
                         zero = tcg_const_i32(0);
                     }
                     for(int i = 0; i < reg_count; ++i) {
                         int currentReg = i + first_reg;
-                        if(double_precision) {
-                            tcg_gen_st_i64(zero, cpu_env, vfp_reg_offset(true, currentReg));
+                        if(dp) {
+                            tcg_gen_st_i64(zero, cpu_env, vfp_reg_offset(dp, currentReg));
                         } else {
-                            tcg_gen_st_i32(zero, cpu_env, vfp_reg_offset(false, currentReg));
+                            tcg_gen_st_i32(zero, cpu_env, vfp_reg_offset(dp, currentReg));
                         }
                     }
-                    if(double_precision) {
+                    if(dp) {
                         tcg_temp_free_i64(zero);
                     } else {
                         tcg_temp_free_i32(zero);
