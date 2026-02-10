@@ -1222,14 +1222,33 @@ VFP_GEN_FIX(ulto)
 #define tcg_gen_st_f32 tcg_gen_st_i32
 #define tcg_gen_st_f64 tcg_gen_st_i64
 
-static inline void gen_vfp_ld(DisasContext *s, enum arm_fp_precision precision, TCGv addr)
+static inline void gen_vfp_ld(DisasContext *s, enum arm_fp_precision precision, TCGv addr, int reg)
 {
-    if(precision == DOUBLE_PRECISION) {
-        tcg_gen_qemu_ld64(cpu_F0d, addr, context_to_mmu_index(s));
-    } else {
-        tcg_gen_qemu_ld32u(cpu_F0s, addr, context_to_mmu_index(s));
+    switch(precision) {
+        case DOUBLE_PRECISION: {
+            TCGv_i64 tmp = tcg_temp_new_i64();
+            tcg_gen_qemu_ld64(tmp, addr, context_to_mmu_index(s));
+            tcg_gen_st_f64(tmp, cpu_env, vfp_reg_offset(precision, reg));
+            tcg_temp_free_i64(tmp);
+            break;
+        }
+        case SINGLE_PRECISION: {
+            TCGv_i32 tmp = tcg_temp_new_i32();
+            tcg_gen_qemu_ld32u(tmp, addr, context_to_mmu_index(s));
+            tcg_gen_st_f32(tmp, cpu_env, vfp_reg_offset(precision, reg));
+            tcg_temp_free_i32(tmp);
+            break;
+        }
+        case HALF_PRECISION: {
+            TCGv_i32 tmp = tcg_temp_new_i32();
+            tcg_gen_qemu_ld16u(tmp, addr, context_to_mmu_index(s));
+            tcg_gen_st_f32(tmp, cpu_env, vfp_reg_offset(precision, reg));
+            tcg_temp_free_i32(tmp);
+            break;
+        }
+        default:
+            tlib_abortf("%s: Invalid precision: %x", __FUNCTION__, precision);
     }
-    //  TODO: check halfprecision if applies
 }
 
 static inline void gen_vfp_st(DisasContext *s, enum arm_fp_precision precision, TCGv addr, int reg)
@@ -4246,8 +4265,8 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                     }
                     tcg_gen_addi_i32(addr, addr, offset);
                     if(insn & (1 << 20)) {
-                        gen_vfp_ld(s, precision, addr);
-                        gen_mov_vreg_F0(precision, rd);
+                        /* VLDR */
+                        gen_vfp_ld(s, precision, addr, rd);
                     } else {
                         /* VSTR */
                         gen_vfp_st(s, precision, addr, rd);
@@ -4296,8 +4315,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                     for(i = 0; i < n; i++) {
                         if(insn & ARM_CP_RW_BIT) {
                             /* load */
-                            gen_vfp_ld(s, precision, addr);
-                            gen_mov_vreg_F0(precision, rd + i);
+                            gen_vfp_ld(s, precision, addr, rd + i);
                         } else {
                             /* store */
                             gen_vfp_st(s, precision, addr, rd + i);
