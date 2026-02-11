@@ -355,8 +355,7 @@ enum riscv_additional_feature {
     RISCV_FEATURE_ZVE64D = 13,
     RISCV_FEATURE_ZACAS = 14,
     RISCV_FEATURE_SSCOFPMF = 15,
-    //  Please update the highest additional when adding a new member!
-    RISCV_FEATURE_HIGHEST_ADDITIONAL = RISCV_FEATURE_SSCOFPMF
+    RISCV_FEATURE_ONE_HIGHER_THAN_HIGHEST_ADDITIONAL
 };
 
 enum privilege_architecture {

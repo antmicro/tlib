@@ -114,7 +114,7 @@ EXC_VOID_1(tlib_allow_feature, uint32_t, feature_bit)
 
 void tlib_allow_additional_feature(uint32_t feature)
 {
-    if(feature > RISCV_FEATURE_HIGHEST_ADDITIONAL) {
+    if(feature > RISCV_FEATURE_ONE_HIGHER_THAN_HIGHEST_ADDITIONAL - 1) {
         tlib_abort("Invalid architecture set extension.");
         return;
     }
@@ -163,6 +163,11 @@ void tlib_allow_additional_feature(uint32_t feature)
         case RISCV_FEATURE_ZIFENCEI:
         case RISCV_FEATURE_ZACAS:
             //  No dependencies
+            break;
+
+        case RISCV_FEATURE_ONE_HIGHER_THAN_HIGHEST_ADDITIONAL:
+            // We should never reach here, as we are gated by if check
+            tlib_assert_not_reached();
             break;
     }
     cpu->additional_extensions |= 1U << extension;
