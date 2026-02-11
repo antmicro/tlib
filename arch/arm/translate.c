@@ -10245,6 +10245,10 @@ DO_TRANS_V_MAXMIN_V_FP(vminnmav, vminnmav)
 DO_TRANS_2OP(vadd, vadd)
 DO_TRANS_2OP(vsub, vsub)
 DO_TRANS_2OP(vmul, vmul)
+DO_TRANS_2OP(vhadd_s, vhadds)
+DO_TRANS_2OP(vhadd_u, vhaddu)
+DO_TRANS_2OP(vhsub_s, vhsubs)
+DO_TRANS_2OP(vhsub_u, vhsubu)
 
 static int trans_vpsel(DisasContext *s, arg_2op *a)
 {
@@ -11857,6 +11861,30 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     } else {
                         return trans_vmov_to_2gp(s, &a);
                     }
+                }
+                if(is_insn_vhadd_s(insn)) {
+                    ARCH(MVE);
+                    arg_2op args;
+                    mve_extract_2op(&args, insn);
+                    return trans_vhadd_s(s, &args);
+                }
+                if(is_insn_vhadd_u(insn)) {
+                    ARCH(MVE);
+                    arg_2op args;
+                    mve_extract_2op(&args, insn);
+                    return trans_vhadd_u(s, &args);
+                }
+                if(is_insn_vhsub_s(insn)) {
+                    ARCH(MVE);
+                    arg_2op args;
+                    mve_extract_2op(&args, insn);
+                    return trans_vhsub_s(s, &args);
+                }
+                if(is_insn_vhsub_u(insn)) {
+                    ARCH(MVE);
+                    arg_2op args;
+                    mve_extract_2op(&args, insn);
+                    return trans_vhsub_u(s, &args);
                 }
             }
 #endif

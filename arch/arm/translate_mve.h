@@ -507,6 +507,26 @@ static inline bool is_insn_vmov_2gp(uint32_t insn)
     return (insn & 0xFFA01FE0) == 0xEC000F00;
 }
 
+static inline bool is_insn_vhadd_s(uint32_t insn)
+{
+    return (insn & 0xFF811F51) == 0xEF000040;
+}
+
+static inline bool is_insn_vhadd_u(uint32_t insn)
+{
+    return (insn & 0xFF811F51) == 0xFF000040;
+}
+
+static inline bool is_insn_vhsub_s(uint32_t insn)
+{
+    return (insn & 0xFF811F51) == 0xEF000240;
+}
+
+static inline bool is_insn_vhsub_u(uint32_t insn)
+{
+    return (insn & 0xFF811F51) == 0xFF000240;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {

@@ -230,9 +230,40 @@ static void mergemask_sq(int64_t *d, int64_t r, uint16_t mask)
     DO_2OP(OP##h, 2, uint16_t, FN) \
     DO_2OP(OP##w, 4, uint32_t, FN)
 
+/* provide signed 2-op helpers for all sizes */
+#define DO_2OP_S(OP, FN)          \
+    DO_2OP(OP##b, 1, int8_t, FN)  \
+    DO_2OP(OP##h, 2, int16_t, FN) \
+    DO_2OP(OP##w, 4, int32_t, FN)
+
 DO_2OP_U(vadd, DO_ADD)
 DO_2OP_U(vsub, DO_SUB)
 DO_2OP_U(vmul, DO_MUL)
+
+static inline uint32_t do_vhadd_u(uint32_t n, uint32_t m)
+{
+    return ((uint64_t)n + m) >> 1;
+}
+
+static inline int32_t do_vhadd_s(int32_t n, int32_t m)
+{
+    return ((int64_t)n + m) >> 1;
+}
+
+static inline uint32_t do_vhsub_u(uint32_t n, uint32_t m)
+{
+    return ((uint64_t)n - m) >> 1;
+}
+
+static inline int32_t do_vhsub_s(int32_t n, int32_t m)
+{
+    return ((int64_t)n - m) >> 1;
+}
+
+DO_2OP_S(vhadds, do_vhadd_s)
+DO_2OP_U(vhaddu, do_vhadd_u)
+DO_2OP_S(vhsubs, do_vhsub_s)
+DO_2OP_U(vhsubu, do_vhsub_u)
 
 #define DO_2OP_SCALAR(OP, ESIZE, TYPE, FN)                                       \
     void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vn, uint32_t rm) \
