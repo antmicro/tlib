@@ -470,6 +470,46 @@ void generate_opcode_count_increment(CPUState *env, uint64_t opcode)
     }
 }
 
+void generate_pre_opcode_execution_hook(CPUState *env, uint64_t pc, uint64_t opcode)
+{
+    for(int hook_id = 0; hook_id < env->pre_opcode_execution_hooks_count; hook_id++) {
+        opcode_hook_mask_t opcode_def = env->pre_opcode_execution_hook_masks[hook_id];
+        if((opcode & opcode_def.mask) == opcode_def.value) {
+
+            TCGv_i32 tcg_hook_id = tcg_const_i32(hook_id);
+            TCGv_i64 tcg_pc = tcg_const_i64(pc);
+            TCGv_i64 tcg_opcode = tcg_const_i64(opcode);
+
+            gen_helper_handle_pre_opcode_execution_hook(tcg_hook_id, tcg_pc, tcg_opcode);
+
+            tcg_temp_free_i32(tcg_hook_id);
+            tcg_temp_free_i64(tcg_pc);
+            tcg_temp_free_i64(tcg_opcode);
+            break;
+        }
+    }
+}
+
+void generate_post_opcode_execution_hook(CPUState *env, uint64_t pc, uint64_t opcode)
+{
+    for(int hook_id = 0; hook_id < env->post_opcode_execution_hooks_count; hook_id++) {
+        opcode_hook_mask_t opcode_def = env->post_opcode_execution_hook_masks[hook_id];
+        if((opcode & opcode_def.mask) == opcode_def.value) {
+
+            TCGv_i32 tcg_hook_id = tcg_const_i32(hook_id);
+            TCGv_i64 tcg_pc = tcg_const_i64(pc);
+            TCGv_i64 tcg_opcode = tcg_const_i64(opcode);
+
+            gen_helper_handle_post_opcode_execution_hook(tcg_hook_id, tcg_pc, tcg_opcode);
+
+            tcg_temp_free_i32(tcg_hook_id);
+            tcg_temp_free_i64(tcg_pc);
+            tcg_temp_free_i64(tcg_opcode);
+            break;
+        }
+    }
+}
+
 void generate_stack_announcement_imm_i32(uint32_t addr, int type, bool clear_lsb)
 {
     TCGv jump_target = tcg_const_i32(addr);

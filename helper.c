@@ -171,6 +171,16 @@ uintptr_t HELPER(translate_page_aligned_address_and_fill_tlb_u128)(target_ulong 
     return translate_page_aligned_address_and_fill_tlb_u128(addr, mmu_idx, access, return_address);
 }
 
+void HELPER(handle_pre_opcode_execution_hook)(uint32_t id, uint64_t pc, uint64_t opcode)
+{
+    tlib_handle_pre_opcode_execution_hook(id, pc, opcode);
+}
+
+void HELPER(handle_post_opcode_execution_hook)(uint32_t id, uint64_t pc, uint64_t opcode)
+{
+    tlib_handle_post_opcode_execution_hook(id, pc, opcode);
+}
+
 void HELPER(abort_message)(void *message)
 {
     tlib_abortf("%s", (const char *)message);

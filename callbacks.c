@@ -113,6 +113,10 @@ DEFAULT_INT_HANDLER4(int32_t tlib_mmu_fault_external_handler, uint64_t addr, int
 DEFAULT_VOID_HANDLER4(void tlib_profiler_announce_stack_change, uint64_t current_address, uint64_t return_address,
                       uint64_t instructions_count, int32_t is_frame_add)
 
+DEFAULT_VOID_HANDLER3(void tlib_handle_pre_opcode_execution_hook, uint32_t id, uint64_t pc, uint64_t opcode)
+
+DEFAULT_VOID_HANDLER3(void tlib_handle_post_opcode_execution_hook, uint32_t id, uint64_t pc, uint64_t opcode)
+
 DEFAULT_VOID_HANDLER1(void tlib_profiler_announce_context_change, uint64_t context_id)
 
 DEFAULT_VOID_HANDLER4(void tlib_profiler_announce_stack_pointer_change, uint64_t address, uint64_t old_stack_pointer,

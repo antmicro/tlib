@@ -28,6 +28,9 @@ DEF_HELPER_3(translate_page_aligned_address_and_fill_tlb_u32, uintptr, tl, i32, 
 DEF_HELPER_3(translate_page_aligned_address_and_fill_tlb_u64, uintptr, tl, i32, i32)
 DEF_HELPER_3(translate_page_aligned_address_and_fill_tlb_u128, uintptr, tl, i32, i32)
 
+DEF_HELPER_3(handle_pre_opcode_execution_hook, void, i32, i64, i64)
+DEF_HELPER_3(handle_post_opcode_execution_hook, void, i32, i64, i64)
+
 DEF_HELPER_1(abort_message, void, ptr)
 
 #include "def-helper.h"

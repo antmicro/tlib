@@ -57,12 +57,6 @@ typedef struct custom_instruction_descriptor_t {
 } custom_instruction_descriptor_t;
 #define CPU_CUSTOM_INSTRUCTIONS_LIMIT 256
 
-typedef struct opcode_hook_mask_t {
-    target_ulong mask;
-    target_ulong value;
-} opcode_hook_mask_t;
-#define CPU_HOOKS_MASKS_LIMIT 256
-
 #define MAX_CSR_ID    0xFFF
 #define CSRS_PER_SLOT 64
 #define CSRS_SLOTS    (MAX_CSR_ID + 1) / CSRS_PER_SLOT
@@ -249,14 +243,6 @@ struct CPUState {
     bool is_pre_stack_access_hook_enabled;
 
     CPU_COMMON
-
-    int8_t are_post_opcode_execution_hooks_enabled;
-    int32_t post_opcode_execution_hooks_count;
-    opcode_hook_mask_t post_opcode_execution_hook_masks[CPU_HOOKS_MASKS_LIMIT];
-
-    int8_t are_pre_opcode_execution_hooks_enabled;
-    int32_t pre_opcode_execution_hooks_count;
-    opcode_hook_mask_t pre_opcode_execution_hook_masks[CPU_HOOKS_MASKS_LIMIT];
 
     int8_t are_post_gpr_access_hooks_enabled;
     uint32_t post_gpr_access_hook_mask;

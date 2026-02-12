@@ -387,6 +387,8 @@ void free_all_page_descriptors(void);
 void code_gen_free(void);
 
 void generate_opcode_count_increment(CPUState *, uint64_t);
+void generate_pre_opcode_execution_hook(CPUState *env, uint64_t pc, uint64_t opcode);
+void generate_post_opcode_execution_hook(CPUState *env, uint64_t pc, uint64_t opcode);
 void generate_stack_announcement_imm_i32(uint32_t addr, int type, bool clear_lsb);
 void generate_stack_announcement_imm_i64(uint64_t addr, int type, bool clear_lsb);
 void generate_stack_announcement(TCGv pc, int type, bool clear_lsb);

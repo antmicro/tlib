@@ -104,6 +104,11 @@ int tlib_get_window_privileges(uint64_t id);
 
 uint64_t tlib_get_mmu_window_addend(uint64_t id);
 
+void tlib_enable_pre_opcode_execution_hooks(uint32_t value);
+uint32_t tlib_install_pre_opcode_execution_hook(uint64_t mask, uint64_t value);
+void tlib_enable_post_opcode_execution_hooks(uint32_t value);
+uint32_t tlib_install_post_opcode_execution_hook(uint64_t mask, uint64_t value);
+
 //  Defined in 'arch/*/cpu_registers.c'.
 uint32_t tlib_get_register_value_32(int reg_number);
 void tlib_set_register_value_32(int reg_number, uint32_t value);
