@@ -1331,6 +1331,12 @@ static void do_interrupt_v7m(CPUState *env)
             return;
         case EXCP_IRQ:
             env->v7m.exception = tlib_nvic_acknowledge_irq();
+            if(env->v7m.exception == 0) {
+                //  We were notified of an IRQ but there isn't one anymore - this can happen if the interrupt was triggered right
+                //  before an instruction (eg. a write to BASEPRI) that makes us ignore the interrupt
+                tlib_printf(LOG_LEVEL_DEBUG, "Spurious NVIC IRQ ignored");
+                return;
+            }
             if(env->v7m.has_trustzone) {
                 /* If we have TrustZone, NVIC_ITNSx determines the security state
                  * the hardware IRQ is taken to */
