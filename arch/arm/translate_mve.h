@@ -527,6 +527,26 @@ static inline bool is_insn_vhsub_u(uint32_t insn)
     return (insn & 0xFF811F51) == 0xFF000240;
 }
 
+static inline bool is_insn_vhadd_s_scalar(uint32_t insn)
+{
+    return (insn & 0xFF811F70) == 0xEE000F40;
+}
+
+static inline bool is_insn_vhadd_u_scalar(uint32_t insn)
+{
+    return (insn & 0xFF811F70) == 0xFE000F40;
+}
+
+static inline bool is_insn_vhsub_s_scalar(uint32_t insn)
+{
+    return (insn & 0xFF811F70) == 0xEE001F40;
+}
+
+static inline bool is_insn_vhsub_u_scalar(uint32_t insn)
+{
+    return (insn & 0xFF811F70) == 0xFE001F40;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {
