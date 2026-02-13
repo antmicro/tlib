@@ -13628,6 +13628,7 @@ static void disas_thumb_insn(CPUState *env, DisasContext *s)
             }
             break;
     }
+
     return;
 undef32:
     gen_exception_insn(s, 4, EXCP_UDEF);
@@ -13643,6 +13644,19 @@ int disas_insn(CPUState *env, DisasContext *dc)
 {
     target_ulong start_pc = dc->base.pc;
     tcg_gen_insn_start(start_pc, pack_condexec(dc));
+    uint64_t insn = 0;
+
+    if(unlikely(env->are_pre_opcode_execution_hooks_enabled || env->are_post_opcode_execution_hooks_enabled)) {
+        if(dc->thumb) {
+            insn = lduw_code(dc->base.pc);
+        } else {
+            insn = ldl_code(dc->base.pc);
+        }
+
+        if(env->are_pre_opcode_execution_hooks_enabled) {
+            generate_pre_opcode_execution_hook(env, dc->base.pc, insn);
+        }
+    }
 
     if(dc->thumb) {
         disas_thumb_insn(env, dc);
@@ -13656,6 +13670,11 @@ int disas_insn(CPUState *env, DisasContext *dc)
     } else {
         disas_arm_insn(env, dc);
     }
+
+    if(unlikely(env->are_post_opcode_execution_hooks_enabled)) {
+        generate_post_opcode_execution_hook(env, start_pc, insn);
+    }
+
     return dc->base.pc - start_pc;
 }
 
