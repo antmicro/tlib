@@ -678,6 +678,14 @@ DEF_HELPER_4(mve_vcadd270b, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vcadd270h, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vcadd270w, void, env, ptr, ptr, ptr)
 
+DEF_HELPER_4(mve_vhcadd90b, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vhcadd90h, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vhcadd90w, void, env, ptr, ptr, ptr)
+
+DEF_HELPER_4(mve_vhcadd270b, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vhcadd270h, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vhcadd270w, void, env, ptr, ptr, ptr)
+
 DEF_HELPER_4(mve_vadd_scalarb, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vadd_scalarh, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vadd_scalarw, void, env, ptr, ptr, i32)

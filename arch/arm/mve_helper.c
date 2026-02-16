@@ -1156,6 +1156,8 @@ DO_1OP_IMM(vorri, DO_ORRI)
 
 DO_VCADD_ALL(vcadd90, DO_SUB, DO_ADD)
 DO_VCADD_ALL(vcadd270, DO_ADD, DO_SUB)
+DO_VCADD_ALL(vhcadd90, do_vhsub_s, do_vhadd_s)
+DO_VCADD_ALL(vhcadd270, do_vhadd_s, do_vhsub_s)
 
 #undef DO_VCADD
 #undef DO_VCADD_ALL

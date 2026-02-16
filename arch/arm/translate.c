@@ -10278,6 +10278,8 @@ DO_TRANS_2OP(vhsub_s, vhsubs)
 DO_TRANS_2OP(vhsub_u, vhsubu)
 DO_TRANS_2OP(vcadd90, vcadd90)
 DO_TRANS_2OP(vcadd270, vcadd270)
+DO_TRANS_2OP(vhcadd90, vhcadd90)
+DO_TRANS_2OP(vhcadd270, vhcadd270)
 
 static int trans_vpsel(DisasContext *s, arg_2op *a)
 {
@@ -12050,6 +12052,18 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_2op args;
                     mve_extract_2op(&args, insn);
                     return trans_vcadd270(s, &args);
+                }
+                if(is_insn_vhcadd90(insn)) {
+                    ARCH(MVE);
+                    arg_2op args;
+                    mve_extract_2op(&args, insn);
+                    return trans_vhcadd90(s, &args);
+                }
+                if(is_insn_vhcadd270(insn)) {
+                    ARCH(MVE);
+                    arg_2op args;
+                    mve_extract_2op(&args, insn);
+                    return trans_vhcadd270(s, &args);
                 }
             }
 #endif
