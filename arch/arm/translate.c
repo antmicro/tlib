@@ -10276,6 +10276,8 @@ DO_TRANS_2OP(vhadd_s, vhadds)
 DO_TRANS_2OP(vhadd_u, vhaddu)
 DO_TRANS_2OP(vhsub_s, vhsubs)
 DO_TRANS_2OP(vhsub_u, vhsubu)
+DO_TRANS_2OP(vcadd90, vcadd90)
+DO_TRANS_2OP(vcadd270, vcadd270)
 
 static int trans_vpsel(DisasContext *s, arg_2op *a)
 {
@@ -12036,6 +12038,18 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     mve_extract_vmov_gp(&a, insn);
                     int from_gp = extract32(insn, 20, 1) == 0;
                     return trans_vmov_between_gp_vec(s, &a, from_gp);
+                }
+                if(is_insn_vcadd90(insn)) {
+                    ARCH(MVE);
+                    arg_2op args;
+                    mve_extract_2op(&args, insn);
+                    return trans_vcadd90(s, &args);
+                }
+                if(is_insn_vcadd270(insn)) {
+                    ARCH(MVE);
+                    arg_2op args;
+                    mve_extract_2op(&args, insn);
+                    return trans_vcadd270(s, &args);
                 }
             }
 #endif

@@ -1128,4 +1128,36 @@ DO_1OP_IMM(vorri, DO_ORRI)
 
 #undef DO_1OP_IMM
 
+#define DO_VCADD(OP, ESIZE, TYPE, FN0, FN1)                                   \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vn, void *vm) \
+    {                                                                         \
+        TYPE *d = vd, *n = vn, *m = vm;                                       \
+        uint16_t mask = mve_element_mask(env);                                \
+        unsigned e;                                                           \
+        TYPE r[16 / ESIZE];                                                   \
+        /* Calculate all results first to avoid overwriting inputs */         \
+        for(e = 0; e < 16 / ESIZE; e++) {                                     \
+            if(!(e & 1)) {                                                    \
+                r[e] = FN0(n[H##ESIZE(e)], m[H##ESIZE(e + 1)]);               \
+            } else {                                                          \
+                r[e] = FN1(n[H##ESIZE(e)], m[H##ESIZE(e - 1)]);               \
+            }                                                                 \
+        }                                                                     \
+        for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                     \
+            mergemask(&d[H##ESIZE(e)], r[e], mask);                           \
+        }                                                                     \
+        mve_advance_vpt(env);                                                 \
+    }
+
+#define DO_VCADD_ALL(OP, FN0, FN1)        \
+    DO_VCADD(OP##b, 1, int8_t, FN0, FN1)  \
+    DO_VCADD(OP##h, 2, int16_t, FN0, FN1) \
+    DO_VCADD(OP##w, 4, int32_t, FN0, FN1)
+
+DO_VCADD_ALL(vcadd90, DO_SUB, DO_ADD)
+DO_VCADD_ALL(vcadd270, DO_ADD, DO_SUB)
+
+#undef DO_VCADD
+#undef DO_VCADD_ALL
+
 #endif
