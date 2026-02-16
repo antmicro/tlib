@@ -485,7 +485,6 @@ void generate_pre_opcode_execution_hook(CPUState *env, uint64_t pc, uint64_t opc
             tcg_temp_free_i32(tcg_hook_id);
             tcg_temp_free_i64(tcg_pc);
             tcg_temp_free_i64(tcg_opcode);
-            break;
         }
     }
 }
@@ -505,7 +504,6 @@ void generate_post_opcode_execution_hook(CPUState *env, uint64_t pc, uint64_t op
             tcg_temp_free_i32(tcg_hook_id);
             tcg_temp_free_i64(tcg_pc);
             tcg_temp_free_i64(tcg_opcode);
-            break;
         }
     }
 }
