@@ -48,6 +48,12 @@ typedef enum TCGMemOp {
     MO_TE = MO_LE,
 #endif
 
+#if TARGET_LONG_BITS == 64
+    MO_TL = MO_64,
+#else
+    MO_TL = MO_32,
+#endif
+
     /* MO_UNALN accesses are never checked for alignment.
      * MO_ALIGN accesses will result in a call to the CPU's
      * do_unaligned_access hook if the guest address is not aligned.
@@ -91,18 +97,21 @@ typedef enum TCGMemOp {
     MO_SL = MO_SIGN | MO_32,
     MO_Q = MO_64,
 
+    MO_LETL = MO_LE | MO_TL,
     MO_LEUW = MO_LE | MO_UW,
     MO_LEUL = MO_LE | MO_UL,
     MO_LESW = MO_LE | MO_SW,
     MO_LESL = MO_LE | MO_SL,
     MO_LEQ = MO_LE | MO_Q,
 
+    MO_BETL = MO_BE | MO_TL,
     MO_BEUW = MO_BE | MO_UW,
     MO_BEUL = MO_BE | MO_UL,
     MO_BESW = MO_BE | MO_SW,
     MO_BESL = MO_BE | MO_SL,
     MO_BEQ = MO_BE | MO_Q,
 
+    MO_TETL = MO_TE | MO_TL,
     MO_TEUW = MO_TE | MO_UW,
     MO_TEUL = MO_TE | MO_UL,
     MO_TESW = MO_TE | MO_SW,
