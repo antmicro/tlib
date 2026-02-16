@@ -115,6 +115,8 @@ extern CPUState *cpu;
 #define tcg_gen_mulu2_tl             tcg_gen_mulu2_i64
 #define tcg_gen_muls2_tl             tcg_gen_muls2_i64
 #define tcg_gen_movcond_tl           tcg_gen_movcond_i64
+#define tcg_gen_qemu_ld_tl           tcg_gen_qemu_ld_i64
+#define tcg_gen_qemu_st_tl           tcg_gen_qemu_st_i64
 #else
 #define tcg_gen_movi_tl              tcg_gen_movi_i32
 #define tcg_gen_mov_tl               tcg_gen_mov_i32
