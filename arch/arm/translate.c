@@ -9975,18 +9975,18 @@ static bool do_2shift(DisasContext *s, arg_2shift *a, MVEGenTwoOpShiftFn fn, boo
     return do_2shift_vec(s, a, fn, negateshift, NULL);
 }
 
-#define DO_2SHIFT_FP(INSN, FN)                               \
+#define DO_TRANS_2SHIFT_FP(INSN, FN)                         \
     static bool trans_##INSN(DisasContext *s, arg_2shift *a) \
     {                                                        \
         return do_2shift(s, a, gen_helper_mve_##FN, false);  \
     }
 
-DO_2SHIFT_FP(vcvt_sf_fixed, vcvt_sf)
-DO_2SHIFT_FP(vcvt_uf_fixed, vcvt_uf)
-DO_2SHIFT_FP(vcvt_fs_fixed, vcvt_fs)
-DO_2SHIFT_FP(vcvt_fu_fixed, vcvt_fu)
+DO_TRANS_2SHIFT_FP(vcvt_sf_fixed, vcvt_sf)
+DO_TRANS_2SHIFT_FP(vcvt_uf_fixed, vcvt_uf)
+DO_TRANS_2SHIFT_FP(vcvt_fs_fixed, vcvt_fs)
+DO_TRANS_2SHIFT_FP(vcvt_fu_fixed, vcvt_fu)
 
-#undef DO_2SHIFT_FP
+#undef DO_TRANS_2SHIFT_FP
 
 #define DO_TRANS_2OP_FP(INSN, FN)                                \
     static int glue(trans_, INSN)(DisasContext * s, arg_2op * a) \
