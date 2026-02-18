@@ -2082,15 +2082,16 @@ static int get_phys_addr_mpu(CPUState *env, uint32_t address, int access_type, i
 
         base = env->cp15.c6_base_address[n];
         mask = (1ull << size) - 1;
+        if(base & mask) {
+            // Misaligned base addr to region, force it to be aligned
+            tlib_printf(LOG_LEVEL_DEBUG, "Base address 0x%x is not naturally aligned for size 0x%x, adjusting to 0x%x", base, size, base & (~mask));
+            base = base & (~mask);
+        }
 
         if((address & TARGET_PAGE_MASK) == (base & TARGET_PAGE_MASK)) {
             page_contains_mpu_region = true;
         }
 
-        if(base & mask) {
-            /* Misaligned base addr to region */
-            continue;
-        }
         /* Check if the region is enabled */
         if(address >= base && address <= base + mask) {
             /* Check subregions, only if region size is equal to or bigger than 256 bytes (region size = 2^size) */
