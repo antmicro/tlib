@@ -253,23 +253,27 @@ void gen_mve_vpst(DisasContext *s, uint32_t mask);
  * Vector load/store register (encodings T5, T6, T7)
  * VLDRB, VLDRH, VLDRW, VSTRB, VSTRH, VSTRW
  */
-static inline bool is_insn_vldst(uint32_t insn)
-{
-    return (insn & 0xEE401E00) == 0xEC000E00;
-}
-
 static inline bool is_insn_vldr_vstr(uint32_t insn)
 {
-    if((insn & 0xFE001E00) == 0xEC001E00) {
-        uint32_t p = extract32(insn, 24, 1);
-        uint32_t w = extract32(insn, 21, 1);
+    uint32_t p = extract32(insn, 24, 1);
+    uint32_t w = extract32(insn, 21, 1);
+    bool related_encoding = p == 0 && w == 0;
 
-        /* P == 0 && W == 0 is related encodings */
+    return !related_encoding && (insn & 0xFE001E00) == 0xEC001E00;
+}
 
-        return (p == 0 && w == 1) || p == 1;
-    }
+/*
+ * Vector load/store register (encodings T1, T2)
+ * VLDRB, VLDRH, VLDRW, VSTRB, VSTRH, VSTRW
+ */
+static inline bool is_insn_vldr_vstr_widening(uint32_t insn)
+{
+    uint32_t p = extract32(insn, 24, 1);
+    uint32_t w = extract32(insn, 21, 1);
+    uint32_t size = extract32(insn, 7, 2);
+    bool related_encoding = (p == 0 && w == 0) || size == 3;
 
-    return false;
+    return !related_encoding && (insn & 0xEE401E00) == 0xEC000E00;
 }
 
 static inline bool is_insn_vadd(uint32_t insn)
@@ -917,7 +921,7 @@ static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 }
 
 /* Extract arguments of widening/narrowing loads/stores */
-static void mve_extract_vldst_wn(arg_vldr_vstr *a, uint32_t insn)
+static void mve_extract_vldr_vstr_widening(arg_vldr_vstr *a, uint32_t insn)
 {
     a->rn = extract32(insn, 16, 3);
     a->l = extract32(insn, 20, 1);
