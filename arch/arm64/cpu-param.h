@@ -7,6 +7,15 @@
 
 #pragma once
 
+#ifdef TARGET_ARMV7
+
+//  TODO: TGAU: #93583 Verify 32 vs 40 when implementing LPAE
+#define TARGET_PHYS_ADDR_SPACE_BITS 32
+#define TARGET_PAGE_BITS            10  //  1k
+#define NB_MMU_MODES                4
+
+#else
+
 #ifdef TARGET_AARCH64
 #define TARGET_PHYS_ADDR_SPACE_BITS 52
 #else
@@ -14,5 +23,5 @@
 #endif
 
 #define TARGET_PAGE_BITS 12  //  4k
-
-#define NB_MMU_MODES 15
+#define NB_MMU_MODES     15
+#endif

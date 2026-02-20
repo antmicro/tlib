@@ -117,13 +117,17 @@ string (TOLOWER "${TARGET_ARCH}" TARGET_ACTUAL_ARCH)
 
 if("${TARGET_ACTUAL_ARCH}" STREQUAL "arm-m")
     set (TARGET_ACTUAL_ARCH "arm")
-    set (ARM_M_DEF -DTARGET_PROTO_ARM_M=1)
+    set (ARM_EXTRA_DEF -DTARGET_PROTO_ARM_M=1)
 elseif("${TARGET_ACTUAL_ARCH}" STREQUAL "ppc64")
     set (TARGET_ACTUAL_ARCH "ppc")
 elseif("${TARGET_ACTUAL_ARCH}" STREQUAL "riscv64")
     set (TARGET_ACTUAL_ARCH "riscv")
 elseif("${TARGET_ACTUAL_ARCH}" STREQUAL "x86_64")
     set (TARGET_ACTUAL_ARCH "i386")
+elseif("${TARGET_ACTUAL_ARCH}" STREQUAL "arm-experimental")
+    set (TARGET_ACTUAL_ARCH "arm64")
+    # TODO: TGAU: Remove TARGET_ARM64 after fixing compilation errors due to undefined TARGET_AARCH64
+    set (ARM_EXTRA_DEF "-DTARGET_ARMV7")
 endif()
 
 # Let's make TARGET_ACTUAL_ARCH available in CMakes adding tlib subdirectory. Using PARENT_SCOPE
@@ -192,7 +196,7 @@ add_definitions (
 
     -DTARGET_LONG_BITS=${TARGET_WORD_SIZE}
     -DTARGET_INSN_START_EXTRA_WORDS=${TARGET_INSN_START_EXTRA_WORDS}
-    ${ARM_M_DEF}
+    ${ARM_EXTRA_DEF}
 
     -DTCG_TARGET_${HOST_ARCH_U}
     -DTLIB_COMMIT=${TLIB_COMMIT_SHA}

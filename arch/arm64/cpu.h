@@ -39,6 +39,13 @@
 #include "ttable.h"
 #include "cpu_common.h"
 
+#define TGAU_LOG_TODO(X) tlib_printf(LOG_LEVEL_ERROR, "%s:%d TODO: TGAU: %s", __func__, __LINE__, (X))
+#define TGAU_ABORT_TODO(X)                                            \
+    do {                                                              \
+        tlib_abortf("%s:%d TODO: TGAU: %s", __func__, __LINE__, (X)); \
+        __builtin_unreachable();                                      \
+    } while(0)
+
 #define CPU_PC(env) (is_a64(env) ? env->pc : env->regs[15])
 
 //  Copied from our 'arm/helper.c'.
