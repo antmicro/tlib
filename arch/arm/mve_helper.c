@@ -388,12 +388,12 @@ DO_VLDR(vldrw, uint32_t, 4, 4, ldl)
 
 //  TODO(MVE): Signed loads won't work. They need to have the sign bit retained.
 /* Widening loads, interpret as: load a byte to signed half-word */
-DO_VLDR(vldrb_sh, int16_t, 1, 2, ldb)
-DO_VLDR(vldrb_sw, int32_t, 1, 4, ldb)
-DO_VLDR(vldrb_uh, uint16_t, 1, 2, ldb)
-DO_VLDR(vldrb_uw, uint32_t, 1, 4, ldb)
-DO_VLDR(vldrh_sw, int32_t, 2, 4, ldw)
-DO_VLDR(vldrh_uw, uint32_t, 2, 4, ldw)
+DO_VLDR(vldrb_sh, int16_t, 2, 1, ldb)
+DO_VLDR(vldrb_sw, int32_t, 4, 1, ldb)
+DO_VLDR(vldrb_uh, uint16_t, 2, 1, ldb)
+DO_VLDR(vldrb_uw, uint32_t, 4, 1, ldb)
+DO_VLDR(vldrh_sw, int32_t, 4, 2, ldw)
+DO_VLDR(vldrh_uw, uint32_t, 4, 2, ldw)
 
 #define DO_VSTR(OP, TYPE, MSIZE, ESIZE, ST_TYPE)                                  \
     void HELPER(glue(mve_, OP))(CPUState * env, void *vd, uint32_t addr)          \
