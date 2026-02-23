@@ -355,45 +355,48 @@ DO_2OP(vmullpbw, 8, uint64_t, DO_VMULLPBW)
 DO_2OP(vmullptw, 8, uint64_t, DO_VMULLPTW)
 
 /* For loads, predicated lanes are zeroed instead of keeping their old values */
-#define DO_VLDR(OP, TYPE, ESIZE, MSIZE, LD_TYPE)                                                 \
-    void HELPER(glue(mve_, OP))(CPUState * env, void *vd, uint32_t addr)                         \
-    {                                                                                            \
-        TYPE *d = vd;                                                                            \
-        uint16_t mask = mve_element_mask(env);                                                   \
-        uint16_t eci_mask = mve_eci_mask(env);                                                   \
-        unsigned int e;                                                                          \
-        /*                                                                                       \
-         * R_SXTM allows the dest reg to become UNKNOWN for abandoned                            \
-         * beats so we don't care if we update part of the dest and                              \
-         * then take an exception.                                                               \
-         */                                                                                      \
-        for(e = 0; e < (16 / ESIZE); e++) {                                                      \
-            if(eci_mask & 1) {                                                                   \
-                if(mask & 1) {                                                                   \
-                    d[e] = __inner_##LD_TYPE##_err_mmu(addr, cpu_mmu_index(env), NULL, GETPC()); \
-                } else {                                                                         \
-                    d[e] = 0;                                                                    \
-                }                                                                                \
-            }                                                                                    \
-            addr += MSIZE;                                                                       \
-            mask >>= ESIZE;                                                                      \
-            eci_mask >>= ESIZE;                                                                  \
-        }                                                                                        \
-        mve_advance_vpt(env);                                                                    \
+#define DO_VLDR(OP, MTYPE, MSIZE, ETYPE, ESIZE, LD_TYPE)                                                    \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vd, uint32_t addr)                                    \
+    {                                                                                                       \
+        ETYPE *d = vd;                                                                                      \
+        uint16_t mask = mve_element_mask(env);                                                              \
+        uint16_t eci_mask = mve_eci_mask(env);                                                              \
+        unsigned int e;                                                                                     \
+        /*                                                                                                  \
+         * R_SXTM allows the dest reg to become UNKNOWN for abandoned                                       \
+         * beats so we don't care if we update part of the dest and                                         \
+         * then take an exception.                                                                          \
+         */                                                                                                 \
+        for(e = 0; e < (16 / ESIZE); e++) {                                                                 \
+            if(eci_mask & 1) {                                                                              \
+                if(mask & 1) {                                                                              \
+                    /* MTYPE: Used to cast the softmmu return type to signed int if widening is expected */ \
+                    /* ETYPE: Size after widening */                                                        \
+                    MTYPE loaded = __inner_##LD_TYPE##_err_mmu(addr, cpu_mmu_index(env), NULL, GETPC());    \
+                    ETYPE result = (ETYPE)loaded;                                                           \
+                    d[e] = result;                                                                          \
+                } else {                                                                                    \
+                    d[e] = 0;                                                                               \
+                }                                                                                           \
+            }                                                                                               \
+            addr += MSIZE;                                                                                  \
+            mask >>= ESIZE;                                                                                 \
+            eci_mask >>= ESIZE;                                                                             \
+        }                                                                                                   \
+        mve_advance_vpt(env);                                                                               \
     }
 
-DO_VLDR(vldrb, uint8_t, 1, 1, ldb)
-DO_VLDR(vldrh, uint16_t, 2, 2, ldw)
-DO_VLDR(vldrw, uint32_t, 4, 4, ldl)
+DO_VLDR(vldrb, uint8_t, 1, uint8_t, 1, ldb)
+DO_VLDR(vldrh, uint16_t, 2, uint16_t, 2, ldw)
+DO_VLDR(vldrw, uint32_t, 4, uint32_t, 4, ldl)
 
-//  TODO(MVE): Signed loads won't work. They need to have the sign bit retained.
 /* Widening loads, interpret as: load a byte to signed half-word */
-DO_VLDR(vldrb_sh, int16_t, 2, 1, ldb)
-DO_VLDR(vldrb_sw, int32_t, 4, 1, ldb)
-DO_VLDR(vldrb_uh, uint16_t, 2, 1, ldb)
-DO_VLDR(vldrb_uw, uint32_t, 4, 1, ldb)
-DO_VLDR(vldrh_sw, int32_t, 4, 2, ldw)
-DO_VLDR(vldrh_uw, uint32_t, 4, 2, ldw)
+DO_VLDR(vldrb_sh, int8_t, 1, int16_t, 2, ldb)
+DO_VLDR(vldrb_sw, int8_t, 1, int32_t, 4, ldb)
+DO_VLDR(vldrb_uh, uint8_t, 1, uint16_t, 2, ldb)
+DO_VLDR(vldrb_uw, uint8_t, 1, uint32_t, 4, ldb)
+DO_VLDR(vldrh_sw, int16_t, 2, int32_t, 4, ldw)
+DO_VLDR(vldrh_uw, uint16_t, 2, uint32_t, 4, ldw)
 
 #define DO_VSTR(OP, TYPE, MSIZE, ESIZE, ST_TYPE)                                  \
     void HELPER(glue(mve_, OP))(CPUState * env, void *vd, uint32_t addr)          \
