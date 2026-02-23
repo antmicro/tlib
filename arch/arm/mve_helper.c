@@ -217,7 +217,7 @@ static void mergemask_sq(int64_t *d, int64_t r, uint16_t mask)
     {                                                                             \
         TYPE *d = vd, *n = vn, *m = vm;                                           \
         uint16_t mask = mve_element_mask(env);                                    \
-        unsigned e;                                                               \
+        unsigned int e;                                                           \
         for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                         \
             mergemask(&d[H##ESIZE(e)], FN(n[H##ESIZE(e)], m[H##ESIZE(e)]), mask); \
         }                                                                         \
@@ -271,7 +271,7 @@ DO_2OP_U(vhsubu, do_vhsub_u)
         TYPE *d = vd, *n = vn;                                                   \
         TYPE m = rm;                                                             \
         uint16_t mask = mve_element_mask(env);                                   \
-        unsigned e;                                                              \
+        unsigned int e;                                                          \
         for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                        \
             mergemask(&d[H##ESIZE(e)], FN(n[H##ESIZE(e)], m), mask);             \
         }                                                                        \
@@ -305,7 +305,7 @@ DO_2OP_SCALAR_U(vhsubu_scalar, do_vhsub_u)
         TYPE *d = vd;                                                                            \
         uint16_t mask = mve_element_mask(env);                                                   \
         uint16_t eci_mask = mve_eci_mask(env);                                                   \
-        unsigned e;                                                                              \
+        unsigned int e;                                                                          \
         /*                                                                                       \
          * R_SXTM allows the dest reg to become UNKNOWN for abandoned                            \
          * beats so we don't care if we update part of the dest and                              \
@@ -344,7 +344,7 @@ DO_VLDR(vldrh_uw, uint32_t, 2, 4, ldw)
     {                                                                             \
         TYPE *d = vd;                                                             \
         uint16_t mask = mve_element_mask(env);                                    \
-        unsigned e;                                                               \
+        unsigned int e;                                                           \
         for(e = 0; e < (16 / ESIZE); e++) {                                       \
             if(mask & 1) {                                                        \
                 __inner_##ST_TYPE##_mmu(addr, d[e], cpu_mmu_index(env), GETPC()); \
@@ -474,7 +474,7 @@ DO_VLD4W(vld43w, 6, 7, 8, 9)
         TYPE *d = vd, *n = vn;                                                   \
         TYPE r, m = rm;                                                          \
         uint16_t mask = mve_element_mask(env);                                   \
-        unsigned e;                                                              \
+        unsigned int e;                                                          \
         float_status *fpst;                                                      \
         float_status scratch_fpst;                                               \
         for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                        \
@@ -503,7 +503,7 @@ DO_2OP_FP_SCALAR(vfmul_scalars, 4, float32, float32_mul)
         TYPE *d = vd, *n = vn, *m = vm;                                                          \
         TYPE r;                                                                                  \
         uint16_t mask = mve_element_mask(env);                                                   \
-        unsigned e;                                                                              \
+        unsigned int e;                                                                          \
         float_status *fpst;                                                                      \
         float_status scratch_fpst;                                                               \
         for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                                        \
@@ -547,7 +547,7 @@ DO_2OP_FP(vminnmas, 4, float32, float32_minnuma)
         TYPE *d = vd, *n = vn;                                                   \
         TYPE r, m = rm;                                                          \
         uint16_t mask = mve_element_mask(env);                                   \
-        unsigned e;                                                              \
+        unsigned int e;                                                          \
         float_status *fpst;                                                      \
         float_status scratch_fpst;                                               \
         for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                        \
@@ -585,7 +585,7 @@ void HELPER(mve_vdup)(CPUState *env, void *vd, uint32_t val)
      */
     uint32_t *d = vd;
     uint16_t mask = mve_element_mask(env);
-    unsigned e;
+    unsigned int e;
     for(e = 0; e < 16 / 4; e++, mask >>= 4) {
         mergemask(&d[e], val, mask);
     }
@@ -656,7 +656,7 @@ void gen_mve_vpst(DisasContext *s, uint32_t mask)
         uint16_t eci_mask = mve_eci_mask(env);                                       \
         uint16_t beatpred = 0;                                                       \
         uint16_t emask = MAKE_64BIT_MASK(0, ESIZE);                                  \
-        unsigned e;                                                                  \
+        unsigned int e;                                                              \
         float_status *fpst;                                                          \
         float_status scratch_fpst;                                                   \
         bool r;                                                                      \
@@ -687,7 +687,7 @@ void gen_mve_vpst(DisasContext *s, uint32_t mask)
         uint16_t eci_mask = mve_eci_mask(env);                                       \
         uint16_t beatpred = 0;                                                       \
         uint16_t emask = MAKE_64BIT_MASK(0, ESIZE);                                  \
-        unsigned e;                                                                  \
+        unsigned int e;                                                              \
         float_status *fpst;                                                          \
         float_status scratch_fpst;                                                   \
         bool r;                                                                      \
@@ -747,7 +747,7 @@ DO_VCMP_FP_BOTH(vfcmp_les, vfcmp_le_scalars, 4, float32, !DO_GT32)
     {                                                                                        \
         TYPE *d = vd;                                                                        \
         uint16_t mask = mve_element_mask(env);                                               \
-        unsigned e;                                                                          \
+        unsigned int e;                                                                      \
         for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                                    \
             mergemask(&d[e], offset, mask);                                                  \
             offset = FN(offset, imm);                                                        \
@@ -761,7 +761,7 @@ DO_VCMP_FP_BOTH(vfcmp_les, vfcmp_le_scalars, 4, float32, !DO_GT32)
     {                                                                                                       \
         TYPE *d = vd;                                                                                       \
         uint16_t mask = mve_element_mask(env);                                                              \
-        unsigned e;                                                                                         \
+        unsigned int e;                                                                                     \
         for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                                                   \
             mergemask(&d[e], offset, mask);                                                                 \
             offset = FN(offset, wrap, imm);                                                                 \
@@ -806,7 +806,7 @@ DO_VIWDUP_ALL(vdwdup, do_sub_wrap)
     uint32_t HELPER(glue(mve_, OP))(CPUState * env, void *vm, uint32_t ra_in) \
     {                                                                         \
         uint16_t mask = mve_element_mask(env);                                \
-        unsigned e;                                                           \
+        unsigned int e;                                                       \
         TYPE *m = vm;                                                         \
         int64_t ra = (RATYPE)ra_in;                                           \
         for(e = 0; e < (16 / ESIZE); e++) {                                   \
@@ -869,7 +869,7 @@ DO_VMAXMINV(vminavw, 4, int32_t, uint32_t, do_mina)
     uint32_t HELPER(glue(mve_, OP))(CPUState * env, void *vm, uint32_t ra_in)            \
     {                                                                                    \
         uint16_t mask = mve_element_mask(env);                                           \
-        unsigned e;                                                                      \
+        unsigned int e;                                                                  \
         TYPE *m = vm;                                                                    \
         TYPE ra = (TYPE)ra_in;                                                           \
         float_status *fpst = ESIZE == 2 ? &env->vfp.fp_status_f16 : &env->vfp.fp_status; \
@@ -910,7 +910,7 @@ void HELPER(mve_vpsel)(CPUState *env, void *vd, void *vn, void *vm)
     uint64_t *d = vd, *n = vn, *m = vm;
     uint16_t mask = mve_element_mask(env);
     uint16_t p0 = FIELD_EX32(env->v7m.vpr, V7M_VPR, P0);
-    unsigned e;
+    unsigned int e;
     for(e = 0; e < 16 / 8; e++, mask >>= 8, p0 >>= 8) {
         uint64_t r = m[e];
         mergemask(&r, n[e], p0);
@@ -928,7 +928,7 @@ void HELPER(mve_vpsel)(CPUState *env, void *vd, void *vn, void *vm)
         TYPE *d = vd, *n = vn, *m = vm;                                         \
         TYPE r0, r1;                                                            \
         uint16_t mask = mve_element_mask(env);                                  \
-        unsigned e;                                                             \
+        unsigned int e;                                                         \
         float_status *fpst0, *fpst1;                                            \
         float_status scratch_fpst;                                              \
         /* We loop through pairs of elements at a time */                       \
@@ -986,7 +986,7 @@ DO_VCMLA(vcmul270s, 4, float32, 3, DO_VCMULS)
     {                                                               \
         TYPE *d = vd, *m = vm;                                      \
         uint16_t mask = mve_element_mask(env);                      \
-        unsigned e;                                                 \
+        unsigned int e;                                             \
         for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {           \
             mergemask(&d[e], FN(m[e]), mask);                       \
         }                                                           \
@@ -1029,7 +1029,7 @@ DO_1OP(vfnegs, 8, uint64_t, DO_FNEGS)
         UTYPE *d = vd;                                              \
         STYPE *m = vm;                                              \
         uint16_t mask = mve_element_mask(env);                      \
-        unsigned e;                                                 \
+        unsigned int e;                                             \
         for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {           \
             UTYPE r = DO_ABS(m[e]);                                 \
             r = FN(d[e], r);                                        \
@@ -1078,7 +1078,7 @@ DO_1OP(vrev64w, 8, uint64_t, wswap64)
         TYPE *d = vd, *m = vm;                                                                     \
         TYPE r;                                                                                    \
         uint16_t mask = mve_element_mask(env);                                                     \
-        unsigned e;                                                                                \
+        unsigned int e;                                                                            \
         float_status *fpst;                                                                        \
         float_status scratch_fpst;                                                                 \
         for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                                          \
@@ -1109,7 +1109,7 @@ DO_VCVT_FIXED(vcvt_fu, 4, uint32_t, helper_vfp_touls)
     {                                                                    \
         uint64_t *da = vda;                                              \
         uint16_t mask = mve_element_mask(env);                           \
-        unsigned e;                                                      \
+        unsigned int e;                                                  \
         for(e = 0; e < 16 / 8; e++, mask >>= 8) {                        \
             mergemask(&da[e], FN(da[e], imm), mask);                     \
         }                                                                \
@@ -1134,7 +1134,7 @@ DO_1OP_IMM(vorri, DO_ORRI)
     {                                                                               \
         TYPE *d = vd, *m = vm;                                                      \
         uint16_t mask = mve_element_mask(env);                                      \
-        unsigned e;                                                                 \
+        unsigned int e;                                                             \
         for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                           \
             mergemask(&d[H##ESIZE(e)], FN(shift, m[H##ESIZE(e)]), mask);            \
         }                                                                           \
@@ -1146,7 +1146,7 @@ DO_1OP_IMM(vorri, DO_ORRI)
     {                                                                               \
         TYPE *d = vd, *m = vm;                                                      \
         uint16_t mask = mve_element_mask(env);                                      \
-        unsigned e;                                                                 \
+        unsigned int e;                                                             \
         bool qc = false;                                                            \
         for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                           \
             bool sat = false;                                                       \
@@ -1164,7 +1164,7 @@ DO_1OP_IMM(vorri, DO_ORRI)
     {                                                                         \
         TYPE *d = vd, *n = vn, *m = vm;                                       \
         uint16_t mask = mve_element_mask(env);                                \
-        unsigned e;                                                           \
+        unsigned int e;                                                       \
         bool qc = false;                                                      \
         for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                     \
             bool sat = false;                                                 \
@@ -1183,7 +1183,7 @@ DO_1OP_IMM(vorri, DO_ORRI)
     {                                                                         \
         TYPE *d = vd, *n = vn, *m = vm;                                       \
         uint16_t mask = mve_element_mask(env);                                \
-        unsigned e;                                                           \
+        unsigned int e;                                                       \
         TYPE r[16 / ESIZE];                                                   \
         /* Calculate all results first to avoid overwriting inputs */         \
         for(e = 0; e < 16 / ESIZE; e++) {                                     \
