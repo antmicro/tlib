@@ -1072,7 +1072,8 @@ ARMCPRegInfo aarch32_instructions[] = {
     ARM32_CP_REG_DEFINE(ATS1CUW,          15,   0,   7,   8,   3,   1, WO | INSTRUCTION)  // Address Translate Stage 1 Current state Unprivileged Write
     ARM32_CP_REG_DEFINE(ATS1HR,           15,   4,   7,   8,   0,   2, WO | INSTRUCTION)  // Address Translate Stage 1 Hyp mode Read
     ARM32_CP_REG_DEFINE(ATS1HW,           15,   4,   7,   8,   1,   2, WO | INSTRUCTION)  // Address Translate Stage 1 Hyp mode Write
-    ARM32_CP_REG_DEFINE(BPIALL,           15,   0,   7,   5,   6,   1, WO | INSTRUCTION)  // Branch Predictor Invalidate All
+    // TODO: TGAU: #93594 TLB flush shouldn't be necessary, but Linux userspace after fork breaks without this
+    ARM32_CP_REG_DEFINE(BPIALL,           15,   0,   7,   5,   6,   1, WO | INSTRUCTION, WRITEFN(tlbi_flush_all))  // Branch Predictor Invalidate All
     ARM32_CP_REG_DEFINE(BPIALLIS,         15,   0,   7,   1,   6,   1, WO | INSTRUCTION)  // Branch Predictor Invalidate All, Inner Shareable
     ARM32_CP_REG_DEFINE(BPIMVA,           15,   0,   7,   5,   7,   1, WO | INSTRUCTION)  // Branch Predictor Invalidate by VA
     ARM32_CP_REG_DEFINE(CFPRCTX,          15,   0,   7,   3,   4,   0, WO | INSTRUCTION)  // Control Flow Prediction Restriction by Context
@@ -1097,13 +1098,13 @@ ARMCPRegInfo aarch32_instructions[] = {
     ARM32_CP_REG_DEFINE(ITLBIALL,         15,   0,   8,   5,   0,   1, WO | INSTRUCTION)  // Instruction TLB Invalidate All
     ARM32_CP_REG_DEFINE(ITLBIASID,        15,   0,   8,   5,   2,   1, WO | INSTRUCTION)  // Instruction TLB Invalidate by ASID match
     ARM32_CP_REG_DEFINE(ITLBIMVA,         15,   0,   8,   5,   1,   1, WO | INSTRUCTION)  // Instruction TLB Invalidate by VA
-    ARM32_CP_REG_DEFINE(TLBIALL,          15,   0,   8,   7,   0,   1, WO | INSTRUCTION)  // TLB Invalidate All
+    ARM32_CP_REG_DEFINE(TLBIALL,          15,   0,   8,   7,   0,   1, WO | INSTRUCTION, WRITEFN(tlbi_flush_all))  // TLB Invalidate All
     ARM32_CP_REG_DEFINE(TLBIALLH,         15,   4,   8,   7,   0,   2, WO | INSTRUCTION)  // TLB Invalidate All, Hyp mode
     ARM32_CP_REG_DEFINE(TLBIALLHIS,       15,   4,   8,   3,   0,   2, WO | INSTRUCTION)  // TLB Invalidate All, Hyp mode, Inner Shareable
-    ARM32_CP_REG_DEFINE(TLBIALLIS,        15,   0,   8,   3,   0,   1, WO | INSTRUCTION)  // TLB Invalidate All, Inner Shareable
+    ARM32_CP_REG_DEFINE(TLBIALLIS,        15,   0,   8,   3,   0,   1, WO | INSTRUCTION, WRITEFN(tlbi_flush_all))  // TLB Invalidate All, Inner Shareable
     ARM32_CP_REG_DEFINE(TLBIALLNSNH,      15,   4,   8,   7,   4,   2, WO | INSTRUCTION)  // TLB Invalidate All, Non-Secure Non-Hyp
     ARM32_CP_REG_DEFINE(TLBIALLNSNHIS,    15,   4,   8,   3,   4,   2, WO | INSTRUCTION)  // TLB Invalidate All, Non-Secure Non-Hyp, Inner Shareable
-    ARM32_CP_REG_DEFINE(TLBIASID,         15,   0,   8,   7,   2,   1, WO | INSTRUCTION)  // TLB Invalidate by ASID match
+    ARM32_CP_REG_DEFINE(TLBIASID,         15,   0,   8,   7,   2,   1, WO | INSTRUCTION, WRITEFN(tlbi_flush_all))  // TLB Invalidate by ASID match
     ARM32_CP_REG_DEFINE(TLBIASIDIS,       15,   0,   8,   3,   2,   1, WO | INSTRUCTION)  // TLB Invalidate by ASID match, Inner Shareable
     ARM32_CP_REG_DEFINE(TLBIIPAS2,        15,   4,   8,   4,   1,   2, WO | INSTRUCTION)  // TLB Invalidate by Intermediate Physical Address, Stage 2
     ARM32_CP_REG_DEFINE(TLBIIPAS2IS,      15,   4,   8,   0,   1,   2, WO | INSTRUCTION)  // TLB Invalidate by Intermediate Physical Address, Stage 2, Inner Shareable
@@ -1111,7 +1112,7 @@ ARMCPRegInfo aarch32_instructions[] = {
     ARM32_CP_REG_DEFINE(TLBIIPAS2LIS,     15,   4,   8,   0,   5,   2, WO | INSTRUCTION)  // TLB Invalidate by Intermediate Physical Address, Stage 2, Last level, Inner Shareable
     ARM32_CP_REG_DEFINE(TLBIMVA,          15,   0,   8,   7,   1,   1, WO | INSTRUCTION)  // TLB Invalidate by VA
     ARM32_CP_REG_DEFINE(TLBIMVAA,         15,   0,   8,   7,   3,   1, WO | INSTRUCTION)  // TLB Invalidate by VA, All ASID
-    ARM32_CP_REG_DEFINE(TLBIMVAAIS,       15,   0,   8,   3,   3,   1, WO | INSTRUCTION)  // TLB Invalidate by VA, All ASID , Inner Shareable
+    ARM32_CP_REG_DEFINE(TLBIMVAAIS,       15,   0,   8,   3,   3,   1, WO | INSTRUCTION, WRITEFN(tlbi_flush_all))  // TLB Invalidate by VA, All ASID , Inner Shareable
     ARM32_CP_REG_DEFINE(TLBIMVAAL,        15,   0,   8,   7,   7,   1, WO | INSTRUCTION)  // TLB Invalidate by VA, All ASID , Last level
     ARM32_CP_REG_DEFINE(TLBIMVAALIS,      15,   0,   8,   3,   7,   1, WO | INSTRUCTION)  // TLB Invalidate by VA, All ASID , Last level, Inner Shareable
     ARM32_CP_REG_DEFINE(TLBIMVAH,         15,   4,   8,   7,   1,   2, WO | INSTRUCTION)  // TLB Invalidate by VA, Hyp mode
@@ -1947,12 +1948,33 @@ void cp_reg_add(CPUState *env, ARMCPRegInfo *reg_info)
     cp_reg_add_with_key(env, env->cp_regs, key, reg_info);
 }
 
+//  TODO: TGAU: XXX_FUNCTION(32, ...) doesn't work
+WRITE_FUNCTION(64, cp14_c6_teecr, {
+    value &= 1;
+    if(env->teecr != value) {
+        env->teecr = value;
+        tb_flush(env);
+    }
+})
+READ_FUNCTION(64, cp14_c6_teecr, env->teecr)
+
 /* Implementation defined registers.
  *
  * The 'op0' field is always 3 and 'crn' can only be either 11 or 15.
  */
 
 // clang-format off
+ARMCPRegInfo cortex_a9_regs[] =
+{
+    // The params are:  name                 cp, op1, crn, crm, op2, el, extra_type, ...
+    ARM32_CP_REG_DEFINE(TEECR,               14,   6,   0,   0,   0,  1,  RW | ARM_CP_FORCE_TB_END, RW_FNS(cp14_c6_teecr)) // Thumb EE Configuration Register
+    ARM32_CP_REG_DEFINE(TEEHBR,              14,   6,   1,   0,   0,  1,  RW, FIELD(teehbr))                               // Thumb EE Handler Base Register
+    ARM32_CP_REG_DEFINE(PCR,                 15,   0,  15,   0,   0,  1,  RW | IGNORED)                                    // Power Control Register
+    // TODO: TGAU: #93964 ARM implementation delegates this outside of tlib, but it resolves to 0xf8f00000 for Zynq-7000/Zedboard
+    // It should also be RW.
+    ARM32_CP_REG_DEFINE(CBAR,                15,   4,  15,   0,   0,  1,  RO, FIELD(cp15.c15_config_base_address), RESETVALUE(0xf8f00000))
+};
+
 ARMCPRegInfo cortex_a53_regs[] =
 {
     // The params are:   name           op0, op1, crn, crm, op2, el, extra_type, ...
@@ -2213,6 +2235,9 @@ ARMCPRegInfo mpu_registers[] = {
 void add_implementation_defined_registers(CPUState *env, uint32_t cpu_model_id)
 {
     switch(cpu_model_id) {
+        case ARM_CPUID_CORTEXA9:
+            cp_regs_add(env, cortex_a9_regs, ARM_CP_ARRAY_COUNT(cortex_a9_regs));
+            break;
         case ARM_CPUID_CORTEXA53:
             cp_regs_add(env, cortex_a53_regs, ARM_CP_ARRAY_COUNT(cortex_a53_regs));
             break;
@@ -2242,6 +2267,8 @@ void add_implementation_defined_registers(CPUState *env, uint32_t cpu_model_id)
 uint32_t get_implementation_defined_registers_count(uint32_t cpu_model_id)
 {
     switch(cpu_model_id) {
+        case ARM_CPUID_CORTEXA9:
+            return ARM_CP_ARRAY_COUNT(cortex_a9_regs);
         case ARM_CPUID_CORTEXA53:
             return ARM_CP_ARRAY_COUNT(cortex_a53_regs);
         case ARM_CPUID_CORTEXA55:

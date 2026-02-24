@@ -105,6 +105,73 @@ void tlib_arch_dispose()
 
 #include "cpu_names.h"
 
+/* Pre-v8 ARM */
+
+void cpu_init_a9(CPUState *env, uint32_t id)
+{
+    assert(id == ARM_CPUID_CORTEXA9);
+
+    //  The features and initialization are based on cpu_reset_model_id in arm/helper.c
+    set_feature(env, ARM_FEATURE_V4T);
+    set_feature(env, ARM_FEATURE_V5);
+    set_feature(env, ARM_FEATURE_V6);
+    set_feature(env, ARM_FEATURE_V6K);
+    set_feature(env, ARM_FEATURE_V7);
+    set_feature(env, ARM_FEATURE_VBAR);
+    set_feature(env, ARM_FEATURE_AUXCR);
+    set_feature(env, ARM_FEATURE_THUMB2);
+    set_feature(env, ARM_FEATURE_NEON);
+    set_feature(env, ARM_FEATURE_THUMB2EE);
+    /* Note that A9 supports the MP extensions even for
+     * A9UP and single-core A9MP (which are both different
+     * and valid configurations; we don't model A9UP).
+     */
+    set_feature(env, ARM_FEATURE_V7MP);
+
+    //  Extra flags/features added when porting to arm64 tlib
+    set_feature(env, ARM_FEATURE_A);
+    set_feature(env, ARM_FEATURE_THUMB_DSP);
+    set_feature(env, ARM_FEATURE_CBAR_RO);
+    set_feature(env, ARM_FEATURE_PMU);
+    set_feature(env, ARM_FEATURE_MVFR);
+
+    //  Initial register values, adapted from arm/helper.c and extended
+    //  Reference manuals:
+    //  CA9     R0P1: DDI0388B
+    //  CA9MP   R0P1: DDI0407B
+    //  CA9 FPU R0P0: DDI0408B
+
+    //  From CA9 3.1.1
+    env->arm_core_config.reset_sctlr = 0x00C50078;
+    env->arm_core_config.mpidr =
+        1 << 31;  //  High bit always set (3.3.5), rest handled in system_registers.c depending on MP index
+    env->arm_core_config.isar.id_pfr0 = 0x00001231;
+    env->arm_core_config.isar.id_pfr1 = 0x00000011;
+    env->arm_core_config.isar.id_dfr0 = 0x00010444;
+    env->arm_core_config.isar.id_mmfr0 = 0x00100103;
+    env->arm_core_config.isar.id_mmfr1 = 0x20000000;
+    env->arm_core_config.isar.id_mmfr2 = 0x01230000;
+    env->arm_core_config.isar.id_mmfr3 = 0x00002111;
+    env->arm_core_config.isar.id_isar0 = 0x00101111;
+    env->arm_core_config.isar.id_isar1 = 0x13112111;
+    env->arm_core_config.isar.id_isar2 = 0x21232041;
+    env->arm_core_config.isar.id_isar3 = 0x11112131;
+    env->arm_core_config.isar.id_isar4 = 0x00011142;
+    env->arm_core_config.ctr = 0x80038003;
+    env->arm_core_config.clidr = 0x09000003;
+
+    //  From arm/helper.c
+    env->arm_core_config.ccsidr[0] = 0xe00fe015; /* 16k L1 dcache. */
+    env->arm_core_config.ccsidr[1] = 0x200fe015; /* 16k L1 icache. */
+
+    //  From arm/helper.c
+    env->arm_core_config.reset_fpsid = 0x41034000;  //  CA9 FPU 2.4: 0x41033090
+    env->arm_core_config.isar.mvfr0 = 0x1111022;    //  CA9 FPU 2.4: 0x10110221
+    env->arm_core_config.isar.mvfr1 = 0x01111111;   //  CA9 FPU 2.4: 0x01000011
+}
+
+/* ARMv8 */
+
 void cpu_init_v8_2(CPUState *env, uint32_t id)
 {
     assert(id == ARM_CPUID_CORTEXA55 || id == ARM_CPUID_CORTEXA75 || id == ARM_CPUID_CORTEXA76 || id == ARM_CPUID_CORTEXA78);
@@ -456,6 +523,9 @@ static void cpu_init_core_config(CPUState *env, uint32_t id)
     env->arm_core_config.midr = id;
 
     switch(id) {
+        case ARM_CPUID_CORTEXA9:
+            cpu_init_a9(env, id);
+            break;
         case ARM_CPUID_CORTEXA53:
             cpu_init_a53(env, id);
             break;

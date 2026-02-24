@@ -9,7 +9,10 @@
 #include <stddef.h>
 #include <inttypes.h>
 
-//  From the core's "Main ID Register", i.e., MIDR_EL1.
+//  From the core's "Main ID Register", i.e., MIDR/MIDR_EL1.
+//  ARMv7
+#define ARM_CPUID_CORTEXA9 0x410fc090
+//  ARMv8
 #define ARM_CPUID_CORTEXA53 0x410fd034
 #define ARM_CPUID_CORTEXA55 0x411fd050
 #define ARM_CPUID_CORTEXA75 0x413fd0a1
@@ -19,6 +22,7 @@
 #define ARM_CPUID_NOT_FOUND 0x0
 
 static const struct arm_cpu_t arm_cpu_names[] = {
+    { ARM_CPUID_CORTEXA9,  "cortex-a9"  },
     { ARM_CPUID_CORTEXA53, "cortex-a53" },
     { ARM_CPUID_CORTEXA55, "cortex-a55" },
     { ARM_CPUID_CORTEXA75, "cortex-a75" },
