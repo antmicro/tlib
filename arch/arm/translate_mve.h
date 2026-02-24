@@ -723,6 +723,13 @@ static inline bool is_insn_vqrshl_u_scalar(uint32_t insn)
     return (insn & 0xFFB31FF0) == 0xFE331EE0;
 }
 
+static inline bool is_insn_vmla_vmlas(uint32_t insn)
+{
+    /* size == 3 is related encoding */
+    uint32_t size = extract32(insn, 20, 2);
+    return size != 3 && (insn & 0xEF810F70) == 0xEE010E40;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {

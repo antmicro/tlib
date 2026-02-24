@@ -1372,4 +1372,32 @@ DO_2SHIFT_SAT_S(vqrshli_s, DO_SQRSHL_OP)
 #undef DO_2SHIFT_SAT_U
 #undef DO_2SHIFT_SAT_S
 
+#define DO_2OP_ACC_SCALAR(OP, ESIZE, TYPE, FN)                                       \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vn, uint32_t rm)     \
+    {                                                                                \
+        TYPE *d = vd, *n = vn;                                                       \
+        TYPE m = rm;                                                                 \
+        uint16_t mask = mve_element_mask(env);                                       \
+        unsigned int e;                                                              \
+        for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                            \
+            mergemask(&d[H##ESIZE(e)], FN(d[H##ESIZE(e)], n[H##ESIZE(e)], m), mask); \
+        }                                                                            \
+        mve_advance_vpt(env);                                                        \
+    }
+
+#define DO_2OP_ACC_SCALAR_U(OP, FN)           \
+    DO_2OP_ACC_SCALAR(OP##b, 1, uint8_t, FN)  \
+    DO_2OP_ACC_SCALAR(OP##h, 2, uint16_t, FN) \
+    DO_2OP_ACC_SCALAR(OP##w, 4, uint32_t, FN)
+
+/* Vector by scalar plus vector */
+#define DO_VMLA(D, N, M) ((N) * (M) + (D))
+DO_2OP_ACC_SCALAR_U(vmla, DO_VMLA)
+#undef DO_VMLA
+
+/* Vector by vector plus scalar */
+#define DO_VMLAS(D, N, M) ((N) * (D) + (M))
+DO_2OP_ACC_SCALAR_U(vmlas, DO_VMLAS)
+#undef DO_VMLAS
+
 #endif

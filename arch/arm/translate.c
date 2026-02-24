@@ -10804,6 +10804,21 @@ static bool trans_vmov_between_gp_vec(DisasContext *s, arg_vmov_gp *a, bool from
     return TRANS_STATUS_SUCCESS;
 }
 
+#define DO_2OP_SCALAR(INSN, FN)                                       \
+    static bool glue(trans_, INSN)(DisasContext * s, arg_2scalar * a) \
+    {                                                                 \
+        static MVEGenTwoOpScalarFn *const fns[] = {                   \
+            gen_helper_mve_##FN##b,                                   \
+            gen_helper_mve_##FN##h,                                   \
+            gen_helper_mve_##FN##w,                                   \
+            NULL,                                                     \
+        };                                                            \
+        return do_2op_scalar(s, a, fns[a->size]);                     \
+    }
+
+DO_2OP_SCALAR(vmla, vmla)
+DO_2OP_SCALAR(vmlas, vmlas)
+
 #endif
 
 /* Translate a 32-bit thumb instruction.  Returns nonzero if the instruction
@@ -12380,6 +12395,18 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                             return trans_vcmple_scalar(s, &a);
                         default:
                             g_assert_not_reached();
+                    }
+                }
+                if(is_insn_vmla_vmlas(insn)) {
+                    ARCH(MVE);
+                    arg_2scalar a;
+                    mve_extract_2op_scalar(&a, insn);
+                    int is_vmlas = extract32(insn, 12, 1);
+
+                    if(is_vmlas) {
+                        return trans_vmlas(s, &a);
+                    } else {
+                        return trans_vmla(s, &a);
                     }
                 }
             }

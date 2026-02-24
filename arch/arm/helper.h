@@ -848,6 +848,14 @@ DEF_HELPER_3(mve_vcmpgt_scalarw, void, env, ptr, i32)
 DEF_HELPER_3(mve_vcmple_scalarb, void, env, ptr, i32)
 DEF_HELPER_3(mve_vcmple_scalarh, void, env, ptr, i32)
 DEF_HELPER_3(mve_vcmple_scalarw, void, env, ptr, i32)
+
+DEF_HELPER_4(mve_vmlab, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vmlah, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vmlaw, void, env, ptr, ptr, i32)
+
+DEF_HELPER_4(mve_vmlasb, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vmlash, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vmlasw, void, env, ptr, ptr, i32)
 #endif
 
 #include "def-helper.h"
