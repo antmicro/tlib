@@ -32,6 +32,12 @@
 #define DO_MIN(N, M) ((N) >= (M) ? (M) : (N))
 #define DO_ABS(N)    ((N) < 0 ? -(N) : (N))
 #define DO_NEG(N)    (-(N))
+#define DO_EQ(N, M)  ((N) == (M))
+#define DO_NE(N, M)  ((N) != (M))
+#define DO_GE(N, M)  ((N) >= (M))
+#define DO_LT(N, M)  ((N) < (M))
+#define DO_GT(N, M)  ((N) > (M))
+#define DO_LE(N, M)  ((N) <= (M))
 
 static uint16_t mve_eci_mask(CPUState *env)
 {
@@ -714,6 +720,78 @@ void gen_mve_vpst(DisasContext *s, uint32_t mask)
 #define DO_VCMP_FP_BOTH(VOP, SOP, ESIZE, TYPE, FN) \
     DO_VCMP_FP(VOP, ESIZE, TYPE, FN)               \
     DO_VCMP_FP_SCALAR(SOP, ESIZE, TYPE, FN)
+
+/*
+ * Vector comparison.
+ * P0 bits for non-executed beats (where eci_mask is 0) are unchanged.
+ * P0 bits for predicated lanes in executed beats (where mask is 0) are 0.
+ * P0 bits otherwise are updated with the results of the comparisons.
+ * We must also keep unchanged the MASK fields at the top of v7m.vpr.
+ */
+#define DO_VCMP(OP, ESIZE, TYPE, FN)                                                 \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vn, void *vm)                  \
+    {                                                                                \
+        TYPE *n = vn, *m = vm;                                                       \
+        uint16_t mask = mve_element_mask(env);                                       \
+        uint16_t eci_mask = mve_eci_mask(env);                                       \
+        uint16_t beatpred = 0;                                                       \
+        uint16_t emask = MAKE_64BIT_MASK(0, ESIZE);                                  \
+        unsigned e;                                                                  \
+        for(e = 0; e < 16 / ESIZE; e++) {                                            \
+            bool r = FN(n[H##ESIZE(e)], m[H##ESIZE(e)]);                             \
+            /* Comparison sets 0/1 bits for each byte in the element */              \
+            beatpred |= r * emask;                                                   \
+            emask <<= ESIZE;                                                         \
+        }                                                                            \
+        beatpred &= mask;                                                            \
+        env->v7m.vpr = (env->v7m.vpr & ~(uint32_t)eci_mask) | (beatpred & eci_mask); \
+        mve_advance_vpt(env);                                                        \
+    }
+
+#define DO_VCMP_SCALAR(OP, ESIZE, TYPE, FN)                                          \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vn, uint32_t rm)               \
+    {                                                                                \
+        TYPE *n = vn;                                                                \
+        uint16_t mask = mve_element_mask(env);                                       \
+        uint16_t eci_mask = mve_eci_mask(env);                                       \
+        uint16_t beatpred = 0;                                                       \
+        uint16_t emask = MAKE_64BIT_MASK(0, ESIZE);                                  \
+        unsigned e;                                                                  \
+        for(e = 0; e < 16 / ESIZE; e++) {                                            \
+            bool r = FN(n[H##ESIZE(e)], (TYPE)rm);                                   \
+            /* Comparison sets 0/1 bits for each byte in the element */              \
+            beatpred |= r * emask;                                                   \
+            emask <<= ESIZE;                                                         \
+        }                                                                            \
+        beatpred &= mask;                                                            \
+        env->v7m.vpr = (env->v7m.vpr & ~(uint32_t)eci_mask) | (beatpred & eci_mask); \
+        mve_advance_vpt(env);                                                        \
+    }
+
+#define DO_VCMP_S(OP, FN)                        \
+    DO_VCMP(OP##b, 1, int8_t, FN)                \
+    DO_VCMP(OP##h, 2, int16_t, FN)               \
+    DO_VCMP(OP##w, 4, int32_t, FN)               \
+    DO_VCMP_SCALAR(OP##_scalarb, 1, int8_t, FN)  \
+    DO_VCMP_SCALAR(OP##_scalarh, 2, int16_t, FN) \
+    DO_VCMP_SCALAR(OP##_scalarw, 4, int32_t, FN)
+
+#define DO_VCMP_U(OP, FN)                         \
+    DO_VCMP(OP##b, 1, uint8_t, FN)                \
+    DO_VCMP(OP##h, 2, uint16_t, FN)               \
+    DO_VCMP(OP##w, 4, uint32_t, FN)               \
+    DO_VCMP_SCALAR(OP##_scalarb, 1, uint8_t, FN)  \
+    DO_VCMP_SCALAR(OP##_scalarh, 2, uint16_t, FN) \
+    DO_VCMP_SCALAR(OP##_scalarw, 4, uint32_t, FN)
+
+DO_VCMP_U(vcmpeq, DO_EQ)
+DO_VCMP_U(vcmpne, DO_NE)
+DO_VCMP_U(vcmpcs, DO_GE)
+DO_VCMP_U(vcmphi, DO_GT)
+DO_VCMP_S(vcmpge, DO_GE)
+DO_VCMP_S(vcmplt, DO_LT)
+DO_VCMP_S(vcmpgt, DO_GT)
+DO_VCMP_S(vcmple, DO_LE)
 
 /*
  * Some care is needed here to get the correct result for the unordered case.

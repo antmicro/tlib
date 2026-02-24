@@ -342,6 +342,20 @@ static inline bool is_insn_vcmp_fp_scalar(uint32_t insn)
     return (insn & 0xEFF1EF50) == 0xEE310F40;
 }
 
+static inline bool is_insn_vcmp(uint32_t insn)
+{
+    uint32_t size = extract32(insn, 20, 2);
+    /* size == 3 is related encoding */
+    return size != 3 && (insn & 0xFF810F50) == 0xFE010F00;
+}
+
+static inline bool is_insn_vcmp_scalar(uint32_t insn)
+{
+    uint32_t size = extract32(insn, 20, 2);
+    /* size == 3 is related encoding */
+    return size != 3 && (insn & 0xFF810F50) == 0xFE010F40;
+}
+
 static inline bool is_insn_vidup(uint32_t insn)
 {
     uint32_t size = extract32(insn, 20, 2);
@@ -802,6 +816,24 @@ static void mve_extract_vctp(arg_vctp *a, uint32_t insn)
 static void mve_extract_vpst(arg_vpst *a, uint32_t insn)
 {
     a->mask = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+}
+
+/* Extract arguments of VCMP instruction */
+static void mve_extract_vcmp(arg_vcmp *a, uint32_t insn)
+{
+    a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));
+    a->qn = extract32(insn, 17, 3);
+    a->size = extract32(insn, 20, 2);
+    a->mask = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+}
+
+/* Extract arguments of VCMP scalar instruction */
+static void mve_extract_vcmp_scalar(arg_vcmp_scalar *a, uint32_t insn)
+{
+    a->mask = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    a->qn = extract32(insn, 17, 3);
+    a->size = extract32(insn, 20, 2);
+    a->rm = extract32(insn, 0, 4);
 }
 
 /* Extract arguments of VCMP floating-point instruction */

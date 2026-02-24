@@ -10183,6 +10183,39 @@ DO_TRANS_VCMP_FP(vfcmp_le, vfcmp_le)
 
 #undef DO_TRANS_VCMP_FP
 
+#define DO_VCMP(INSN, FN)                                                  \
+    static bool trans_##INSN(DisasContext *s, arg_vcmp *a)                 \
+    {                                                                      \
+        static MVEGenCmpFn *const fns[] = {                                \
+            gen_helper_mve_##FN##b,                                        \
+            gen_helper_mve_##FN##h,                                        \
+            gen_helper_mve_##FN##w,                                        \
+            NULL,                                                          \
+        };                                                                 \
+        return do_vcmp(s, a, fns[a->size]);                                \
+    }                                                                      \
+    static bool trans_##INSN##_scalar(DisasContext *s, arg_vcmp_scalar *a) \
+    {                                                                      \
+        static MVEGenScalarCmpFn *const fns[] = {                          \
+            gen_helper_mve_##FN##_scalarb,                                 \
+            gen_helper_mve_##FN##_scalarh,                                 \
+            gen_helper_mve_##FN##_scalarw,                                 \
+            NULL,                                                          \
+        };                                                                 \
+        return do_vcmp_scalar(s, a, fns[a->size]);                         \
+    }
+
+DO_VCMP(vcmpeq, vcmpeq)
+DO_VCMP(vcmpne, vcmpne)
+DO_VCMP(vcmpcs, vcmpcs)
+DO_VCMP(vcmphi, vcmphi)
+DO_VCMP(vcmpge, vcmpge)
+DO_VCMP(vcmplt, vcmplt)
+DO_VCMP(vcmpgt, vcmpgt)
+DO_VCMP(vcmple, vcmple)
+
+#undef DO_VCMP
+
 static int trans_vidup(DisasContext *s, arg_vidup *a)
 {
     static MVEGenVIDUPFn *const fns[] = {
@@ -12292,6 +12325,62 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_shl_scalar a;
                     mve_extract_2shift_scalar(&a, insn);
                     return trans_vqrshl_u_scalar(s, &a);
+                }
+                if(is_insn_vcmp(insn)) {
+                    ARCH(MVE);
+                    arg_vcmp a;
+                    mve_extract_vcmp(&a, insn);
+
+                    int variant =
+                        deposit32(deposit32(extract32(insn, 7, 1), 1, 31, extract32(insn, 12, 1)), 2, 30, extract32(insn, 0, 1));
+                    switch(variant) {
+                        case 0:  //  EQ
+                            return trans_vcmpeq(s, &a);
+                        case 1:  //  NE
+                            return trans_vcmpne(s, &a);
+                        case 2:  //  GE
+                            return trans_vcmpge(s, &a);
+                        case 3:  //  LT
+                            return trans_vcmplt(s, &a);
+                        case 4:  //  CS
+                            return trans_vcmpcs(s, &a);
+                        case 5:  //  HI
+                            return trans_vcmphi(s, &a);
+                        case 6:  //  GT
+                            return trans_vcmpgt(s, &a);
+                        case 7:  //  LE
+                            return trans_vcmple(s, &a);
+                        default:
+                            g_assert_not_reached();
+                    }
+                }
+                if(is_insn_vcmp_scalar(insn)) {
+                    ARCH(MVE);
+                    arg_vcmp_scalar a;
+                    mve_extract_vcmp_scalar(&a, insn);
+
+                    int variant =
+                        deposit32(deposit32(extract32(insn, 7, 1), 1, 31, extract32(insn, 12, 1)), 2, 30, extract32(insn, 5, 1));
+                    switch(variant) {
+                        case 0:  //  EQ
+                            return trans_vcmpeq_scalar(s, &a);
+                        case 1:  //  NE
+                            return trans_vcmpne_scalar(s, &a);
+                        case 2:  //  GE
+                            return trans_vcmpge_scalar(s, &a);
+                        case 3:  //  LT
+                            return trans_vcmplt_scalar(s, &a);
+                        case 4:  //  CS
+                            return trans_vcmpcs_scalar(s, &a);
+                        case 5:  //  HI
+                            return trans_vcmphi_scalar(s, &a);
+                        case 6:  //  GT
+                            return trans_vcmpgt_scalar(s, &a);
+                        case 7:  //  LE
+                            return trans_vcmple_scalar(s, &a);
+                        default:
+                            g_assert_not_reached();
+                    }
                 }
             }
 #endif
