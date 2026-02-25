@@ -321,11 +321,11 @@ static inline bool is_insn_vpst(uint32_t insn)
 
 static inline bool is_insn_vcmp_fp(uint32_t insn)
 {
-    uint32_t fca = extract32(insn, 0, 0);
-    uint32_t fcb = extract32(insn, 0, 0);
+    uint32_t fca = extract32(insn, 12, 1);
+    uint32_t fcb = extract32(insn, 0, 1);
 
-    /* fcA == 1 && fcB == 1 is related encodings */
-    if(fca == 1 && fcb == 1) {
+    /* fcA == 0 && fcB == 1 is related encodings */
+    if(fca == 0 && fcb == 1) {
         return false;
     }
     return (insn & 0xEFF1EF50) == 0xEE310F00;
