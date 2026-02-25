@@ -997,7 +997,6 @@ void HELPER(mve_vpsel)(CPUState *env, void *vd, void *vn, void *vm)
     mve_advance_vpt(env);
 }
 
-#define DO_VCMULH(N, M, S) float16_mul((N), (M), (S))
 #define DO_VCMULS(N, M, S) float32_mul((N), (M), (S))
 
 #define DO_VCMLA(OP, ESIZE, TYPE, ROT, FN)                                      \
