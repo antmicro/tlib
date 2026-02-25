@@ -807,6 +807,11 @@ static inline bool is_insn_vcmla(uint32_t insn)
     return (insn & 0xFE211F51) == 0xFC200840;
 }
 
+static inline bool is_insn_vfcadd(uint32_t insn)
+{
+    return (insn & 0xFEA11F51) == 0xFC800840;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {

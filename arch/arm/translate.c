@@ -10013,6 +10013,8 @@ DO_TRANS_2OP_FP(vcmla0, vcmla0)
 DO_TRANS_2OP_FP(vcmla90, vcmla90)
 DO_TRANS_2OP_FP(vcmla180, vcmla180)
 DO_TRANS_2OP_FP(vcmla270, vcmla270)
+DO_TRANS_2OP_FP(vfcadd90, vfcadd90)
+DO_TRANS_2OP_FP(vfcadd270, vfcadd270)
 
 #define DO_TRANS_2OP_FP_SCALAR(INSN, FN)                     \
     static int trans_##INSN(DisasContext *s, arg_2scalar *a) \
@@ -12590,6 +12592,21 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                             return trans_vcmpgt_scalar(s, &a);
                         case 7:  //  LE
                             return trans_vcmple_scalar(s, &a);
+                        default:
+                            g_assert_not_reached();
+                    }
+                }
+                if(is_insn_vfcadd(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op_fp_size_rev(&a, insn);
+
+                    uint32_t rot = extract32(insn, 24, 1);
+                    switch(rot) {
+                        case 0:
+                            return trans_vfcadd90(s, &a);
+                        case 1:
+                            return trans_vfcadd270(s, &a);
                         default:
                             g_assert_not_reached();
                     }

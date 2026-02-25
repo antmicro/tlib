@@ -892,6 +892,9 @@ DEF_HELPER_4(mve_vcmla0s, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vcmla90s, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vcmla180s, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vcmla270s, void, env, ptr, ptr, ptr)
+
+DEF_HELPER_4(mve_vfcadd90s, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vfcadd270s, void, env, ptr, ptr, ptr)
 #endif
 
 #include "def-helper.h"
