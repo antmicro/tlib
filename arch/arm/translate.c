@@ -10009,6 +10009,10 @@ DO_TRANS_2OP_FP(vmaxnm, vmaxnm)
 DO_TRANS_2OP_FP(vminnm, vminnm)
 DO_TRANS_2OP_FP(vmaxnma, vmaxnma)
 DO_TRANS_2OP_FP(vminnma, vminnma)
+DO_TRANS_2OP_FP(vcmla0, vcmla0)
+DO_TRANS_2OP_FP(vcmla90, vcmla90)
+DO_TRANS_2OP_FP(vcmla180, vcmla180)
+DO_TRANS_2OP_FP(vcmla270, vcmla270)
 
 #define DO_TRANS_2OP_FP_SCALAR(INSN, FN)                     \
     static int trans_##INSN(DisasContext *s, arg_2scalar *a) \
@@ -12539,6 +12543,25 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                             return trans_vcmpgt(s, &a);
                         case 7:  //  LE
                             return trans_vcmple(s, &a);
+                        default:
+                            g_assert_not_reached();
+                    }
+                }
+                if(is_insn_vcmla(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op_fp_size_rev(&a, insn);
+
+                    uint32_t rot = extract32(insn, 23, 2);
+                    switch(rot) {
+                        case 0:
+                            return trans_vcmla0(s, &a);
+                        case 1:
+                            return trans_vcmla90(s, &a);
+                        case 2:
+                            return trans_vcmla180(s, &a);
+                        case 3:
+                            return trans_vcmla270(s, &a);
                         default:
                             g_assert_not_reached();
                     }

@@ -997,7 +997,8 @@ void HELPER(mve_vpsel)(CPUState *env, void *vd, void *vn, void *vm)
     mve_advance_vpt(env);
 }
 
-#define DO_VCMULS(N, M, S) float32_mul((N), (M), (S))
+#define DO_VCMULS(N, M, D, S) float32_mul((N), (M), (S))
+#define DO_VCMLAS(N, M, D, S) float32_muladd(N, M, D, 0, S)
 
 #define DO_VCMLA(OP, ESIZE, TYPE, ROT, FN)                                      \
     void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vn, void *vm)   \
@@ -1025,20 +1026,20 @@ void HELPER(mve_vpsel)(CPUState *env, void *vd, void *vn, void *vm)
             }                                                                   \
             switch(ROT) {                                                       \
                 case 0:                                                         \
-                    r0 = FN(n[e], m[e], fpst0);                                 \
-                    r1 = FN(n[e], m[e + 1], fpst1);                             \
+                    r0 = FN(n[e], m[e], d[e], fpst0);                           \
+                    r1 = FN(n[e], m[e + 1], d[e + 1], fpst1);                   \
                     break;                                                      \
                 case 1:                                                         \
-                    r0 = FN(glue(TYPE, _chs)(n[e + 1]), m[e + 1], fpst0);       \
-                    r1 = FN(n[e + 1], m[e], fpst1);                             \
+                    r0 = FN(glue(TYPE, _chs)(n[e + 1]), m[e + 1], d[e], fpst0); \
+                    r1 = FN(n[e + 1], m[e], d[e + 1], fpst1);                   \
                     break;                                                      \
                 case 2:                                                         \
-                    r0 = FN(glue(TYPE, _chs)(n[e]), m[e], fpst0);               \
-                    r1 = FN(glue(TYPE, _chs)(n[e]), m[e + 1], fpst1);           \
+                    r0 = FN(glue(TYPE, _chs)(n[e]), m[e], d[e], fpst0);         \
+                    r1 = FN(glue(TYPE, _chs)(n[e]), m[e + 1], d[e + 1], fpst1); \
                     break;                                                      \
                 case 3:                                                         \
-                    r0 = FN(n[e + 1], m[e + 1], fpst0);                         \
-                    r1 = FN(glue(TYPE, _chs)(n[e + 1]), m[e], fpst1);           \
+                    r0 = FN(n[e + 1], m[e + 1], d[e], fpst0);                   \
+                    r1 = FN(glue(TYPE, _chs)(n[e + 1]), m[e], d[e + 1], fpst1); \
                     break;                                                      \
                 default:                                                        \
                     g_assert_not_reached();                                     \
@@ -1053,6 +1054,11 @@ DO_VCMLA(vcmul0s, 4, float32, 0, DO_VCMULS)
 DO_VCMLA(vcmul90s, 4, float32, 1, DO_VCMULS)
 DO_VCMLA(vcmul180s, 4, float32, 2, DO_VCMULS)
 DO_VCMLA(vcmul270s, 4, float32, 3, DO_VCMULS)
+
+DO_VCMLA(vcmla0s, 4, float32, 0, DO_VCMLAS)
+DO_VCMLA(vcmla90s, 4, float32, 1, DO_VCMLAS)
+DO_VCMLA(vcmla180s, 4, float32, 2, DO_VCMLAS)
+DO_VCMLA(vcmla270s, 4, float32, 3, DO_VCMLAS)
 
 #undef DO_VCMLA
 #undef DO_VCMULH

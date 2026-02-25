@@ -887,6 +887,11 @@ DEF_HELPER_4(mve_vmlsdavxw, i32, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vmladavub, i32, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vmladavuh, i32, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vmladavuw, i32, env, ptr, ptr, i32)
+
+DEF_HELPER_4(mve_vcmla0s, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vcmla90s, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vcmla180s, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vcmla270s, void, env, ptr, ptr, ptr)
 #endif
 
 #include "def-helper.h"

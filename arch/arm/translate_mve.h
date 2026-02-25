@@ -802,6 +802,11 @@ static inline bool is_insn_vmlsdav(uint32_t insn)
     return (insn & 0xEFF00FD1) == 0xEEF00E01;
 }
 
+static inline bool is_insn_vcmla(uint32_t insn)
+{
+    return (insn & 0xFE211F51) == 0xFC200840;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {
@@ -1129,4 +1134,18 @@ static void mve_extract_vmladav(arg_vmladav *a, uint32_t insn)
     a->qm = extract32(insn, 1, 3);
     a->qn = deposit32(extract32(insn, 17, 3), 3, 29, extract32(insn, 7, 1));
     a->rda = 2 * extract32(insn, 13, 3);
+}
+
+/* Extract arguments of VCMLA/VCADD floating-point instructions */
+static void mve_extract_2op_fp_size_rev(arg_2op *a, uint32_t insn)
+{
+    a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));
+    a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    a->qn = deposit32(extract32(insn, 17, 3), 3, 29, extract32(insn, 7, 1));
+    /*
+     * We have to swap it here because for most instruction size of 1 means F32
+     * but for some size of 0 means F32. We pass the size into `DO_TRANS_2OP_FP`
+     * where it expect size of 0 zero to mean F32.
+     */
+    a->size = extract32(insn, 20, 1) == 1 ? 0 : 1;
 }
