@@ -31,6 +31,7 @@ typedef void MVEGenVIWDUPFn(TCGv_i32, TCGv_ptr, TCGv_ptr, TCGv_i32, TCGv_i32, TC
 typedef void MVEGenVADDVFn(TCGv_i32, TCGv_ptr, TCGv_ptr, TCGv_i32);
 typedef void MVEGenOneOpFn(TCGv_ptr, TCGv_ptr, TCGv_ptr);
 typedef void MVEGenOneOpImmFn(TCGv_ptr, TCGv_ptr, TCGv_i64);
+typedef void MVEGenLongDualAccOpFn(TCGv_i64, TCGv_ptr, TCGv_ptr, TCGv_ptr, TCGv_i64);
 
 /* Note that the gvec expanders operate on offsets + sizes.  */
 typedef void GVecGen3Fn(unsigned, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
@@ -188,6 +189,24 @@ typedef struct {
     int h;  //  high (upper) d-register
     int u;  //  unsigned
 } arg_vmov_gp;
+
+/* Arguments of VMLA(L)DAV instruction */
+typedef struct {
+    /* General purpose register containing high bits of 64-bit value */
+    int rdahi;
+    /* General purpose register containing low bits of 64-bit value */
+    int rdalo;
+    /* Size of the operation (.S8/S16/S32/S64 suffix) */
+    int size;
+    /* First vector register used for operation */
+    int qn;
+    /* Second vector register used for operation */
+    int qm;
+    /* Exchange adjecent pairs of values in Qm */
+    int x;
+    /* Accumulate with existing register contents */
+    int a;
+} arg_vmlaldav;
 
 void gen_mve_vld40b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld41b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
@@ -730,6 +749,12 @@ static inline bool is_insn_vmla_vmlas(uint32_t insn)
     return size != 3 && (insn & 0xEF810F70) == 0xEE010E40;
 }
 
+static inline bool is_insn_vmlaldav_vmlsldav(uint32_t insn)
+{
+    uint32_t related = extract32(insn, 20, 3);
+    return related != 7 && (insn & 0xEF800F50) == 0xEE800E00;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {
@@ -1034,4 +1059,16 @@ static void mve_extract_2shift_scalar(arg_shl_scalar *a, uint32_t insn)
     a->qda = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
     a->rm = extract32(insn, 0, 4);
     a->size = extract32(insn, 18, 2);
+}
+
+/* Extract arguments of vmlaldav/vmlsldav instructions */
+static void mve_extract_vmlaldav(arg_vmlaldav *a, uint32_t insn)
+{
+    a->a = extract32(insn, 5, 1);
+    a->rdahi = 2 * extract32(insn, 20, 3) + 1;
+    a->x = extract32(insn, 12, 1);
+    a->size = extract32(insn, 16, 1) + 1;
+    a->rdalo = 2 * extract32(insn, 13, 3);
+    a->qm = extract32(insn, 1, 3);
+    a->qn = deposit32(extract32(insn, 17, 3), 3, 29, extract32(insn, 7, 1));
 }

@@ -1400,4 +1400,41 @@ DO_2OP_ACC_SCALAR_U(vmla, DO_VMLA)
 DO_2OP_ACC_SCALAR_U(vmlas, DO_VMLAS)
 #undef DO_VMLAS
 
+/*
+ * Multiply add long dual accumulate ops.
+ */
+#define DO_LDAV(OP, ESIZE, TYPE, XCHG, EVENACC, ODDACC)                             \
+    uint64_t HELPER(glue(mve_, OP))(CPUState * env, void *vn, void *vm, uint64_t a) \
+    {                                                                               \
+        uint16_t mask = mve_element_mask(env);                                      \
+        unsigned int e;                                                             \
+        TYPE *n = vn, *m = vm;                                                      \
+        for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                           \
+            if(mask & 1) {                                                          \
+                if(e & 1) {                                                         \
+                    a ODDACC(int64_t) n[H##ESIZE(e - 1 * XCHG)] * m[H##ESIZE(e)];   \
+                } else {                                                            \
+                    a EVENACC(int64_t) n[H##ESIZE(e + 1 * XCHG)] * m[H##ESIZE(e)];  \
+                }                                                                   \
+            }                                                                       \
+        }                                                                           \
+        mve_advance_vpt(env);                                                       \
+        return a;                                                                   \
+    }
+
+DO_LDAV(vmlaldavsh, 2, int16_t, false, +=, +=)
+DO_LDAV(vmlaldavxsh, 2, int16_t, true, +=, +=)
+DO_LDAV(vmlaldavsw, 4, int32_t, false, +=, +=)
+DO_LDAV(vmlaldavxsw, 4, int32_t, true, +=, +=)
+
+DO_LDAV(vmlaldavuh, 2, uint16_t, false, +=, +=)
+DO_LDAV(vmlaldavuw, 4, uint32_t, false, +=, +=)
+
+DO_LDAV(vmlsldavsh, 2, int16_t, false, +=, -=)
+DO_LDAV(vmlsldavxsh, 2, int16_t, true, +=, -=)
+DO_LDAV(vmlsldavsw, 4, int32_t, false, +=, -=)
+DO_LDAV(vmlsldavxsw, 4, int32_t, true, +=, -=)
+
+#undef DO_LDAV
+
 #endif

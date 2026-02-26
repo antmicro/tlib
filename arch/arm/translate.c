@@ -10819,6 +10819,114 @@ static bool trans_vmov_between_gp_vec(DisasContext *s, arg_vmov_gp *a, bool from
 DO_2OP_SCALAR(vmla, vmla)
 DO_2OP_SCALAR(vmlas, vmlas)
 
+static bool mve_skip_first_beat(DisasContext *s)
+{
+    /* Return true if PSR.ECI says we must skip the first beat of this insn */
+    switch(s->eci) {
+        case ECI_NONE:
+            return false;
+        case ECI_A0:
+        case ECI_A0A1:
+        case ECI_A0A1A2:
+        case ECI_A0A1A2B0:
+            return true;
+        default:
+            g_assert_not_reached();
+    }
+}
+
+static int do_long_dual_acc(DisasContext *s, arg_vmlaldav *a, MVEGenLongDualAccOpFn *fn)
+{
+    TCGv_ptr qn, qm;
+    TCGv_i64 rda_i, rda_o;
+    TCGv_i32 rdalo, rdahi;
+
+    if(!mve_check_qreg_bank(a->qn | a->qm) || !fn) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    /*
+     * rdahi == 13 is UNPREDICTABLE; rdahi == 15 is a related
+     * encoding; rdalo always has bit 0 clear so cannot be 13 or 15.
+     */
+    if(a->rdahi == 13 || a->rdahi == 15) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    qn = mve_qreg_ptr(a->qn);
+    qm = mve_qreg_ptr(a->qm);
+
+    /*
+     * This insn is subject to beat-wise execution. Partial execution
+     * of an A=0 (no-accumulate) insn which does not execute the first
+     * beat must start with the current rda value, not 0.
+     */
+    rda_o = tcg_temp_new_i64();
+    if(a->a || mve_skip_first_beat(s)) {
+        rda_i = rda_o;
+        rdalo = load_reg(s, a->rdalo);
+        rdahi = load_reg(s, a->rdahi);
+        tcg_gen_concat_i32_i64(rda_i, rdalo, rdahi);
+        tcg_temp_free_i32(rdahi);
+    } else {
+        rda_i = tcg_const_i64(0);
+    }
+
+    fn(rda_o, cpu_env, qn, qm, rda_i);
+
+    if(rda_i != rda_o) {
+        tcg_temp_free_i32(rda_i);
+    }
+    tcg_temp_free_i32(rda_o);
+    tcg_temp_free_ptr(qn);
+    tcg_temp_free_ptr(qm);
+
+    rdalo = tcg_temp_new_i32();
+    rdahi = tcg_temp_new_i32();
+    tcg_gen_extrl_i64_i32(rdalo, rda_o);
+    tcg_gen_extrh_i64_i32(rdahi, rda_o);
+    store_reg(s, a->rdalo, rdalo);
+    store_reg(s, a->rdahi, rdahi);
+
+    mve_update_eci(s);
+    return TRANS_STATUS_SUCCESS;
+}
+
+static int trans_vmlaldav_s(DisasContext *s, arg_vmlaldav *a)
+{
+    static MVEGenLongDualAccOpFn *const fns[4][2] = {
+
+        { NULL,                      NULL                       },
+        { gen_helper_mve_vmlaldavsh, gen_helper_mve_vmlaldavxsh },
+        { gen_helper_mve_vmlaldavsw, gen_helper_mve_vmlaldavxsw },
+        { NULL,                      NULL                       },
+    };
+    return do_long_dual_acc(s, a, fns[a->size][a->x]);
+}
+
+static int trans_vmlaldav_u(DisasContext *s, arg_vmlaldav *a)
+{
+    static MVEGenLongDualAccOpFn *const fns[4][2] = {
+        { NULL,                      NULL },
+        { gen_helper_mve_vmlaldavuh, NULL },
+        { gen_helper_mve_vmlaldavuw, NULL },
+        { NULL,                      NULL },
+    };
+    return do_long_dual_acc(s, a, fns[a->size][a->x]);
+}
+
+static int trans_vmlsldav(DisasContext *s, arg_vmlaldav *a)
+{
+    static MVEGenLongDualAccOpFn *const fns[4][2] = {
+        { NULL,                      NULL                       },
+        { gen_helper_mve_vmlsldavsh, gen_helper_mve_vmlsldavxsh },
+        { gen_helper_mve_vmlsldavsw, gen_helper_mve_vmlsldavxsw },
+        { NULL,                      NULL                       },
+    };
+    return do_long_dual_acc(s, a, fns[a->size][a->x]);
+}
 #endif
 
 /* Translate a 32-bit thumb instruction.  Returns nonzero if the instruction
@@ -12407,6 +12515,23 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                         return trans_vmlas(s, &a);
                     } else {
                         return trans_vmla(s, &a);
+                    }
+                }
+                if(is_insn_vmlaldav_vmlsldav(insn)) {
+                    ARCH(MVE);
+                    arg_vmlaldav a;
+                    mve_extract_vmlaldav(&a, insn);
+
+                    uint32_t subtract = extract32(insn, 0, 1);
+                    /* only make sense when subtract == 0 */
+                    uint32_t is_signed = extract32(insn, 28, 1) == 0;
+
+                    if(subtract) {
+                        return trans_vmlsldav(s, &a);
+                    } else if(is_signed) {
+                        return trans_vmlaldav_s(s, &a);
+                    } else {
+                        return trans_vmlaldav_u(s, &a);
                     }
                 }
             }
