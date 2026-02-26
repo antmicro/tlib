@@ -672,6 +672,10 @@ int get_phys_addr_pmsav8(CPUState *env, target_ulong address, int access_type, u
 inline int get_phys_addr(CPUState *env, target_ulong address, int access_type, int mmu_idx, uintptr_t return_address,
                          bool suppress_faults, target_ulong *phys_ptr, int *prot, target_ulong *page_size, int access_width)
 {
+    if(!arm_feature(env, ARM_FEATURE_V8)) {
+        return get_phys_addr_v7(env, address, access_type, mmu_idx, phys_ptr, prot, page_size, suppress_faults);
+    }
+
     ARMMMUIdx arm_mmu_idx = core_to_aa64_mmu_idx(mmu_idx);
     uint32_t el = arm_mmu_idx_to_el(arm_mmu_idx);
 

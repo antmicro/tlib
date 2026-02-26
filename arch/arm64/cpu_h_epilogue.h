@@ -173,6 +173,8 @@ int get_phys_addr(CPUState *env, target_ulong address, int access_type, int mmu_
 int get_phys_addr_v8(CPUState *env, target_ulong address, int access_type, int mmu_idx, uintptr_t return_address,
                      bool suppress_faults, target_ulong *phys_ptr, int *prot, target_ulong *page_size,
                      bool at_instruction_or_cache_maintenance);
+int get_phys_addr_v7(CPUState *env, uint32_t address, int access_type, int mmu_idx, target_ulong *phys_ptr, int *prot,
+                     target_ulong *page_size, int no_page_fault);
 uint32_t pmsav8_number_of_el1_regions(CPUState *env);
 uint32_t pmsav8_number_of_el2_regions(CPUState *env);
 int process_interrupt_v8a(int interrupt_request, CPUState *env);

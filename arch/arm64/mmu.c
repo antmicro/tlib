@@ -139,6 +139,263 @@ static inline uint32_t get_tcr_ips_offset(CPUState *env, uint32_t current_el)
     }
 }
 
+static uint32_t get_level1_table_address_pre_v8(CPUState *env, int current_el, uint32_t address)
+{
+    uint32_t table;
+    uint64_t tcr = arm_tcr(env, current_el);
+    uint32_t c2_control = tcr & 7;
+    uint32_t c2_mask = ~(((uint32_t)0xffffffffu) >> c2_control);
+    uint32_t c2_base_mask = ~((uint32_t)0x3fffu >> c2_control);
+    uint32_t c2_base0 = arm_ttbr0(env, current_el);
+    uint32_t c2_base1 = arm_ttbr1(env, current_el);
+
+    if(address & c2_mask) {
+        table = c2_base1 & 0xffffc000;
+    } else {
+        table = c2_base0 & c2_base_mask;
+    }
+
+    table |= (address >> 18) & 0x3ffc;
+    return table;
+}
+
+/* Check section/page access permissions.
+   Returns the page protection flags, or zero if the access is not
+   permitted.  */
+static inline int check_ap_pre_v8(CPUState *env, int current_el, int ap, int domain, int access_type, int is_user)
+{
+    int prot_ro;
+
+    if(domain == 3) {
+        return PAGE_READ | PAGE_WRITE;
+    }
+
+    if(access_type == ACCESS_DATA_STORE) {
+        prot_ro = 0;
+    } else {
+        prot_ro = PAGE_READ;
+    }
+
+    switch(ap) {
+        case 0:
+            if(access_type == ACCESS_DATA_STORE) {
+                return 0;
+            }
+            switch((arm_sctlr(env, current_el) >> 8) & 3) {
+                case 1:
+                    return is_user ? 0 : PAGE_READ;
+                case 2:
+                    return PAGE_READ;
+                default:
+                    return 0;
+            }
+        case 1:
+            return is_user ? 0 : PAGE_READ | PAGE_WRITE;
+        case 2:
+            if(is_user) {
+                return prot_ro;
+            } else {
+                return PAGE_READ | PAGE_WRITE;
+            }
+        case 3:
+            return PAGE_READ | PAGE_WRITE;
+        case 4: /* Reserved.  */
+            return 0;
+        case 5:
+            return is_user ? 0 : prot_ro;
+        case 6:
+            return prot_ro;
+        case 7:
+            if(!arm_feature(env, ARM_FEATURE_V6K)) {
+                return 0;
+            }
+            return prot_ro;
+        default:
+            abort();
+    }
+}
+
+static int get_phys_addr_v5(CPUState *env, int mmu_idx, uint32_t address, int access_type, target_ulong *phys_ptr, int *prot,
+                            target_ulong *page_size)
+{
+    TGAU_ABORT_TODO("ARMv5 MMU logic is unimplemented");
+}
+
+static int get_phys_addr_v6(CPUState *env, int mmu_idx, uint32_t address, int access_type, target_ulong *phys_ptr, int *prot,
+                            target_ulong *page_size)
+{
+    ARMMMUIdx arm_mmu_idx = core_to_arm_mmu_idx(env, mmu_idx);
+    uint32_t current_el = arm_mmu_idx_to_el(arm_mmu_idx);
+    int is_secure = current_el > 0;
+    int is_user = !is_secure;
+
+    int code;
+    uint32_t table;
+    uint32_t desc;
+    uint32_t xn;
+    int type;
+    int ap;
+    int domain;
+    uint32_t phys_addr;
+
+    /* Pagetable walk.  */
+    /* Lookup l1 descriptor.  */
+    table = get_level1_table_address_pre_v8(env, current_el, address);
+    desc = ldl_phys(table);
+    type = (desc & 3);
+    if(type == 0) {
+        /* Section translation fault.  */
+        code = 5;
+        domain = 0;
+        goto do_fault;
+    } else if(type == 2 && (desc & (1 << 18))) {
+        /* Supersection.  */
+        domain = 0;
+    } else {
+        /* Section or page.  */
+        domain = (desc >> 4) & 0x1e;
+    }
+    uint32_t c3 = current_el <= 1 ? env->cp15.dacr_ns : env->cp15.dacr_s;
+    domain = (c3 >> domain) & 3;
+    if(domain == 0 || domain == 2) {
+        if(type == 2) {
+            code = 9; /* Section domain fault.  */
+        } else {
+            code = 11; /* Page domain fault.  */
+        }
+        goto do_fault;
+    }
+    if(type == 2) {
+        if(desc & (1 << 18)) {
+            /* Supersection.  */
+            phys_addr = (desc & 0xff000000) | (address & 0x00ffffff);
+            *page_size = 0x1000000;
+        } else {
+            /* Section.  */
+            phys_addr = (desc & 0xfff00000) | (address & 0x000fffff);
+            *page_size = 0x100000;
+        }
+        ap = ((desc >> 10) & 3) | ((desc >> 13) & 4);
+        xn = desc & (1 << 4);
+        code = 13;
+    } else {
+        /* Lookup l2 entry.  */
+        table = (desc & 0xfffffc00) | ((address >> 10) & 0x3fc);
+        desc = ldl_phys(table);
+        ap = ((desc >> 4) & 3) | ((desc >> 7) & 4);
+        switch(desc & 3) {
+            case 0: /* Page translation fault.  */
+                code = 7;
+                goto do_fault;
+            case 1: /* 64k page.  */
+                phys_addr = (desc & 0xffff0000) | (address & 0xffff);
+                xn = desc & (1 << 15);
+                *page_size = 0x10000;
+                break;
+            case 2:  //  4k page.
+            case 3:
+                phys_addr = (desc & 0xfffff000) | (address & 0xfff);
+                xn = desc & 1;
+                *page_size = 0x1000;
+                break;
+            default:
+                /* Never happens, but compiler isn't smart enough to tell.  */
+                abort();
+        }
+        code = 15;
+    }
+    if(domain == 3) {
+        *prot = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
+    } else {
+        if(xn && access_type == ACCESS_INST_FETCH) {
+            goto do_fault;
+        }
+
+        /* The simplified model uses AP[0] as an access control bit.  */
+        if((arm_sctlr(env, current_el) & (1 << 29)) && (ap & 1) == 0) {
+            /* Access flag fault.  */
+            code = (code == 15) ? 6 : 3;
+            goto do_fault;
+        }
+        *prot = check_ap_pre_v8(env, current_el, ap, domain, access_type, is_user);
+        if(!*prot) {
+            /* Access permission fault.  */
+            goto do_fault;
+        }
+        if(!xn) {
+            *prot |= PAGE_EXEC;
+        }
+    }
+    *phys_ptr = phys_addr;
+    return TRANSLATE_SUCCESS;
+do_fault:
+    return code | (domain << 4);  //  TRANSLATE_FAIL
+}
+
+/* Returns TRANSLATE_SUCCESS (0x0) on success. In case of failure:
+ * - for no PMSA returns c5_data/insn value
+ * - for PMSA returns enum mpu_result
+ * - if TrustZone is active, and SecureFault occurs, will return `TRANSLATE_FAIL` constant, and set SecureFaultStatus register */
+int get_phys_addr_v7(CPUState *env, uint32_t address, int access_type, int mmu_idx, target_ulong *phys_ptr, int *prot,
+                     target_ulong *page_size, int no_page_fault)
+{
+    ARMMMUIdx arm_mmu_idx = core_to_arm_mmu_idx(env, mmu_idx);
+    uint32_t current_el = arm_mmu_idx_to_el(arm_mmu_idx);
+    /* Fast Context Switch Extension.  */
+    if(address < 0x02000000) {
+        address += arm_is_secure(env) ? env->cp15.fcseidr_ns : env->cp15.fcseidr_s;
+    }
+
+    /* Resulting `page_size` should be a minimum of IDAU/SAU and MPU `page_size`.
+     *
+     * Generally it's a little tricky because in case no region was matched we still need to know
+     * whether there are no regions on the whole page.
+     *
+     * `TARGET_PAGE_SIZE` is used as default for IDAU/SAU so that the final `page_size` isn't
+     * changed if security attribution check wasn't performed.
+     *
+     * The same goes for allowed permissions which are necessary in case security check differs
+     * based on access type though in this case we can just modify permissions provided by MMU/MPU.
+     */
+    target_ulong idau_sau_page_size = TARGET_PAGE_SIZE;
+    int idau_sau_allowed_permissions = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
+
+    int ret;
+#ifdef TARGET_PROTO_ARM_M
+    /* TrustZone: Security attribution happens here */
+    TGAU_LOG_TODO("ARM-M TrustZone");
+#endif
+    if((arm_sctlr_eff(env, current_el) & SCTLR_M) == 0) {
+        /* MMU/MPU disabled.  */
+        *phys_ptr = address;
+        *prot = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
+        *page_size = TARGET_PAGE_SIZE;
+        return TRANSLATE_SUCCESS;
+    } else if(arm_feature(env, ARM_FEATURE_PMSA)) {
+        //  TODO: TGAU: #93584
+        TGAU_ABORT_TODO("MPU/PMSA is unimplemented");
+    } else if(arm_feature(env, ARM_FEATURE_LPAE)) {
+        //  TODO: TGAU: #93583
+        TGAU_ABORT_TODO("LPAE is unimplemented");
+    } else if(arm_sctlr_eff(env, current_el) & (1 << 23)) {
+        ret = get_phys_addr_v6(env, mmu_idx, address, access_type, phys_ptr, prot, page_size);
+    } else {
+        ret = get_phys_addr_v5(env, mmu_idx, address, access_type, phys_ptr, prot, page_size);
+    }
+
+    //  See the comment above `idau_sau_page_size` and `idau_sau_allowed_permissions` declarations.
+    *page_size = MIN(idau_sau_page_size, *page_size);
+    *prot = *prot & idau_sau_allowed_permissions;
+
+    if(ret == TRANSLATE_SUCCESS || no_page_fault) {
+        return ret;
+    }
+
+    set_mmu_fault_registers(access_type, address, ret);
+
+    return ret;
+}
+
 int get_phys_addr_v8(CPUState *env, target_ulong address, int access_type, int mmu_idx, uintptr_t return_address,
                      bool suppress_faults, target_ulong *phys_ptr, int *prot, target_ulong *page_size,
                      bool at_instruction_or_cache_maintenance)
