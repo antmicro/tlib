@@ -284,6 +284,25 @@ DO_2OP_U(vhsubu, do_vhsub_u)
         mve_advance_vpt(env);                                                    \
     }
 
+#define DO_2OP_SAT_SCALAR(OP, ESIZE, TYPE, FN)                                   \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vn, uint32_t rm) \
+    {                                                                            \
+        TYPE *d = vd, *n = vn;                                                   \
+        TYPE m = rm;                                                             \
+        uint16_t mask = mve_element_mask(env);                                   \
+        unsigned int e;                                                          \
+        bool qc = false;                                                         \
+        for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                        \
+            bool sat = false;                                                    \
+            mergemask(&d[H##ESIZE(e)], FN(n[H##ESIZE(e)], m, &sat), mask);       \
+            qc |= sat & mask & 1;                                                \
+        }                                                                        \
+        if(qc) {                                                                 \
+            env->vfp.qc = qc;                                                    \
+        }                                                                        \
+        mve_advance_vpt(env);                                                    \
+    }
+
 /* provide unsigned 2-op scalar helpers for all sizes */
 #define DO_2OP_SCALAR_U(OP, FN)           \
     DO_2OP_SCALAR(OP##b, 1, uint8_t, FN)  \
@@ -1331,6 +1350,26 @@ DO_VCADD_ALL(vhcadd270, do_vhadd_s, do_vhsub_s)
 #define DO_UQRSHL_OP(N, M, satp) WRAP_QRSHL_HELPER(do_uqrshl_bhs, N, M, true, satp)
 #define DO_SQRSHL_OP(N, M, satp) WRAP_QRSHL_HELPER(do_sqrshl_bhs, N, M, true, satp)
 
+//  Consider using this instead of porting do_sat_bhw
+static inline int32_t do_sat_bhs(int64_t val, int64_t min, int64_t max, bool *satp)
+{
+    if(val > max) {
+        *satp = true;
+        return max;
+    } else if(val < min) {
+        *satp = true;
+        return min;
+    }
+    return val;
+}
+
+#define DO_SQADD_B(N, M, satp) do_sat_bhs((int64_t)N + M, INT8_MIN, INT8_MAX, satp)
+#define DO_SQADD_H(N, M, satp) do_sat_bhs((int64_t)N + M, INT16_MIN, INT16_MAX, satp)
+#define DO_SQADD_W(N, M, satp) do_sat_bhs((int64_t)N + M, INT32_MIN, INT32_MAX, satp)
+#define DO_UQADD_B(N, M, satp) do_sat_bhs((int64_t)N + M, 0, UINT8_MAX, satp)
+#define DO_UQADD_H(N, M, satp) do_sat_bhs((int64_t)N + M, 0, UINT16_MAX, satp)
+#define DO_UQADD_W(N, M, satp) do_sat_bhs((int64_t)N + M, 0, UINT32_MAX, satp)
+
 /* provide unsigned 2-op shift helpers for all sizes */
 #define DO_2SHIFT_U(OP, FN)           \
     DO_2SHIFT(OP##b, 1, uint8_t, FN)  \
@@ -1367,6 +1406,20 @@ DO_2SHIFT_SAT_S(vqshli_s, DO_SQSHL_OP)
 DO_2SHIFT_SAT_S(vqshlui_s, DO_SUQSHL_OP)
 DO_2SHIFT_SAT_U(vqrshli_u, DO_UQRSHL_OP)
 DO_2SHIFT_SAT_S(vqrshli_s, DO_SQRSHL_OP)
+
+DO_2OP_SAT(vqaddsb, 1, int8_t, DO_SQADD_B)
+DO_2OP_SAT(vqaddsh, 2, int16_t, DO_SQADD_H)
+DO_2OP_SAT(vqaddsw, 4, int32_t, DO_SQADD_W)
+DO_2OP_SAT(vqaddub, 1, uint8_t, DO_UQADD_B)
+DO_2OP_SAT(vqadduh, 2, uint16_t, DO_UQADD_H)
+DO_2OP_SAT(vqadduw, 4, uint32_t, DO_UQADD_W)
+
+DO_2OP_SAT_SCALAR(vqadds_scalarb, 1, int8_t, DO_SQADD_B)
+DO_2OP_SAT_SCALAR(vqadds_scalarh, 2, int16_t, DO_SQADD_H)
+DO_2OP_SAT_SCALAR(vqadds_scalarw, 4, int32_t, DO_SQADD_W)
+DO_2OP_SAT_SCALAR(vqaddu_scalarb, 1, uint8_t, DO_UQADD_B)
+DO_2OP_SAT_SCALAR(vqaddu_scalarh, 2, uint16_t, DO_UQADD_H)
+DO_2OP_SAT_SCALAR(vqaddu_scalarw, 4, uint32_t, DO_UQADD_W)
 
 #undef DO_VSHLS
 #undef DO_VSHLU

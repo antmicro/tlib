@@ -812,6 +812,26 @@ static inline bool is_insn_vfcadd(uint32_t insn)
     return (insn & 0xFEA11F51) == 0xFC800840;
 }
 
+static inline bool is_insn_vqadd_u(uint32_t insn)
+{
+    return (insn & 0xFF811F51) == 0xFF000050;
+}
+
+static inline bool is_insn_vqadd_s(uint32_t insn)
+{
+    return (insn & 0xFF811F51) == 0xEF000050;
+}
+
+static inline bool is_insn_vqadd_u_scalar(uint32_t insn)
+{
+    return (insn & 0xFF811F70) == 0xFE000F60;
+}
+
+static inline bool is_insn_vqadd_s_scalar(uint32_t insn)
+{
+    return (insn & 0xFF811F70) == 0xEE000F60;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {
