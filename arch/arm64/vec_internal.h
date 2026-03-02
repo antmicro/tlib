@@ -29,65 +29,6 @@ static inline void clear_tail(void *vd, uintptr_t opr_sz, uintptr_t max_sz)
     }
 }
 
-static inline int64_t do_sqrshl_d(int64_t src, int64_t shift, bool round, uint32_t *sat)
-{
-    if(shift <= -64) {
-        /* Rounding the sign bit always produces 0. */
-        if(round) {
-            return 0;
-        }
-        return src >> 63;
-    } else if(shift < 0) {
-        if(round) {
-            src >>= -shift - 1;
-            return (src >> 1) + (src & 1);
-        }
-        return src >> -shift;
-    } else if(shift < 64) {
-        int64_t val = src << shift;
-        if(!sat || val >> shift == src) {
-            return val;
-        }
-    } else if(!sat || src == 0) {
-        return 0;
-    }
-
-    *sat = 1;
-    return src < 0 ? INT64_MIN : INT64_MAX;
-}
-
-static inline uint64_t do_uqrshl_d(uint64_t src, int64_t shift, bool round, uint32_t *sat)
-{
-    if(shift <= -(64 + round)) {
-        return 0;
-    } else if(shift < 0) {
-        if(round) {
-            src >>= -shift - 1;
-            return (src >> 1) + (src & 1);
-        }
-        return src >> -shift;
-    } else if(shift < 64) {
-        uint64_t val = src << shift;
-        if(!sat || val >> shift == src) {
-            return val;
-        }
-    } else if(!sat || src == 0) {
-        return 0;
-    }
-
-    *sat = 1;
-    return UINT64_MAX;
-}
-
-static inline int64_t do_suqrshl_d(int64_t src, int64_t shift, bool round, uint32_t *sat)
-{
-    if(sat && src < 0) {
-        *sat = 1;
-        return 0;
-    }
-    return do_uqrshl_d(src, shift, round, sat);
-}
-
 int8_t do_sqrdmlah_b(int8_t, int8_t, int8_t, bool, bool);
 int16_t do_sqrdmlah_h(int16_t, int16_t, int16_t, bool, bool, uint32_t *);
 int32_t do_sqrdmlah_s(int32_t, int32_t, int32_t, bool, bool, uint32_t *);

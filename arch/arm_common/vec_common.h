@@ -64,7 +64,13 @@ static inline uint64_t expand_pred_s(uint8_t byte)
 }
 
 int32_t do_sqrshl_bhs(int32_t src, int32_t shift, int bits, bool round, uint32_t *sat);
+int64_t do_sqrshl_d(int64_t src, int64_t shift, bool round, uint32_t *sat);
+
 uint32_t do_uqrshl_bhs(uint32_t src, int32_t shift, int bits, bool round, uint32_t *sat);
+uint64_t do_uqrshl_d(uint64_t src, int64_t shift, bool round, uint32_t *sat);
+
 int32_t do_suqrshl_bhs(int32_t src, int32_t shift, int bits, bool round, uint32_t *sat);
+int64_t do_suqrshl_d(int64_t src, int64_t shift, bool round, uint32_t *sat);
+
 uint64_t pmull_w(uint64_t op1, uint64_t op2);
 uint64_t pmull_h(uint64_t op1, uint64_t op2);

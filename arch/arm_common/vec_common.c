@@ -154,6 +154,65 @@ int32_t do_suqrshl_bhs(int32_t src, int32_t shift, int bits, bool round, uint32_
     return do_uqrshl_bhs(src, shift, bits, round, sat);
 }
 
+int64_t do_sqrshl_d(int64_t src, int64_t shift, bool round, uint32_t *sat)
+{
+    if(shift <= -64) {
+        /* Rounding the sign bit always produces 0. */
+        if(round) {
+            return 0;
+        }
+        return src >> 63;
+    } else if(shift < 0) {
+        if(round) {
+            src >>= -shift - 1;
+            return (src >> 1) + (src & 1);
+        }
+        return src >> -shift;
+    } else if(shift < 64) {
+        int64_t val = src << shift;
+        if(!sat || val >> shift == src) {
+            return val;
+        }
+    } else if(!sat || src == 0) {
+        return 0;
+    }
+
+    *sat = 1;
+    return src < 0 ? INT64_MIN : INT64_MAX;
+}
+
+uint64_t do_uqrshl_d(uint64_t src, int64_t shift, bool round, uint32_t *sat)
+{
+    if(shift <= -(64 + round)) {
+        return 0;
+    } else if(shift < 0) {
+        if(round) {
+            src >>= -shift - 1;
+            return (src >> 1) + (src & 1);
+        }
+        return src >> -shift;
+    } else if(shift < 64) {
+        uint64_t val = src << shift;
+        if(!sat || val >> shift == src) {
+            return val;
+        }
+    } else if(!sat || src == 0) {
+        return 0;
+    }
+
+    *sat = 1;
+    return UINT64_MAX;
+}
+
+int64_t do_suqrshl_d(int64_t src, int64_t shift, bool round, uint32_t *sat)
+{
+    if(sat && src < 0) {
+        *sat = 1;
+        return 0;
+    }
+    return do_uqrshl_d(src, shift, round, sat);
+}
+
 uint64_t pmull_w(uint64_t op1, uint64_t op2)
 {
     uint64_t result = 0;
