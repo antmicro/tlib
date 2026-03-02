@@ -1773,4 +1773,9 @@ uint64_t HELPER(mve_sqshll)(CPUState *env, uint64_t n, uint32_t shift)
     return do_sqrshl_d(n, (int8_t)shift, false, &env->QF);
 }
 
+uint64_t HELPER(mve_uqshll)(CPUState *env, uint64_t n, uint32_t shift)
+{
+    return do_uqrshl_d(n, (int8_t)shift, false, &env->QF);
+}
+
 #endif
