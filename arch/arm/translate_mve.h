@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include "translate_common.h"
+
 typedef void MVEGenLdStFn(TCGv_ptr, TCGv_ptr, TCGv_i32);
 typedef void MVEGenLdStIlFn(DisasContext *, uint32_t, TCGv_i32);
 typedef void MVEGenTwoOpScalarFn(TCGv_ptr, TCGv_ptr, TCGv_ptr, TCGv_i32);

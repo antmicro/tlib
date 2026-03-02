@@ -1,6 +1,7 @@
 #pragma once
 
 #include "syndrome.h"
+#include "translate_common.h"
 
 typedef struct DisasCompare {
     TCGCond cond;
@@ -11,65 +12,6 @@ typedef struct DisasCompare {
 /* Share the TCG temporaries common between 32 and 64 bit modes.  */
 extern TCGv_i32 cpu_NF, cpu_ZF, cpu_CF, cpu_VF;
 extern TCGv reserved_address;
-
-/*
- * Constant expanders for the decoders.
- */
-
-static inline int negate(DisasContext *s, int x)
-{
-    return -x;
-}
-
-static inline int plus_1(DisasContext *s, int x)
-{
-    return x + 1;
-}
-
-static inline int plus_2(DisasContext *s, int x)
-{
-    return x + 2;
-}
-
-static inline int plus_12(DisasContext *s, int x)
-{
-    return x + 12;
-}
-
-static inline int times_2(DisasContext *s, int x)
-{
-    return x * 2;
-}
-
-static inline int times_4(DisasContext *s, int x)
-{
-    return x * 4;
-}
-
-static inline int times_2_plus_1(DisasContext *s, int x)
-{
-    return x * 2 + 1;
-}
-
-static inline int rsub_64(DisasContext *s, int x)
-{
-    return 64 - x;
-}
-
-static inline int rsub_32(DisasContext *s, int x)
-{
-    return 32 - x;
-}
-
-static inline int rsub_16(DisasContext *s, int x)
-{
-    return 16 - x;
-}
-
-static inline int rsub_8(DisasContext *s, int x)
-{
-    return 8 - x;
-}
 
 static inline int neon_3same_fp_size(DisasContext *s, int x)
 {
