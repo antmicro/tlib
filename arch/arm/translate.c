@@ -10927,6 +10927,72 @@ static int trans_vmlsldav(DisasContext *s, arg_vmlaldav *a)
     };
     return do_long_dual_acc(s, a, fns[a->size][a->x]);
 }
+
+static int do_dual_acc(DisasContext *s, arg_vmladav *a, MVEGenDualAccOpFn *fn)
+{
+    TCGv_ptr qn, qm;
+    TCGv_i32 rda_i, rda_o;
+
+    if(!mve_check_qreg_bank(a->qn) || !fn) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    qn = mve_qreg_ptr(a->qn);
+    qm = mve_qreg_ptr(a->qm);
+
+    /*
+     * This insn is subject to beat-wise execution. Partial execution
+     * of an A=0 (no-accumulate) insn which does not execute the first
+     * beat must start with the current rda value, not 0.
+     */
+    if(a->a || mve_skip_first_beat(s)) {
+        rda_o = rda_i = load_reg(s, a->rda);
+    } else {
+        rda_i = tcg_const_i32(0);
+        rda_o = tcg_temp_new_i32();
+    }
+
+    fn(rda_o, cpu_env, qn, qm, rda_i);
+
+    if(rda_o != rda_i) {
+        tcg_temp_free_i32(rda_i);
+    }
+    store_reg(s, a->rda, rda_o);
+    tcg_temp_free_ptr(qn);
+    tcg_temp_free_ptr(qm);
+
+    mve_update_eci(s);
+    return TRANS_STATUS_SUCCESS;
+}
+
+#define DO_DUAL_ACC(INSN, FN)                                        \
+    static int glue(trans_, INSN)(DisasContext * s, arg_vmladav * a) \
+    {                                                                \
+        static MVEGenDualAccOpFn *const fns[4][2] = {                \
+            { gen_helper_mve_##FN##b, gen_helper_mve_##FN##xb },     \
+            { gen_helper_mve_##FN##h, gen_helper_mve_##FN##xh },     \
+            { gen_helper_mve_##FN##w, gen_helper_mve_##FN##xw },     \
+            { NULL,                   NULL                    },                                          \
+        };                                                           \
+        return do_dual_acc(s, a, fns[a->size][a->x]);                \
+    }
+
+DO_DUAL_ACC(vmladav_s, vmladavs)
+DO_DUAL_ACC(vmlsdav, vmlsdav)
+
+static int trans_vmladav_u(DisasContext *s, arg_vmladav *a)
+{
+    static MVEGenDualAccOpFn *const fns[4][2] = {
+        { gen_helper_mve_vmladavub, NULL },
+        { gen_helper_mve_vmladavuh, NULL },
+        { gen_helper_mve_vmladavuw, NULL },
+        { NULL,                     NULL },
+    };
+    return do_dual_acc(s, a, fns[a->size][a->x]);
+}
 #endif
 
 /* Translate a 32-bit thumb instruction.  Returns nonzero if the instruction
@@ -12533,6 +12599,30 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     } else {
                         return trans_vmlaldav_u(s, &a);
                     }
+                }
+                if(is_insn_vmladav(insn)) {
+                    ARCH(MVE);
+                    arg_vmladav a;
+                    mve_extract_vmladav(&a, insn);
+                    uint32_t is_sized = extract32(insn, 8, 1) == 0;
+                    /* set size to zero if unsized decoding */
+                    a.size = is_sized ? a.size : 0;
+
+                    uint32_t is_signed = extract32(insn, 28, 1) == 0;
+                    if(is_signed) {
+                        return trans_vmladav_s(s, &a);
+                    } else {
+                        return trans_vmladav_u(s, &a);
+                    }
+                }
+                if(is_insn_vmlsdav(insn)) {
+                    ARCH(MVE);
+                    arg_vmladav a;
+                    mve_extract_vmladav(&a, insn);
+                    uint32_t is_sized = extract32(insn, 28, 1) == 0;
+                    /* set size to zero if unsized decoding */
+                    a.size = is_sized ? a.size : 0;
+                    return trans_vmlsdav(s, &a);
                 }
             }
 #endif

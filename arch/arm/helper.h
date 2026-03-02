@@ -869,6 +869,24 @@ DEF_HELPER_4(mve_vmlsldavsh, i64, env, ptr, ptr, i64)
 DEF_HELPER_4(mve_vmlsldavxsh, i64, env, ptr, ptr, i64)
 DEF_HELPER_4(mve_vmlsldavsw, i64, env, ptr, ptr, i64)
 DEF_HELPER_4(mve_vmlsldavxsw, i64, env, ptr, ptr, i64)
+
+DEF_HELPER_4(mve_vmladavsb, i32, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vmladavsh, i32, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vmladavsw, i32, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vmladavsxb, i32, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vmladavsxh, i32, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vmladavsxw, i32, env, ptr, ptr, i32)
+
+DEF_HELPER_4(mve_vmlsdavb, i32, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vmlsdavh, i32, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vmlsdavw, i32, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vmlsdavxb, i32, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vmlsdavxh, i32, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vmlsdavxw, i32, env, ptr, ptr, i32)
+
+DEF_HELPER_4(mve_vmladavub, i32, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vmladavuh, i32, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vmladavuw, i32, env, ptr, ptr, i32)
 #endif
 
 #include "def-helper.h"

@@ -1437,4 +1437,45 @@ DO_LDAV(vmlsldavxsw, 4, int32_t, true, +=, -=)
 
 #undef DO_LDAV
 
+/*
+ * Multiply add dual accumulate ops
+ */
+#define DO_DAV(OP, ESIZE, TYPE, XCHG, EVENACC, ODDACC)                              \
+    uint32_t HELPER(glue(mve_, OP))(CPUState * env, void *vn, void *vm, uint32_t a) \
+    {                                                                               \
+        uint16_t mask = mve_element_mask(env);                                      \
+        unsigned int e;                                                             \
+        TYPE *n = vn, *m = vm;                                                      \
+        for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                           \
+            if(mask & 1) {                                                          \
+                if(e & 1) {                                                         \
+                    a ODDACC n[H##ESIZE(e - 1 * XCHG)] * m[H##ESIZE(e)];            \
+                } else {                                                            \
+                    a EVENACC n[H##ESIZE(e + 1 * XCHG)] * m[H##ESIZE(e)];           \
+                }                                                                   \
+            }                                                                       \
+        }                                                                           \
+        mve_advance_vpt(env);                                                       \
+        return a;                                                                   \
+    }
+
+#define DO_DAV_S(INSN, XCHG, EVENACC, ODDACC)          \
+    DO_DAV(INSN##b, 1, int8_t, XCHG, EVENACC, ODDACC)  \
+    DO_DAV(INSN##h, 2, int16_t, XCHG, EVENACC, ODDACC) \
+    DO_DAV(INSN##w, 4, int32_t, XCHG, EVENACC, ODDACC)
+
+#define DO_DAV_U(INSN, XCHG, EVENACC, ODDACC)           \
+    DO_DAV(INSN##b, 1, uint8_t, XCHG, EVENACC, ODDACC)  \
+    DO_DAV(INSN##h, 2, uint16_t, XCHG, EVENACC, ODDACC) \
+    DO_DAV(INSN##w, 4, uint32_t, XCHG, EVENACC, ODDACC)
+
+DO_DAV_S(vmladavs, false, +=, +=)
+DO_DAV_U(vmladavu, false, +=, +=)
+DO_DAV_S(vmlsdav, false, +=, -=)
+DO_DAV_S(vmladavsx, true, +=, +=)
+DO_DAV_S(vmlsdavx, true, +=, -=)
+
+#undef DO_DAV_S
+#undef DO_DAV_U
+#undef DO_DAV
 #endif
