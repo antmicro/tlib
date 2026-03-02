@@ -965,6 +965,11 @@ static inline bool is_insn_uqshll_imm(uint32_t insn)
     return (insn & 0xFFF1813F) == 0xEA51010F;
 }
 
+static inline bool is_insn_srshrl_imm(uint32_t insn)
+{
+    return (insn & 0xFFF1813F) == 0xEA51012F;
+}
+
 static inline bool is_insn_sqshll_imm(uint32_t insn)
 {
     return (insn & 0xFFF1813F) == 0xEA51013F;
