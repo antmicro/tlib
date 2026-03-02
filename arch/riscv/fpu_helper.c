@@ -531,9 +531,13 @@ target_ulong helper_fcvt_hw_s(CPUState *env, uint64_t frs1, uint64_t rm)
 target_ulong helper_fcvt_hwu_s(CPUState *env, uint64_t frs1, uint64_t rm)
 {
     require_fp;
-    set_float_rounding_mode(RM, &env->fp_status);
-    frs1 = (int16_t)float32_to_uint16(frs1, &env->fp_status);
-    set_fp_exceptions();
+    set_float3_rounding_mode(RM_3);
+
+    float32_t f1;
+    f1.v = (uint32_t)frs1;
+    frs1 = (uint16_t)f32_to_ui16(f1, RM_3, true);
+
+    set_fp3_exceptions();
     return frs1;
 }
 
