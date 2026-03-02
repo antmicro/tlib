@@ -945,6 +945,11 @@ static inline bool is_insn_vabd_fp(uint32_t insn)
     return (insn & 0xFFA11F51) == 0xFF200D40;
 }
 
+static inline bool is_insn_lsll_imm(uint32_t insn)
+{
+    return (insn & 0xFFF1813F) == 0xEA50010F;
+}
+
 static inline bool is_insn_asrl_imm(uint32_t insn)
 {
     return (insn & 0xFFF1813F) == 0xEA50012F;

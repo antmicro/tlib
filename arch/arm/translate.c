@@ -11833,10 +11833,16 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                         extract_mve_shl_ri(s, &args, insn);
                         return do_mve_shl_ri(s, &args, tcg_gen_sari_i64);
                     }
+                    if(is_insn_lsll_imm(insn)) {
+                        ARCH(MVE);
+                        arg_mve_shl_ri args;
+                        extract_mve_shl_ri(s, &args, insn);
+                        return do_mve_shl_ri(s, &args, tcg_gen_shli_i64);
+                    }
 #endif
 
                     //  TODO: The following ARMv8.1-M MVE extension instructions should be handled here:
-                    //  LSLL, LSRL, SQSHLL, SRSHRL, UQSHLL, URSHRL, SQSHL
+                    //  LSRL, SQSHLL, SRSHRL, UQSHLL, URSHRL, SQSHL
                     //  SRSHR, UQSHL, URSHR, SQRSHR, SQRSHRL, UQRSHL, UQRSHLL
                     goto illegal_op;
                 }
