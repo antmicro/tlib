@@ -887,18 +887,14 @@ VFMOP_VVX(vfle_vf, helper_fle)
 VFMOP_VVX(vfgt_vf, helper_fgt)
 VFMOP_VVX(vfge_vf, helper_fge)
 
-#define VFOP_RSQRT7_h(ENV, OP1) \
-    0;                          \
-    tlib_abort("RSQRT7 isn't supported for half precision floating point yet.")
-#define VFOP_RSQRT7_s(ENV, OP1) f32_rsqrte7(ENV, OP1)
-#define VFOP_RSQRT7_d(ENV, OP1) f64_rsqrte7(ENV, OP1)
+#define VFOP_RSQRT7_h(ENV, OP1) helper_f16_rsqrte7(ENV, OP1)
+#define VFOP_RSQRT7_s(ENV, OP1) helper_f32_rsqrte7(ENV, OP1)
+#define VFOP_RSQRT7_d(ENV, OP1) helper_f64_rsqrte7(ENV, OP1)
 VFOP_VV(vfrsqrt7_v, VFOP_RSQRT7)
 
-#define VFOP_REC7_h(ENV, OP1) \
-    0;                        \
-    tlib_abort("REC7 isn't supported for half precision floating point yet.")
-#define VFOP_REC7_s(ENV, OP1) f32_recip7(ENV, OP1)
-#define VFOP_REC7_d(ENV, OP1) f64_recip7(ENV, OP1)
+#define VFOP_REC7_h(ENV, OP1) helper_f16_recip7(ENV, OP1)
+#define VFOP_REC7_s(ENV, OP1) helper_f32_recip7(ENV, OP1)
+#define VFOP_REC7_d(ENV, OP1) helper_f64_recip7(ENV, OP1)
 VFOP_VV(vfrec7_v, VFOP_REC7)
 
 #define VFOP_SQRT_h(ENV, OP1) helper_fsqrt_h(ENV, OP1, env->frm)
