@@ -35,6 +35,7 @@ typedef void MVEGenOneOpFn(TCGv_ptr, TCGv_ptr, TCGv_ptr);
 typedef void MVEGenOneOpImmFn(TCGv_ptr, TCGv_ptr, TCGv_i64);
 typedef void MVEGenLongDualAccOpFn(TCGv_i64, TCGv_ptr, TCGv_ptr, TCGv_ptr, TCGv_i64);
 typedef void MVEGenDualAccOpFn(TCGv_i32, TCGv_ptr, TCGv_ptr, TCGv_ptr, TCGv_i32);
+typedef void MVEWideShiftImmFn(TCGv_i64, TCGv_i64, int64_t shift);
 
 /* Note that the gvec expanders operate on offsets + sizes.  */
 typedef void GVecGen3Fn(unsigned, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
@@ -236,6 +237,13 @@ typedef struct {
     /* Only valid for VADDLV */
     int rdahi;
 } arg_vaddv;
+
+/* Arguments of long (64-bit) shifts by immediate (1-32) */
+typedef struct {
+    int rdalo;  //  Rda register containing lower bits of 64-bit value
+    int rdahi;  //  Rda register containing upper bits of 64-bit value
+    int shim;   //  "shift immediate", the immediate value
+} arg_mve_shl_ri;
 
 void gen_mve_vld40b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld41b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
@@ -937,6 +945,11 @@ static inline bool is_insn_vabd_fp(uint32_t insn)
     return (insn & 0xFFA11F51) == 0xFF200D40;
 }
 
+static inline bool is_insn_asrl_imm(uint32_t insn)
+{
+    return (insn & 0xFFF1813F) == 0xEA50012F;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {
@@ -1337,4 +1350,12 @@ static void mve_extract_vaddv(arg_vaddv *a, uint32_t insn)
     a->qm = extract32(insn, 1, 3);
     a->rda = 2 * extract32(insn, 13, 3);
     a->rdahi = 2 * extract32(insn, 20, 3) + 1;
+}
+
+/* Extract arguments of long (64-bit) shifts by immediate (1-32) */
+static void extract_mve_shl_ri(DisasContext *context, arg_mve_shl_ri *args, uint32_t instruction)
+{
+    args->shim = deposit32(extract32(instruction, 6, 2), 2, 30, extract32(instruction, 12, 3));
+    args->rdalo = times_2(context, extract32(instruction, 17, 3));
+    args->rdahi = times_2_plus_1(context, extract32(instruction, 9, 3));
 }

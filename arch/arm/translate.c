@@ -9968,6 +9968,47 @@ static int do_vmaxv(DisasContext *s, arg_vmaxv *a, MVEGenVADDVFn fn)
     return TRANS_STATUS_SUCCESS;
 }
 
+/*
+ * v8.1M MVE wide-shifts
+ */
+static bool do_mve_shl_ri(DisasContext *s, arg_mve_shl_ri *arg, MVEWideShiftImmFn *fn)
+{
+    TCGv_i64 rda;
+    TCGv_i32 rdalo, rdahi;
+
+    if(!ENABLE_ARCH_8_1M) {
+        /* Decode falls through to ORR/MOV UNPREDICTABLE handling */
+        return TRANS_STATUS_SUCCESS;
+    }
+    if(arg->rdahi == 15) {
+        /* These are a different encoding (SQSHL/SRSHR/UQSHL/URSHR) */
+        return TRANS_STATUS_SUCCESS;
+    }
+    if(!ENABLE_ARCH_MVE || arg->rdahi == 13) {
+        /* RdaHi == 13 is UNPREDICTABLE; we choose to treat it as ILLEGAL */
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+
+    if(arg->shim == 0) {
+        arg->shim = 32;
+    }
+
+    rda = tcg_temp_new_i64();
+    rdalo = load_reg(s, arg->rdalo);
+    rdahi = load_reg(s, arg->rdahi);
+    tcg_gen_concat_i32_i64(rda, rdalo, rdahi);
+
+    fn(rda, rda, arg->shim);
+
+    tcg_gen_extrl_i64_i32(rdalo, rda);
+    tcg_gen_extrh_i64_i32(rdahi, rda);
+    store_reg(s, arg->rdalo, rdalo);
+    store_reg(s, arg->rdahi, rdahi);
+    tcg_temp_free_i64(rda);
+
+    return TRANS_STATUS_SUCCESS;
+}
+
 /* This macro is just to make the arrays more compact in these functions */
 #define F(OP) glue(gen_mve_, OP)
 
@@ -11785,8 +11826,17 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     store_reg(s, rd, tmp);
                     gen_set_label(end_label);
                 } else {
+#ifdef TARGET_PROTO_ARM_M
+                    if(is_insn_asrl_imm(insn)) {
+                        ARCH(MVE);
+                        arg_mve_shl_ri args;
+                        extract_mve_shl_ri(s, &args, insn);
+                        return do_mve_shl_ri(s, &args, tcg_gen_sari_i64);
+                    }
+#endif
+
                     //  TODO: The following ARMv8.1-M MVE extension instructions should be handled here:
-                    //  ASRL, LSLL, LSRL, SQSHLL, SRSHRL, UQSHLL, URSHRL, SQSHL
+                    //  LSLL, LSRL, SQSHLL, SRSHRL, UQSHLL, URSHRL, SQSHL
                     //  SRSHR, UQSHL, URSHR, SQRSHR, SQRSHRL, UQRSHL, UQRSHLL
                     goto illegal_op;
                 }
