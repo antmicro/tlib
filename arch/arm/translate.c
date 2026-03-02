@@ -11355,6 +11355,13 @@ DO_TRANS_LOGIC(vorr, gen_helper_mve_vorr, tcg_gen_gvec_or)
 DO_TRANS_LOGIC(vorn, gen_helper_mve_vorn, tcg_gen_gvec_orc)
 DO_TRANS_LOGIC(veor, gen_helper_mve_veor, tcg_gen_gvec_xor)
 
+static void gen_mve_sqshll(TCGv_i64 r, TCGv_i64 n, int64_t shift)
+{
+    TCGv_i32 tcg_shift = tcg_const_i32(shift);
+    gen_helper_mve_sqshll(r, cpu_env, n, tcg_shift);
+    tcg_temp_free_i32(tcg_shift);
+}
+
 #endif /* TARGET_PROTO_ARM_M */
 
 /* Translate a 32-bit thumb instruction.  Returns nonzero if the instruction
@@ -11845,10 +11852,16 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                         extract_mve_shl_ri(s, &args, insn);
                         return do_mve_shl_ri(s, &args, tcg_gen_shri_i64);
                     }
+                    if(is_insn_sqshll_imm(insn)) {
+                        ARCH(MVE);
+                        arg_mve_shl_ri args;
+                        extract_mve_shl_ri(s, &args, insn);
+                        return do_mve_shl_ri(s, &args, gen_mve_sqshll);
+                    }
 #endif
 
                     //  TODO: The following ARMv8.1-M MVE extension instructions should be handled here:
-                    //  SQSHLL, SRSHRL, UQSHLL, URSHRL, SQSHL
+                    //  SRSHRL, UQSHLL, URSHRL, SQSHL
                     //  SRSHR, UQSHL, URSHR, SQRSHR, SQRSHRL, UQRSHL, UQRSHLL
                     goto illegal_op;
                 }

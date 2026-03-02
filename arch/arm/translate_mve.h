@@ -960,6 +960,11 @@ static inline bool is_insn_asrl_imm(uint32_t insn)
     return (insn & 0xFFF1813F) == 0xEA50012F;
 }
 
+static inline bool is_insn_sqshll_imm(uint32_t insn)
+{
+    return (insn & 0xFFF1813F) == 0xEA51013F;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {
