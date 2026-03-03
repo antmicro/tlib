@@ -93,7 +93,7 @@ unsigned int ieee_vxrm[] = { float_round_up, float_round_nearest_even, float_rou
  * as the last step, convert rm codes to what the softfloat library expects
  * Adapted from Spike's decode.h:RM
  */
-#define RM                                                             \
+#define RM_VERSION(version)                                            \
     ({                                                                 \
         if(rm == 7) {                                                  \
             rm = env->frm;                                             \
@@ -101,8 +101,13 @@ unsigned int ieee_vxrm[] = { float_round_up, float_round_nearest_even, float_rou
         if(rm > 4) {                                                   \
             raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST); \
         }                                                              \
-        ieee_rm[rm];                                                   \
+        ((version) == 3 ? rm : ieee_rm[rm]);                           \
     })
+
+/* Convert rm codes to what the softfloat-2 library expects */
+#define RM RM_VERSION(2)
+/* Convert rm codes to what the softfloat-3 library expects */
+#define RM_3 RM_VERSION(3)
 
 #define require_fp                                                 \
     if(!(env->mstatus & MSTATUS_FS)) {                             \
@@ -194,7 +199,7 @@ uint64_t helper_fmadd_d(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t fr
 uint64_t helper_fmadd_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t frs3, uint64_t rm)
 {
     require_fp;
-    set_float3_rounding_mode(RM);
+    set_float3_rounding_mode(RM_3);
 
     float16_t f1, f2, f3;
     f1.v = (uint16_t)frs1;
@@ -230,7 +235,7 @@ uint64_t helper_fmsub_d(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t fr
 uint64_t helper_fmsub_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t frs3, uint64_t rm)
 {
     require_fp;
-    set_float3_rounding_mode(RM);
+    set_float3_rounding_mode(RM_3);
 
     float16_t f1, f2, f3;
     f1.v = (uint16_t)frs1;
@@ -266,7 +271,7 @@ uint64_t helper_fnmsub_d(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t f
 uint64_t helper_fnmsub_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t frs3, uint64_t rm)
 {
     require_fp;
-    set_float3_rounding_mode(RM);
+    set_float3_rounding_mode(RM_3);
 
     float16_t f1, f2, f3;
     f1.v = (uint16_t)(frs1 ^ (uint64_t)INT16_MIN);
@@ -302,7 +307,7 @@ uint64_t helper_fnmadd_d(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t f
 uint64_t helper_fnmadd_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t frs3, uint64_t rm)
 {
     require_fp;
-    set_float3_rounding_mode(RM);
+    set_float3_rounding_mode(RM_3);
 
     float16_t f1, f2, f3;
     f1.v = (uint16_t)(frs1 ^ (uint64_t)INT16_MIN);
@@ -841,7 +846,7 @@ uint64_t helper_fcvt_s_d_rod(CPUState *env, uint64_t rs1)
 uint64_t helper_fadd_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t rm)
 {
     require_fp;
-    set_float3_rounding_mode(RM);
+    set_float3_rounding_mode(RM_3);
 
     float16_t f1, f2;
     f1.v = (uint16_t)frs1;
@@ -856,7 +861,7 @@ uint64_t helper_fadd_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t rm)
 uint64_t helper_fsub_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t rm)
 {
     require_fp;
-    set_float3_rounding_mode(RM);
+    set_float3_rounding_mode(RM_3);
 
     float16_t f1, f2;
     f1.v = (uint16_t)frs1;
@@ -871,7 +876,7 @@ uint64_t helper_fsub_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t rm)
 uint64_t helper_fmul_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t rm)
 {
     require_fp;
-    set_float3_rounding_mode(RM);
+    set_float3_rounding_mode(RM_3);
 
     float16_t f1, f2;
     f1.v = (uint16_t)frs1;
@@ -886,7 +891,7 @@ uint64_t helper_fmul_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t rm)
 uint64_t helper_fdiv_h(CPUState *env, uint64_t frs1, uint64_t frs2, uint64_t rm)
 {
     require_fp;
-    set_float3_rounding_mode(RM);
+    set_float3_rounding_mode(RM_3);
 
     float16_t f1, f2;
     f1.v = (uint16_t)frs1;
@@ -931,7 +936,7 @@ uint64_t helper_fmax_h(CPUState *env, uint64_t frs1, uint64_t frs2)
 uint64_t helper_fcvt_s_h(CPUState *env, uint64_t rs1, uint64_t rm)
 {
     require_fp;
-    set_float3_rounding_mode(RM);
+    set_float3_rounding_mode(RM_3);
 
     float16_t f1;
     f1.v = (uint16_t)rs1;
@@ -945,7 +950,7 @@ uint64_t helper_fcvt_s_h(CPUState *env, uint64_t rs1, uint64_t rm)
 uint64_t helper_fcvt_h_s(CPUState *env, uint64_t rs1, uint64_t rm)
 {
     require_fp;
-    set_float3_rounding_mode(RM);
+    set_float3_rounding_mode(RM_3);
 
     float32_t f1;
     f1.v = (uint32_t)rs1;
@@ -959,7 +964,7 @@ uint64_t helper_fcvt_h_s(CPUState *env, uint64_t rs1, uint64_t rm)
 uint64_t helper_fcvt_d_h(CPUState *env, uint64_t rs1, uint64_t rm)
 {
     require_fp;
-    set_float3_rounding_mode(RM);
+    set_float3_rounding_mode(RM_3);
 
     float16_t f1;
     f1.v = (uint16_t)rs1;
@@ -973,7 +978,7 @@ uint64_t helper_fcvt_d_h(CPUState *env, uint64_t rs1, uint64_t rm)
 uint64_t helper_fcvt_h_d(CPUState *env, uint64_t rs1, uint64_t rm)
 {
     require_fp;
-    set_float3_rounding_mode(RM);
+    set_float3_rounding_mode(RM_3);
 
     float64_t f1;
     f1.v = rs1;
@@ -987,7 +992,7 @@ uint64_t helper_fcvt_h_d(CPUState *env, uint64_t rs1, uint64_t rm)
 uint64_t helper_fsqrt_h(CPUState *env, uint64_t frs1, uint64_t rm)
 {
     require_fp;
-    set_float3_rounding_mode(RM);
+    set_float3_rounding_mode(RM_3);
 
     float16_t f1;
     f1.v = (uint16_t)frs1;
@@ -1050,11 +1055,11 @@ target_ulong helper_feq_h(CPUState *env, uint64_t frs1, uint64_t frs2)
 target_ulong helper_fcvt_w_h(CPUState *env, uint64_t frs1, uint64_t rm)
 {
     require_fp;
-    set_float3_rounding_mode(RM);
+    set_float3_rounding_mode(RM_3);
 
     float16_t f1;
     f1.v = (uint16_t)frs1;
-    frs1 = (int64_t)((int32_t)f16_to_i32(f1, RM, true));
+    frs1 = (int64_t)((int32_t)f16_to_i32(f1, RM_3, true));
 
     set_fp3_exceptions();
     mark_fs_dirty();
@@ -1064,11 +1069,11 @@ target_ulong helper_fcvt_w_h(CPUState *env, uint64_t frs1, uint64_t rm)
 target_ulong helper_fcvt_wu_h(CPUState *env, uint64_t frs1, uint64_t rm)
 {
     require_fp;
-    set_float3_rounding_mode(RM);
+    set_float3_rounding_mode(RM_3);
 
     float16_t f1;
     f1.v = (uint16_t)frs1;
-    frs1 = (int64_t)((int32_t)f16_to_ui32(f1, RM, true));
+    frs1 = (int64_t)((int32_t)f16_to_ui32(f1, RM_3, true));
 
     set_fp3_exceptions();
     mark_fs_dirty();
@@ -1078,11 +1083,11 @@ target_ulong helper_fcvt_wu_h(CPUState *env, uint64_t frs1, uint64_t rm)
 uint64_t helper_fcvt_l_h(CPUState *env, uint64_t frs1, uint64_t rm)
 {
     require_fp;
-    set_float3_rounding_mode(RM);
+    set_float3_rounding_mode(RM_3);
 
     float16_t f1;
     f1.v = (uint16_t)frs1;
-    frs1 = f16_to_i64(f1, RM, true);
+    frs1 = f16_to_i64(f1, RM_3, true);
 
     set_fp3_exceptions();
     mark_fs_dirty();
@@ -1092,11 +1097,11 @@ uint64_t helper_fcvt_l_h(CPUState *env, uint64_t frs1, uint64_t rm)
 uint64_t helper_fcvt_lu_h(CPUState *env, uint64_t frs1, uint64_t rm)
 {
     require_fp;
-    set_float3_rounding_mode(RM);
+    set_float3_rounding_mode(RM_3);
 
     float16_t f1;
     f1.v = (uint16_t)frs1;
-    frs1 = f16_to_ui64(f1, RM, true);
+    frs1 = f16_to_ui64(f1, RM_3, true);
 
     set_fp3_exceptions();
     mark_fs_dirty();
@@ -1107,7 +1112,7 @@ uint64_t helper_fcvt_h_w(CPUState *env, target_ulong rs1, uint64_t rm)
 {
     require_fp;
     uint64_t res;
-    set_float3_rounding_mode(RM);
+    set_float3_rounding_mode(RM_3);
 
     res = i32_to_f16((uint32_t)rs1).v;
 
@@ -1120,7 +1125,7 @@ uint64_t helper_fcvt_h_wu(CPUState *env, target_ulong rs1, uint64_t rm)
 {
     require_fp;
     uint64_t res;
-    set_float3_rounding_mode(RM);
+    set_float3_rounding_mode(RM_3);
 
     res = ui32_to_f16((uint32_t)rs1).v;
 
@@ -1132,7 +1137,7 @@ uint64_t helper_fcvt_h_wu(CPUState *env, target_ulong rs1, uint64_t rm)
 uint64_t helper_fcvt_h_l(CPUState *env, uint64_t rs1, uint64_t rm)
 {
     require_fp;
-    set_float3_rounding_mode(RM);
+    set_float3_rounding_mode(RM_3);
 
     rs1 = i64_to_f16(rs1).v;
 
@@ -1144,7 +1149,7 @@ uint64_t helper_fcvt_h_l(CPUState *env, uint64_t rs1, uint64_t rm)
 uint64_t helper_fcvt_h_lu(CPUState *env, uint64_t rs1, uint64_t rm)
 {
     require_fp;
-    set_float3_rounding_mode(RM);
+    set_float3_rounding_mode(RM_3);
 
     rs1 = ui64_to_f16(rs1).v;
 
@@ -1156,7 +1161,7 @@ uint64_t helper_fcvt_h_lu(CPUState *env, uint64_t rs1, uint64_t rm)
 uint64_t helper_fmv_x_h(CPUState *env, uint64_t rs1, uint64_t rm)
 {
     require_fp;
-    set_float3_rounding_mode(RM);
+    set_float3_rounding_mode(RM_3);
 
     rs1 = (int64_t)((int32_t)((int16_t)rs1));
 
@@ -1168,7 +1173,7 @@ uint64_t helper_fmv_x_h(CPUState *env, uint64_t rs1, uint64_t rm)
 uint64_t helper_fmv_h_x(CPUState *env, uint64_t rs1, uint64_t rm)
 {
     require_fp;
-    set_float3_rounding_mode(RM);
+    set_float3_rounding_mode(RM_3);
 
     //  FMV.H.X moves the half-precision value encoded in IEEE 754-2008 standard encoding from the
     //  lower 16 bits of integer register rs1 to the floating-point register rd, NaN-boxing the result
