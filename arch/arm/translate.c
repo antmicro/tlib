@@ -1336,6 +1336,7 @@ void write_neon_element32(TCGv_i32 src, int reg, int ele, TCGMemOp memop)
 #define tcg_gen_st_f32 tcg_gen_st_i32
 #define tcg_gen_st_f64 tcg_gen_st_i64
 
+//  Deprecated, prefer using `tcg_gen_ld_f*` directly with local temporaries generated with tcg_temp_new_i*();
 static inline void gen_mov_F0_vreg(enum arm_fp_precision precision, int reg)
 {
     if(precision == DOUBLE_PRECISION) {
@@ -1343,9 +1344,9 @@ static inline void gen_mov_F0_vreg(enum arm_fp_precision precision, int reg)
     } else {
         tcg_gen_ld_f32(cpu_F0s, cpu_env, vfp_reg_offset(precision, reg));
     }
-    //  TODO: check halfprecision if applies
 }
 
+//  Deprecated, prefer using `tcg_gen_ld_f*` directly with local temporaries generated with tcg_temp_new_i*();
 static inline void gen_mov_F1_vreg(enum arm_fp_precision precision, int reg)
 {
     if(precision == DOUBLE_PRECISION) {
@@ -1353,9 +1354,9 @@ static inline void gen_mov_F1_vreg(enum arm_fp_precision precision, int reg)
     } else {
         tcg_gen_ld_f32(cpu_F1s, cpu_env, vfp_reg_offset(precision, reg));
     }
-    //  TODO: check halfprecision if applies
 }
 
+//  Deprecated, prefer using `tcg_gen_st_f*` directly with local temporaries generated with tcg_temp_new_i*();
 static inline void gen_mov_vreg_F0(enum arm_fp_precision precision, int reg)
 {
     if(precision == DOUBLE_PRECISION) {
@@ -1363,7 +1364,6 @@ static inline void gen_mov_vreg_F0(enum arm_fp_precision precision, int reg)
     } else {
         tcg_gen_st_f32(cpu_F0s, cpu_env, vfp_reg_offset(precision, reg));
     }
-    //  TODO: check halfprecision if applies
 }
 
 #define ARM_CP_RW_BIT (1 << 20)

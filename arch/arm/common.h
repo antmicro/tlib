@@ -53,7 +53,6 @@ static inline long vfp_reg_offset(enum arm_fp_precision precision, int reg)
     } else {
         return offsetof(CPUState, vfp.regs[reg >> 1]) + offsetof(CPU_DoubleU, l.lower);
     }
-    //  TODO: check halfprecision if applies
 }
 
 /* Return the offset of a Qn register */
