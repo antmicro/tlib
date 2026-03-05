@@ -1075,8 +1075,13 @@ target_ulong helper_fcvt_w_d_rod(CPUState *env, uint64_t frs1)
 uint64_t helper_fcvt_s_d_rod(CPUState *env, uint64_t rs1)
 {
     require_fp;
-    rs1 = float64_to_float32_rod(rs1, &env->fp_status);
-    set_fp_exceptions();
+    set_float3_rounding_mode(softfloat_round_odd);
+
+    float64_t f1;
+    f1.v = rs1;
+    rs1 = f64_to_f32(f1).v;
+
+    set_fp3_exceptions();
     return rs1;
 }
 
