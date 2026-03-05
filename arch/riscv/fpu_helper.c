@@ -714,37 +714,14 @@ int64_t helper_fcvt_l_s_rod(CPUState *env, uint32_t frs1)
     return frs1;
 }
 
-uint_fast16_t float32_classify(uint32_t a, float_status *status)
-{
-    union ui32_f32 uA;
-    uint_fast32_t uiA;
-
-    uA.f = a;
-    uiA = uA.ui;
-
-    uint_fast16_t infOrNaN = expF32UI(uiA) == 0xFF;
-    uint_fast16_t subnormalOrZero = expF32UI(uiA) == 0;
-    bool sign = signF32UI(uiA);
-
-    // clang-format off
-    return
-        (sign && infOrNaN && fracF32UI(uiA) == 0)           << 0 |
-        (sign && !infOrNaN && !subnormalOrZero)             << 1 |
-        (sign && subnormalOrZero && fracF32UI(uiA))         << 2 |
-        (sign && subnormalOrZero && fracF32UI(uiA) == 0)    << 3 |
-        (!sign && infOrNaN && fracF32UI(uiA) == 0)          << 7 |
-        (!sign && !infOrNaN && !subnormalOrZero)            << 6 |
-        (!sign && subnormalOrZero && fracF32UI(uiA))        << 5 |
-        (!sign && subnormalOrZero && fracF32UI(uiA) == 0)   << 4 |
-        (isNaNF32UI(uiA) &&  float32_is_signaling_nan(uiA, status)) << 8 |
-        (isNaNF32UI(uiA) && !float32_is_signaling_nan(uiA, status)) << 9;
-    // clang-format on
-}
-
 target_ulong helper_fclass_s(CPUState *env, uint64_t frs1)
 {
     require_fp;
-    frs1 = float32_classify(frs1, &env->fp_status);
+
+    float32_t f1;
+    f1.v = (uint32_t)frs1;
+    frs1 = f32_classify(f1);
+
     mark_fs_dirty();
     return frs1;
 }
