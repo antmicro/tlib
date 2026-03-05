@@ -10189,6 +10189,8 @@ DO_TRANS_2OP_SCALAR(vhsub_u_scalar, vhsubu_scalar)
 
 DO_TRANS_2OP_SCALAR(vqadd_s_scalar, vqadds_scalar)
 DO_TRANS_2OP_SCALAR(vqadd_u_scalar, vqaddu_scalar)
+DO_TRANS_2OP_SCALAR(vqsub_s_scalar, vqsubs_scalar)
+DO_TRANS_2OP_SCALAR(vqsub_u_scalar, vqsubu_scalar)
 
 #undef DO_TRANS_2OP_FP_SCALAR
 #undef DO_TRANS_2OP_FP
@@ -10496,6 +10498,8 @@ DO_TRANS_2OP(vqrshl_u, vqrshlu)
 
 DO_TRANS_2OP(vqadd_s, vqadds)
 DO_TRANS_2OP(vqadd_u, vqaddu)
+DO_TRANS_2OP(vqsub_s, vqsubs)
+DO_TRANS_2OP(vqsub_u, vqsubu)
 
 DO_TRANS_2OP_VEC(vmax_s, vmaxs, tcg_gen_gvec_smax)
 DO_TRANS_2OP_VEC(vmax_u, vmaxu, tcg_gen_gvec_umax)
@@ -13352,6 +13356,30 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_2scalar args;
                     mve_extract_2op_scalar(&args, insn);
                     return trans_vqadd_s_scalar(s, &args);
+                }
+                if(is_insn_vqsub_u(insn)) {
+                    ARCH(MVE);
+                    arg_2op args;
+                    mve_extract_2op(&args, insn);
+                    return trans_vqsub_u(s, &args);
+                }
+                if(is_insn_vqsub_s(insn)) {
+                    ARCH(MVE);
+                    arg_2op args;
+                    mve_extract_2op(&args, insn);
+                    return trans_vqsub_s(s, &args);
+                }
+                if(is_insn_vqsub_u_scalar(insn)) {
+                    ARCH(MVE);
+                    arg_2scalar args;
+                    mve_extract_2op_scalar(&args, insn);
+                    return trans_vqsub_u_scalar(s, &args);
+                }
+                if(is_insn_vqsub_s_scalar(insn)) {
+                    ARCH(MVE);
+                    arg_2scalar args;
+                    mve_extract_2op_scalar(&args, insn);
+                    return trans_vqsub_s_scalar(s, &args);
                 }
                 if(is_insn_vmull(insn)) {
                     ARCH(MVE);

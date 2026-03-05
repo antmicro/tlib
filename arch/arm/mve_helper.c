@@ -1486,6 +1486,13 @@ static inline int32_t do_sat_bhs(int64_t val, int64_t min, int64_t max, bool *sa
 #define DO_UQADD_H(N, M, satp) do_sat_bhs((int64_t)N + M, 0, UINT16_MAX, satp)
 #define DO_UQADD_W(N, M, satp) do_sat_bhs((int64_t)N + M, 0, UINT32_MAX, satp)
 
+#define DO_SQSUB_B(N, M, satp) do_sat_bhs((int64_t)N - M, INT8_MIN, INT8_MAX, satp)
+#define DO_SQSUB_H(N, M, satp) do_sat_bhs((int64_t)N - M, INT16_MIN, INT16_MAX, satp)
+#define DO_SQSUB_W(N, M, satp) do_sat_bhs((int64_t)N - M, INT32_MIN, INT32_MAX, satp)
+#define DO_UQSUB_B(N, M, satp) do_sat_bhs((int64_t)N - M, 0, UINT8_MAX, satp)
+#define DO_UQSUB_H(N, M, satp) do_sat_bhs((int64_t)N - M, 0, UINT16_MAX, satp)
+#define DO_UQSUB_W(N, M, satp) do_sat_bhs((int64_t)N - M, 0, UINT32_MAX, satp)
+
 /* provide unsigned 2-op shift helpers for all sizes */
 #define DO_2SHIFT_U(OP, FN)           \
     DO_2SHIFT(OP##b, 1, uint8_t, FN)  \
@@ -1536,6 +1543,20 @@ DO_2OP_SAT_SCALAR(vqadds_scalarw, 4, int32_t, DO_SQADD_W)
 DO_2OP_SAT_SCALAR(vqaddu_scalarb, 1, uint8_t, DO_UQADD_B)
 DO_2OP_SAT_SCALAR(vqaddu_scalarh, 2, uint16_t, DO_UQADD_H)
 DO_2OP_SAT_SCALAR(vqaddu_scalarw, 4, uint32_t, DO_UQADD_W)
+
+DO_2OP_SAT(vqsubub, 1, uint8_t, DO_UQSUB_B)
+DO_2OP_SAT(vqsubuh, 2, uint16_t, DO_UQSUB_H)
+DO_2OP_SAT(vqsubuw, 4, uint32_t, DO_UQSUB_W)
+DO_2OP_SAT(vqsubsb, 1, int8_t, DO_SQSUB_B)
+DO_2OP_SAT(vqsubsh, 2, int16_t, DO_SQSUB_H)
+DO_2OP_SAT(vqsubsw, 4, int32_t, DO_SQSUB_W)
+
+DO_2OP_SAT_SCALAR(vqsubu_scalarb, 1, uint8_t, DO_UQSUB_B)
+DO_2OP_SAT_SCALAR(vqsubu_scalarh, 2, uint16_t, DO_UQSUB_H)
+DO_2OP_SAT_SCALAR(vqsubu_scalarw, 4, uint32_t, DO_UQSUB_W)
+DO_2OP_SAT_SCALAR(vqsubs_scalarb, 1, int8_t, DO_SQSUB_B)
+DO_2OP_SAT_SCALAR(vqsubs_scalarh, 2, int16_t, DO_SQSUB_H)
+DO_2OP_SAT_SCALAR(vqsubs_scalarw, 4, int32_t, DO_SQSUB_W)
 
 #undef DO_VSHLS
 #undef DO_VSHLU
