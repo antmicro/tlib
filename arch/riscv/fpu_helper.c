@@ -1484,30 +1484,14 @@ void helper_vfmv_sf(CPUState *env, uint32_t vd, float64 rs1)
     }
 }
 
-uint_fast16_t float64_classify(uint64_t a, float_status *status)
-{
-    union ui64_f64 uA;
-    uint_fast64_t uiA;
-
-    uA.f = a;
-    uiA = uA.ui;
-
-    uint_fast16_t infOrNaN = expF64UI(uiA) == 0x7FF;
-    uint_fast16_t subnormalOrZero = expF64UI(uiA) == 0;
-    bool sign = signF64UI(uiA);
-
-    return (sign && infOrNaN && fracF64UI(uiA) == 0) << 0 | (sign && !infOrNaN && !subnormalOrZero) << 1 |
-           (sign && subnormalOrZero && fracF64UI(uiA)) << 2 | (sign && subnormalOrZero && fracF64UI(uiA) == 0) << 3 |
-           (!sign && infOrNaN && fracF64UI(uiA) == 0) << 7 | (!sign && !infOrNaN && !subnormalOrZero) << 6 |
-           (!sign && subnormalOrZero && fracF64UI(uiA)) << 5 | (!sign && subnormalOrZero && fracF64UI(uiA) == 0) << 4 |
-           (isNaNF64UI(uiA) && float64_is_signaling_nan(uiA, status)) << 8 |
-           (isNaNF64UI(uiA) && !float64_is_signaling_nan(uiA, status)) << 9;
-}
-
 target_ulong helper_fclass_d(CPUState *env, uint64_t frs1)
 {
     require_fp;
-    frs1 = float64_classify(frs1, &env->fp_status);
+
+    float64_t f1;
+    f1.v = frs1;
+    frs1 = f64_classify(f1);
+
     mark_fs_dirty();
     return frs1;
 }
