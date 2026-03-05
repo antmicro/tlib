@@ -703,8 +703,14 @@ int32_t helper_fcvt_w_s_rod(CPUState *env, uint32_t frs1)
 uint64_t helper_fcvt_lu_d_rod(CPUState *env, uint64_t frs1)
 {
     require_fp;
-    frs1 = float64_to_uint64_rod(frs1, &env->fp_status);
-    set_fp_exceptions();
+    set_float3_rounding_mode(softfloat_round_odd);
+
+    float64_t f1;
+    f1.v = frs1;
+    frs1 = f64_to_ui64(f1, softfloat_round_odd, true);
+
+    set_fp3_exceptions();
+    mark_fs_dirty();
     return frs1;
 }
 
