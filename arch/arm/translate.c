@@ -1217,8 +1217,10 @@ VFP_GEN_FIX(uhto)
 VFP_GEN_FIX(ulto)
 #undef VFP_GEN_FIX
 
+#define tcg_gen_ld_f16 tcg_gen_ld16u_i32
 #define tcg_gen_ld_f32 tcg_gen_ld_i32
 #define tcg_gen_ld_f64 tcg_gen_ld_i64
+#define tcg_gen_st_f16 tcg_gen_st16_i32
 #define tcg_gen_st_f32 tcg_gen_st_i32
 #define tcg_gen_st_f64 tcg_gen_st_i64
 
@@ -1372,6 +1374,44 @@ void write_neon_element32(TCGv_i32 src, int reg, int ele, TCGMemOp memop)
         default:
             g_assert_not_reached();
     }
+}
+/* Allocates a temporary register and loads single-precision floating-point register into it */
+static inline TCGv_i32 load_vreg_32(enum arm_fp_precision precision, int vreg)
+{
+    TCGv_i32 reg = tcg_temp_new_i32();
+    switch(precision) {
+        case SINGLE_PRECISION:
+            tcg_gen_ld_f32(reg, cpu_env, vfp_reg_offset(precision, vreg));
+            break;
+        case HALF_PRECISION:
+            tcg_gen_ld_f16(reg, cpu_env, vfp_reg_offset(precision, vreg));
+            break;
+        case DOUBLE_PRECISION:
+            tlib_abortf("%s: Can't process DOUBLE_PRECISION here, use load_vreg_64 instead: %x", __FUNCTION__, precision);
+            break;
+        default:
+            tlib_abortf("%s: Invalid precision: %x", __FUNCTION__, precision);
+    }
+    return reg;
+}
+
+/* Stores register's value into single-precision floating-point register and frees the source register */
+static inline void store_vreg_32(enum arm_fp_precision precision, TCGv_i32 reg, int vreg)
+{
+    switch(precision) {
+        case SINGLE_PRECISION:
+            tcg_gen_st_f32(reg, cpu_env, vfp_reg_offset(precision, vreg));
+            break;
+        case HALF_PRECISION:
+            tcg_gen_st_f16(reg, cpu_env, vfp_reg_offset(precision, vreg));
+            break;
+        case DOUBLE_PRECISION:
+            tlib_abortf("%s: Can't process DOUBLE_PRECISION here, use store_vreg_64 instead: %x", __FUNCTION__, precision);
+            break;
+        default:
+            tlib_abortf("%s: Invalid precision: %x", __FUNCTION__, precision);
+    }
+    tcg_temp_free_i32(reg);
 }
 
 //  Deprecated, prefer using `tcg_gen_ld_f*` directly with local temporaries generated with tcg_temp_new_i*();
@@ -2980,13 +3020,14 @@ static bool cp15_special_user_ok(CPUState *env, int user, int is64, int opc1, in
 #define VFP_DREG_M(reg, insn) VFP_DREG(reg, insn, 0, 5)
 
 /* Move between integer and VFP cores.  */
+/* Consider load_vreg_32 when moving away from cpu_F0s */
 static TCGv gen_vfp_mrs(void)
 {
     TCGv tmp = tcg_temp_new_i32();
     tcg_gen_mov_i32(tmp, cpu_F0s);
     return tmp;
 }
-
+/* Consider store_vreg_32 when moving away from cpu_F0s */
 static void gen_vfp_msr(TCGv tmp)
 {
     tcg_gen_mov_i32(cpu_F0s, tmp);
@@ -3433,7 +3474,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
     switch((insn >> 24) & 0xf) {
         case 0xe:
             if(insn & (1 << 4)) {
-                /* single register transfer */
+                /* single register transfer (VMOV) */
                 rd = (insn >> 12) & 0xf;
                 if(precision == DOUBLE_PRECISION) {
                     int size;
@@ -3593,9 +3634,16 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                                     return 1;
                             }
                         } else {
-                            gen_mov_F0_vreg(SINGLE_PRECISION, rn);
-                            tmp = gen_vfp_mrs();
+                            tmp = load_vreg_32(precision, rn);
                         }
+
+                        if(precision == HALF_PRECISION) {
+                            if(!arm_feature(env, ARM_FEATURE_VFP_FP16)) {
+                                return 1;
+                            }
+                            tcg_gen_andi_i32(tmp, tmp, 0xffff);
+                        }
+
                         if(rd == 15) {
                             /* Set the 4 flag bits in the CPSR.  */
                             gen_set_nzcv(tmp);
@@ -3651,8 +3699,13 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                                     return 1;
                             }
                         } else {
-                            gen_vfp_msr(tmp);
-                            gen_mov_vreg_F0(SINGLE_PRECISION, rn);
+                            if(precision == HALF_PRECISION) {
+                                if(!arm_feature(env, ARM_FEATURE_VFP_FP16)) {
+                                    return 1;
+                                }
+                                tcg_gen_andi_i32(tmp, tmp, 0xffff);
+                            }
+                            store_vreg_32(SINGLE_PRECISION, tmp, rn);
                         }
                     }
                 }
