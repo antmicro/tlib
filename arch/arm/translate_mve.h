@@ -486,6 +486,12 @@ static inline bool is_insn_vneg_fp(uint32_t insn)
     return (insn & 0xFFB31FD1) == 0xFFB107C0;
 }
 
+static inline bool is_insn_vmin_vmax(uint32_t insn)
+{
+    uint32_t size = extract32(insn, 18, 2);
+    return size != 3 && (insn & 0xEF811F41) == 0xEF000640;
+}
+
 static inline bool is_insn_vmaxa(uint32_t insn)
 {
     uint32_t size = extract32(insn, 18, 2);

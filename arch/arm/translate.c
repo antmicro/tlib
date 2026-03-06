@@ -10439,6 +10439,11 @@ DO_TRANS_2OP(vqrshl_u, vqrshlu)
 DO_TRANS_2OP(vqadd_s, vqadds)
 DO_TRANS_2OP(vqadd_u, vqaddu)
 
+DO_TRANS_2OP_VEC(vmax_s, vmaxs, tcg_gen_gvec_smax)
+DO_TRANS_2OP_VEC(vmax_u, vmaxu, tcg_gen_gvec_umax)
+DO_TRANS_2OP_VEC(vmin_s, vmins, tcg_gen_gvec_smin)
+DO_TRANS_2OP_VEC(vmin_u, vminu, tcg_gen_gvec_umin)
+
 #define DO_TRANS_2SHIFT_VEC(INSN, FN, NEGATESHIFT, VECFN)             \
     static bool trans_##INSN(DisasContext *s, arg_2shift *a)          \
     {                                                                 \
@@ -12269,6 +12274,26 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_1op a;
                     mve_extract_1op(&a, insn);
                     return trans_vfneg(s, &a);
+                }
+                if(is_insn_vmin_vmax(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op(&a, insn);
+                    uint32_t is_signed = extract32(insn, 28, 1) == 0;
+                    uint32_t is_vmax = extract32(insn, 4, 1) == 0;
+                    if(is_vmax) {
+                        if(is_signed) {
+                            return trans_vmax_s(s, &a);
+                        } else {
+                            return trans_vmax_u(s, &a);
+                        }
+                    } else {
+                        if(is_signed) {
+                            return trans_vmin_s(s, &a);
+                        } else {
+                            return trans_vmin_u(s, &a);
+                        }
+                    }
                 }
                 if(is_insn_vmina(insn)) {
                     ARCH(MVE);

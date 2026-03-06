@@ -949,6 +949,12 @@ DO_VMAXMINV_S(vmaxvs, DO_MAX)
 DO_VMAXMINV_U(vmaxvu, DO_MAX)
 DO_VMAXMINV_S(vminvs, DO_MIN)
 DO_VMAXMINV_U(vminvu, DO_MIN)
+
+DO_2OP_S(vmaxs, DO_MAX)
+DO_2OP_U(vmaxu, DO_MAX)
+DO_2OP_S(vmins, DO_MIN)
+DO_2OP_U(vminu, DO_MIN)
+
 /*
  * VMAXAV, VMINAV treat the general purpose input as unsigned
  * and the vector elements as signed.
