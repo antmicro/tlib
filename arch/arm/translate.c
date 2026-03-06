@@ -1217,6 +1217,11 @@ VFP_GEN_FIX(uhto)
 VFP_GEN_FIX(ulto)
 #undef VFP_GEN_FIX
 
+#define tcg_gen_ld_f32 tcg_gen_ld_i32
+#define tcg_gen_ld_f64 tcg_gen_ld_i64
+#define tcg_gen_st_f32 tcg_gen_st_i32
+#define tcg_gen_st_f64 tcg_gen_st_i64
+
 static inline void gen_vfp_ld(DisasContext *s, enum arm_fp_precision precision, TCGv addr)
 {
     if(precision == DOUBLE_PRECISION) {
@@ -1227,14 +1232,33 @@ static inline void gen_vfp_ld(DisasContext *s, enum arm_fp_precision precision, 
     //  TODO: check halfprecision if applies
 }
 
-static inline void gen_vfp_st(DisasContext *s, enum arm_fp_precision precision, TCGv addr)
+static inline void gen_vfp_st(DisasContext *s, enum arm_fp_precision precision, TCGv addr, int reg)
 {
-    if(precision == DOUBLE_PRECISION) {
-        tcg_gen_qemu_st64(cpu_F0d, addr, context_to_mmu_index(s));
-    } else {
-        tcg_gen_qemu_st32(cpu_F0s, addr, context_to_mmu_index(s));
+    switch(precision) {
+        case DOUBLE_PRECISION: {
+            TCGv_i64 tmp = tcg_temp_local_new_i64();
+            tcg_gen_ld_f64(tmp, cpu_env, vfp_reg_offset(precision, reg));
+            tcg_gen_qemu_st64(tmp, addr, context_to_mmu_index(s));
+            tcg_temp_free_i64(tmp);
+            break;
+        }
+        case SINGLE_PRECISION: {
+            TCGv_i32 tmp = tcg_temp_local_new_i32();
+            tcg_gen_ld_f32(tmp, cpu_env, vfp_reg_offset(precision, reg));
+            tcg_gen_qemu_st32(tmp, addr, context_to_mmu_index(s));
+            tcg_temp_free_i32(tmp);
+            break;
+        }
+        case HALF_PRECISION: {
+            TCGv_i32 tmp = tcg_temp_local_new_i32();
+            tcg_gen_ld_f32(tmp, cpu_env, vfp_reg_offset(precision, reg));
+            tcg_gen_qemu_st16(tmp, addr, context_to_mmu_index(s));
+            tcg_temp_free_i32(tmp);
+            break;
+        }
+        default:
+            tlib_abortf("%s: Invalid precision: %x", __FUNCTION__, precision);
     }
-    //  TODO: check halfprecision if applies
 }
 
 /* Return the offset of a 32-bit piece of a NEON register.
@@ -1330,11 +1354,6 @@ void write_neon_element32(TCGv_i32 src, int reg, int ele, TCGMemOp memop)
             g_assert_not_reached();
     }
 }
-
-#define tcg_gen_ld_f32 tcg_gen_ld_i32
-#define tcg_gen_ld_f64 tcg_gen_ld_i64
-#define tcg_gen_st_f32 tcg_gen_st_i32
-#define tcg_gen_st_f64 tcg_gen_st_i64
 
 //  Deprecated, prefer using `tcg_gen_ld_f*` directly with local temporaries generated with tcg_temp_new_i*();
 static inline void gen_mov_F0_vreg(enum arm_fp_precision precision, int reg)
@@ -4208,7 +4227,13 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
 #endif
                 } else if((insn & 0x01200000) == 0x01000000) {
                     /* Single load/store */
-                    offset = (insn & 0xff) << 2;
+                    offset = (insn & 0xff);
+                    if(precision == HALF_PRECISION) {
+                        offset = offset << 1;
+                    } else {
+                        offset = offset << 2;
+                    }
+
                     if((insn & (1 << 23)) == 0) {
                         offset = -offset;
                     }
@@ -4224,8 +4249,8 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                         gen_vfp_ld(s, precision, addr);
                         gen_mov_vreg_F0(precision, rd);
                     } else {
-                        gen_mov_F0_vreg(precision, rd);
-                        gen_vfp_st(s, precision, addr);
+                        /* VSTR */
+                        gen_vfp_st(s, precision, addr, rd);
                     }
                     tcg_temp_free_i32(addr);
                 } else {
@@ -4275,8 +4300,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                             gen_mov_vreg_F0(precision, rd + i);
                         } else {
                             /* store */
-                            gen_mov_F0_vreg(precision, rd + i);
-                            gen_vfp_st(s, precision, addr);
+                            gen_vfp_st(s, precision, addr, rd + i);
                         }
                         tcg_gen_addi_i32(addr, addr, offset);
                     }
