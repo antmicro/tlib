@@ -413,10 +413,10 @@ RW_FUNCTIONS(64, c6_dracr, get_c6_dracr(env), set_c6_dracr(env, value))
 static inline uint64_t get_c1_actlr(CPUState *env, const ARMCPRegInfo *info)
 {
     switch(ARM_CPUID(env) & ARM_ARCHITECTURE_MASK) {
-        case ARM_CPUID_ARM1026 &ARM_ARCHITECTURE_MASK:
+        case ARM_CPUID_ARM1026EJ_S &ARM_ARCHITECTURE_MASK:
             return 1;
-        case ARM_CPUID_ARM1136 &ARM_ARCHITECTURE_MASK:
-        case ARM_CPUID_ARM1176 &ARM_ARCHITECTURE_MASK:
+        case ARM_CPUID_ARM1136JF_S &ARM_ARCHITECTURE_MASK:
+        case ARM_CPUID_ARM1176JZF_S &ARM_ARCHITECTURE_MASK:
             return 7;
         case ARM_CPUID_ARM11MPCORE &ARM_ARCHITECTURE_MASK:
             return 1;
