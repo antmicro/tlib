@@ -10402,7 +10402,7 @@ DO_TRANS_V_MAXMIN_V_FP(vminnmv, vminnmv)
 DO_TRANS_V_MAXMIN_V_FP(vmaxnmav, vmaxnmav)
 DO_TRANS_V_MAXMIN_V_FP(vminnmav, vminnmav)
 
-#define DO_TRANS_2OP(INSN, FN)                            \
+#define DO_TRANS_2OP_VEC(INSN, FN, VECFN)                 \
     static bool trans_##INSN(DisasContext *s, arg_2op *a) \
     {                                                     \
         static MVEGenTwoOpFn *const fns[] = {             \
@@ -10411,8 +10411,10 @@ DO_TRANS_V_MAXMIN_V_FP(vminnmav, vminnmav)
             gen_helper_mve_##FN##w,                       \
             NULL,                                         \
         };                                                \
-        return do_2op(s, a, fns[a->size]);                \
+        return do_2op_vec(s, a, fns[a->size], VECFN);     \
     }
+
+#define DO_TRANS_2OP(INSN, FN) DO_TRANS_2OP_VEC(INSN, FN, NULL)
 
 DO_TRANS_2OP(vadd, vadd)
 DO_TRANS_2OP(vsub, vsub)
