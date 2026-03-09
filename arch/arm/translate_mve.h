@@ -585,6 +585,27 @@ static inline bool is_insn_vandi_vorri(uint32_t insn)
     return (insn & 0xEFB810D0) == 0xEF800050;
 }
 
+static inline bool is_insn_vand(uint32_t insn)
+{
+    return (insn & 0xFFB11F51) == 0xEF000150;
+}
+static inline bool is_insn_vbic(uint32_t insn)
+{
+    return (insn & 0xFFB11F51) == 0xEF100150;
+}
+static inline bool is_insn_vorr(uint32_t insn)
+{
+    return (insn & 0xFFB11F51) == 0xEF200150;
+}
+static inline bool is_insn_vorn(uint32_t insn)
+{
+    return (insn & 0xFFB11F51) == 0xEF300150;
+}
+static inline bool is_insn_veor(uint32_t insn)
+{
+    return (insn & 0xFFB11F51) == 0xFF000150;
+}
+
 static inline bool is_insn_vmov_2gp(uint32_t insn)
 {
     return (insn & 0xFFA01FE0) == 0xEC000F00;

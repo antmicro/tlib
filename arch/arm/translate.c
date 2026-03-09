@@ -11253,7 +11253,20 @@ static int trans_vaddlv(DisasContext *s, arg_vaddv *a)
     mve_update_eci(s);
     return TRANS_STATUS_SUCCESS;
 }
-#endif
+
+#define DO_TRANS_LOGIC(INSN, HELPER, VECFN)              \
+    static int trans_##INSN(DisasContext *s, arg_2op *a) \
+    {                                                    \
+        return do_2op_vec(s, a, HELPER, VECFN);          \
+    }
+
+DO_TRANS_LOGIC(vand, gen_helper_mve_vand, tcg_gen_gvec_and)
+DO_TRANS_LOGIC(vbic, gen_helper_mve_vbic, tcg_gen_gvec_andc)
+DO_TRANS_LOGIC(vorr, gen_helper_mve_vorr, tcg_gen_gvec_or)
+DO_TRANS_LOGIC(vorn, gen_helper_mve_vorn, tcg_gen_gvec_orc)
+DO_TRANS_LOGIC(veor, gen_helper_mve_veor, tcg_gen_gvec_xor)
+
+#endif /* TARGET_PROTO_ARM_M */
 
 /* Translate a 32-bit thumb instruction.  Returns nonzero if the instruction
    is not legal.  */
@@ -12561,6 +12574,36 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     } else {
                         return trans_vorri(s, &a);
                     }
+                }
+                if(is_insn_vand(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op_no_size(&a, insn);
+                    return trans_vand(s, &a);
+                }
+                if(is_insn_vbic(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op_no_size(&a, insn);
+                    return trans_vbic(s, &a);
+                }
+                if(is_insn_vorr(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op_no_size(&a, insn);
+                    return trans_vorr(s, &a);
+                }
+                if(is_insn_vorn(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op_no_size(&a, insn);
+                    return trans_vorn(s, &a);
+                }
+                if(is_insn_veor(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op_no_size(&a, insn);
+                    return trans_veor(s, &a);
                 }
                 if(is_insn_vmov_2gp(insn)) {
                     ARCH(MVE);

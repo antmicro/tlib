@@ -249,6 +249,18 @@ DO_2OP_U(vmul, DO_MUL)
 DO_2OP_S(vabds, DO_ABD)
 DO_2OP_U(vabdu, DO_ABD)
 
+#define DO_AND(N, M) ((N) & (M))
+#define DO_BIC(N, M) ((N) & ~(M))
+#define DO_ORR(N, M) ((N) | (M))
+#define DO_ORN(N, M) ((N) | ~(M))
+#define DO_EOR(N, M) ((N) ^ (M))
+
+DO_2OP(vand, 8, uint64_t, DO_AND)
+DO_2OP(vbic, 8, uint64_t, DO_BIC)
+DO_2OP(vorr, 8, uint64_t, DO_ORR)
+DO_2OP(vorn, 8, uint64_t, DO_ORN)
+DO_2OP(veor, 8, uint64_t, DO_EOR)
+
 static inline uint32_t do_vhadd_u(uint32_t n, uint32_t m)
 {
     return ((uint64_t)n + m) >> 1;
