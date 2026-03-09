@@ -964,6 +964,8 @@ DEF_HELPER_4(mve_vabdsw, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vabdub, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vabduh, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vabduw, void, env, ptr, ptr, ptr)
+
+DEF_HELPER_4(mve_vfabds, void, env, ptr, ptr, ptr)
 #endif
 
 #include "def-helper.h"

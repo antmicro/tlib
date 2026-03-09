@@ -585,6 +585,13 @@ static inline float32 float32_minnuma(float32 a, float32 b, float_status *s)
 DO_2OP_FP(vmaxnmas, 4, float32, float32_maxnuma)
 DO_2OP_FP(vminnmas, 4, float32, float32_minnuma)
 
+static inline float32 float32_abd(float32 a, float32 b, float_status *s)
+{
+    return float32_abs(float32_sub(a, b, s));
+}
+
+DO_2OP_FP(vfabds, 4, float32, float32_abd)
+
 #define DO_2OP_FP_ACC_SCALAR(OP, ESIZE, TYPE, FN)                                \
     void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vn, uint32_t rm) \
     {                                                                            \
