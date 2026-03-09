@@ -10444,6 +10444,9 @@ DO_TRANS_2OP_VEC(vmax_u, vmaxu, tcg_gen_gvec_umax)
 DO_TRANS_2OP_VEC(vmin_s, vmins, tcg_gen_gvec_smin)
 DO_TRANS_2OP_VEC(vmin_u, vminu, tcg_gen_gvec_umin)
 
+DO_TRANS_2OP(vabd_s, vabds)
+DO_TRANS_2OP(vabd_u, vabdu)
+
 DO_TRANS_2OP(vmull_bs, vmullbs)
 DO_TRANS_2OP(vmull_bu, vmullbu)
 DO_TRANS_2OP(vmull_ts, vmullts)
@@ -13002,6 +13005,18 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_vaddv a;
                     mve_extract_vaddv(&a, insn);
                     return trans_vaddlv(s, &a);
+                }
+                if(is_insn_vabd(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op(&a, insn);
+
+                    uint32_t is_signed = extract32(insn, 28, 1) == 0;
+                    if(is_signed) {
+                        return trans_vabd_s(s, &a);
+                    } else {
+                        return trans_vabd_u(s, &a);
+                    }
                 }
             }
 #endif

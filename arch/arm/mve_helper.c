@@ -38,6 +38,7 @@
 #define DO_LT(N, M)  ((N) < (M))
 #define DO_GT(N, M)  ((N) > (M))
 #define DO_LE(N, M)  ((N) <= (M))
+#define DO_ABD(N, M) ((N) >= (M) ? (N) - (M) : (M) - (N))
 
 static uint16_t mve_eci_mask(CPUState *env)
 {
@@ -245,6 +246,8 @@ static void mergemask_sq(int64_t *d, int64_t r, uint16_t mask)
 DO_2OP_U(vadd, DO_ADD)
 DO_2OP_U(vsub, DO_SUB)
 DO_2OP_U(vmul, DO_MUL)
+DO_2OP_S(vabds, DO_ABD)
+DO_2OP_U(vabdu, DO_ABD)
 
 static inline uint32_t do_vhadd_u(uint32_t n, uint32_t m)
 {

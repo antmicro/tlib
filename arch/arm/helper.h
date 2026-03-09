@@ -957,6 +957,13 @@ DEF_HELPER_3(mve_vaddvuw, i32, env, ptr, i32);
 
 DEF_HELPER_3(mve_vaddlvs, i64, env, ptr, i64)
 DEF_HELPER_3(mve_vaddlvu, i64, env, ptr, i64)
+
+DEF_HELPER_4(mve_vabdsb, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vabdsh, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vabdsw, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vabdub, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vabduh, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vabduw, void, env, ptr, ptr, ptr)
 #endif
 
 #include "def-helper.h"
