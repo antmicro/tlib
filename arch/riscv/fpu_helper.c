@@ -66,10 +66,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 extern THREAD_LOCAL uint_fast8_t softfloat_roundingMode;
 extern THREAD_LOCAL uint_fast8_t softfloat_exceptionFlags;
 
-/* convert RISC-V rounding mode to IEEE library numbers */
-unsigned int ieee_rm[] = { float_round_nearest_even, float_round_to_zero, float_round_down, float_round_up,
-                           float_round_ties_away };
-
 typedef enum {
     riscv_float_round_nearest_even = 0,
     riscv_float_round_to_zero = 1,
@@ -86,28 +82,22 @@ typedef enum {
     riscv_float_exception_invalid_operation = 16,  //  NV
 } riscv_float_exception_flag;
 
-/* convert RISC-V Vector Fixed-Point Rounding Mode to IEEE library numbers */
-unsigned int ieee_vxrm[] = { float_round_up, float_round_nearest_even, float_round_down };
-
 /* obtain rm value to use in computation
- * as the last step, convert rm codes to what the softfloat library expects
+ * as the last step, convert rm codes to what the SoftFloat-3 library expects
  * Adapted from Spike's decode.h:RM
  */
-#define RM_VERSION(version)                                            \
-    ({                                                                 \
-        if(rm == 7) {                                                  \
-            rm = env->frm;                                             \
-        }                                                              \
-        if(rm > 4) {                                                   \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST); \
-        }                                                              \
-        ((version) == 3 ? rm : ieee_rm[rm]);                           \
+#define RM_3                                                                        \
+    ({                                                                              \
+        if(rm == 7) {                                                               \
+            rm = env->frm;                                                          \
+        }                                                                           \
+        if(rm > 4) {                                                                \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);              \
+        }                                                                           \
+        /* Because RISC-V and SoftFloat-3 has a one-to-one relation of its rounding \
+           mode values, it is enough to return the value of `rm` immediately. */    \
+        rm;                                                                         \
     })
-
-/* Convert rm codes to what the softfloat-2 library expects */
-#define RM RM_VERSION(2)
-/* Convert rm codes to what the softfloat-3 library expects */
-#define RM_3 RM_VERSION(3)
 
 #define require_fp                                                 \
     if(!(env->mstatus & MSTATUS_FS)) {                             \
@@ -135,18 +125,6 @@ union ui64_f64 {
     uint64_t f;
 };
 
-/* convert softfloat library flag numbers to RISC-V */
-unsigned int softfloat_flags_to_riscv(unsigned int flags)
-{
-    int rv_flags = 0;
-    rv_flags |= (flags & float_flag_inexact) ? riscv_float_exception_inexact : 0;
-    rv_flags |= (flags & float_flag_underflow) ? riscv_float_exception_underflow : 0;
-    rv_flags |= (flags & float_flag_overflow) ? riscv_float_exception_overflow : 0;
-    rv_flags |= (flags & float_flag_divbyzero) ? riscv_float_exception_divide_by_zero : 0;
-    rv_flags |= (flags & float_flag_invalid) ? riscv_float_exception_invalid_operation : 0;
-    return rv_flags;
-}
-
 unsigned int softfloat3_flags_to_riscv(unsigned int flags)
 {
     int rv_flags = 0;
@@ -162,13 +140,6 @@ void set_float3_rounding_mode(int val)
 {
     softfloat_roundingMode = (uint_fast8_t)val;
 }
-
-/* adapted from Spike's decode.h:set_fp_exceptions */
-#define set_fp_exceptions()                                                                  \
-    do {                                                                                     \
-        env->fflags |= softfloat_flags_to_riscv(get_float_exception_flags(&env->fp_status)); \
-        set_float_exception_flags(0, &env->fp_status);                                       \
-    } while(0)
 
 #define set_fp3_exceptions()                                                \
     do {                                                                    \
