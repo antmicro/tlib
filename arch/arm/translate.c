@@ -11140,6 +11140,51 @@ static int trans_vmladav_u(DisasContext *s, arg_vmladav *a)
     };
     return do_dual_acc(s, a, fns[a->size][a->x]);
 }
+
+static int trans_vaddv(DisasContext *s, arg_vaddv *a)
+{
+    /* VADDV: vector add across vector */
+    static MVEGenVADDVFn *const fns[4][2] = {
+        { gen_helper_mve_vaddvsb, gen_helper_mve_vaddvub },
+        { gen_helper_mve_vaddvsh, gen_helper_mve_vaddvuh },
+        { gen_helper_mve_vaddvsw, gen_helper_mve_vaddvuw },
+        { NULL,                   NULL                   }
+    };
+    TCGv_ptr qm;
+    TCGv_i32 rda_i, rda_o;
+
+    if(a->size == 3) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    /*
+     * This insn is subject to beat-wise execution. Partial execution
+     * of an A=0 (no-accumulate) insn which does not execute the first
+     * beat must start with the current value of Rda, not zero.
+     */
+    if(a->a || mve_skip_first_beat(s)) {
+        /* Accumulate input from Rda */
+        rda_o = rda_i = load_reg(s, a->rda);
+    } else {
+        /* Accumulate starting at zero */
+        rda_i = tcg_const_i32(0);
+        rda_o = tcg_temp_new_i32();
+    }
+
+    qm = mve_qreg_ptr(a->qm);
+    fns[a->size][a->u](rda_o, cpu_env, qm, rda_i);
+
+    if(rda_o != rda_i) {
+        tcg_temp_free_i32(rda_i);
+    }
+    store_reg(s, a->rda, rda_o);
+
+    mve_update_eci(s);
+    return TRANS_STATUS_SUCCESS;
+}
 #endif
 
 /* Translate a 32-bit thumb instruction.  Returns nonzero if the instruction
@@ -12881,6 +12926,12 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     } else {
                         return trans_vmullp_b(s, &a);
                     }
+                }
+                if(is_insn_vaddv(insn)) {
+                    ARCH(MVE);
+                    arg_vaddv a;
+                    mve_extract_vaddv(&a, insn);
+                    return trans_vaddv(s, &a);
                 }
             }
 #endif

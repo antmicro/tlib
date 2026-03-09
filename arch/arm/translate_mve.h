@@ -224,6 +224,17 @@ typedef struct {
     int a;
 } arg_vmladav;
 
+typedef struct {
+    int u;
+    int a;
+    /* Only valid for VADDV */
+    int size;
+    int qm;
+    int rda;
+    /* Only valid for VADDLV */
+    int rdahi;
+} arg_vaddv;
+
 void gen_mve_vld40b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld41b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld42b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
@@ -849,6 +860,11 @@ static inline bool is_insn_vmullp(uint32_t insn)
     return (insn & 0xEFB10F51) == 0xEE310E00;
 }
 
+static inline bool is_insn_vaddv(uint32_t insn)
+{
+    return (insn & 0xEFF31FD1) == 0xEEF10F00;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {
@@ -1199,4 +1215,15 @@ static void mve_extract_2op_sz28(arg_2op *a, uint32_t insn)
     a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));
     a->qn = deposit32(extract32(insn, 17, 3), 3, 29, extract32(insn, 7, 1));
     a->size = extract32(insn, 28, 1) + 1;
+}
+
+/* Extract arguments of VADD(L)V(A) instructions */
+static void mve_extract_vaddv(arg_vaddv *a, uint32_t insn)
+{
+    a->u = extract32(insn, 28, 1);
+    a->a = extract32(insn, 5, 1);
+    a->size = extract32(insn, 18, 2);
+    a->qm = extract32(insn, 1, 3);
+    a->rda = 2 * extract32(insn, 13, 3);
+    a->rdahi = 2 * extract32(insn, 20, 3) + 1;
 }
