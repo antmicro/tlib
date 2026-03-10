@@ -838,6 +838,12 @@ static inline bool is_insn_vqadd_s_scalar(uint32_t insn)
     return (insn & 0xFF811F70) == 0xEE000F60;
 }
 
+static inline bool is_insn_vmull(uint32_t insn)
+{
+    uint32_t size = extract32(insn, 20, 2);
+    return size != 3 && (insn & 0xEF810F51) == 0xEE010E00;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {

@@ -10444,6 +10444,11 @@ DO_TRANS_2OP_VEC(vmax_u, vmaxu, tcg_gen_gvec_umax)
 DO_TRANS_2OP_VEC(vmin_s, vmins, tcg_gen_gvec_smin)
 DO_TRANS_2OP_VEC(vmin_u, vminu, tcg_gen_gvec_umin)
 
+DO_TRANS_2OP(vmull_bs, vmullbs)
+DO_TRANS_2OP(vmull_bu, vmullbu)
+DO_TRANS_2OP(vmull_ts, vmullts)
+DO_TRANS_2OP(vmull_tu, vmulltu)
+
 #define DO_TRANS_2SHIFT_VEC(INSN, FN, NEGATESHIFT, VECFN)             \
     static bool trans_##INSN(DisasContext *s, arg_2shift *a)          \
     {                                                                 \
@@ -12815,6 +12820,27 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_2scalar args;
                     mve_extract_2op_scalar(&args, insn);
                     return trans_vqadd_s_scalar(s, &args);
+                }
+                if(is_insn_vmull(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op(&a, insn);
+                    uint32_t top_half = extract32(insn, 12, 1) == 1;
+                    uint32_t is_signed = extract32(insn, 28, 1) == 1;
+
+                    if(is_signed) {
+                        if(top_half) {
+                            return trans_vmull_ts(s, &a);
+                        } else {
+                            return trans_vmull_bs(s, &a);
+                        }
+                    } else {
+                        if(top_half) {
+                            return trans_vmull_tu(s, &a);
+                        } else {
+                            return trans_vmull_bu(s, &a);
+                        }
+                    }
                 }
             }
 #endif

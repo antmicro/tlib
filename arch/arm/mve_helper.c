@@ -1581,4 +1581,34 @@ DO_VCADD_FP(vfcadd270s, 4, float32, float32_add, float32_sub)
 
 #undef DO_VCADD_FP
 
+#define DO_2OP_L(OP, TOP, ESIZE, TYPE, LESIZE, LTYPE, FN)                              \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vn, void *vm)          \
+    {                                                                                  \
+        LTYPE *d = vd;                                                                 \
+        TYPE *n = vn, *m = vm;                                                         \
+        uint16_t mask = mve_element_mask(env);                                         \
+        unsigned int le;                                                               \
+        for(le = 0; le < 16 / LESIZE; le++, mask >>= LESIZE) {                         \
+            LTYPE r = FN((LTYPE)n[H##ESIZE(le * 2 + TOP)], m[H##ESIZE(le * 2 + TOP)]); \
+            mergemask(&d[H##LESIZE(le)], r, mask);                                     \
+        }                                                                              \
+        mve_advance_vpt(env);                                                          \
+    }
+
+DO_2OP_L(vmullbsb, 0, 1, int8_t, 2, int16_t, DO_MUL)
+DO_2OP_L(vmullbsh, 0, 2, int16_t, 4, int32_t, DO_MUL)
+DO_2OP_L(vmullbsw, 0, 4, int32_t, 8, int64_t, DO_MUL)
+DO_2OP_L(vmullbub, 0, 1, uint8_t, 2, uint16_t, DO_MUL)
+DO_2OP_L(vmullbuh, 0, 2, uint16_t, 4, uint32_t, DO_MUL)
+DO_2OP_L(vmullbuw, 0, 4, uint32_t, 8, uint64_t, DO_MUL)
+
+DO_2OP_L(vmulltsb, 1, 1, int8_t, 2, int16_t, DO_MUL)
+DO_2OP_L(vmulltsh, 1, 2, int16_t, 4, int32_t, DO_MUL)
+DO_2OP_L(vmulltsw, 1, 4, int32_t, 8, int64_t, DO_MUL)
+DO_2OP_L(vmulltub, 1, 1, uint8_t, 2, uint16_t, DO_MUL)
+DO_2OP_L(vmulltuh, 1, 2, uint16_t, 4, uint32_t, DO_MUL)
+DO_2OP_L(vmulltuw, 1, 4, uint32_t, 8, uint64_t, DO_MUL)
+
+#undef DO_2OP_L
+
 #endif

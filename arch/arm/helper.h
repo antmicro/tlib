@@ -925,6 +925,22 @@ DEF_HELPER_4(mve_vcmla270s, void, env, ptr, ptr, ptr)
 
 DEF_HELPER_4(mve_vfcadd90s, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vfcadd270s, void, env, ptr, ptr, ptr)
+
+DEF_HELPER_4(mve_vmullbsb, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vmullbsh, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vmullbsw, void, env, ptr, ptr, ptr)
+
+DEF_HELPER_4(mve_vmullbub, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vmullbuh, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vmullbuw, void, env, ptr, ptr, ptr)
+
+DEF_HELPER_4(mve_vmulltsb, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vmulltsh, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vmulltsw, void, env, ptr, ptr, ptr)
+
+DEF_HELPER_4(mve_vmulltub, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vmulltuh, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vmulltuw, void, env, ptr, ptr, ptr)
 #endif
 
 #include "def-helper.h"
