@@ -10011,14 +10011,14 @@ static int trans_vldr_vstr(DisasContext *s, arg_vldr_vstr *a)
     return do_ldst(s, a, ldst_fns[a->size][a->l], a->size);
 }
 
-#define DO_VLDST_WIDE_NARROW(OP, SLD, ULD, ST, MSIZE)                \
-    static int glue(trans_, OP)(DisasContext * s, arg_vldr_vstr * a) \
-    {                                                                \
-        static MVEGenLdStFn *const ldst_fns[2][2] = {                \
-            { F(ST), F(SLD) },                                       \
-            { NULL,  F(ULD) },                                        \
-        };                                                           \
-        return do_ldst(s, a, ldst_fns[a->u][a->l], MSIZE);           \
+#define DO_VLDST_WIDE_NARROW(OP, SLD, ULD, ST, MSIZE)        \
+    static int trans_##OP(DisasContext *s, arg_vldr_vstr *a) \
+    {                                                        \
+        static MVEGenLdStFn *const ldst_fns[2][2] = {        \
+            { F(ST), F(SLD) },                               \
+            { NULL,  F(ULD) },                                \
+        };                                                   \
+        return do_ldst(s, a, ldst_fns[a->u][a->l], MSIZE);   \
     }
 
 DO_VLDST_WIDE_NARROW(vldstb_h, vldrb_sh, vldrb_uh, vstrb_h, 1)
@@ -10083,14 +10083,14 @@ DO_TRANS_2SHIFT_FP(vcvt_fu_fixed, vcvt_fu)
 
 #undef DO_TRANS_2SHIFT_FP
 
-#define DO_TRANS_2OP_FP(INSN, FN)                                \
-    static int glue(trans_, INSN)(DisasContext * s, arg_2op * a) \
-    {                                                            \
-        static MVEGenTwoOpFn *const fns[] = {                    \
-            gen_helper_mve_##FN##s,                              \
-            NULL,                                                \
-        };                                                       \
-        return do_2op(s, a, fns[a->size]);                       \
+#define DO_TRANS_2OP_FP(INSN, FN)                        \
+    static int trans_##INSN(DisasContext *s, arg_2op *a) \
+    {                                                    \
+        static MVEGenTwoOpFn *const fns[] = {            \
+            gen_helper_mve_##FN##s,                      \
+            NULL,                                        \
+        };                                               \
+        return do_2op(s, a, fns[a->size]);               \
     }
 
 DO_TRANS_2OP_FP(vadd_fp, vfadd)
@@ -10582,16 +10582,16 @@ static int do_1op_vec(DisasContext *s, arg_1op *a, MVEGenOneOpFn fn, GVecGen2Fn 
     return TRANS_STATUS_SUCCESS;
 }
 
-#define DO_1OP_VEC(INSN, FN, VECFN)                              \
-    static int glue(trans_, INSN)(DisasContext * s, arg_1op * a) \
-    {                                                            \
-        static MVEGenOneOpFn *const fns[] = {                    \
-            gen_helper_mve_##FN##b,                              \
-            gen_helper_mve_##FN##h,                              \
-            gen_helper_mve_##FN##w,                              \
-            NULL,                                                \
-        };                                                       \
-        return do_1op_vec(s, a, fns[a->size], VECFN);            \
+#define DO_1OP_VEC(INSN, FN, VECFN)                      \
+    static int trans_##INSN(DisasContext *s, arg_1op *a) \
+    {                                                    \
+        static MVEGenOneOpFn *const fns[] = {            \
+            gen_helper_mve_##FN##b,                      \
+            gen_helper_mve_##FN##h,                      \
+            gen_helper_mve_##FN##w,                      \
+            NULL,                                        \
+        };                                               \
+        return do_1op_vec(s, a, fns[a->size], VECFN);    \
     }
 
 #define DO_1OP(INSN, FN) DO_1OP_VEC(INSN, FN, NULL)
@@ -10955,16 +10955,16 @@ static bool trans_vmov_between_gp_vec(DisasContext *s, arg_vmov_gp *a, bool from
     return TRANS_STATUS_SUCCESS;
 }
 
-#define DO_2OP_SCALAR(INSN, FN)                                       \
-    static bool glue(trans_, INSN)(DisasContext * s, arg_2scalar * a) \
-    {                                                                 \
-        static MVEGenTwoOpScalarFn *const fns[] = {                   \
-            gen_helper_mve_##FN##b,                                   \
-            gen_helper_mve_##FN##h,                                   \
-            gen_helper_mve_##FN##w,                                   \
-            NULL,                                                     \
-        };                                                            \
-        return do_2op_scalar(s, a, fns[a->size]);                     \
+#define DO_2OP_SCALAR(INSN, FN)                               \
+    static bool trans_##INSN(DisasContext *s, arg_2scalar *a) \
+    {                                                         \
+        static MVEGenTwoOpScalarFn *const fns[] = {           \
+            gen_helper_mve_##FN##b,                           \
+            gen_helper_mve_##FN##h,                           \
+            gen_helper_mve_##FN##w,                           \
+            NULL,                                             \
+        };                                                    \
+        return do_2op_scalar(s, a, fns[a->size]);             \
     }
 
 DO_2OP_SCALAR(vmla, vmla)
@@ -11119,16 +11119,16 @@ static int do_dual_acc(DisasContext *s, arg_vmladav *a, MVEGenDualAccOpFn *fn)
     return TRANS_STATUS_SUCCESS;
 }
 
-#define DO_DUAL_ACC(INSN, FN)                                        \
-    static int glue(trans_, INSN)(DisasContext * s, arg_vmladav * a) \
-    {                                                                \
-        static MVEGenDualAccOpFn *const fns[4][2] = {                \
-            { gen_helper_mve_##FN##b, gen_helper_mve_##FN##xb },     \
-            { gen_helper_mve_##FN##h, gen_helper_mve_##FN##xh },     \
-            { gen_helper_mve_##FN##w, gen_helper_mve_##FN##xw },     \
-            { NULL,                   NULL                    },                                          \
-        };                                                           \
-        return do_dual_acc(s, a, fns[a->size][a->x]);                \
+#define DO_DUAL_ACC(INSN, FN)                                    \
+    static int trans_##INSN(DisasContext *s, arg_vmladav *a)     \
+    {                                                            \
+        static MVEGenDualAccOpFn *const fns[4][2] = {            \
+            { gen_helper_mve_##FN##b, gen_helper_mve_##FN##xb }, \
+            { gen_helper_mve_##FN##h, gen_helper_mve_##FN##xh }, \
+            { gen_helper_mve_##FN##w, gen_helper_mve_##FN##xw }, \
+            { NULL,                   NULL                    },                                      \
+        };                                                       \
+        return do_dual_acc(s, a, fns[a->size][a->x]);            \
     }
 
 DO_DUAL_ACC(vmladav_s, vmladavs)
