@@ -844,6 +844,11 @@ static inline bool is_insn_vmull(uint32_t insn)
     return size != 3 && (insn & 0xEF810F51) == 0xEE010E00;
 }
 
+static inline bool is_insn_vmullp(uint32_t insn)
+{
+    return (insn & 0xEFB10F51) == 0xEE310E00;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {
@@ -1185,4 +1190,13 @@ static void mve_extract_2op_fp_size_rev(arg_2op *a, uint32_t insn)
      * where it expect size of 0 zero to mean F32.
      */
     a->size = extract32(insn, 20, 1) == 1 ? 0 : 1;
+}
+
+/* Extract arguments of 2-operand instructions with size on 28th bit */
+static void mve_extract_2op_sz28(arg_2op *a, uint32_t insn)
+{
+    a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));
+    a->qn = deposit32(extract32(insn, 17, 3), 3, 29, extract32(insn, 7, 1));
+    a->size = extract32(insn, 28, 1) + 1;
 }

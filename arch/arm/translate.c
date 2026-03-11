@@ -10449,6 +10449,34 @@ DO_TRANS_2OP(vmull_bu, vmullbu)
 DO_TRANS_2OP(vmull_ts, vmullts)
 DO_TRANS_2OP(vmull_tu, vmulltu)
 
+static bool trans_vmullp_b(DisasContext *s, arg_2op *a)
+{
+    /*
+     * Note that a->size indicates the output size, ie VMULL.P8
+     * is the 8x8->16 operation and a->size is MO_16; VMULL.P16
+     * is the 16x16->32 operation and a->size is MO_32.
+     */
+    static MVEGenTwoOpFn *const fns[] = {
+        NULL,
+        gen_helper_mve_vmullpbh,
+        gen_helper_mve_vmullpbw,
+        NULL,
+    };
+    return do_2op(s, a, fns[a->size]);
+}
+
+static bool trans_vmullp_t(DisasContext *s, arg_2op *a)
+{
+    /* a->size is as for trans_vmullp_b */
+    static MVEGenTwoOpFn *const fns[] = {
+        NULL,
+        gen_helper_mve_vmullpth,
+        gen_helper_mve_vmullptw,
+        NULL,
+    };
+    return do_2op(s, a, fns[a->size]);
+}
+
 #define DO_TRANS_2SHIFT_VEC(INSN, FN, NEGATESHIFT, VECFN)             \
     static bool trans_##INSN(DisasContext *s, arg_2shift *a)          \
     {                                                                 \
@@ -12840,6 +12868,18 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                         } else {
                             return trans_vmull_bu(s, &a);
                         }
+                    }
+                }
+                if(is_insn_vmullp(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op_sz28(&a, insn);
+                    uint32_t top_half = extract32(insn, 12, 1) == 1;
+
+                    if(top_half) {
+                        return trans_vmullp_t(s, &a);
+                    } else {
+                        return trans_vmullp_b(s, &a);
                     }
                 }
             }

@@ -323,6 +323,22 @@ DO_2OP_SCALAR_U(vhaddu_scalar, do_vhadd_u)
 DO_2OP_SCALAR_S(vhsubs_scalar, do_vhsub_s)
 DO_2OP_SCALAR_U(vhsubu_scalar, do_vhsub_u)
 
+/*
+ * Polynomial multiply. We can always do this generating 64 bits
+ * of the result at a time, so we don't need to use DO_2OP_L.
+ */
+#define VMULLPH_MASK      0x00ff00ff00ff00ffULL
+#define VMULLPW_MASK      0x0000ffff0000ffffULL
+#define DO_VMULLPBH(N, M) pmull_h((N) & VMULLPH_MASK, (M) & VMULLPH_MASK)
+#define DO_VMULLPTH(N, M) DO_VMULLPBH((N) >> 8, (M) >> 8)
+#define DO_VMULLPBW(N, M) pmull_w((N) & VMULLPW_MASK, (M) & VMULLPW_MASK)
+#define DO_VMULLPTW(N, M) DO_VMULLPBW((N) >> 16, (M) >> 16)
+
+DO_2OP(vmullpbh, 8, uint64_t, DO_VMULLPBH)
+DO_2OP(vmullpth, 8, uint64_t, DO_VMULLPTH)
+DO_2OP(vmullpbw, 8, uint64_t, DO_VMULLPBW)
+DO_2OP(vmullptw, 8, uint64_t, DO_VMULLPTW)
+
 /* For loads, predicated lanes are zeroed instead of keeping their old values */
 #define DO_VLDR(OP, TYPE, ESIZE, MSIZE, LD_TYPE)                                                 \
     void HELPER(glue(mve_, OP))(CPUState * env, void *vd, uint32_t addr)                         \
