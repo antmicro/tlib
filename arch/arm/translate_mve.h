@@ -865,6 +865,12 @@ static inline bool is_insn_vaddv(uint32_t insn)
     return (insn & 0xEFF31FD1) == 0xEEF10F00;
 }
 
+static inline bool is_insn_vaddlv(uint32_t insn)
+{
+    uint32_t related = extract32(insn, 16, 3);
+    return related != 7 && (insn & 0xEF8F1FD1) == 0xEE890F00;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {

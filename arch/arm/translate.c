@@ -11185,6 +11185,70 @@ static int trans_vaddv(DisasContext *s, arg_vaddv *a)
     mve_update_eci(s);
     return TRANS_STATUS_SUCCESS;
 }
+
+static int trans_vaddlv(DisasContext *s, arg_vaddv *a)
+{
+    /*
+     * Vector Add Long Across Vector: accumulate the 32-bit
+     * elements of the vector into a 64-bit result stored in
+     * a pair of general-purpose registers.
+     * No need to check Qm's bank: it is only 3 bits in decode.
+     */
+    TCGv_ptr qm;
+    TCGv_i64 rda_i, rda_o;
+    TCGv_i32 rdalo, rdahi;
+
+    /*
+     * rdahi == 13 is UNPREDICTABLE; rdahi == 15 is a related
+     * encoding; rdalo always has bit 0 clear so cannot be 13 or 15.
+     */
+    if(a->rdahi == 13 || a->rdahi == 15) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    /*
+     * This insn is subject to beat-wise execution. Partial execution
+     * of an A=0 (no-accumulate) insn which does not execute the first
+     * beat must start with the current value of RdaHi:RdaLo, not zero.
+     */
+    rda_o = tcg_temp_new_i64();
+    if(a->a || mve_skip_first_beat(s)) {
+        /* Accumulate input from RdaHi:RdaLo */
+        rda_i = rda_o;
+        rdalo = load_reg(s, a->rda);
+        rdahi = load_reg(s, a->rdahi);
+        tcg_gen_concat_i32_i64(rda_i, rdalo, rdahi);
+        tcg_temp_free_i32(rdalo);
+        tcg_temp_free_i32(rdahi);
+    } else {
+        /* Accumulate starting at zero */
+        rda_i = tcg_const_i64(0);
+    }
+
+    qm = mve_qreg_ptr(a->qm);
+    if(a->u) {
+        gen_helper_mve_vaddlvu(rda_o, cpu_env, qm, rda_i);
+    } else {
+        gen_helper_mve_vaddlvs(rda_o, cpu_env, qm, rda_i);
+    }
+
+    rdalo = tcg_temp_new_i32();
+    rdahi = tcg_temp_new_i32();
+    tcg_gen_extrl_i64_i32(rdalo, rda_o);
+    tcg_gen_extrh_i64_i32(rdahi, rda_o);
+    store_reg(s, a->rda, rdalo);
+    store_reg(s, a->rdahi, rdahi);
+    tcg_temp_free_i32(qm);
+    if(rda_i != rda_o) {
+        tcg_temp_free_i64(rda_i);
+    }
+    tcg_temp_free_i64(rda_o);
+    mve_update_eci(s);
+    return TRANS_STATUS_SUCCESS;
+}
 #endif
 
 /* Translate a 32-bit thumb instruction.  Returns nonzero if the instruction
@@ -12932,6 +12996,12 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_vaddv a;
                     mve_extract_vaddv(&a, insn);
                     return trans_vaddv(s, &a);
+                }
+                if(is_insn_vaddlv(insn)) {
+                    ARCH(MVE);
+                    arg_vaddv a;
+                    mve_extract_vaddv(&a, insn);
+                    return trans_vaddlv(s, &a);
                 }
             }
 #endif
