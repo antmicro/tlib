@@ -10538,6 +10538,11 @@ static bool trans_vmullp_t(DisasContext *s, arg_2op *a)
     return do_2op(s, a, fns[a->size]);
 }
 
+DO_TRANS_2OP(vmulh_s, vmulhs)
+DO_TRANS_2OP(vmulh_u, vmulhu)
+DO_TRANS_2OP(vrmulh_s, vrmulhs)
+DO_TRANS_2OP(vrmulh_u, vrmulhu)
+
 #define DO_TRANS_2SHIFT_VEC(INSN, FN, NEGATESHIFT, VECFN)             \
     static bool trans_##INSN(DisasContext *s, arg_2shift *a)          \
     {                                                                 \
@@ -13460,6 +13465,27 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_2shift a;
                     mve_extract_lshift_imm(&a, insn);
                     return trans_vsli(s, &a);
+                }
+                if(is_insn_vmulh_vrmulh(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op(&a, insn);
+                    uint32_t is_rounding = extract32(insn, 12, 1) == 1;
+                    uint32_t is_signed = extract32(insn, 28, 1) == 0;
+
+                    if(is_rounding) {
+                        if(is_signed) {
+                            return trans_vrmulh_s(s, &a);
+                        } else {
+                            return trans_vrmulh_u(s, &a);
+                        }
+                    } else {
+                        if(is_signed) {
+                            return trans_vmulh_s(s, &a);
+                        } else {
+                            return trans_vmulh_u(s, &a);
+                        }
+                    }
                 }
             }
 #endif

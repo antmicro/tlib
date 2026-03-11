@@ -286,6 +286,54 @@ DO_2OP_U(vhaddu, do_vhadd_u)
 DO_2OP_S(vhsubs, do_vhsub_s)
 DO_2OP_U(vhsubu, do_vhsub_u)
 
+/*
+ * Because the computation type is at least twice as large as required,
+ * these work for both signed and unsigned source types.
+ */
+static inline uint8_t do_mulh_b(int32_t n, int32_t m)
+{
+    return (n * m) >> 8;
+}
+
+static inline uint16_t do_mulh_h(int32_t n, int32_t m)
+{
+    return (n * m) >> 16;
+}
+
+static inline uint32_t do_mulh_w(int64_t n, int64_t m)
+{
+    return (n * m) >> 32;
+}
+
+static inline uint8_t do_rmulh_b(int32_t n, int32_t m)
+{
+    return (n * m + (1U << 7)) >> 8;
+}
+
+static inline uint16_t do_rmulh_h(int32_t n, int32_t m)
+{
+    return (n * m + (1U << 15)) >> 16;
+}
+
+static inline uint32_t do_rmulh_w(int64_t n, int64_t m)
+{
+    return (n * m + (1U << 31)) >> 32;
+}
+
+DO_2OP(vmulhsb, 1, int8_t, do_mulh_b)
+DO_2OP(vmulhsh, 2, int16_t, do_mulh_h)
+DO_2OP(vmulhsw, 4, int32_t, do_mulh_w)
+DO_2OP(vmulhub, 1, uint8_t, do_mulh_b)
+DO_2OP(vmulhuh, 2, uint16_t, do_mulh_h)
+DO_2OP(vmulhuw, 4, uint32_t, do_mulh_w)
+
+DO_2OP(vrmulhsb, 1, int8_t, do_rmulh_b)
+DO_2OP(vrmulhsh, 2, int16_t, do_rmulh_h)
+DO_2OP(vrmulhsw, 4, int32_t, do_rmulh_w)
+DO_2OP(vrmulhub, 1, uint8_t, do_rmulh_b)
+DO_2OP(vrmulhuh, 2, uint16_t, do_rmulh_h)
+DO_2OP(vrmulhuw, 4, uint32_t, do_rmulh_w)
+
 #define DO_2OP_SCALAR(OP, ESIZE, TYPE, FN)                                       \
     void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vn, uint32_t rm) \
     {                                                                            \
