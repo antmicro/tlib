@@ -11676,7 +11676,14 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                 uint8_t op0 = (insn >> 15) & 0x1;
                 uint8_t op1 = (insn >> 12) & 0x3;
 
-                if(op0 == 0 && rm != 0xd && rm != 0xf) {
+                if(op0 == 0 && rm != 0xf) {
+                    /*
+                     * ORR (register) T2 / MOV (register) T3.
+                     * Rm==13 (SP) is UNPREDICTABLE per ARMv7-M ARM §A7.7.77/§A7.7.92
+                     * but all Cortex-M silicon executes it as a normal move.
+                     * Allow it here to match hardware behaviour (needed for
+                     * Nordic nRF5 SoftDevice S140 which uses MOV.W R0, SP).
+                     */
                     tmp = load_reg(s, rn);
                     tmp2 = load_reg(s, rm);
                     gen_arm_shift_im(tmp2, shiftop, shift, logic_cc);
