@@ -12480,9 +12480,11 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     return trans_vpnot(s);
                 }
                 if(is_insn_vcmp_fp(insn)) {
+                    /* also used for decoding VPT (floating-point vector-vector) instruction*/
                     ARCH(MVE);
                     arg_vcmp a;
                     mve_extract_vcmp_fp(&a, insn);
+                    /* a->mask > 0 means we are decoding VPT instruction */
 
                     //  This is [fcC, fcB, fcA] (least significant bit is fcA)
                     uint32_t cmp =
@@ -12514,9 +12516,11 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     return trans_vfcmp_eq(s, &a);
                 }
                 if(is_insn_vcmp_fp_scalar(insn)) {
+                    /* also used for decoding VPT (floating-point vector-scalar) instruction*/
                     ARCH(MVE);
                     arg_vcmp_scalar a;
                     mve_extract_vcmp_fp_scalar(&a, insn);
+                    /* a->mask > 0 means we are decoding VPT instruction */
 
                     //  This is [fcC, fcB, fcA] (least significant bit is fcA)
                     uint32_t cmp =

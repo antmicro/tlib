@@ -406,7 +406,7 @@ static inline bool is_insn_vcmp_fp(uint32_t insn)
     if(fca == 0 && fcb == 1) {
         return false;
     }
-    return (insn & 0xEFF1EF50) == 0xEE310F00;
+    return (insn & 0xEFB10F50) == 0xEE310F00;
 }
 
 static inline bool is_insn_vcmp_fp_scalar(uint32_t insn)
@@ -417,7 +417,7 @@ static inline bool is_insn_vcmp_fp_scalar(uint32_t insn)
     if(rm == 13) {
         return false;
     }
-    return (insn & 0xEFF1EF50) == 0xEE310F40;
+    return (insn & 0xEFB10F50) == 0xEE310F40;
 }
 
 static inline bool is_insn_vcmp(uint32_t insn)
