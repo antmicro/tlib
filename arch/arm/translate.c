@@ -12527,15 +12527,15 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                             return trans_vfcmp_eq_scalar(s, &a);
                         //  fcA = 0; fcB = 0; fcC = 1
                         case 4:
-                            return trans_vfcmp_ge_scalar(s, &a);
+                            return trans_vfcmp_ne_scalar(s, &a);
                         //  fcA = 1; fcB = 0; fcC = 0
                         case 1:
-                            return trans_vfcmp_ne_scalar(s, &a);
+                            return trans_vfcmp_ge_scalar(s, &a);
                         //  fcA = 1; fcB = 0; fcC = 1
                         case 5:
                             return trans_vfcmp_lt_scalar(s, &a);
                         //  fcA = 1; fcB = 1; fcC = 0
-                        case 6:
+                        case 3:
                             return trans_vfcmp_gt_scalar(s, &a);
                         //  fcA = 1; fcB = 1; fcC = 1
                         case 7:
