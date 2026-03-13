@@ -10259,6 +10259,25 @@ static inline int trans_vpst(DisasContext *s, arg_vpst *a)
     return TRANS_STATUS_SUCCESS;
 }
 
+static int trans_vpnot(DisasContext *s)
+{
+    /*
+     * Invert the predicate in VPR.P0. We have call out to
+     * a helper because this insn itself is beatwise and can
+     * be predicated.
+     */
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    gen_helper_fp_lsp(cpu_env);
+
+    gen_helper_mve_vpnot(cpu_env);
+    /* This insn updates predication bits */
+    mve_update_eci(s);
+    return TRANS_STATUS_SUCCESS;
+}
+
 #define DO_TRANS_VCMP_FP(INSN, FN)                                              \
     static int trans_##INSN(DisasContext *s, arg_vcmp *a)                       \
     {                                                                           \
@@ -12254,6 +12273,10 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_vpst a;
                     mve_extract_vpst(&a, insn);
                     return trans_vpst(s, &a);
+                }
+                if(is_insn_vpnot(insn)) {
+                    ARCH(MVE);
+                    return trans_vpnot(s);
                 }
                 if(is_insn_vcmp_fp(insn)) {
                     ARCH(MVE);

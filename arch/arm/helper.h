@@ -621,6 +621,7 @@ DEF_HELPER_4(mve_vorn, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_veor, void, env, ptr, ptr, ptr)
 
 DEF_HELPER_4(mve_vpsel, void, env, ptr, ptr, ptr)
+DEF_HELPER_1(mve_vpnot, void, env)
 
 DEF_HELPER_4(mve_vcmul0s, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vcmul90s, void, env, ptr, ptr, ptr)

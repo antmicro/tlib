@@ -369,6 +369,11 @@ static inline bool is_insn_vpst(uint32_t insn)
     return mask != 0 && (insn & 0xFFB10F5F) == 0xFE310F4D;
 }
 
+static inline bool is_insn_vpnot(uint32_t insn)
+{
+    return (insn & 0xFFFFFFFF) == 0xFE310F4D;
+}
+
 static inline bool is_insn_vcmp_fp(uint32_t insn)
 {
     uint32_t fca = extract32(insn, 12, 1);
