@@ -9842,9 +9842,7 @@ static int do_vcmp(DisasContext *s, arg_vcmp *a, MVEGenCmpFn *fn)
         gen_mve_vpst(s, a->mask);
     }
 
-    //  TODO(MVE): We may want to use a different method here or drop it entirely.
     /* This insn updates predication bits */
-    s->base.is_jmp = EXIT_TB_NO_JUMP;
     mve_update_eci(s);
     return TRANS_STATUS_SUCCESS;
 }
@@ -9880,9 +9878,7 @@ static int do_vcmp_scalar(DisasContext *s, arg_vcmp_scalar *a, MVEGenScalarCmpFn
     tcg_temp_free_ptr(rm);
     tcg_temp_free_ptr(qn);
 
-    //  TODO(MVE): We may want to use a different method here or drop it entirely.
     /* This insn updates predication bits */
-    s->base.is_jmp = EXIT_TB_NO_JUMP;
     mve_update_eci(s);
     return TRANS_STATUS_SUCCESS;
 }
@@ -10238,9 +10234,8 @@ static int trans_vctp(DisasContext *s, arg_vctp *a)
 
     gen_helper_mve_vctp(cpu_env, masklen);
     tcg_temp_free_i32(masklen);
-    //  TODO(MVE): We may want to use a different method here or drop it entirely.
+
     /* This insn updates predication bits */
-    s->base.is_jmp = EXIT_TB_NO_JUMP;
     mve_update_eci(s);
     return TRANS_STATUS_SUCCESS;
 }
@@ -10585,9 +10580,7 @@ DO_TRANS_VSHLL(vshll_tu, vshlltu)
 
 static int trans_vpsel(DisasContext *s, arg_2op *a)
 {
-    //  TODO(MVE): We may want to use a different method here or drop it entirely.
     /* This insn updates predication bits */
-    s->base.is_jmp = EXIT_TB_NO_JUMP;
     return do_2op(s, a, gen_helper_mve_vpsel);
 }
 
