@@ -12933,9 +12933,11 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     }
                 }
                 if(is_insn_vcmp(insn)) {
+                    /* also used for decoding VPT (vector-vector) instruction*/
                     ARCH(MVE);
                     arg_vcmp a;
                     mve_extract_vcmp(&a, insn);
+                    /* a->mask > 0 means we are decoding VPT instruction */
 
                     int variant =
                         deposit32(deposit32(extract32(insn, 7, 1), 1, 31, extract32(insn, 12, 1)), 2, 30, extract32(insn, 0, 1));
@@ -12980,9 +12982,11 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     }
                 }
                 if(is_insn_vcmp_scalar(insn)) {
+                    /* also used for decoding VPT (vector-scalar) instruction */
                     ARCH(MVE);
                     arg_vcmp_scalar a;
                     mve_extract_vcmp_scalar(&a, insn);
+                    /* a->mask > 0 means we are decoding VPT instruction */
 
                     int variant =
                         deposit32(deposit32(extract32(insn, 7, 1), 1, 31, extract32(insn, 12, 1)), 2, 30, extract32(insn, 5, 1));
