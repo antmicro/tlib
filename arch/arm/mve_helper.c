@@ -1189,6 +1189,10 @@ DO_1OP(vfnegs, 8, uint64_t, DO_FNEGS)
 #undef DO_FABSS
 #undef DO_FABSH
 
+#define DO_NOT(N) (~(N))
+
+DO_1OP(vmvn, 8, uint64_t, DO_NOT)
+
 #define DO_VMAXMINA(OP, ESIZE, STYPE, UTYPE, FN)                    \
     void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vm) \
     {                                                               \

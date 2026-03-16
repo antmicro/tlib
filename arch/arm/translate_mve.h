@@ -506,6 +506,11 @@ static inline bool is_insn_vneg_fp(uint32_t insn)
     return (insn & 0xFFB31FD1) == 0xFFB107C0;
 }
 
+static inline bool is_insn_vmvn(uint32_t insn)
+{
+    return (insn & 0xFFBF1FD1) == 0xFFB005C0;
+}
+
 static inline bool is_insn_vmin_vmax(uint32_t insn)
 {
     uint32_t size = extract32(insn, 18, 2);
@@ -1139,6 +1144,14 @@ static void mve_extract_1op(arg_1op *a, uint32_t insn)
     a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
     a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));
     a->size = extract32(insn, 18, 2);
+}
+
+/* Extract arguments of 1-operand instruction without a size */
+static void mve_extract_1op_no_size(arg_1op *a, uint32_t insn)
+{
+    a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));
+    a->size = 0;
 }
 
 /* Extract arguments of vcvt fixed instruction */

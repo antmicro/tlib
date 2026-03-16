@@ -10685,6 +10685,11 @@ static int trans_vfneg(DisasContext *s, arg_1op *a)
     return do_1op_vec(s, a, fns[a->size], NULL);
 }
 
+static int trans_vmvn(DisasContext *s, arg_1op *a)
+{
+    return do_1op_vec(s, a, gen_helper_mve_vmvn, tcg_gen_gvec_not);
+}
+
 DO_1OP(vmina, vmina)
 DO_1OP(vmaxa, vmaxa)
 
@@ -12475,6 +12480,12 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_1op a;
                     mve_extract_1op(&a, insn);
                     return trans_vfneg(s, &a);
+                }
+                if(is_insn_vmvn(insn)) {
+                    ARCH(MVE);
+                    arg_1op a;
+                    mve_extract_1op_no_size(&a, insn);
+                    return trans_vmvn(s, &a);
                 }
                 if(is_insn_vmin_vmax(insn)) {
                     ARCH(MVE);
