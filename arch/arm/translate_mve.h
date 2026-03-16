@@ -800,6 +800,18 @@ static inline bool is_insn_vqrshl_u_scalar(uint32_t insn)
     return (insn & 0xFFB31FF0) == 0xFE331EE0;
 }
 
+static inline bool is_insn_vshll_imm(uint32_t insn)
+{
+    return (insn & 0xEFA00FD1) == 0xEEA00F40;
+}
+
+static inline bool is_insn_vshll(uint32_t insn)
+{
+    /* size == 3 is related encoding */
+    uint32_t size = extract32(insn, 18, 2);
+    return size != 3 && (insn & 0xEFB30FD1) == 0xEE310E01;
+}
+
 static inline bool is_insn_vmla_vmlas(uint32_t insn)
 {
     /* size == 3 is related encoding */
@@ -1202,6 +1214,37 @@ static void mve_extract_rshift_imm(arg_2shift *a, uint32_t insn)
     } else {
         __builtin_unreachable();
     }
+}
+
+/* Extract arguments of vshll T1 encoding */
+static void mve_extract_vshll_imm(arg_2shift *a, uint32_t insn)
+{
+    a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));
+    uint32_t sz = extract32(insn, 19, 2);
+    uint32_t imm5 = deposit32(extract32(insn, 16, 3), 3, 29, sz);
+    if(sz == 0b01) {
+        a->size = 0;
+        a->shift = imm5 - 8;
+    } else if((sz & 0b10) == 0b10) {
+        a->size = 1;
+        a->shift = imm5 - 16;
+    } else {
+        tlib_abortf("Unsupported size (sz field) for vshll instruction: 0x%x", sz);
+    }
+}
+
+/* Extract arguments of vshll T2 encoding */
+static void mve_extract_vshll(arg_2shift *a, uint32_t insn)
+{
+    a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));
+    a->size = extract32(insn, 18, 2);
+
+    if(a->size == 0b10) {
+        tlib_abortf("Unsupported size for vshll instruction: 0x%x", a->size);
+    }
+    a->shift = 8 << a->size;
 }
 
 /* Extract arguments of 2-shift scalar instruction */

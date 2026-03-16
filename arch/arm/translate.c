@@ -10549,6 +10549,21 @@ DO_TRANS_2SHIFT_SCALAR(vqshl_u_scalar, vqshli_u)
 DO_TRANS_2SHIFT_SCALAR(vqrshl_s_scalar, vqrshli_s)
 DO_TRANS_2SHIFT_SCALAR(vqrshl_u_scalar, vqrshli_u)
 
+#define DO_TRANS_VSHLL(INSN, FN)                               \
+    static bool trans_##INSN(DisasContext *s, arg_2shift *a)   \
+    {                                                          \
+        static MVEGenTwoOpShiftFn *const fns[] = {             \
+            gen_helper_mve_##FN##b,                            \
+            gen_helper_mve_##FN##h,                            \
+        };                                                     \
+        return do_2shift_vec(s, a, fns[a->size], false, NULL); \
+    }
+
+DO_TRANS_VSHLL(vshll_bs, vshllbs)
+DO_TRANS_VSHLL(vshll_bu, vshllbu)
+DO_TRANS_VSHLL(vshll_ts, vshllts)
+DO_TRANS_VSHLL(vshll_tu, vshlltu)
+
 static int trans_vpsel(DisasContext *s, arg_2op *a)
 {
     //  TODO(MVE): We may want to use a different method here or drop it entirely.
@@ -12832,6 +12847,47 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_shl_scalar a;
                     mve_extract_2shift_scalar(&a, insn);
                     return trans_vqrshl_u_scalar(s, &a);
+                }
+                if(is_insn_vshll_imm(insn)) {
+                    /* also treated as VMOVL when imm == 0 and sz == 2 or 1 */
+                    ARCH(MVE);
+                    arg_2shift a;
+                    mve_extract_vshll_imm(&a, insn);
+                    bool from_top = extract32(insn, 12, 1) == 1;
+                    bool is_signed = extract32(insn, 28, 1) == 0;
+                    if(from_top) {
+                        if(is_signed) {
+                            return trans_vshll_ts(s, &a);
+                        } else {
+                            return trans_vshll_tu(s, &a);
+                        }
+                    } else {
+                        if(is_signed) {
+                            return trans_vshll_bs(s, &a);
+                        } else {
+                            return trans_vshll_bu(s, &a);
+                        }
+                    }
+                }
+                if(is_insn_vshll(insn)) {
+                    ARCH(MVE);
+                    arg_2shift a;
+                    mve_extract_vshll(&a, insn);
+                    bool from_top = extract32(insn, 12, 1) == 1;
+                    bool is_signed = extract32(insn, 28, 1) == 0;
+                    if(from_top) {
+                        if(is_signed) {
+                            return trans_vshll_ts(s, &a);
+                        } else {
+                            return trans_vshll_tu(s, &a);
+                        }
+                    } else {
+                        if(is_signed) {
+                            return trans_vshll_bs(s, &a);
+                        } else {
+                            return trans_vshll_bu(s, &a);
+                        }
+                    }
                 }
                 if(is_insn_vcmp(insn)) {
                     ARCH(MVE);
