@@ -10676,6 +10676,22 @@ static int trans_vfneg(DisasContext *s, arg_1op *a)
 DO_1OP(vmina, vmina)
 DO_1OP(vmaxa, vmaxa)
 
+/* Narrowing moves: only size 0 and 1 are valid */
+#define DO_TRANS_VMOVN(INSN, FN)                         \
+    static int trans_##INSN(DisasContext *s, arg_1op *a) \
+    {                                                    \
+        static MVEGenOneOpFn *const fns[] = {            \
+            gen_helper_mve_##FN##b,                      \
+            gen_helper_mve_##FN##h,                      \
+            NULL,                                        \
+            NULL,                                        \
+        };                                               \
+        return do_1op_vec(s, a, fns[a->size], NULL);     \
+    }
+
+DO_TRANS_VMOVN(vmovnb, vmovnb)
+DO_TRANS_VMOVN(vmovnt, vmovnt)
+
 static int trans_vrev16(DisasContext *s, arg_1op *a)
 {
     static MVEGenOneOpFn *const fns[] = {
@@ -12887,6 +12903,17 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                         } else {
                             return trans_vshll_bu(s, &a);
                         }
+                    }
+                }
+                if(is_insn_vmovn(insn)) {
+                    ARCH(MVE);
+                    arg_1op a;
+                    mve_extract_1op(&a, insn);
+                    uint32_t from_top = extract32(insn, 12, 1);
+                    if(from_top) {
+                        return trans_vmovnt(s, &a);
+                    } else {
+                        return trans_vmovnb(s, &a);
                     }
                 }
                 if(is_insn_vcmp(insn)) {

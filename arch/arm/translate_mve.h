@@ -812,6 +812,13 @@ static inline bool is_insn_vshll(uint32_t insn)
     return size != 3 && (insn & 0xEFB30FD1) == 0xEE310E01;
 }
 
+static inline bool is_insn_vmovn(uint32_t insn)
+{
+    /* size == 3 is related encoding */
+    uint32_t size = extract32(insn, 18, 2);
+    return size != 3 && (insn & 0xFFB30FD1) == 0xFE310E81;
+}
+
 static inline bool is_insn_vmla_vmlas(uint32_t insn)
 {
     /* size == 3 is related encoding */

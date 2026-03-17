@@ -1508,6 +1508,25 @@ DO_2OP_SAT_SCALAR(vqaddu_scalarw, 4, uint32_t, DO_UQADD_W)
 DO_VSHLL_ALL(vshllb, false)
 DO_VSHLL_ALL(vshllt, true)
 
+#define DO_VMOVN(OP, TOP, ESIZE, TYPE, LESIZE, LTYPE)                      \
+    void HELPER(mve_##OP)(CPUState * env, void *vd, void *vm)              \
+    {                                                                      \
+        LTYPE *m = vm;                                                     \
+        TYPE *d = vd;                                                      \
+        uint16_t mask = mve_element_mask(env);                             \
+        unsigned int le;                                                   \
+        mask >>= ESIZE * TOP;                                              \
+        for(le = 0; le < 16 / LESIZE; le++, mask >>= LESIZE) {             \
+            mergemask(&d[H##ESIZE(le * 2 + TOP)], m[H##LESIZE(le)], mask); \
+        }                                                                  \
+        mve_advance_vpt(env);                                              \
+    }
+
+DO_VMOVN(vmovnbb, false, 1, uint8_t, 2, uint16_t)
+DO_VMOVN(vmovnbh, false, 2, uint16_t, 4, uint32_t)
+DO_VMOVN(vmovntb, true, 1, uint8_t, 2, uint16_t)
+DO_VMOVN(vmovnth, true, 2, uint16_t, 4, uint32_t)
+
 #define DO_2OP_ACC_SCALAR(OP, ESIZE, TYPE, FN)                                       \
     void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vn, uint32_t rm)     \
     {                                                                                \
