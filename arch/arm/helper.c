@@ -161,6 +161,7 @@ static void cpu_reset_model_id(CPUState *env, uint32_t id)
             set_feature(env, ARM_FEATURE_AUXCR);
             set_feature(env, ARM_FEATURE_THUMB2);
             set_feature(env, ARM_FEATURE_VFP);
+            set_feature(env, ARM_FEATURE_VFP3);
             set_feature(env, ARM_FEATURE_VFP4);
             set_feature(env, ARM_FEATURE_NEON);
             set_feature(env, ARM_FEATURE_GENERIC_TIMER);
