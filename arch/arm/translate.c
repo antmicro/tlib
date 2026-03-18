@@ -10563,6 +10563,9 @@ DO_TRANS_2SHIFT(vshri_u, vshli_u, true)
 DO_TRANS_2SHIFT(vrshri_s, vrshli_s, true)
 DO_TRANS_2SHIFT(vrshri_u, vrshli_u, true)
 
+DO_TRANS_2SHIFT(vsri, vsri, false)
+DO_TRANS_2SHIFT(vsli, vsli, false)
+
 static bool do_2shift_scalar(DisasContext *s, arg_shl_scalar *a, MVEGenTwoOpShiftFn *fn)
 {
     TCGv_ptr qda;
@@ -13445,6 +13448,18 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     } else {
                         return trans_vqrdmlsdh(s, &a);
                     }
+                }
+                if(is_insn_vsri(insn)) {
+                    ARCH(MVE);
+                    arg_2shift a;
+                    mve_extract_rshift_imm(&a, insn);
+                    return trans_vsri(s, &a);
+                }
+                if(is_insn_vsli(insn)) {
+                    ARCH(MVE);
+                    arg_2shift a;
+                    mve_extract_lshift_imm(&a, insn);
+                    return trans_vsli(s, &a);
                 }
             }
 #endif

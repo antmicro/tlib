@@ -2028,4 +2028,51 @@ DO_VFMA(vfmss, 4, float32, true)
 
 #undef DO_VFMA
 
+/* Shift-and-insert; we always work with 64 bits at a time */
+#define DO_2SHIFT_INSERT(OP, ESIZE, SHIFTFN, MASKFN)                                       \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vm, uint32_t shift)        \
+    {                                                                                      \
+        uint64_t *d = vd, *m = vm;                                                         \
+        uint16_t mask;                                                                     \
+        uint64_t shiftmask;                                                                \
+        unsigned int e;                                                                    \
+        if(shift == ESIZE * 8) {                                                           \
+            /*                                                                             \
+             * Only VSRI can shift by <dt>; it should mean "don't                          \
+             * update the destination". The generic logic can't handle                     \
+             * this because it would try to shift by an out-of-range                       \
+             * amount, so special case it here.                                            \
+             */                                                                            \
+            goto done;                                                                     \
+        }                                                                                  \
+        assert(shift < ESIZE * 8);                                                         \
+        mask = mve_element_mask(env);                                                      \
+        /* ESIZE / 2 gives the MO_* value if ESIZE is in [1,2,4] */                        \
+        shiftmask = dup_const(ESIZE / 2, MASKFN(ESIZE * 8, shift));                        \
+        for(e = 0; e < 16 / 8; e++, mask >>= 8) {                                          \
+            uint64_t r = (SHIFTFN(m[H8(e)], shift) & shiftmask) | (d[H8(e)] & ~shiftmask); \
+            mergemask(&d[H8(e)], r, mask);                                                 \
+        }                                                                                  \
+    done:                                                                                  \
+        mve_advance_vpt(env);                                                              \
+    }
+
+#define DO_SHL(N, SHIFT)       ((N) << (SHIFT))
+#define DO_SHR(N, SHIFT)       ((N) >> (SHIFT))
+#define SHL_MASK(EBITS, SHIFT) MAKE_64BIT_MASK((SHIFT), (EBITS) - (SHIFT))
+#define SHR_MASK(EBITS, SHIFT) MAKE_64BIT_MASK(0, (EBITS) - (SHIFT))
+
+DO_2SHIFT_INSERT(vsrib, 1, DO_SHR, SHR_MASK)
+DO_2SHIFT_INSERT(vsrih, 2, DO_SHR, SHR_MASK)
+DO_2SHIFT_INSERT(vsriw, 4, DO_SHR, SHR_MASK)
+DO_2SHIFT_INSERT(vslib, 1, DO_SHL, SHL_MASK)
+DO_2SHIFT_INSERT(vslih, 2, DO_SHL, SHL_MASK)
+DO_2SHIFT_INSERT(vsliw, 4, DO_SHL, SHL_MASK)
+
+#undef SHR_MASK
+#undef SHL_MASK
+#undef DO_SHR
+#undef DO_SHL
+#undef DO_2SHIFT_INSERT
+
 #endif
