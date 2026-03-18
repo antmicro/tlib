@@ -3439,11 +3439,11 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
         if((insn & 0x0fe00fff) != 0x0ee00a10) {
 #ifdef TARGET_PROTO_ARM_M
             gen_exception_insn(s, 4, EXCP_NOCP);
+#else
+            gen_exception_insn(s, 4, EXCP_UDEF);
+#endif
             LOCK_TB(s->base.tb);
             return 0;
-#else
-            return 1;
-#endif
         }
         rn = (insn >> 16) & 0xf;
 
