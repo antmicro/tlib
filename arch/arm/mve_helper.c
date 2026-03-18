@@ -1548,6 +1548,58 @@ DO_VMOVN(vmovnbh, false, 2, uint16_t, 4, uint32_t)
 DO_VMOVN(vmovntb, true, 1, uint8_t, 2, uint16_t)
 DO_VMOVN(vmovnth, true, 2, uint16_t, 4, uint32_t)
 
+#define DO_VMOVN_SAT(OP, TOP, ESIZE, TYPE, LESIZE, LTYPE, FN)  \
+    void HELPER(mve_##OP)(CPUState * env, void *vd, void *vm)  \
+    {                                                          \
+        LTYPE *m = vm;                                         \
+        TYPE *d = vd;                                          \
+        uint16_t mask = mve_element_mask(env);                 \
+        bool qc = false;                                       \
+        unsigned int le;                                       \
+        mask >>= ESIZE * TOP;                                  \
+        for(le = 0; le < 16 / LESIZE; le++, mask >>= LESIZE) { \
+            bool sat = false;                                  \
+            TYPE r = FN(m[H##LESIZE(le)], &sat);               \
+            mergemask(&d[H##ESIZE(le * 2 + TOP)], r, mask);    \
+            qc |= sat & mask & 1;                              \
+        }                                                      \
+        if(qc) {                                               \
+            env->vfp.qc = qc;                                  \
+        }                                                      \
+        mve_advance_vpt(env);                                  \
+    }
+
+#define DO_VMOVN_SAT_UB(BOT, TOP, FN)                     \
+    DO_VMOVN_SAT(BOT, false, 1, uint8_t, 2, uint16_t, FN) \
+    DO_VMOVN_SAT(TOP, true, 1, uint8_t, 2, uint16_t, FN)
+
+#define DO_VMOVN_SAT_UH(BOT, TOP, FN)                      \
+    DO_VMOVN_SAT(BOT, false, 2, uint16_t, 4, uint32_t, FN) \
+    DO_VMOVN_SAT(TOP, true, 2, uint16_t, 4, uint32_t, FN)
+
+#define DO_VMOVN_SAT_SB(BOT, TOP, FN)                   \
+    DO_VMOVN_SAT(BOT, false, 1, int8_t, 2, int16_t, FN) \
+    DO_VMOVN_SAT(TOP, true, 1, int8_t, 2, int16_t, FN)
+
+#define DO_VMOVN_SAT_SH(BOT, TOP, FN)                    \
+    DO_VMOVN_SAT(BOT, false, 2, int16_t, 4, int32_t, FN) \
+    DO_VMOVN_SAT(TOP, true, 2, int16_t, 4, int32_t, FN)
+
+#define DO_VQMOVN_SB(N, SATP) do_sat_bhs((int64_t)(N), INT8_MIN, INT8_MAX, SATP)
+#define DO_VQMOVN_UB(N, SATP) do_sat_bhs((uint64_t)(N), 0, UINT8_MAX, SATP)
+#define DO_VQMOVUN_B(N, SATP) do_sat_bhs((int64_t)(N), 0, UINT8_MAX, SATP)
+
+#define DO_VQMOVN_SH(N, SATP) do_sat_bhs((int64_t)(N), INT16_MIN, INT16_MAX, SATP)
+#define DO_VQMOVN_UH(N, SATP) do_sat_bhs((uint64_t)(N), 0, UINT16_MAX, SATP)
+#define DO_VQMOVUN_H(N, SATP) do_sat_bhs((int64_t)(N), 0, UINT16_MAX, SATP)
+
+DO_VMOVN_SAT_SB(vqmovnbsb, vqmovntsb, DO_VQMOVN_SB)
+DO_VMOVN_SAT_SH(vqmovnbsh, vqmovntsh, DO_VQMOVN_SH)
+DO_VMOVN_SAT_UB(vqmovnbub, vqmovntub, DO_VQMOVN_UB)
+DO_VMOVN_SAT_UH(vqmovnbuh, vqmovntuh, DO_VQMOVN_UH)
+DO_VMOVN_SAT_SB(vqmovunbb, vqmovuntb, DO_VQMOVUN_B)
+DO_VMOVN_SAT_SH(vqmovunbh, vqmovunth, DO_VQMOVUN_H)
+
 #define DO_2OP_ACC_SCALAR(OP, ESIZE, TYPE, FN)                                       \
     void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vn, uint32_t rm)     \
     {                                                                                \

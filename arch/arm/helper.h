@@ -755,6 +755,21 @@ DEF_HELPER_3(mve_vmovnbh, void, env, ptr, ptr)
 DEF_HELPER_3(mve_vmovntb, void, env, ptr, ptr)
 DEF_HELPER_3(mve_vmovnth, void, env, ptr, ptr)
 
+DEF_HELPER_3(mve_vqmovunbb, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vqmovunbh, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vqmovuntb, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vqmovunth, void, env, ptr, ptr)
+
+DEF_HELPER_3(mve_vqmovnbsb, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vqmovnbsh, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vqmovntsb, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vqmovntsh, void, env, ptr, ptr)
+
+DEF_HELPER_3(mve_vqmovnbub, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vqmovnbuh, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vqmovntub, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vqmovntuh, void, env, ptr, ptr)
+
 DEF_HELPER_3(mve_vmovi, void, env, ptr, i64)
 DEF_HELPER_3(mve_vandi, void, env, ptr, i64)
 DEF_HELPER_3(mve_vorri, void, env, ptr, i64)

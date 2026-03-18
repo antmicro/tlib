@@ -10749,6 +10749,12 @@ DO_1OP(vmaxa, vmaxa)
 
 DO_TRANS_VMOVN(vmovnb, vmovnb)
 DO_TRANS_VMOVN(vmovnt, vmovnt)
+DO_TRANS_VMOVN(vqmovunb, vqmovunb)
+DO_TRANS_VMOVN(vqmovunt, vqmovunt)
+DO_TRANS_VMOVN(vqmovnbs, vqmovnbs)
+DO_TRANS_VMOVN(vqmovnts, vqmovnts)
+DO_TRANS_VMOVN(vqmovnbu, vqmovnbu)
+DO_TRANS_VMOVN(vqmovntu, vqmovntu)
 
 static int trans_vrev16(DisasContext *s, arg_1op *a)
 {
@@ -13041,6 +13047,37 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                         return trans_vmovnt(s, &a);
                     } else {
                         return trans_vmovnb(s, &a);
+                    }
+                }
+                if(is_insn_vqmovn(insn)) {
+                    ARCH(MVE);
+                    arg_1op a;
+                    mve_extract_1op(&a, insn);
+                    bool from_top = extract32(insn, 12, 1) == 1;
+                    bool is_signed = extract32(insn, 28, 1) == 0;
+                    if(from_top) {
+                        if(is_signed) {
+                            return trans_vqmovnts(s, &a);
+                        } else {
+                            return trans_vqmovntu(s, &a);
+                        }
+                    } else {
+                        if(is_signed) {
+                            return trans_vqmovnbs(s, &a);
+                        } else {
+                            return trans_vqmovnbu(s, &a);
+                        }
+                    }
+                }
+                if(is_insn_vqmovun(insn)) {
+                    ARCH(MVE);
+                    arg_1op a;
+                    mve_extract_1op(&a, insn);
+                    bool from_top = extract32(insn, 12, 1) == 1;
+                    if(from_top) {
+                        return trans_vqmovunt(s, &a);
+                    } else {
+                        return trans_vqmovunb(s, &a);
                     }
                 }
                 if(is_insn_vcmp(insn)) {
