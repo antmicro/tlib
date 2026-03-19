@@ -13186,22 +13186,23 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                         return trans_vmla(s, &a);
                     }
                 }
-                if(is_insn_vmlaldav_vmlsldav(insn)) {
+                if(is_insn_vmlaldav(insn)) {
                     ARCH(MVE);
                     arg_vmlaldav a;
                     mve_extract_vmlaldav(&a, insn);
 
-                    uint32_t subtract = extract32(insn, 0, 1);
-                    /* only make sense when subtract == 0 */
                     uint32_t is_signed = extract32(insn, 28, 1) == 0;
-
-                    if(subtract) {
-                        return trans_vmlsldav(s, &a);
-                    } else if(is_signed) {
+                    if(is_signed) {
                         return trans_vmlaldav_s(s, &a);
                     } else {
                         return trans_vmlaldav_u(s, &a);
                     }
+                }
+                if(is_insn_vmlsldav(insn)) {
+                    ARCH(MVE);
+                    arg_vmlaldav a;
+                    mve_extract_vmlaldav(&a, insn);
+                    return trans_vmlsldav(s, &a);
                 }
                 if(is_insn_vmladav(insn)) {
                     ARCH(MVE);

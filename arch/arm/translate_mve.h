@@ -860,10 +860,24 @@ static inline bool is_insn_vmla_vmlas(uint32_t insn)
     return size != 3 && (insn & 0xEF810F70) == 0xEE010E40;
 }
 
-static inline bool is_insn_vmlaldav_vmlsldav(uint32_t insn)
+static inline bool is_insn_vmlaldav(uint32_t insn)
 {
-    uint32_t related = extract32(insn, 20, 3);
-    return related != 7 && (insn & 0xEF800F50) == 0xEE800E00;
+    uint32_t rdahi = extract32(insn, 20, 3);
+    if(rdahi == 7) {
+        /* RdaHi == '111' is related encoding */
+        return false;
+    }
+    return (insn & 0xEF801FD1) == 0xEE800E00;
+}
+
+static inline bool is_insn_vmlsldav(uint32_t insn)
+{
+    uint32_t rdahi = extract32(insn, 20, 3);
+    if(rdahi == 7) {
+        /* RdaHi == '111' is related encoding */
+        return false;
+    }
+    return (insn & 0xFF800FD1) == 0xEE800E01;
 }
 
 static inline bool is_insn_vmladav(uint32_t insn)
