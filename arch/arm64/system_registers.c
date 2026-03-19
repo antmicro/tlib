@@ -977,6 +977,86 @@ ARMCPRegInfo aarch32_only_registers[] = {
     ARM32_CP_REG_DEFINE(CNTV_CTL,         15,   0,  14,   3,   1,   0, RW | GTIMER, RW_FNS(generic_timer_aarch32_32))  // Counter-timer Virtual Timer Control register
     ARM32_CP_REG_DEFINE(CNTV_TVAL,        15,   0,  14,   3,   0,   0, RW | GTIMER, RW_FNS(generic_timer_aarch32_32))  // Counter-timer Virtual Timer Timer Value register
 };
+/* TLBI helpers */
+
+typedef enum {
+    TLBI_IS,
+    TLBI_NS,
+    TLBI_OS,
+} TLBIShareability;
+
+static inline uint16_t tlbi_get_mmu_indexes_mask(CPUState *env, const ARMCPRegInfo *ri)
+{
+    uint16_t el1_map, el2_map;
+    if(arm_is_secure_below_el3(env)) {
+        el1_map = ARMMMUIdxBit_SE10_1 | ARMMMUIdxBit_SE10_1_PAN | ARMMMUIdxBit_SE10_0;
+        el2_map = ARMMMUIdxBit_SE20_2 | ARMMMUIdxBit_SE20_2_PAN | ARMMMUIdxBit_SE20_0;
+    } else {
+        el1_map = ARMMMUIdxBit_E10_1 | ARMMMUIdxBit_E10_1_PAN | ARMMMUIdxBit_E10_0;
+        el2_map = ARMMMUIdxBit_E20_2 | ARMMMUIdxBit_E20_2_PAN | ARMMMUIdxBit_E20_0;
+    }
+
+    //  Fortunately the instruction's min. access EL matches the target EL, e.g. it's 2 for VAE2.
+    uint32_t tlbi_target_el = ARM_CP_GET_MIN_EL(ri->type);
+    switch(tlbi_target_el) {
+        case 1:
+            return arm_is_el2_enabled(env) && are_hcr_e2h_and_tge_set(arm_hcr_el2_eff(env)) ? el2_map : el1_map;
+        case 2:
+            return el2_map;
+        case 3:
+            return ARMMMUIdxBit_SE3;
+        default:
+            tlib_assert_not_reached();
+    }
+}
+
+TLBIShareability tlbi_get_shareability(CPUState *env, const ARMCPRegInfo *ri)
+{
+    if(strstr(ri->name, "IS") != NULL) {
+        return TLBI_IS;
+    } else if(strstr(ri->name, "OS") != NULL) {
+        return TLBI_OS;
+    } else {
+        //  The HCR_EL2's FB bit forces inner shareability for EL1.
+        if((arm_current_el(env) == 1) && (arm_hcr_el2_eff(env) & HCR_FB)) {
+            return TLBI_IS;
+        }
+        return TLBI_NS;
+    }
+}
+
+void tlbi_print_stub_logs(CPUState *env, const ARMCPRegInfo *ri)
+{
+    TLBIShareability tlbi_shareability = tlbi_get_shareability(env, ri);
+    if(tlbi_shareability != TLBI_NS) {
+        tlib_printf(LOG_LEVEL_DEBUG, "[%s] %s Shareable domain not implemented yet; falling back to normal variant", ri->name,
+                    tlbi_shareability == TLBI_IS ? "Inner" : "Outer");
+    }
+}
+
+WRITE_FUNCTION(64, ic_ialluis, helper_invalidate_dirty_addresses_shared(env))
+
+//  TODO: Implement remaining TLBI instructions.
+WRITE_FUNCTION(64, tlbi_flush_all, {
+    tlib_printf(LOG_LEVEL_DEBUG, "[%s] Using TLBI stub, forcing full flush", info->name);
+
+    tlb_flush(env, 1, true);
+})
+
+WRITE_FUNCTION(64, tlbi_va, {
+    tlbi_print_stub_logs(env, info);
+
+    uint64_t pageaddr = sextract64(value << 12, 0, 56);
+    uint32_t indexes_mask = tlbi_get_mmu_indexes_mask(env, info);
+    tlb_flush_page_masked(env, pageaddr, indexes_mask, true);
+})
+
+WRITE_FUNCTION(64, tlbi_vmall, {
+    tlbi_print_stub_logs(env, info);
+
+    uint16_t indexes_mask = tlbi_get_mmu_indexes_mask(env, info);
+    tlb_flush_masked(env, indexes_mask);
+})
 
 ARMCPRegInfo aarch32_instructions[] = {
     // The params are:  name              cp, op1, crn, crm, op2, el, extra_type, ...
@@ -1642,87 +1722,6 @@ ARMCPRegInfo aarch64_registers[] = {
     ARM64_CP_REG_DEFINE(ZCR_EL3,                 3,   6,   1,   2,   0,  3, RW, FIELD(vfp.zcr_el[3]))
 };
 // clang-format on
-
-/* TLBI helpers */
-
-typedef enum {
-    TLBI_IS,
-    TLBI_NS,
-    TLBI_OS,
-} TLBIShareability;
-
-static inline uint16_t tlbi_get_mmu_indexes_mask(CPUState *env, const ARMCPRegInfo *ri)
-{
-    uint16_t el1_map, el2_map;
-    if(arm_is_secure_below_el3(env)) {
-        el1_map = ARMMMUIdxBit_SE10_1 | ARMMMUIdxBit_SE10_1_PAN | ARMMMUIdxBit_SE10_0;
-        el2_map = ARMMMUIdxBit_SE20_2 | ARMMMUIdxBit_SE20_2_PAN | ARMMMUIdxBit_SE20_0;
-    } else {
-        el1_map = ARMMMUIdxBit_E10_1 | ARMMMUIdxBit_E10_1_PAN | ARMMMUIdxBit_E10_0;
-        el2_map = ARMMMUIdxBit_E20_2 | ARMMMUIdxBit_E20_2_PAN | ARMMMUIdxBit_E20_0;
-    }
-
-    //  Fortunately the instruction's min. access EL matches the target EL, e.g. it's 2 for VAE2.
-    uint32_t tlbi_target_el = ARM_CP_GET_MIN_EL(ri->type);
-    switch(tlbi_target_el) {
-        case 1:
-            return arm_is_el2_enabled(env) && are_hcr_e2h_and_tge_set(arm_hcr_el2_eff(env)) ? el2_map : el1_map;
-        case 2:
-            return el2_map;
-        case 3:
-            return ARMMMUIdxBit_SE3;
-        default:
-            tlib_assert_not_reached();
-    }
-}
-
-TLBIShareability tlbi_get_shareability(CPUState *env, const ARMCPRegInfo *ri)
-{
-    if(strstr(ri->name, "IS") != NULL) {
-        return TLBI_IS;
-    } else if(strstr(ri->name, "OS") != NULL) {
-        return TLBI_OS;
-    } else {
-        //  The HCR_EL2's FB bit forces inner shareability for EL1.
-        if((arm_current_el(env) == 1) && (arm_hcr_el2_eff(env) & HCR_FB)) {
-            return TLBI_IS;
-        }
-        return TLBI_NS;
-    }
-}
-
-void tlbi_print_stub_logs(CPUState *env, const ARMCPRegInfo *ri)
-{
-    TLBIShareability tlbi_shareability = tlbi_get_shareability(env, ri);
-    if(tlbi_shareability != TLBI_NS) {
-        tlib_printf(LOG_LEVEL_DEBUG, "[%s] %s Shareable domain not implemented yet; falling back to normal variant", ri->name,
-                    tlbi_shareability == TLBI_IS ? "Inner" : "Outer");
-    }
-}
-
-WRITE_FUNCTION(64, ic_ialluis, helper_invalidate_dirty_addresses_shared(env))
-
-//  TODO: Implement remaining TLBI instructions.
-WRITE_FUNCTION(64, tlbi_flush_all, {
-    tlib_printf(LOG_LEVEL_DEBUG, "[%s] Using TLBI stub, forcing full flush", info->name);
-
-    tlb_flush(env, 1, true);
-})
-
-WRITE_FUNCTION(64, tlbi_va, {
-    tlbi_print_stub_logs(env, info);
-
-    uint64_t pageaddr = sextract64(value << 12, 0, 56);
-    uint32_t indexes_mask = tlbi_get_mmu_indexes_mask(env, info);
-    tlb_flush_page_masked(env, pageaddr, indexes_mask, true);
-})
-
-WRITE_FUNCTION(64, tlbi_vmall, {
-    tlbi_print_stub_logs(env, info);
-
-    uint16_t indexes_mask = tlbi_get_mmu_indexes_mask(env, info);
-    tlb_flush_masked(env, indexes_mask);
-})
 
 // clang-format off
 ARMCPRegInfo aarch64_instructions[] = {
