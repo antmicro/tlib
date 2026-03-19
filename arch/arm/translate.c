@@ -11174,6 +11174,33 @@ static int trans_vmlsldav(DisasContext *s, arg_vmlaldav *a)
     return do_long_dual_acc(s, a, fns[a->size][a->x]);
 }
 
+static int trans_vrmlaldavh_s(DisasContext *s, arg_vmlaldav *a)
+{
+    static MVEGenLongDualAccOpFn *const fns[] = {
+        gen_helper_mve_vrmlaldavhsw,
+        gen_helper_mve_vrmlaldavhxsw,
+    };
+    return do_long_dual_acc(s, a, fns[a->x]);
+}
+
+static int trans_vrmlaldavh_u(DisasContext *s, arg_vmlaldav *a)
+{
+    static MVEGenLongDualAccOpFn *const fns[] = {
+        gen_helper_mve_vrmlaldavhuw,
+        NULL,
+    };
+    return do_long_dual_acc(s, a, fns[a->x]);
+}
+
+static int trans_vrmlsldavh(DisasContext *s, arg_vmlaldav *a)
+{
+    static MVEGenLongDualAccOpFn *const fns[] = {
+        gen_helper_mve_vrmlsldavhsw,
+        gen_helper_mve_vrmlsldavhxsw,
+    };
+    return do_long_dual_acc(s, a, fns[a->x]);
+}
+
 static int do_dual_acc(DisasContext *s, arg_vmladav *a, MVEGenDualAccOpFn *fn)
 {
     TCGv_ptr qn, qm;
@@ -13314,6 +13341,24 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_2op a;
                     mve_extract_2op_fp(&a, insn);
                     return trans_vfabd(s, &a);
+                }
+                if(is_insn_vrmlaldavh(insn)) {
+                    ARCH(MVE);
+                    arg_vmlaldav a;
+                    mve_extract_vmlaldav(&a, insn);
+
+                    uint32_t is_signed = extract32(insn, 28, 1) == 0;
+                    if(is_signed) {
+                        return trans_vrmlaldavh_s(s, &a);
+                    } else {
+                        return trans_vrmlaldavh_u(s, &a);
+                    }
+                }
+                if(is_insn_vrmlsldavh(insn)) {
+                    ARCH(MVE);
+                    arg_vmlaldav a;
+                    mve_extract_vmlaldav(&a, insn);
+                    return trans_vrmlsldavh(s, &a);
                 }
             }
 #endif

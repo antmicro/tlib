@@ -956,6 +956,14 @@ DEF_HELPER_4(mve_vmladavub, i32, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vmladavuh, i32, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vmladavuw, i32, env, ptr, ptr, i32)
 
+DEF_HELPER_4(mve_vrmlaldavhsw, i64, env, ptr, ptr, i64)
+DEF_HELPER_4(mve_vrmlaldavhxsw, i64, env, ptr, ptr, i64)
+
+DEF_HELPER_4(mve_vrmlaldavhuw, i64, env, ptr, ptr, i64)
+
+DEF_HELPER_4(mve_vrmlsldavhsw, i64, env, ptr, ptr, i64)
+DEF_HELPER_4(mve_vrmlsldavhxsw, i64, env, ptr, ptr, i64)
+
 DEF_HELPER_4(mve_vcmla0s, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vcmla90s, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vcmla180s, void, env, ptr, ptr, ptr)

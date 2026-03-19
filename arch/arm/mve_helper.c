@@ -1666,6 +1666,49 @@ DO_LDAV(vmlsldavxsw, 4, int32_t, true, +=, -=)
 #undef DO_LDAV
 
 /*
+ * Rounding multiply add long dual accumulate high. In the pseudocode
+ * this is implemented with a 72-bit internal accumulator value of which
+ * the top 64 bits are returned. We optimize this to avoid having to
+ * use 128-bit arithmetic -- we can do this because the 74-bit accumulator
+ * is squashed back into 64-bits after each beat.
+ */
+
+#define DO_LDAVH(OP, TYPE, LTYPE, XCHG, SUB)                                        \
+    uint64_t HELPER(glue(mve_, OP))(CPUState * env, void *vn, void *vm, uint64_t a) \
+    {                                                                               \
+        uint16_t mask = mve_element_mask(env);                                      \
+        unsigned int e;                                                             \
+        TYPE *n = vn, *m = vm;                                                      \
+        for(e = 0; e < 16 / 4; e++, mask >>= 4) {                                   \
+            if(mask & 1) {                                                          \
+                LTYPE mul;                                                          \
+                if(e & 1) {                                                         \
+                    mul = (LTYPE)n[H4(e - 1 * XCHG)] * m[H4(e)];                    \
+                    if(SUB) {                                                       \
+                        mul = -mul;                                                 \
+                    }                                                               \
+                } else {                                                            \
+                    mul = (LTYPE)n[H4(e + 1 * XCHG)] * m[H4(e)];                    \
+                }                                                                   \
+                mul = (mul >> 8) + ((mul >> 7) & 1);                                \
+                a += mul;                                                           \
+            }                                                                       \
+        }                                                                           \
+        mve_advance_vpt(env);                                                       \
+        return a;                                                                   \
+    }
+
+DO_LDAVH(vrmlaldavhsw, int32_t, int64_t, false, false)
+DO_LDAVH(vrmlaldavhxsw, int32_t, int64_t, true, false)
+
+DO_LDAVH(vrmlaldavhuw, uint32_t, uint64_t, false, false)
+
+DO_LDAVH(vrmlsldavhsw, int32_t, int64_t, false, true)
+DO_LDAVH(vrmlsldavhxsw, int32_t, int64_t, true, true)
+
+#undef DO_LDAVH
+
+/*
  * Multiply add dual accumulate ops
  */
 #define DO_DAV(OP, ESIZE, TYPE, XCHG, EVENACC, ODDACC)                              \

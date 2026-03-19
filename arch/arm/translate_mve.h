@@ -1008,6 +1008,23 @@ static inline bool is_insn_sqshll_imm(uint32_t insn)
     return (insn & 0xFFF1813F) == 0xEA51013F;
 }
 
+static inline bool is_insn_vrmlaldavh(uint32_t insn)
+{
+    /* RdaHi == '11x' is related encoding */
+    uint32_t rdahi = extract32(insn, 20, 3);
+    if((rdahi & 6) == 6) {
+        return false;
+    }
+    return (insn & 0xEF810FD1) == 0xEE800F00;
+}
+
+static inline bool is_insn_vrmlsldavh(uint32_t insn)
+{
+    /* RdaHi == '111' is related encoding */
+    uint32_t rdahi = extract32(insn, 20, 3);
+    return rdahi != 7 && (insn & 0xFF810FD1) == 0xFE800E01;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {
