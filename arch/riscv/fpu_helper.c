@@ -1123,7 +1123,6 @@ uint64_t helper_fmin_h(CPUState *env, uint64_t frs1, uint64_t frs2)
     float16_t f1, f2;
     f1.v = (uint16_t)frs1;
     f2.v = (uint16_t)frs2;
-
     frs1 = f16_min(f1, f2).v;
 
     set_fp3_exceptions();
@@ -1138,7 +1137,6 @@ uint64_t helper_fmax_h(CPUState *env, uint64_t frs1, uint64_t frs2)
     float16_t f1, f2;
     f1.v = (uint16_t)frs1;
     f2.v = (uint16_t)frs2;
-
     frs1 = f16_max(f1, f2).v;
 
     set_fp3_exceptions();
@@ -1324,9 +1322,9 @@ uint64_t helper_fcvt_lu_h(CPUState *env, uint64_t frs1, uint64_t rm)
 uint64_t helper_fcvt_h_w(CPUState *env, target_ulong rs1, uint64_t rm)
 {
     require_fp;
-    uint64_t res;
     set_float3_rounding_mode(RM_3);
 
+    uint64_t res;
     res = i32_to_f16((uint32_t)rs1).v;
 
     set_fp3_exceptions();
@@ -1337,9 +1335,9 @@ uint64_t helper_fcvt_h_w(CPUState *env, target_ulong rs1, uint64_t rm)
 uint64_t helper_fcvt_h_wu(CPUState *env, target_ulong rs1, uint64_t rm)
 {
     require_fp;
-    uint64_t res;
     set_float3_rounding_mode(RM_3);
 
+    uint64_t res;
     res = ui32_to_f16((uint32_t)rs1).v;
 
     set_fp3_exceptions();
@@ -1403,7 +1401,6 @@ target_ulong helper_fclass_h(CPUState *env, uint64_t frs1)
 
     float16_t f1;
     f1.v = (uint16_t)frs1;
-
     frs1 = f16_classify(f1);
 
     mark_fs_dirty();
