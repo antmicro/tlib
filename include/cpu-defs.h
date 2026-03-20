@@ -155,12 +155,14 @@ typedef struct CPUBreakpoint {
     QTAILQ_ENTRY(CPUBreakpoint) entry;
 } CPUBreakpoint;
 
-typedef struct CachedRegiserDescriptor {
+typedef struct CachedAccessDescriptor {
+    uint64_t access_count;
     uint64_t address;
-    uint64_t lower_access_count;
-    uint64_t upper_access_count;
-    QTAILQ_ENTRY(CachedRegiserDescriptor) entry;
-} CachedRegiserDescriptor;
+    uint64_t not_cached_count;
+    uint64_t cached_count;
+    uint64_t previous_value;
+    QTAILQ_ENTRY(CachedAccessDescriptor) entry;
+} CachedAccessDescriptor;
 
 #define MAX_OPCODE_COUNTERS 2048
 typedef struct opcode_counter_descriptor {
@@ -297,7 +299,8 @@ enum block_interrupt_cause {
     CPU_COMMON_TLB                                                             \
     ExtMmuRange *external_mmu_windows;                                         \
     QTAILQ_HEAD(breakpoints_head, CPUBreakpoint) breakpoints;                  \
-    QTAILQ_HEAD(cached_address_head, CachedRegiserDescriptor) cached_address;  \
+    QTAILQ_HEAD(read_cache_head, CachedAccessDescriptor) read_cache;           \
+    QTAILQ_HEAD(write_cache_head, CachedAccessDescriptor) write_cache;         \
     struct TranslationBlock *tb_jmp_cache[TB_JMP_CACHE_SIZE];                  \
     /* buffer for temporaries in the code generator */                         \
     long temp_buf[CPU_TEMP_BUF_NLONGS];                                        \
@@ -305,10 +308,11 @@ enum block_interrupt_cause {
     int32_t return_on_exception;                                               \
     bool guest_profiler_enabled;                                               \
                                                                                \
-    uint64_t io_access_count;                                                  \
-    uint64_t previous_io_access_read_value;                                    \
+    struct CachedAccessDescriptor *last_crd;                                   \
+    struct CachedAccessDescriptor *last_cwd;                                   \
     uint64_t previous_io_access_read_address;                                  \
-    struct CachedRegiserDescriptor *last_crd;                                  \
+    uint64_t previous_io_access_read_value;                                    \
+    bool flush_cache_descriptors;                                              \
                                                                                \
     int8_t are_pre_opcode_execution_hooks_enabled;                             \
     int32_t pre_opcode_execution_hooks_count;                                  \
