@@ -245,6 +245,19 @@ typedef struct {
     int shim;   //  "shift immediate", the immediate value
 } arg_mve_shl_ri;
 
+typedef struct {
+    /* Vector register used as destination */
+    int qd;
+    /* First vector register used for operation */
+    int qn;
+    /* Second vector register used for operation */
+    int qm;
+    /* Size of the operation (.S8/S16/S32/S64 suffix) */
+    int size;
+    /* Exchange adjacent pairs of values in Qm */
+    int x;
+} arg_vqdmladh;
+
 void gen_mve_vld40b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld41b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld42b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
@@ -1035,6 +1048,20 @@ static inline bool is_insn_vfms(uint32_t insn)
     return (insn & 0xFFE11FF1) == 0xEF200C50;
 }
 
+static inline bool is_insn_vqdmladh(uint32_t insn)
+{
+    /* size == '11' is related encoding */
+    uint32_t size = extract32(insn, 20, 2);
+    return size != 3 && (insn & 0xFF810F50) == 0xEE000E00;
+}
+
+static inline bool is_insn_vqdmlsdh(uint32_t insn)
+{
+    /* size == '11' is related encoding */
+    uint32_t size = extract32(insn, 20, 2);
+    return size != 3 && (insn & 0xFF810F50) == 0xFE000E00;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {
@@ -1443,4 +1470,14 @@ static void extract_mve_shl_ri(DisasContext *context, arg_mve_shl_ri *args, uint
     args->shim = deposit32(extract32(instruction, 6, 2), 2, 30, extract32(instruction, 12, 3));
     args->rdalo = times_2(context, extract32(instruction, 17, 3));
     args->rdahi = times_2_plus_1(context, extract32(instruction, 9, 3));
+}
+
+/* Extract arguments of VQ(R)DMLADH(X) and VQ(R)DMLSDH(X) instructions */
+static void mve_extract_vqdmladh(arg_vqdmladh *a, uint32_t insn)
+{
+    a->size = extract32(insn, 20, 2);
+    a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    a->qn = deposit32(extract32(insn, 17, 3), 3, 29, extract32(insn, 7, 1));
+    a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));
+    a->x = extract32(insn, 12, 1);
 }

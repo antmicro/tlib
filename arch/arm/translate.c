@@ -11404,6 +11404,54 @@ static void gen_mve_uqshll(TCGv_i64 r, TCGv_i64 n, int64_t shift)
     tcg_temp_free_i32(tcg_shift);
 }
 
+static bool trans_vqdmladh(DisasContext *s, arg_vqdmladh *a)
+{
+    static MVEGenTwoOpFn *const fns[4][2] = {
+        { gen_helper_mve_vqdmladhb, gen_helper_mve_vqdmladhxb },
+        { gen_helper_mve_vqdmladhh, gen_helper_mve_vqdmladhxh },
+        { gen_helper_mve_vqdmladhw, gen_helper_mve_vqdmladhxw },
+        { NULL,                     NULL                      }
+    };
+    arg_2op arg = { .qd = a->qd, .qm = a->qm, .qn = a->qn, .size = a->size };
+    return do_2op_vec(s, &arg, fns[a->size][a->x], NULL);
+}
+
+static bool trans_vqrdmladh(DisasContext *s, arg_vqdmladh *a)
+{
+    static MVEGenTwoOpFn *const fns[4][2] = {
+        { gen_helper_mve_vqrdmladhb, gen_helper_mve_vqrdmladhxb },
+        { gen_helper_mve_vqrdmladhh, gen_helper_mve_vqrdmladhxh },
+        { gen_helper_mve_vqrdmladhw, gen_helper_mve_vqrdmladhxw },
+        { NULL,                      NULL                       }
+    };
+    arg_2op arg = { .qd = a->qd, .qm = a->qm, .qn = a->qn, .size = a->size };
+    return do_2op_vec(s, &arg, fns[a->size][a->x], NULL);
+}
+
+static bool trans_vqdmlsdh(DisasContext *s, arg_vqdmladh *a)
+{
+    static MVEGenTwoOpFn *const fns[4][2] = {
+        { gen_helper_mve_vqdmlsdhb, gen_helper_mve_vqdmlsdhxb },
+        { gen_helper_mve_vqdmlsdhh, gen_helper_mve_vqdmlsdhxh },
+        { gen_helper_mve_vqdmlsdhw, gen_helper_mve_vqdmlsdhxw },
+        { NULL,                     NULL                      }
+    };
+    arg_2op arg = { .qd = a->qd, .qm = a->qm, .qn = a->qn, .size = a->size };
+    return do_2op_vec(s, &arg, fns[a->size][a->x], NULL);
+}
+
+static bool trans_vqrdmlsdh(DisasContext *s, arg_vqdmladh *a)
+{
+    static MVEGenTwoOpFn *const fns[4][2] = {
+        { gen_helper_mve_vqrdmlsdhb, gen_helper_mve_vqrdmlsdhxb },
+        { gen_helper_mve_vqrdmlsdhh, gen_helper_mve_vqrdmlsdhxh },
+        { gen_helper_mve_vqrdmlsdhw, gen_helper_mve_vqrdmlsdhxw },
+        { NULL,                      NULL                       }
+    };
+    arg_2op arg = { .qd = a->qd, .qm = a->qm, .qn = a->qn, .size = a->size };
+    return do_2op_vec(s, &arg, fns[a->size][a->x], NULL);
+}
+
 #endif /* TARGET_PROTO_ARM_M */
 
 /* Translate a 32-bit thumb instruction.  Returns nonzero if the instruction
@@ -13373,6 +13421,30 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_vmlaldav a;
                     mve_extract_vmlaldav(&a, insn);
                     return trans_vrmlsldavh(s, &a);
+                }
+                if(is_insn_vqdmladh(insn)) {
+                    ARCH(MVE);
+                    arg_vqdmladh a;
+                    mve_extract_vqdmladh(&a, insn);
+
+                    uint32_t is_rounding = extract32(insn, 0, 1) == 1;
+                    if(is_rounding) {
+                        return trans_vqdmladh(s, &a);
+                    } else {
+                        return trans_vqrdmladh(s, &a);
+                    }
+                }
+                if(is_insn_vqdmlsdh(insn)) {
+                    ARCH(MVE);
+                    arg_vqdmladh a;
+                    mve_extract_vqdmladh(&a, insn);
+
+                    uint32_t is_rounding = extract32(insn, 0, 1) == 1;
+                    if(is_rounding) {
+                        return trans_vqdmlsdh(s, &a);
+                    } else {
+                        return trans_vqrdmlsdh(s, &a);
+                    }
                 }
             }
 #endif
