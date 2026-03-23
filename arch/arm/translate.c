@@ -10031,6 +10031,23 @@ static int trans_vld4(DisasContext *s, uint32_t insn)
     return do_vldst_il(s, &a, fns[a.pat][a.size], 64);
 }
 
+static int trans_vld2(DisasContext *s, arg_vldst_il *a)
+{
+    static MVEGenLdStIlFn *const fns[4][4] = {
+        { F(vld20b), F(vld20h), F(vld20w), NULL },
+        { F(vld21b), F(vld21h), F(vld21w), NULL },
+        { NULL,      NULL,      NULL,      NULL },
+        { NULL,      NULL,      NULL,      NULL },
+    };
+
+    /* We use 2 consecutive vector registers */
+    if(a->qd > 6) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+
+    return do_vldst_il(s, a, fns[a->pat][a->size], 32);
+}
+
 #undef F
 
 /* This macro is just to make the arrays more compact in these functions */
@@ -12338,6 +12355,12 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                 if(is_insn_vld4(insn)) {
                     ARCH(MVE);
                     return trans_vld4(s, insn);
+                }
+                if(is_insn_vld2(insn)) {
+                    ARCH(MVE);
+                    arg_vldst_il a;
+                    extract_arg_vldst_il(&a, insn);
+                    return trans_vld2(s, &a);
                 }
                 /* Vector load/store (widening loads/narrowing stores) (encoding T1 & T2) */
                 if(is_insn_vldr_vstr_widening(insn)) {

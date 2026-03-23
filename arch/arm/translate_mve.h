@@ -270,6 +270,14 @@ void gen_mve_vld40w(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld41w(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld42w(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld43w(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+
+void gen_mve_vld20b(DisasContext *s, uint32_t qdindx, TCGv_i32 base);
+void gen_mve_vld21b(DisasContext *s, uint32_t qdindx, TCGv_i32 base);
+void gen_mve_vld20h(DisasContext *s, uint32_t qdindx, TCGv_i32 base);
+void gen_mve_vld21h(DisasContext *s, uint32_t qdindx, TCGv_i32 base);
+void gen_mve_vld20w(DisasContext *s, uint32_t qdindx, TCGv_i32 base);
+void gen_mve_vld21w(DisasContext *s, uint32_t qdindx, TCGv_i32 base);
+
 void gen_mve_vpst(DisasContext *s, uint32_t mask);
 
 /*
@@ -492,6 +500,11 @@ static inline bool is_insn_vpsel(uint32_t insn)
 static inline bool is_insn_vld4(uint32_t insn)
 {
     return (insn & 0xFF901E01) == 0xFC901E01;
+}
+
+static inline bool is_insn_vld2(uint32_t insn)
+{
+    return (insn & 0xFF901E01) == 0xFC901E00;
 }
 
 static inline bool is_insn_vcmul(uint32_t insn)
