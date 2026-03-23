@@ -1025,6 +1025,16 @@ static inline bool is_insn_vrmlsldavh(uint32_t insn)
     return rdahi != 7 && (insn & 0xFF810FD1) == 0xFE800E01;
 }
 
+static inline bool is_insn_vfma(uint32_t insn)
+{
+    return (insn & 0xFFE11FF1) == 0xEF000C50;
+}
+
+static inline bool is_insn_vfms(uint32_t insn)
+{
+    return (insn & 0xFFE11FF1) == 0xEF200C50;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {

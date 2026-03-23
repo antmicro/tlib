@@ -1873,4 +1873,38 @@ uint64_t HELPER(mve_uqshll)(CPUState *env, uint64_t n, uint32_t shift)
     return do_uqrshl_d(n, (int8_t)shift, false, &env->QF);
 }
 
+#define DO_VFMA(OP, ESIZE, TYPE, CHS)                                            \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vn, void *vm)    \
+    {                                                                            \
+        TYPE *d = vd, *n = vn, *m = vm;                                          \
+        TYPE r;                                                                  \
+        uint16_t mask = mve_element_mask(env);                                   \
+        unsigned int e;                                                          \
+        float_status *fpst;                                                      \
+        float_status scratch_fpst;                                               \
+        for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                        \
+            if((mask & MAKE_64BIT_MASK(0, ESIZE)) == 0) {                        \
+                continue;                                                        \
+            }                                                                    \
+            fpst = ESIZE == 2 ? &env->vfp.fp_status_f16 : &env->vfp.fp_status;   \
+            if(!(mask & 1)) {                                                    \
+                /* We need the result but without updating flags */              \
+                scratch_fpst = *fpst;                                            \
+                fpst = &scratch_fpst;                                            \
+            }                                                                    \
+            r = n[H##ESIZE(e)];                                                  \
+            if(CHS) {                                                            \
+                r = glue(TYPE, _chs)(r);                                         \
+            }                                                                    \
+            r = glue(TYPE, _muladd)(r, m[H##ESIZE(e)], d[H##ESIZE(e)], 0, fpst); \
+            mergemask(&d[H##ESIZE(e)], r, mask);                                 \
+        }                                                                        \
+        mve_advance_vpt(env);                                                    \
+    }
+
+DO_VFMA(vfmas, 4, float32, false)
+DO_VFMA(vfmss, 4, float32, true)
+
+#undef DO_VFMA
+
 #endif
