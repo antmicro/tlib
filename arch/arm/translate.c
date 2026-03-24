@@ -10590,6 +10590,9 @@ static int trans_vqdmullt_scalar(DisasContext *s, arg_2scalar *a)
     return do_2op_scalar(s, a, fns[a->size]);
 }
 
+DO_TRANS_2OP(vqdmulh, vqdmulh)
+DO_TRANS_2OP(vqrdmulh, vqrdmulh)
+
 static bool trans_vmullp_b(DisasContext *s, arg_2op *a)
 {
     /*
@@ -13623,6 +13626,18 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                         return trans_vqdmullt_scalar(s, &a);
                     } else {
                         return trans_vqdmullb_scalar(s, &a);
+                    }
+                }
+                if(is_insn_vqdmulh(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op(&a, insn);
+
+                    uint32_t is_rounding = extract32(insn, 28, 1) == 1;
+                    if(is_rounding) {
+                        return trans_vqrdmulh(s, &a);
+                    } else {
+                        return trans_vqdmulh(s, &a);
                     }
                 }
             }
