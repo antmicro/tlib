@@ -61,6 +61,17 @@ static inline long mve_qreg_offset(uint32_t reg)
     return vfp_reg_offset(DOUBLE_PRECISION, reg * 2);
 }
 
+/* Return the offset of a specified lane of Qn register
+   It correspond with H macros so:
+   size 1 - 8 bits per lane
+   size 2 - 16 bits per lane
+   size 4 - 32 bits per lane */
+#define mve_qreg_lane_offset(size, reg, lane_number) (mve_qreg_offset(reg) + (H##size(lane_number) * size))
+
+#define mve_qreg_lane_offset_b(reg, lane_number) mve_qreg_lane_offset(1, reg, lane_number)
+#define mve_qreg_lane_offset_h(reg, lane_number) mve_qreg_lane_offset(2, reg, lane_number)
+#define mve_qreg_lane_offset_w(reg, lane_number) mve_qreg_lane_offset(4, reg, lane_number)
+
 static inline uint8_t clz_u8(uint8_t a)
 {
     uint8_t count = 0;

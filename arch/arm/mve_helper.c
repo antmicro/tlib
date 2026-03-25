@@ -490,8 +490,7 @@ DO_VSTR(vstrh_w, int32_t, 2, 4, stw)
             tcg_gen_addi_i32(addr, base, off[beat] * 4);                      \
             data = gen_ld32(addr, context_to_mmu_index(s));                   \
             for(e = 0; e < 4; e++) {                                          \
-                qn_offset = mve_qreg_offset(qnindx + e);                      \
-                qn_offset += off[beat];                                       \
+                qn_offset = mve_qreg_lane_offset_b(qnindx + e, off[beat]);    \
                 tcg_gen_st8_i32(data, cpu_env, qn_offset);                    \
                 tcg_gen_shri_i32(data, data, 8);                              \
             }                                                                 \
@@ -522,14 +521,12 @@ DO_VLD4B(vld43b, 6, 7, 8, 9)
             tcg_gen_addi_i32(addr, base, off[beat] * 8 + (beat & 1) * 4);     \
             data = gen_ld32(addr, context_to_mmu_index(s));                   \
                                                                               \
-            qn_offset = mve_qreg_offset(qnindx + y);                          \
-            qn_offset += off[beat];                                           \
+            qn_offset = mve_qreg_lane_offset_h(qnindx + y, off[beat]);        \
             tcg_gen_st16_i32(data, cpu_env, qn_offset);                       \
                                                                               \
             tcg_gen_shri_i32(data, data, 16);                                 \
                                                                               \
-            qn_offset = mve_qreg_offset(qnindx + y + 1);                      \
-            qn_offset += off[beat];                                           \
+            qn_offset = mve_qreg_lane_offset_h(qnindx + y + 1, off[beat]);    \
             tcg_gen_st16_i32(data, cpu_env, qn_offset);                       \
             tcg_temp_free_i32(data);                                          \
         }                                                                     \
@@ -557,9 +554,7 @@ DO_VLD4H(vld43h, 3, 4)
             tcg_gen_addi_i32(addr, base, off[beat] * 4);                      \
             data = gen_ld32(addr, context_to_mmu_index(s));                   \
             y = (beat + (O1 & 2)) & 3;                                        \
-            qn_offset = mve_qreg_offset(qnindx + y);                          \
-            /* Align the offset to 4  */                                      \
-            qn_offset += off[beat] & ~3;                                      \
+            qn_offset = mve_qreg_lane_offset_w(qnindx + y, off[beat] >> 2);   \
             tcg_gen_st_i32(data, cpu_env, qn_offset);                         \
             tcg_temp_free_i32(data);                                          \
         }                                                                     \

@@ -9686,7 +9686,7 @@ static int do_vldst_il(DisasContext *s, arg_vldst_il *a, MVEGenLdStIlFn *fn, int
 
     rn = load_reg(s, a->rn);
     /*
-     * We pass the index of Qd, not a pointer, because the helper must
+     * We pass the index of Qd, not a pointer, because the instruction must
      * access multiple Q registers starting at Qd and working up.
      */
     fn(s, a->qd, rn);
@@ -10028,8 +10028,7 @@ static int trans_vld4(DisasContext *s, uint32_t insn)
         return TRANS_STATUS_ILLEGAL_INSN;
     }
 
-    do_vldst_il(s, &a, fns[a.pat][a.size], 64);
-    return TRANS_STATUS_SUCCESS;
+    return do_vldst_il(s, &a, fns[a.pat][a.size], 64);
 }
 
 #undef F
