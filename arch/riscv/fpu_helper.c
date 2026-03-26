@@ -573,9 +573,7 @@ uint64_t helper_fcvt_s_hw(CPUState *env, target_ulong rs1, uint64_t rm)
     require_fp;
     set_float3_rounding_mode(RM_3);
 
-    float16_t f1;
-    f1.v = (int16_t)rs1;
-    rs1 = f16_to_f32(f1).v;
+    rs1 = i32_to_f32((int16_t)rs1).v;
 
     set_fp3_exceptions();
     mark_fs_dirty();
