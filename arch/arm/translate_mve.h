@@ -959,12 +959,14 @@ static inline bool is_insn_vqadd_s(uint32_t insn)
 
 static inline bool is_insn_vqadd_u_scalar(uint32_t insn)
 {
-    return (insn & 0xFF811F70) == 0xFE000F60;
+    uint32_t size = extract32(insn, 20, 2);
+    return size != 3 && (insn & 0xFF811F70) == 0xFE000F60;
 }
 
 static inline bool is_insn_vqadd_s_scalar(uint32_t insn)
 {
-    return (insn & 0xFF811F70) == 0xEE000F60;
+    uint32_t size = extract32(insn, 20, 2);
+    return size != 3 && (insn & 0xFF811F70) == 0xEE000F60;
 }
 
 static inline bool is_insn_vqsub_u(uint32_t insn)
