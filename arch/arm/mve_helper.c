@@ -1620,6 +1620,60 @@ DO_2OP_SAT(vqaddub, 1, uint8_t, DO_UQADD_B)
 DO_2OP_SAT(vqadduh, 2, uint16_t, DO_UQADD_H)
 DO_2OP_SAT(vqadduw, 4, uint32_t, DO_UQADD_W)
 
+static inline int32_t do_qdmullh(int16_t n, int16_t m, bool *sat)
+{
+    int64_t r = ((int64_t)n * m) * 2;
+    return do_sat_bhs(r, INT32_MIN, INT32_MAX, sat);
+}
+
+static inline int64_t do_qdmullw(int32_t n, int32_t m, bool *sat)
+{
+    /* The multiply can't overflow, but the doubling might */
+    int64_t r = (int64_t)n * m;
+    if(r > INT64_MAX / 2) {
+        *sat = true;
+        return INT64_MAX;
+    } else if(r < INT64_MIN / 2) {
+        *sat = true;
+        return INT64_MIN;
+    } else {
+        return r * 2;
+    }
+}
+
+#define SATMASK16B 1
+#define SATMASK16T (1 << 2)
+#define SATMASK32  ((1 << 4) | 1)
+
+/*
+ * Long saturating ops
+ */
+#define DO_2OP_SAT_L(OP, TOP, ESIZE, TYPE, LESIZE, LTYPE, FN, SATMASK)        \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vn, void *vm) \
+    {                                                                         \
+        LTYPE *d = vd;                                                        \
+        TYPE *n = vn, *m = vm;                                                \
+        uint16_t mask = mve_element_mask(env);                                \
+        unsigned int le;                                                      \
+        bool qc = false;                                                      \
+        for(le = 0; le < 16 / LESIZE; le++, mask >>= LESIZE) {                \
+            bool sat = false;                                                 \
+            LTYPE op1 = n[H##ESIZE(le * 2 + TOP)];                            \
+            LTYPE op2 = m[H##ESIZE(le * 2 + TOP)];                            \
+            mergemask(&d[H##LESIZE(le)], FN(op1, op2, &sat), mask);           \
+            qc |= sat && (mask & SATMASK);                                    \
+        }                                                                     \
+        if(qc) {                                                              \
+            env->vfp.qc = qc;                                                 \
+        }                                                                     \
+        mve_advance_vpt(env);                                                 \
+    }
+
+DO_2OP_SAT_L(vqdmullbh, 0, 2, int16_t, 4, int32_t, do_qdmullh, SATMASK16B)
+DO_2OP_SAT_L(vqdmullbw, 0, 4, int32_t, 8, int64_t, do_qdmullw, SATMASK32)
+DO_2OP_SAT_L(vqdmullth, 1, 2, int16_t, 4, int32_t, do_qdmullh, SATMASK16T)
+DO_2OP_SAT_L(vqdmulltw, 1, 4, int32_t, 8, int64_t, do_qdmullw, SATMASK32)
+
 DO_2OP_SAT_SCALAR(vqadds_scalarb, 1, int8_t, DO_SQADD_B)
 DO_2OP_SAT_SCALAR(vqadds_scalarh, 2, int16_t, DO_SQADD_H)
 DO_2OP_SAT_SCALAR(vqadds_scalarw, 4, int32_t, DO_SQADD_W)

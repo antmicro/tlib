@@ -1114,6 +1114,11 @@ static inline bool is_insn_vmulh_vrmulh(uint32_t insn)
     return size != 3 && (insn & 0xEFC10FF1) == 0xEE010E01;
 }
 
+static inline bool is_insn_vqdmull(uint32_t insn)
+{
+    return (insn & 0xEFF10FF1) == 0xEE300F01;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {

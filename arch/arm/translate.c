@@ -10530,6 +10530,36 @@ DO_TRANS_2OP(vmull_bu, vmullbu)
 DO_TRANS_2OP(vmull_ts, vmullts)
 DO_TRANS_2OP(vmull_tu, vmulltu)
 
+static int trans_vqdmullb(DisasContext *s, arg_2op *a)
+{
+    static MVEGenTwoOpFn *const fns[] = {
+        NULL,
+        gen_helper_mve_vqdmullbh,
+        gen_helper_mve_vqdmullbw,
+        NULL,
+    };
+    if(a->size == MO_32 && (a->qd == a->qm || a->qd == a->qn)) {
+        /* UNPREDICTABLE; we choose to undef */
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    return do_2op(s, a, fns[a->size]);
+}
+
+static int trans_vqdmullt(DisasContext *s, arg_2op *a)
+{
+    static MVEGenTwoOpFn *const fns[] = {
+        NULL,
+        gen_helper_mve_vqdmullth,
+        gen_helper_mve_vqdmulltw,
+        NULL,
+    };
+    if(a->size == MO_32 && (a->qd == a->qm || a->qd == a->qn)) {
+        /* UNPREDICTABLE; we choose to undef */
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    return do_2op(s, a, fns[a->size]);
+}
+
 static bool trans_vmullp_b(DisasContext *s, arg_2op *a)
 {
     /*
@@ -13539,6 +13569,18 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                         } else {
                             return trans_vmulh_u(s, &a);
                         }
+                    }
+                }
+                if(is_insn_vqdmull(insn)) {
+                    ARCH(MVE);
+                    arg_2op a;
+                    mve_extract_2op_sz28(&a, insn);
+
+                    uint32_t top_half = extract32(insn, 12, 1) == 1;
+                    if(top_half) {
+                        return trans_vqdmullt(s, &a);
+                    } else {
+                        return trans_vqdmullb(s, &a);
                     }
                 }
             }
