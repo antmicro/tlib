@@ -1674,6 +1674,41 @@ DO_2OP_SAT_L(vqdmullbw, 0, 4, int32_t, 8, int64_t, do_qdmullw, SATMASK32)
 DO_2OP_SAT_L(vqdmullth, 1, 2, int16_t, 4, int32_t, do_qdmullh, SATMASK16T)
 DO_2OP_SAT_L(vqdmulltw, 1, 4, int32_t, 8, int64_t, do_qdmullw, SATMASK32)
 
+/*
+ * Long saturating scalar ops. As with DO_2OP_L, TYPE and H are for the
+ * input (smaller) type and LESIZE, LTYPE, LH for the output (long) type.
+ * SATMASK specifies which bits of the predicate mask matter for determining
+ * whether to propagate a saturation indication into FPSCR.QC -- for
+ * the 16x16->32 case we must check only the bit corresponding to the T or B
+ * half that we used, but for the 32x32->64 case we propagate if the mask
+ * bit is set for either half.
+ */
+#define DO_2OP_SAT_SCALAR_L(OP, TOP, ESIZE, TYPE, LESIZE, LTYPE, FN, SATMASK)    \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vn, uint32_t rm) \
+    {                                                                            \
+        LTYPE *d = vd;                                                           \
+        TYPE *n = vn;                                                            \
+        TYPE m = rm;                                                             \
+        uint16_t mask = mve_element_mask(env);                                   \
+        unsigned int le;                                                         \
+        bool qc = false;                                                         \
+        for(le = 0; le < 16 / LESIZE; le++, mask >>= LESIZE) {                   \
+            bool sat = false;                                                    \
+            LTYPE r = FN((LTYPE)n[H##ESIZE(le * 2 + TOP)], m, &sat);             \
+            mergemask(&d[H##LESIZE(le)], r, mask);                               \
+            qc |= sat && (mask & SATMASK);                                       \
+        }                                                                        \
+        if(qc) {                                                                 \
+            env->vfp.qc = qc;                                                    \
+        }                                                                        \
+        mve_advance_vpt(env);                                                    \
+    }
+
+DO_2OP_SAT_SCALAR_L(vqdmullb_scalarh, 0, 2, int16_t, 4, int32_t, do_qdmullh, SATMASK16B)
+DO_2OP_SAT_SCALAR_L(vqdmullb_scalarw, 0, 4, int32_t, 8, int64_t, do_qdmullw, SATMASK32)
+DO_2OP_SAT_SCALAR_L(vqdmullt_scalarh, 1, 2, int16_t, 4, int32_t, do_qdmullh, SATMASK16T)
+DO_2OP_SAT_SCALAR_L(vqdmullt_scalarw, 1, 4, int32_t, 8, int64_t, do_qdmullw, SATMASK32)
+
 DO_2OP_SAT_SCALAR(vqadds_scalarb, 1, int8_t, DO_SQADD_B)
 DO_2OP_SAT_SCALAR(vqadds_scalarh, 2, int16_t, DO_SQADD_H)
 DO_2OP_SAT_SCALAR(vqadds_scalarw, 4, int32_t, DO_SQADD_W)

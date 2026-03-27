@@ -1119,6 +1119,11 @@ static inline bool is_insn_vqdmull(uint32_t insn)
     return (insn & 0xEFF10FF1) == 0xEE300F01;
 }
 
+static inline bool is_insn_vqdmull_scalar(uint32_t insn)
+{
+    return (insn & 0xEFF10FF0) == 0xEE300F60;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {
@@ -1170,6 +1175,15 @@ static void mve_extract_2op_scalar(arg_2scalar *a, uint32_t insn)
 static void mve_extract_2op_fp_scalar(arg_2scalar *a, uint32_t insn)
 {
     a->size = extract32(insn, 28, 1);
+    a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    a->qn = deposit32(extract32(insn, 17, 3), 3, 29, extract32(insn, 7, 1));
+    a->rm = extract32(insn, 0, 4);
+}
+
+/* Extract arguments of 2-operand scalar with size on 28th bit */
+static void mve_extract_2op_scalar_sz28(arg_2scalar *a, uint32_t insn)
+{
+    a->size = extract32(insn, 28, 1) + 1;
     a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
     a->qn = deposit32(extract32(insn, 17, 3), 3, 29, extract32(insn, 7, 1));
     a->rm = extract32(insn, 0, 4);
