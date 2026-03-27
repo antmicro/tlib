@@ -1499,6 +1499,9 @@ static void do_interrupt_v7m(CPUState *env)
         do_interrupt_v7m(env);
     }
 
+    // ARMv7-M ARM B1.4.2: exception entry sets the event register.
+    env->sev_pending = 1;
+
     arm_announce_stack_change();
 }
 #endif
