@@ -1129,6 +1129,9 @@ DEF_HELPER_4(mve_vstrh_sg_os_uh, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vstrh_sg_os_uw, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vstrw_sg_os_uw, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vstrd_sg_os_ud, void, env, ptr, ptr, i32)
+
+DEF_HELPER_4(mve_vstrw_sg_wb_uw, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vstrd_sg_wb_ud, void, env, ptr, ptr, i32)
 #endif
 
 #include "def-helper.h"

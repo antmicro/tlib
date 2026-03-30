@@ -274,6 +274,19 @@ typedef struct {
     int os;
 } arg_vldst_sg;
 
+typedef struct {
+    /* Vector register used as destination */
+    int qd;
+    /* Vector register containing address offsets */
+    int qm;
+    /* Defines if offsets should be added or subtracted */
+    int a;
+    /* Write-back */
+    int w;
+    /* Base address offset (signed) */
+    int imm;
+} arg_vldst_sg_imm;
+
 void gen_mve_vld40b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld41b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld42b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
@@ -1166,6 +1179,11 @@ static inline bool is_insn_vstr(uint32_t insn)
     return (insn & 0xFFB01E00) == 0xEC800E00;
 }
 
+static inline bool is_insn_vstr_imm(uint32_t insn)
+{
+    return (insn & 0xFF111E00) == 0xFD001E00;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {
@@ -1604,4 +1622,14 @@ static void mve_extract_vldst_sg(arg_vldst_sg *a, uint32_t insn)
     a->rn = extract32(insn, 16, 4);
     a->msize = deposit32(extract32(insn, 4, 1), 1, 31, extract32(insn, 6, 1));
     a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));
+}
+
+/* Extract arguments of VSTR/VLDST (vector/immediate) instructions */
+static void mve_extract_vldst_sg_imm(arg_vldst_sg_imm *a, uint32_t insn)
+{
+    a->a = extract32(insn, 23, 1);
+    a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    a->imm = extract32(insn, 0, 7);
+    a->qm = deposit32(extract32(insn, 17, 3), 3, 29, extract32(insn, 7, 1));
+    a->w = extract32(insn, 21, 1);
 }

@@ -10125,6 +10125,57 @@ static int trans_vstr_sg(DisasContext *s, arg_vldst_sg *a)
 #undef DO_VLDST_WIDE_NARROW
 #undef F
 
+static int do_ldst_sg_imm(DisasContext *s, arg_vldst_sg_imm *a, MVEGenLdStSGFn *fn, unsigned int msize)
+{
+    uint32_t offset;
+    TCGv_ptr qd, qm;
+    TCGv_i32 off;
+
+    if(!mve_check_qreg_bank(a->qd | a->qm) || !fn) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    offset = a->imm << msize;
+    if(!a->a) {
+        offset = -offset;
+    }
+
+    qd = mve_qreg_ptr(a->qd);
+    qm = mve_qreg_ptr(a->qm);
+    off = tcg_const_i32(offset);
+
+    fn(cpu_env, qd, qm, off);
+
+    tcg_temp_free_i32(off);
+    tcg_temp_free_ptr(qm);
+    tcg_temp_free_ptr(qd);
+
+    mve_update_eci(s);
+    return TRANS_STATUS_SUCCESS;
+}
+
+static int trans_vstrw_sg_imm(DisasContext *s, arg_vldst_sg_imm *a)
+{
+    static MVEGenLdStSGFn *const fns[] = {
+        gen_helper_mve_vstrw_sg_uw,
+        gen_helper_mve_vstrw_sg_wb_uw,
+    };
+    return do_ldst_sg_imm(s, a, fns[a->w], MO_32);
+}
+
+static int trans_vstrd_sg_imm(DisasContext *s, arg_vldst_sg_imm *a)
+{
+    static MVEGenLdStSGFn *const fns[] = {
+        gen_helper_mve_vstrd_sg_ud,
+        gen_helper_mve_vstrd_sg_wb_ud,
+    };
+    return do_ldst_sg_imm(s, a, fns[a->w], MO_64);
+}
+
 static bool do_2shift_vec(DisasContext *s, arg_2shift *a, MVEGenTwoOpShiftFn fn, bool negateshift, GVecGen2iFn vecfn)
 {
     TCGv_ptr qd, qm;
@@ -13719,6 +13770,18 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_vldst_sg a;
                     mve_extract_vldst_sg(&a, insn);
                     return trans_vstr_sg(s, &a);
+                }
+                if(is_insn_vstr_imm(insn)) {
+                    ARCH(MVE);
+                    arg_vldst_sg_imm a;
+                    mve_extract_vldst_sg_imm(&a, insn);
+
+                    uint32_t is_doubleword = extract32(insn, 8, 1) == 1;
+                    if(is_doubleword) {
+                        return trans_vstrd_sg_imm(s, &a);
+                    } else {
+                        return trans_vstrw_sg_imm(s, &a);
+                    }
                 }
             }
 #endif
