@@ -77,6 +77,8 @@ uint32_t *get_reg_pointer_32_with_security(int reg, bool is_secure)
             return &(cpu->v7m.faultmask[is_secure]);
         case FPSCR_32:
             return &(cpu->vfp.xregs[ARM_VFP_FPSCR]);
+        case VPR_32:
+            return &(cpu->v7m.vpr);
         case S_0_32 ... S_31_32: {
             int tmp_reg = reg - S_0_32;
             CPU_DoubleU *d_reg_ref = (CPU_DoubleU *)&(cpu->vfp.regs[tmp_reg >> 1]);  //  S0...S31 are contained within D0...D15

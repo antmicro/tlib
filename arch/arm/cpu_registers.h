@@ -42,6 +42,7 @@ typedef enum {
     CPACR_32 = 27,
     PRIMASK_32 = 28,
     FAULTMASK_32 = 30,
+    VPR_32 = 31,
     D_0_64 = 42,
     D_1_64 = 43,
     D_2_64 = 44,
