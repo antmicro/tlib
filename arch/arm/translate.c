@@ -10078,6 +10078,50 @@ DO_VLDST_WIDE_NARROW(vldstb_h, vldrb_sh, vldrb_uh, vstrb_h, MO_8)
 DO_VLDST_WIDE_NARROW(vldstb_w, vldrb_sw, vldrb_uw, vstrb_w, MO_8)
 DO_VLDST_WIDE_NARROW(vldsth_w, vldrh_sw, vldrh_uw, vstrh_w, MO_16)
 
+static int do_ldst_sg(DisasContext *s, arg_vldst_sg *a, MVEGenLdStSGFn fn)
+{
+    TCGv_i32 addr;
+    TCGv_ptr qd, qm;
+
+    if(!mve_check_qreg_bank(a->qd | a->qm) || !fn || a->rn == 15) {
+        /* Rn case is UNPREDICTABLE */
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    addr = load_reg(s, a->rn);
+    qd = mve_qreg_ptr(a->qd);
+    qm = mve_qreg_ptr(a->qm);
+
+    fn(cpu_env, qd, qm, addr);
+
+    tcg_temp_free_ptr(qm);
+    tcg_temp_free_ptr(qd);
+    tcg_temp_free_i32(addr);
+
+    mve_update_eci(s);
+
+    return TRANS_STATUS_SUCCESS;
+}
+
+static int trans_vstr_sg(DisasContext *s, arg_vldst_sg *a)
+{
+    static MVEGenLdStSGFn *const fns[2][4][4] = {
+        { { F(vstrb_sg_ub), F(vstrb_sg_uh), F(vstrb_sg_uw), NULL },
+         { NULL, F(vstrh_sg_uh), F(vstrh_sg_uw), NULL },
+         { NULL, NULL, F(vstrw_sg_uw), NULL },
+         { NULL, NULL, NULL, F(vstrd_sg_ud) }    },
+        { { NULL, NULL, NULL, NULL },
+         { NULL, F(vstrh_sg_os_uh), F(vstrh_sg_os_uw), NULL },
+         { NULL, NULL, F(vstrw_sg_os_uw), NULL },
+         { NULL, NULL, NULL, F(vstrd_sg_os_ud) } }
+    };
+    return do_ldst_sg(s, a, fns[a->os][a->msize][a->size]);
+}
+
 #undef DO_VLDST_WIDE_NARROW
 #undef F
 
@@ -13669,6 +13713,12 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     } else {
                         return trans_vqdmlash(s, &a);
                     }
+                }
+                if(is_insn_vstr(insn)) {
+                    ARCH(MVE);
+                    arg_vldst_sg a;
+                    mve_extract_vldst_sg(&a, insn);
+                    return trans_vstr_sg(s, &a);
                 }
             }
 #endif

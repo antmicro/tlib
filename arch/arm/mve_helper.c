@@ -2418,5 +2418,72 @@ DO_2OP_SAT_ACC_SCALAR(vqdmlashw, 4, int32_t, DO_VQDMLASH_W)
 DO_2OP_SAT_ACC_SCALAR(vqrdmlashb, 1, int8_t, DO_VQRDMLASH_B)
 DO_2OP_SAT_ACC_SCALAR(vqrdmlashh, 2, int16_t, DO_VQRDMLASH_H)
 DO_2OP_SAT_ACC_SCALAR(vqrdmlashw, 4, int32_t, DO_VQRDMLASH_W)
+/* We know here TYPE is unsigned so always the same as the offset type */
+#define DO_VSTR_SG(OP, STTYPE, ESIZE, TYPE, ADDRFN, WB)                       \
+    void HELPER(mve_##OP)(CPUState * env, void *vd, void *vm, uint32_t base)  \
+    {                                                                         \
+        TYPE *d = vd;                                                         \
+        TYPE *m = vm;                                                         \
+        uint16_t mask = mve_element_mask(env);                                \
+        uint16_t eci_mask = mve_eci_mask(env);                                \
+        unsigned int e;                                                       \
+        uint32_t addr;                                                        \
+        for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE, eci_mask >>= ESIZE) { \
+            if(!(eci_mask & 1)) {                                             \
+                continue;                                                     \
+            }                                                                 \
+            addr = ADDRFN(base, m[H##ESIZE(e)]);                              \
+            if(mask & 1) {                                                    \
+                __##STTYPE##_mmu(addr, d[H##ESIZE(e)], cpu_mmu_index(env));   \
+            }                                                                 \
+            if(WB) {                                                          \
+                m[H##ESIZE(e)] = addr;                                        \
+            }                                                                 \
+        }                                                                     \
+        mve_advance_vpt(env);                                                 \
+    }
+
+#define DO_VSTR64_SG(OP, ADDRFN, WB)                                         \
+    void HELPER(mve_##OP)(CPUState * env, void *vd, void *vm, uint32_t base) \
+    {                                                                        \
+        uint32_t *d = vd;                                                    \
+        uint32_t *m = vm;                                                    \
+        uint16_t mask = mve_element_mask(env);                               \
+        uint16_t eci_mask = mve_eci_mask(env);                               \
+        unsigned int e;                                                      \
+        uint32_t addr;                                                       \
+        for(e = 0; e < 16 / 4; e++, mask >>= 4, eci_mask >>= 4) {            \
+            if(!(eci_mask & 1)) {                                            \
+                continue;                                                    \
+            }                                                                \
+            addr = ADDRFN(base, m[H4(e & ~1)]);                              \
+            addr += 4 * (e & 1);                                             \
+            if(mask & 1) {                                                   \
+                __stq_mmu(addr, d[H4(e)], cpu_mmu_index(env));               \
+            }                                                                \
+            if(WB && (e & 1)) {                                              \
+                m[H4(e & ~1)] = addr - 4;                                    \
+            }                                                                \
+        }                                                                    \
+        mve_advance_vpt(env);                                                \
+    }
+
+#define ADDR_ADD(BASE, OFFSET)     ((BASE) + (OFFSET))
+#define ADDR_ADD_OSH(BASE, OFFSET) ((BASE) + ((OFFSET) << 1))
+#define ADDR_ADD_OSW(BASE, OFFSET) ((BASE) + ((OFFSET) << 2))
+#define ADDR_ADD_OSD(BASE, OFFSET) ((BASE) + ((OFFSET) << 3))
+
+DO_VSTR_SG(vstrb_sg_ub, stb, 1, uint8_t, ADDR_ADD, false)
+DO_VSTR_SG(vstrb_sg_uh, stb, 2, uint16_t, ADDR_ADD, false)
+DO_VSTR_SG(vstrb_sg_uw, stb, 4, uint32_t, ADDR_ADD, false)
+DO_VSTR_SG(vstrh_sg_uh, stw, 2, uint16_t, ADDR_ADD, false)
+DO_VSTR_SG(vstrh_sg_uw, stw, 4, uint32_t, ADDR_ADD, false)
+DO_VSTR_SG(vstrw_sg_uw, stl, 4, uint32_t, ADDR_ADD, false)
+DO_VSTR64_SG(vstrd_sg_ud, ADDR_ADD, false)
+
+DO_VSTR_SG(vstrh_sg_os_uh, stw, 2, uint16_t, ADDR_ADD_OSH, false)
+DO_VSTR_SG(vstrh_sg_os_uw, stw, 4, uint32_t, ADDR_ADD_OSH, false)
+DO_VSTR_SG(vstrw_sg_os_uw, stl, 4, uint32_t, ADDR_ADD_OSW, false)
+DO_VSTR64_SG(vstrd_sg_os_ud, ADDR_ADD_OSD, false)
 
 #endif

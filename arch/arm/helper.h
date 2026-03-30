@@ -1116,6 +1116,19 @@ DEF_HELPER_4(mve_vqdmlashw, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vqrdmlashb, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vqrdmlashh, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vqrdmlashw, void, env, ptr, ptr, i32)
+
+DEF_HELPER_4(mve_vstrb_sg_ub, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vstrb_sg_uh, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vstrb_sg_uw, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vstrh_sg_uh, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vstrh_sg_uw, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vstrw_sg_uw, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vstrd_sg_ud, void, env, ptr, ptr, i32)
+
+DEF_HELPER_4(mve_vstrh_sg_os_uh, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vstrh_sg_os_uw, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vstrw_sg_os_uw, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vstrd_sg_os_ud, void, env, ptr, ptr, i32)
 #endif
 
 #include "def-helper.h"
