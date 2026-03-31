@@ -1539,3 +1539,22 @@ void TLIB_NORETURN arch_raise_external_abort(CPUState *env, target_ulong address
     }
     tlib_assert_not_reached();
 }
+
+#define STUB_MVE_HELPER(name)                                               \
+    void HELPER(mve_##name)(uint64_t a, uint64_t b, uint64_t c, uint32_t d) \
+    {                                                                       \
+        (void)a;                                                            \
+        (void)b;                                                            \
+        (void)c;                                                            \
+        (void)d;                                                            \
+        tlib_abortf("Stub encountered: %s", #name);                         \
+    }
+
+STUB_MVE_HELPER(sqrshrl48)
+STUB_MVE_HELPER(sqrshrl)
+STUB_MVE_HELPER(sqrshr)
+STUB_MVE_HELPER(sshrl)
+STUB_MVE_HELPER(uqrshll48)
+STUB_MVE_HELPER(uqrshll)
+STUB_MVE_HELPER(uqrshl)
+STUB_MVE_HELPER(ushll)

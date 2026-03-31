@@ -1,15 +1,32 @@
 //  STUB HELPERS
 
-#define FUNC_STUB(name)           \
-    static inline int name()      \
-    {                             \
-        return stub_abort(#name); \
+//  Because pre C23 requires one fixed argument before the variadic arguments two different stub macros are needed
+#define FUNC_STUB(name)                    \
+    static inline int name(int dummy, ...) \
+    {                                      \
+        (void)dummy;                       \
+        return stub_abort(#name);          \
     }
 
-#define FUNC_STUB_GENERIC(name, type)   \
-    static inline type name()           \
-    {                                   \
-        return (type)stub_abort(#name); \
+#define FUNC_STUB_PTR(name)                        \
+    static inline int name(const void *dummy, ...) \
+    {                                              \
+        (void)dummy;                               \
+        return stub_abort(#name);                  \
+    }
+
+#define FUNC_STUB_GENERIC(name, type)       \
+    static inline type name(int dummy, ...) \
+    {                                       \
+        (void)dummy;                        \
+        return (type)stub_abort(#name);     \
+    }
+
+#define FUNC_STUB_GENERIC_PTR(name, type)           \
+    static inline type name(const void *dummy, ...) \
+    {                                               \
+        (void)dummy;                                \
+        return (type)stub_abort(#name);             \
     }
 
 //  Call directly for consts.
@@ -44,7 +61,7 @@ static inline bool disas_mve(DisasContext *dc, uint32_t insn)
 
 //  These were declared in 'cpu.h' and used by non-skipped sources but we have no
 //  implementations. Remember to reenable their declarations after implementing.
-FUNC_STUB(write_v7m_exception)
+FUNC_STUB_PTR(write_v7m_exception)
 
 typedef struct MemTxAttrs {
     int secure;
@@ -55,8 +72,8 @@ typedef struct MemTxAttrs {
 #define HAVE_CMPXCHG128 stub_abort("HAVE_CMPXCHG128")
 FUNC_STUB(cpu_atomic_cmpxchgo_be_mmu)
 FUNC_STUB(cpu_atomic_cmpxchgo_le_mmu)
-FUNC_STUB(probe_access)
-FUNC_STUB_GENERIC(probe_write, void *)
+FUNC_STUB_PTR(probe_access)
+FUNC_STUB_GENERIC_PTR(probe_write, void *)
 FUNC_STUB_GENERIC(tlb_vaddr_to_host, void *)
 
 #define MO_128 stub_abort("MO_128")
@@ -112,29 +129,29 @@ typedef struct {
     env_tlb_d_struct *d;
 } env_tlb_struct;
 
-FUNC_STUB_GENERIC(address_space_translate, void *)
+FUNC_STUB_GENERIC_PTR(address_space_translate, void *)
 FUNC_STUB(address_with_allocation_tag)
 FUNC_STUB(allocation_tag_from_addr)
-FUNC_STUB(arm_cpu_do_unaligned_access)
-FUNC_STUB(cpu_check_watchpoint)
-FUNC_STUB_GENERIC(cpu_get_address_space, void *)
+FUNC_STUB_PTR(arm_cpu_do_unaligned_access)
+FUNC_STUB_PTR(cpu_check_watchpoint)
+FUNC_STUB_GENERIC_PTR(cpu_get_address_space, void *)
 FUNC_STUB(cpu_physical_memory_set_dirty_flag)
-FUNC_STUB_GENERIC(env_tlb, env_tlb_struct *)
-FUNC_STUB(error_free)
-FUNC_STUB(error_get_pretty)
-FUNC_STUB_GENERIC(memory_region_from_host, void *)
-FUNC_STUB(memory_region_get_ram_addr)
-FUNC_STUB_GENERIC(memory_region_get_ram_ptr, void *)
-FUNC_STUB(memory_region_is_ram)
-FUNC_STUB(probe_access_flags)
-FUNC_STUB(qatomic_cmpxchg)
-FUNC_STUB(qatomic_read)
-FUNC_STUB(qatomic_set)
-FUNC_STUB(qemu_guest_getrandom)
-FUNC_STUB(regime_el)
+FUNC_STUB_GENERIC_PTR(env_tlb, env_tlb_struct *)
+FUNC_STUB_PTR(error_free)
+FUNC_STUB_PTR(error_get_pretty)
+FUNC_STUB_GENERIC_PTR(memory_region_from_host, void *)
+FUNC_STUB_PTR(memory_region_get_ram_addr)
+FUNC_STUB_GENERIC_PTR(memory_region_get_ram_ptr, void *)
+FUNC_STUB_PTR(memory_region_is_ram)
+FUNC_STUB_PTR(probe_access_flags)
+FUNC_STUB_PTR(qatomic_cmpxchg)
+FUNC_STUB_PTR(qatomic_read)
+FUNC_STUB_PTR(qatomic_set)
+FUNC_STUB_PTR(qemu_guest_getrandom)
+FUNC_STUB_PTR(regime_el)
 FUNC_STUB(tbi_check)
 FUNC_STUB(tcma_check)
-FUNC_STUB(tlb_index)
+FUNC_STUB_PTR(tlb_index)
 FUNC_STUB(useronly_clean_ptr)
 
 #define BP_MEM_READ            stub_abort("BP_MEM_READ")
@@ -154,12 +171,12 @@ typedef struct {
 
 #define ARMFault_AsyncExternal stub_abort("ARMFault_AsyncExternal")
 
-FUNC_STUB(arm_cpreg_in_idspace)
-FUNC_STUB(arm_fi_to_lfsc)
-FUNC_STUB(arm_fi_to_sfsc)
-FUNC_STUB(extended_addresses_enabled)
+FUNC_STUB_PTR(arm_cpreg_in_idspace)
+FUNC_STUB_PTR(arm_fi_to_lfsc)
+FUNC_STUB_PTR(arm_fi_to_sfsc)
+FUNC_STUB_PTR(extended_addresses_enabled)
 FUNC_STUB(syn_bxjtrap)
-FUNC_STUB(v7m_sp_limit)
+FUNC_STUB_PTR(v7m_sp_limit)
 
 /* vfp_helper.c */
 
@@ -214,21 +231,21 @@ FUNC_STUB(uint16_to_float16)
 #define float16_one       stub_abort("float16_one")
 #define SVE_MTEDESC_SHIFT stub_abort("SVE_MTEDESC_SHIFT")
 
-FUNC_STUB(cpu_ldl_be_data_ra)
-FUNC_STUB(cpu_ldl_le_data_ra)
-FUNC_STUB(cpu_ldq_be_data_ra)
-FUNC_STUB(cpu_ldq_le_data_ra)
-FUNC_STUB(cpu_ldub_data_ra)
-FUNC_STUB(cpu_lduw_be_data_ra)
-FUNC_STUB(cpu_lduw_le_data_ra)
-FUNC_STUB(cpu_stb_data_ra)
-FUNC_STUB(cpu_stl_be_data_ra)
-FUNC_STUB(cpu_stl_le_data_ra)
-FUNC_STUB(cpu_stq_be_data_ra)
-FUNC_STUB(cpu_stq_le_data_ra)
-FUNC_STUB(cpu_stw_be_data_ra)
-FUNC_STUB(cpu_stw_le_data_ra)
-FUNC_STUB(cpu_watchpoint_address_matches)
+FUNC_STUB_PTR(cpu_ldl_be_data_ra)
+FUNC_STUB_PTR(cpu_ldl_le_data_ra)
+FUNC_STUB_PTR(cpu_ldq_be_data_ra)
+FUNC_STUB_PTR(cpu_ldq_le_data_ra)
+FUNC_STUB_PTR(cpu_ldub_data_ra)
+FUNC_STUB_PTR(cpu_lduw_be_data_ra)
+FUNC_STUB_PTR(cpu_lduw_le_data_ra)
+FUNC_STUB_PTR(cpu_stb_data_ra)
+FUNC_STUB_PTR(cpu_stl_be_data_ra)
+FUNC_STUB_PTR(cpu_stl_le_data_ra)
+FUNC_STUB_PTR(cpu_stq_be_data_ra)
+FUNC_STUB_PTR(cpu_stq_le_data_ra)
+FUNC_STUB_PTR(cpu_stw_be_data_ra)
+FUNC_STUB_PTR(cpu_stw_le_data_ra)
+FUNC_STUB_PTR(cpu_watchpoint_address_matches)
 FUNC_STUB(float16_is_neg)
 FUNC_STUB(float16_scalbn)
 FUNC_STUB(float16_to_int64_round_to_zero)
@@ -262,17 +279,17 @@ typedef struct {
 #define SME_ET_InactiveZA   stub_abort("SME_ET_InactiveZA")
 #define SME_ET_NotStreaming stub_abort("SME_ET_NotStreaming")
 #define SME_ET_Streaming    stub_abort("SME_ET_Streaming")
-FUNC_STUB(gen_io_start)
+#define gen_io_start()      stub_abort("gen_io_start")
 FUNC_STUB_GENERIC(get_arm_cp_reginfo, void *)
 FUNC_STUB(target_disas)
-FUNC_STUB_GENERIC(tcg_last_op, void *)
-FUNC_STUB_GENERIC(tlb_entry, void *)
+#define tcg_last_op() (void *)stub_abort("tcg_last_op")
+FUNC_STUB_GENERIC_PTR(tlb_entry, void *)
 FUNC_STUB(tlb_hit)
 FUNC_STUB(translator_ldl_swap)
 FUNC_STUB(translator_lduw_swap)
 FUNC_STUB(translator_loop_temp_check)
 FUNC_STUB(translator_use_goto_tb)
-FUNC_STUB_GENERIC(gen_helper_crypto_sm3tt2b, void)
+FUNC_STUB_GENERIC(crypto_sm3tt2b, void)
 FUNC_STUB(gen_helper_autda)
 FUNC_STUB(gen_helper_autdb)
 FUNC_STUB(gen_helper_autia)
@@ -302,7 +319,7 @@ FUNC_STUB(gen_helper_set_pstate_sm)
 FUNC_STUB(gen_helper_set_pstate_za)
 FUNC_STUB(gen_helper_xpacd)
 FUNC_STUB(gen_helper_xpaci)
-FUNC_STUB(disas_m_nocp)
+FUNC_STUB_PTR(disas_m_nocp)
 
 /* translate.c */
 
@@ -311,20 +328,11 @@ FUNC_STUB(disas_m_nocp)
 
 #define TCG_TARGET_HAS_add2_i32 0  //  TODO: Port add2_i32 from TCG
 
-FUNC_STUB(regime_is_secure)
-FUNC_STUB(tcg_remove_ops_after)
+FUNC_STUB_PTR(regime_is_secure)
+FUNC_STUB_PTR(tcg_remove_ops_after)
 FUNC_STUB(translator_loop)
 
 /* translate.c */
-
-FUNC_STUB_GENERIC(gen_helper_mve_sqrshrl48, void)
-FUNC_STUB_GENERIC(gen_helper_mve_sqrshrl, void)
-FUNC_STUB_GENERIC(gen_helper_mve_sqrshr, void)
-FUNC_STUB_GENERIC(gen_helper_mve_sshrl, void)
-FUNC_STUB_GENERIC(gen_helper_mve_uqrshll48, void)
-FUNC_STUB_GENERIC(gen_helper_mve_uqrshll, void)
-FUNC_STUB_GENERIC(gen_helper_mve_uqrshl, void)
-FUNC_STUB_GENERIC(gen_helper_mve_ushll, void)
 
 FUNC_STUB(gen_helper_crc32)
 FUNC_STUB(gen_helper_crc32c)
@@ -344,11 +352,11 @@ FUNC_STUB(gen_helper_v7m_tt)
 
 /* translate-neon.c */
 
-FUNC_STUB_GENERIC(gen_helper_gvec_fceq0_h, void)
-FUNC_STUB_GENERIC(gen_helper_gvec_fcge0_h, void)
-FUNC_STUB_GENERIC(gen_helper_gvec_fcgt0_h, void)
-FUNC_STUB_GENERIC(gen_helper_gvec_fcle0_h, void)
-FUNC_STUB_GENERIC(gen_helper_gvec_fclt0_h, void)
+FUNC_STUB_GENERIC(gvec_fceq0_h, void)
+FUNC_STUB_GENERIC(gvec_fcge0_h, void)
+FUNC_STUB_GENERIC(gvec_fcgt0_h, void)
+FUNC_STUB_GENERIC(gvec_fcle0_h, void)
+FUNC_STUB_GENERIC(gvec_fclt0_h, void)
 
 /* translate-sve.c */
 
@@ -381,14 +389,14 @@ FUNC_STUB(gen_helper_v7m_preserve_fp_state)
 
 /* decode-sve.c.inc included in translate-sve.c */
 
-FUNC_STUB(trans_FADD_zpzi)
-FUNC_STUB(trans_FSUB_zpzi)
-FUNC_STUB(trans_FMUL_zpzi)
-FUNC_STUB(trans_FSUBR_zpzi)
-FUNC_STUB(trans_FMAXNM_zpzi)
-FUNC_STUB(trans_FMINNM_zpzi)
-FUNC_STUB(trans_FMAX_zpzi)
-FUNC_STUB(trans_FMIN_zpzi)
+FUNC_STUB_PTR(trans_FADD_zpzi)
+FUNC_STUB_PTR(trans_FSUB_zpzi)
+FUNC_STUB_PTR(trans_FMUL_zpzi)
+FUNC_STUB_PTR(trans_FSUBR_zpzi)
+FUNC_STUB_PTR(trans_FMAXNM_zpzi)
+FUNC_STUB_PTR(trans_FMINNM_zpzi)
+FUNC_STUB_PTR(trans_FMAX_zpzi)
+FUNC_STUB_PTR(trans_FMIN_zpzi)
 
 /* mte_helper.c */
 
@@ -416,6 +424,6 @@ FUNC_STUB(trans_FMIN_zpzi)
 #define __REGISTER_MTEDESC_TCMA_WIDTH stub_abort("__REGISTER_MTEDESC_TCMA_WIDTH")
 
 //  Prototyped in translate-a32.h
-FUNC_STUB(mve_eci_check)
-FUNC_STUB(mve_update_eci)
-FUNC_STUB(mve_update_and_store_eci)
+FUNC_STUB_PTR(mve_eci_check)
+FUNC_STUB_PTR(mve_update_eci)
+FUNC_STUB_PTR(mve_update_and_store_eci)

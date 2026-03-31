@@ -229,6 +229,7 @@ DEF_HELPER_4(crypto_sm3tt1b, void, ptr, ptr, ptr, i32)
 DEF_HELPER_4(crypto_sm3tt2a, void, ptr, ptr, ptr, i32)
 DEF_HELPER_4(crypto_sm4e, void, ptr, ptr, ptr, i32)
 DEF_HELPER_4(crypto_sm4ekey, void, ptr, ptr, ptr, i32)
+DEF_HELPER_4(crypto_sm3tt2b, void, ptr, ptr, ptr, i32)
 
 /* op_helper.c */
 
@@ -527,6 +528,16 @@ DEF_HELPER_3(neon_qzip8, void, env, i32, i32)
 DEF_HELPER_3(neon_qzip16, void, env, i32, i32)
 DEF_HELPER_3(neon_qzip32, void, env, i32, i32)
 
+/* stubs.h */
+DEF_HELPER_4(mve_sqrshrl48, void, i64, i64, i64, i32)
+DEF_HELPER_4(mve_sqrshrl, void, i64, i64, i64, i32)
+DEF_HELPER_4(mve_sqrshr, void, i64, i64, i64, i32)
+DEF_HELPER_4(mve_sshrl, void, i64, i64, i64, i32)
+DEF_HELPER_4(mve_uqrshll48, void, i64, i64, i64, i32)
+DEF_HELPER_4(mve_uqrshll, void, i64, i64, i64, i32)
+DEF_HELPER_4(mve_uqrshl, void, i64, i64, i64, i32)
+DEF_HELPER_4(mve_ushll, void, i64, i64, i64, i32)
+
 /* iwmmxt_helper.c */
 
 DEF_HELPER_2(iwmmxt_maddsq, i64, i64, i64)
@@ -701,6 +712,11 @@ DEF_HELPER_4(gvec_fcge0_s, void, ptr, ptr, ptr, i32)
 DEF_HELPER_4(gvec_fceq0_s, void, ptr, ptr, ptr, i32)
 DEF_HELPER_4(gvec_fclt0_s, void, ptr, ptr, ptr, i32)
 DEF_HELPER_4(gvec_fcle0_s, void, ptr, ptr, ptr, i32)
+DEF_HELPER_4(gvec_fcgt0_h, void, ptr, ptr, ptr, i32)
+DEF_HELPER_4(gvec_fcge0_h, void, ptr, ptr, ptr, i32)
+DEF_HELPER_4(gvec_fceq0_h, void, ptr, ptr, ptr, i32)
+DEF_HELPER_4(gvec_fclt0_h, void, ptr, ptr, ptr, i32)
+DEF_HELPER_4(gvec_fcle0_h, void, ptr, ptr, ptr, i32)
 DEF_HELPER_5(gvec_fadd_h, void, ptr, ptr, ptr, ptr, i32)
 DEF_HELPER_5(gvec_fadd_s, void, ptr, ptr, ptr, ptr, i32)
 DEF_HELPER_5(gvec_fadd_d, void, ptr, ptr, ptr, ptr, i32)
