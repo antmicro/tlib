@@ -1184,6 +1184,11 @@ static inline bool is_insn_vstr_imm(uint32_t insn)
     return (insn & 0xFF111E00) == 0xFD001E00;
 }
 
+static inline bool is_insn_vldr(uint32_t insn)
+{
+    return (insn & 0xEFB01E00) == 0xEC900E00;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {

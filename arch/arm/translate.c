@@ -10122,6 +10122,42 @@ static int trans_vstr_sg(DisasContext *s, arg_vldst_sg *a)
     return do_ldst_sg(s, a, fns[a->os][a->msize][a->size]);
 }
 
+static int trans_vldr_s_sg(DisasContext *s, arg_vldst_sg *a)
+{
+    static MVEGenLdStSGFn *const fns[2][4][4] = {
+        { { NULL, F(vldrb_sg_sh), F(vldrb_sg_sw), NULL },
+         { NULL, NULL, F(vldrh_sg_sw), NULL },
+         { NULL, NULL, NULL, NULL },
+         { NULL, NULL, NULL, NULL } },
+        { { NULL, NULL, NULL, NULL },
+         { NULL, NULL, F(vldrh_sg_os_sw), NULL },
+         { NULL, NULL, NULL, NULL },
+         { NULL, NULL, NULL, NULL } }
+    };
+    if(a->qd == a->qm) {
+        return TRANS_STATUS_ILLEGAL_INSN; /* UNPREDICTABLE */
+    }
+    return do_ldst_sg(s, a, fns[a->os][a->msize][a->size]);
+}
+
+static int trans_vldr_u_sg(DisasContext *s, arg_vldst_sg *a)
+{
+    static MVEGenLdStSGFn *const fns[2][4][4] = {
+        { { F(vldrb_sg_ub), F(vldrb_sg_uh), F(vldrb_sg_uw), NULL },
+         { NULL, F(vldrh_sg_uh), F(vldrh_sg_uw), NULL },
+         { NULL, NULL, F(vldrw_sg_uw), NULL },
+         { NULL, NULL, NULL, F(vldrd_sg_ud) }    },
+        { { NULL, NULL, NULL, NULL },
+         { NULL, F(vldrh_sg_os_uh), F(vldrh_sg_os_uw), NULL },
+         { NULL, NULL, F(vldrw_sg_os_uw), NULL },
+         { NULL, NULL, NULL, F(vldrd_sg_os_ud) } }
+    };
+    if(a->qd == a->qm) {
+        return TRANS_STATUS_ILLEGAL_INSN; /* UNPREDICTABLE */
+    }
+    return do_ldst_sg(s, a, fns[a->os][a->msize][a->size]);
+}
+
 #undef DO_VLDST_WIDE_NARROW
 #undef F
 
@@ -13781,6 +13817,18 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                         return trans_vstrd_sg_imm(s, &a);
                     } else {
                         return trans_vstrw_sg_imm(s, &a);
+                    }
+                }
+                if(is_insn_vldr(insn)) {
+                    ARCH(MVE);
+                    arg_vldst_sg a;
+                    mve_extract_vldst_sg(&a, insn);
+
+                    uint32_t is_signed = extract32(insn, 28, 1) == 0;
+                    if(is_signed) {
+                        return trans_vldr_s_sg(s, &a);
+                    } else {
+                        return trans_vldr_u_sg(s, &a);
                     }
                 }
             }

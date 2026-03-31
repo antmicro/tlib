@@ -1132,6 +1132,23 @@ DEF_HELPER_4(mve_vstrd_sg_os_ud, void, env, ptr, ptr, i32)
 
 DEF_HELPER_4(mve_vstrw_sg_wb_uw, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vstrd_sg_wb_ud, void, env, ptr, ptr, i32)
+
+DEF_HELPER_4(mve_vldrb_sg_sh, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vldrb_sg_sw, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vldrh_sg_sw, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vldrb_sg_ub, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vldrb_sg_uh, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vldrb_sg_uw, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vldrh_sg_uh, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vldrh_sg_uw, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vldrw_sg_uw, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vldrd_sg_ud, void, env, ptr, ptr, i32)
+
+DEF_HELPER_4(mve_vldrh_sg_os_sw, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vldrh_sg_os_uh, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vldrh_sg_os_uw, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vldrw_sg_os_uw, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vldrd_sg_os_ud, void, env, ptr, ptr, i32)
 #endif
 
 #include "def-helper.h"

@@ -2489,4 +2489,74 @@ DO_VSTR64_SG(vstrd_sg_os_ud, ADDR_ADD_OSD, false)
 DO_VSTR_SG(vstrw_sg_wb_uw, stl, 4, uint32_t, ADDR_ADD, true)
 DO_VSTR64_SG(vstrd_sg_wb_ud, ADDR_ADD, true)
 
+#define DO_VLDR_SG(OP, MTYPE, LDTYPE, ESIZE, TYPE, OFFTYPE, ADDRFN, WB)                                                   \
+    void HELPER(mve_##OP)(CPUState * env, void *vd, void *vm, uint32_t base)                                              \
+    {                                                                                                                     \
+        TYPE *d = vd;                                                                                                     \
+        OFFTYPE *m = vm;                                                                                                  \
+        uint16_t mask = mve_element_mask(env);                                                                            \
+        uint16_t eci_mask = mve_eci_mask(env);                                                                            \
+        unsigned int e;                                                                                                   \
+        uint32_t addr;                                                                                                    \
+        for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE, eci_mask >>= ESIZE) {                                             \
+            if(!(eci_mask & 1)) {                                                                                         \
+                continue;                                                                                                 \
+            }                                                                                                             \
+            addr = ADDRFN(base, m[H##ESIZE(e)]);                                                                          \
+            d[H##ESIZE(e)] = (mask & 1) ? (MTYPE)__inner_##LDTYPE##_err_mmu(addr, cpu_mmu_index(env), NULL, GETPC()) : 0; \
+            if(WB) {                                                                                                      \
+                m[H##ESIZE(e)] = addr;                                                                                    \
+            }                                                                                                             \
+        }                                                                                                                 \
+        mve_advance_vpt(env);                                                                                             \
+    }
+
+/*
+ * 64-bit accesses are slightly different: they are done as two 32-bit
+ * accesses, controlled by the predicate mask for the relevant beat,
+ * and with a single 32-bit offset in the first of the two Qm elements.
+ * Address writeback happens on the odd beats and updates the address
+ * stored in the even-beat element.
+ */
+#define DO_VLDR64_SG(OP, ADDRFN, WB)                                                                  \
+    void HELPER(mve_##OP)(CPUState * env, void *vd, void *vm, uint32_t base)                          \
+    {                                                                                                 \
+        uint32_t *d = vd;                                                                             \
+        uint32_t *m = vm;                                                                             \
+        uint16_t mask = mve_element_mask(env);                                                        \
+        uint16_t eci_mask = mve_eci_mask(env);                                                        \
+        unsigned int e;                                                                               \
+        uint32_t addr;                                                                                \
+        for(e = 0; e < 16 / 4; e++, mask >>= 4, eci_mask >>= 4) {                                     \
+            if(!(eci_mask & 1)) {                                                                     \
+                continue;                                                                             \
+            }                                                                                         \
+            addr = ADDRFN(base, m[H4(e & ~1)]);                                                       \
+            addr += 4 * (e & 1);                                                                      \
+            d[H4(e)] = (mask & 1) ? __inner_ldl_err_mmu(addr, cpu_mmu_index(env), NULL, GETPC()) : 0; \
+            if(WB && (e & 1)) {                                                                       \
+                m[H4(e & ~1)] = addr - 4;                                                             \
+            }                                                                                         \
+        }                                                                                             \
+        mve_advance_vpt(env);                                                                         \
+    }
+
+DO_VLDR_SG(vldrb_sg_sh, int8_t, ldb, 2, int16_t, uint16_t, ADDR_ADD, false)
+DO_VLDR_SG(vldrb_sg_sw, int8_t, ldb, 4, int32_t, uint32_t, ADDR_ADD, false)
+DO_VLDR_SG(vldrh_sg_sw, int16_t, ldw, 4, int32_t, uint32_t, ADDR_ADD, false)
+
+DO_VLDR_SG(vldrb_sg_ub, uint8_t, ldb, 1, uint8_t, uint8_t, ADDR_ADD, false)
+DO_VLDR_SG(vldrb_sg_uh, uint8_t, ldb, 2, uint16_t, uint16_t, ADDR_ADD, false)
+DO_VLDR_SG(vldrb_sg_uw, uint8_t, ldb, 4, uint32_t, uint32_t, ADDR_ADD, false)
+DO_VLDR_SG(vldrh_sg_uh, uint16_t, ldw, 2, uint16_t, uint16_t, ADDR_ADD, false)
+DO_VLDR_SG(vldrh_sg_uw, uint16_t, ldw, 4, uint32_t, uint32_t, ADDR_ADD, false)
+DO_VLDR_SG(vldrw_sg_uw, uint32_t, ldl, 4, uint32_t, uint32_t, ADDR_ADD, false)
+DO_VLDR64_SG(vldrd_sg_ud, ADDR_ADD, false)
+
+DO_VLDR_SG(vldrh_sg_os_sw, int16_t, ldw, 4, int32_t, uint32_t, ADDR_ADD_OSH, false)
+DO_VLDR_SG(vldrh_sg_os_uh, uint16_t, ldw, 2, uint16_t, uint16_t, ADDR_ADD_OSH, false)
+DO_VLDR_SG(vldrh_sg_os_uw, uint16_t, ldw, 4, uint32_t, uint32_t, ADDR_ADD_OSH, false)
+DO_VLDR_SG(vldrw_sg_os_uw, uint32_t, ldl, 4, uint32_t, uint32_t, ADDR_ADD_OSW, false)
+DO_VLDR64_SG(vldrd_sg_os_ud, ADDR_ADD_OSD, false)
+
 #endif
