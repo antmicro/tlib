@@ -2559,4 +2559,7 @@ DO_VLDR_SG(vldrh_sg_os_uw, uint16_t, ldw, 4, uint32_t, uint32_t, ADDR_ADD_OSH, f
 DO_VLDR_SG(vldrw_sg_os_uw, uint32_t, ldl, 4, uint32_t, uint32_t, ADDR_ADD_OSW, false)
 DO_VLDR64_SG(vldrd_sg_os_ud, ADDR_ADD_OSD, false)
 
+DO_VLDR_SG(vldrw_sg_wb_uw, uint32_t, ldl, 4, uint32_t, uint32_t, ADDR_ADD, true)
+DO_VLDR64_SG(vldrd_sg_wb_ud, ADDR_ADD, true)
+
 #endif

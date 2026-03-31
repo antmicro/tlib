@@ -10212,6 +10212,30 @@ static int trans_vstrd_sg_imm(DisasContext *s, arg_vldst_sg_imm *a)
     return do_ldst_sg_imm(s, a, fns[a->w], MO_64);
 }
 
+static int trans_vldrw_sg_imm(DisasContext *s, arg_vldst_sg_imm *a)
+{
+    static MVEGenLdStSGFn *const fns[] = {
+        gen_helper_mve_vldrw_sg_uw,
+        gen_helper_mve_vldrw_sg_wb_uw,
+    };
+    if(a->qd == a->qm) {
+        return TRANS_STATUS_ILLEGAL_INSN; /* UNPREDICTABLE */
+    }
+    return do_ldst_sg_imm(s, a, fns[a->w], MO_32);
+}
+
+static int trans_vldrd_sg_imm(DisasContext *s, arg_vldst_sg_imm *a)
+{
+    static MVEGenLdStSGFn *const fns[] = {
+        gen_helper_mve_vldrd_sg_ud,
+        gen_helper_mve_vldrd_sg_wb_ud,
+    };
+    if(a->qd == a->qm) {
+        return TRANS_STATUS_ILLEGAL_INSN; /* UNPREDICTABLE */
+    }
+    return do_ldst_sg_imm(s, a, fns[a->w], MO_64);
+}
+
 static bool do_2shift_vec(DisasContext *s, arg_2shift *a, MVEGenTwoOpShiftFn fn, bool negateshift, GVecGen2iFn vecfn)
 {
     TCGv_ptr qd, qm;
@@ -13829,6 +13853,18 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                         return trans_vldr_s_sg(s, &a);
                     } else {
                         return trans_vldr_u_sg(s, &a);
+                    }
+                }
+                if(is_insn_vldr_imm(insn)) {
+                    ARCH(MVE);
+                    arg_vldst_sg_imm a;
+                    mve_extract_vldst_sg_imm(&a, insn);
+
+                    uint32_t is_doubleword = extract32(insn, 8, 1) == 1;
+                    if(is_doubleword) {
+                        return trans_vldrd_sg_imm(s, &a);
+                    } else {
+                        return trans_vldrw_sg_imm(s, &a);
                     }
                 }
             }
