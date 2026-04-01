@@ -10613,6 +10613,104 @@ static int trans_vmsr_vmrs(DisasContext *s, arg_vmsr_vmrs *a)
     }
 }
 
+static void fp_sysreg_to_memory(DisasContext *s, void *opaque, TCGv_i32 value, bool do_access)
+{
+    arg_vldr_vstr_sysreg *a = opaque;
+    uint32_t offset = a->imm;
+    TCGv_i32 addr;
+
+    if(!a->a) {
+        offset = -offset;
+    }
+
+    if(!do_access && !a->w) {
+        return;
+    }
+
+    addr = load_reg(s, a->rn);
+    if(a->p) {
+        tcg_gen_addi_i32(addr, addr, offset);
+    }
+
+    //  TODO: Add stack check (ViolatesSPLim), check that says if SP won't violate its boundaries after writeback
+
+    if(do_access) {
+        tcg_gen_qemu_st32(value, addr, context_to_mmu_index(s));
+        tcg_temp_free_i32(value);
+    }
+
+    if(a->w) {
+        /* writeback */
+        if(!a->p) {
+            tcg_gen_addi_i32(addr, addr, offset);
+        }
+        store_reg(s, a->rn, addr);
+    } else {
+        tcg_temp_free_i32(addr);
+    }
+}
+
+static TCGv_i32 memory_to_fp_sysreg(DisasContext *s, void *opaque, bool do_access)
+{
+    arg_vldr_vstr_sysreg *a = opaque;
+    uint32_t offset = a->imm;
+    TCGv_i32 addr;
+    TCGv_i32 value = 0;
+
+    if(!a->a) {
+        offset = -offset;
+    }
+
+    if(!do_access && !a->w) {
+        return 0;
+    }
+
+    addr = load_reg(s, a->rn);
+    if(a->p) {
+        tcg_gen_addi_i32(addr, addr, offset);
+    }
+
+    //  TODO: Add stack check (ViolatesSPLim), check that says if SP won't violate its boundaries after writeback
+
+    if(do_access) {
+        value = tcg_temp_new_i32();
+        tcg_gen_qemu_ld32u(value, addr, context_to_mmu_index(s));
+    }
+
+    if(a->w) {
+        /* writeback */
+        if(!a->p) {
+            tcg_gen_addi_i32(addr, addr, offset);
+        }
+        store_reg(s, a->rn, addr);
+    } else {
+        tcg_temp_free_i32(addr);
+    }
+    return value;
+}
+
+static int trans_vstr_sysreg(DisasContext *s, arg_vldr_vstr_sysreg *a)
+{
+    if(!arm_feature(env, ARM_FEATURE_V8_1M)) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    if(a->rn == 15) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    return gen_M_fp_sysreg_read(s, a->reg, fp_sysreg_to_memory, a);
+}
+
+static int trans_vldr_sysreg(DisasContext *s, arg_vldr_vstr_sysreg *a)
+{
+    if(!arm_feature(env, ARM_FEATURE_V8_1M)) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    if(a->rn == 15) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    return gen_M_fp_sysreg_write(s, a->reg, memory_to_fp_sysreg, a);
+}
+
 static bool do_2shift_vec(DisasContext *s, arg_2shift *a, MVEGenTwoOpShiftFn fn, bool negateshift, GVecGen2iFn vecfn)
 {
     TCGv_ptr qd, qm;
@@ -12993,6 +13091,17 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                 return trans_vmsr_vmrs(s, &a);
             }
             if(arm_feature(env, ARM_FEATURE_V8)) {
+                if(is_insn_vldr_vstr_sysreg(insn)) {
+                    arg_vldr_vstr_sysreg a;
+                    mve_extract_vldr_vstr_sysreg(&a, insn);
+
+                    bool load = extract32(insn, 20, 1) == 1;
+                    if(load) {
+                        return trans_vldr_sysreg(s, &a);
+                    } else {
+                        return trans_vstr_sysreg(s, &a);
+                    }
+                }
                 if(is_insn_vld4(insn)) {
                     ARCH(MVE);
                     return trans_vld4(s, insn);

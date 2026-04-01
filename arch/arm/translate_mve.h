@@ -50,6 +50,16 @@ typedef struct {
     int l;
 } arg_vmsr_vmrs;
 
+/* Arguments for VLDR/VSTR system register instruction */
+typedef struct {
+    int rn;
+    int reg;
+    int imm;
+    int a;
+    int w;
+    int p;
+} arg_vldr_vstr_sysreg;
+
 /*
  * Arguments of stores/loads:
  * VSTRB, VSTRH, VSTRW, VLDRB, VLDRH, VLDRW
@@ -319,6 +329,15 @@ void gen_mve_vpst(DisasContext *s, uint32_t mask);
 static inline bool is_insn_vmsr_vmrs(uint32_t insn)
 {
     return (insn & 0xFFE00FFF) == 0xEEE00A10;
+}
+
+static inline bool is_insn_vldr_vstr_sysreg(uint32_t insn)
+{
+    uint32_t p = extract32(insn, 24, 1);
+    uint32_t w = extract32(insn, 21, 1);
+    bool related_encoding = p == 0 && w == 0;
+
+    return !related_encoding && (insn & 0xFE001F80) == 0xEC000F80;
 }
 
 /*
@@ -1211,6 +1230,17 @@ static void mve_extract_vmsr_vmrs(arg_vmsr_vmrs *a, uint32_t insn)
     a->rt = extract32(insn, 12, 4);
     a->reg = extract32(insn, 16, 4);
     a->l = extract32(insn, 20, 1);
+}
+
+/* Extract arguments of loads/stores to system registers */
+static void mve_extract_vldr_vstr_sysreg(arg_vldr_vstr_sysreg *a, uint32_t insn)
+{
+    a->rn = extract32(insn, 16, 4);
+    a->reg = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    a->imm = extract32(insn, 0, 7) << 2;
+    a->w = extract32(insn, 21, 1);
+    a->a = extract32(insn, 23, 1);
+    a->p = extract32(insn, 24, 1);
 }
 
 /* Extract arguments of loads/stores */
