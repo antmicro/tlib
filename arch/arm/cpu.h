@@ -55,9 +55,6 @@
 #define EXCP_INVSTATE       18 /* INVSTATE usage fault */
 #define EXCP_SECURE         19 /* TrustZone Secure fault */
 
-/* These ones are M-profile only */
-#define ARM_VFP_P0 13
-
 #define ARMV7M_EXCP_RESET    1
 #define ARMV7M_EXCP_NMI      2
 #define ARMV7M_EXCP_HARD     3
@@ -627,6 +624,16 @@ static inline bool in_user_mode(CPUState *env)
 #define ARM_VFP_FPINST  9
 #define ARM_VFP_FPINST2 10
 
+/* These ones are M-profile only */
+#define ARM_VFP_FPSCR_NZCVQC 2
+#define ARM_VFP_VPR          12
+#define ARM_VFP_P0           13
+#define ARM_VFP_FPCXT_NS     14
+#define ARM_VFP_FPCXT_S      15
+
+/* Internal value meaning "FPSCR, but we care only about NZCV" */
+#define INTERNAL_VFP_FPSCR_NZCV 0xffff
+
 /* FP fields.  */
 #define ARM_CONTROL_FPCA     2
 #define ARM_CONTROL_SFPA     3
@@ -1064,6 +1071,15 @@ static inline uint32_t pmsav8_idau_sau_get_flags(uint32_t rbar_or_rlar)
 #define FIELD_EX32(variable, register, field) \
     extract32(variable, __REGISTER_##register##_##field##_START, __REGISTER_##register##_##field##_WIDTH)
 
+#define TCG_GEN_FIELD_DP32(result, destination, source, register, field)                      \
+    tcg_gen_deposit_i32(result, destination, source, __REGISTER_##register##_##field##_START, \
+                        __REGISTER_##register##_##field##_WIDTH)
+
+#define TCG_GEN_FIELD_EX32(result, source, register, field) \
+    tcg_gen_extract_i32(result, source, __REGISTER_##register##_##field##_START, __REGISTER_##register##_##field##_WIDTH)
+
+#define FIELD_MASK(register, field) __REGISTER_##register##_##field##_MASK
+
 #define DEBUG_ADDRESS_VALID_VALUE 0b11
 
 FIELD(DBGDRAR, ROMADDR, 12, 20)
@@ -1086,6 +1102,8 @@ FIELD(VFP_FPSCR, VEC_LEN, 16, 3)
 FIELD(VFP_FPSCR, VEC_STRIDE, 20, 2)
 FIELD(VFP_FPSCR, LTPSIZE, 16, 3)
 FIELD(VFP_FPSCR, QC, 27, 1)
+FIELD(VFP_FPSCR, NZCV, 28, 4)
+FIELD(VFP_FPSCR, NZCVQC, 27, 5)
 
 /* v7M FPCCR bits */
 FIELD(V7M_FPCCR, LSPACT, 0, 1)

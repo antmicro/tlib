@@ -43,6 +43,13 @@ typedef void GVecGen3Fn(unsigned, uint32_t, uint32_t, uint32_t, uint32_t, uint32
 typedef void GVecGen2Fn(unsigned, uint32_t, uint32_t, uint32_t, uint32_t);
 typedef void GVecGen2iFn(unsigned, uint32_t, uint32_t, int64_t, uint32_t, uint32_t);
 
+/* Arguments for VMSR/VMRS system register instruction */
+typedef struct {
+    int rt;
+    int reg;
+    int l;
+} arg_vmsr_vmrs;
+
 /*
  * Arguments of stores/loads:
  * VSTRB, VSTRH, VSTRW, VLDRB, VLDRH, VLDRW
@@ -308,6 +315,11 @@ void gen_mve_vld20w(DisasContext *s, uint32_t qdindx, TCGv_i32 base);
 void gen_mve_vld21w(DisasContext *s, uint32_t qdindx, TCGv_i32 base);
 
 void gen_mve_vpst(DisasContext *s, uint32_t mask);
+
+static inline bool is_insn_vmsr_vmrs(uint32_t insn)
+{
+    return (insn & 0xFFE00FFF) == 0xEEE00A10;
+}
 
 /*
  * Vector load/store register (encodings T5, T6, T7)
@@ -1192,6 +1204,13 @@ static inline bool is_insn_vldr(uint32_t insn)
 static inline bool is_insn_vldr_imm(uint32_t insn)
 {
     return (insn & 0xFF111E00) == 0xFD101E00;
+}
+
+static void mve_extract_vmsr_vmrs(arg_vmsr_vmrs *a, uint32_t insn)
+{
+    a->rt = extract32(insn, 12, 4);
+    a->reg = extract32(insn, 16, 4);
+    a->l = extract32(insn, 20, 1);
 }
 
 /* Extract arguments of loads/stores */
