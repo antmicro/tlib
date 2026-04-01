@@ -1131,6 +1131,13 @@ static inline bool is_insn_vqdmulh(uint32_t insn)
     return size != 3 && (insn & 0xEFC11FF1) == 0xEF000B40;
 }
 
+static inline bool is_insn_vqdmlah(uint32_t insn)
+{
+    /* size == '11' is related encoding */
+    uint32_t size = extract32(insn, 20, 2);
+    return size != 3 && (insn & 0xFFC11FD0) == 0xEE000E40;
+}
+
 /* Extract arguments of loads/stores */
 static void mve_extract_vldr_vstr(arg_vldr_vstr *a, uint32_t insn)
 {

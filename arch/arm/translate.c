@@ -10208,6 +10208,9 @@ DO_TRANS_2OP_SCALAR(vqadd_u_scalar, vqaddu_scalar)
 DO_TRANS_2OP_SCALAR(vqsub_s_scalar, vqsubs_scalar)
 DO_TRANS_2OP_SCALAR(vqsub_u_scalar, vqsubu_scalar)
 
+DO_TRANS_2OP_SCALAR(vqdmlah, vqdmlah)
+DO_TRANS_2OP_SCALAR(vqrdmlah, vqrdmlah)
+
 #undef DO_TRANS_2OP_FP_SCALAR
 #undef DO_TRANS_2OP_FP
 #undef DO_TRANS_2OP_SCALAR
@@ -13638,6 +13641,18 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                         return trans_vqrdmulh(s, &a);
                     } else {
                         return trans_vqdmulh(s, &a);
+                    }
+                }
+                if(is_insn_vqdmlah(insn)) {
+                    ARCH(MVE);
+                    arg_2scalar a;
+                    mve_extract_2op_scalar(&a, insn);
+                    uint32_t is_rounding = extract32(insn, 5, 1) == 0;
+
+                    if(is_rounding) {
+                        return trans_vqrdmlah(s, &a);
+                    } else {
+                        return trans_vqdmlah(s, &a);
                     }
                 }
             }

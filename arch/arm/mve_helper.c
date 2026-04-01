@@ -2335,4 +2335,74 @@ DO_2SHIFT_INSERT(vsliw, 4, DO_SHL, SHL_MASK)
 #undef DO_SHL
 #undef DO_2SHIFT_INSERT
 
+static int8_t do_vqdmlah_b(int8_t a, int8_t b, int8_t c, int round, bool *sat)
+{
+    int64_t r = (int64_t)a * b * 2 + ((int64_t)c << 8) + (round << 7);
+    return do_sat_bhs(r, INT16_MIN, INT16_MAX, sat) >> 8;
+}
+
+static int16_t do_vqdmlah_h(int16_t a, int16_t b, int16_t c, int round, bool *sat)
+{
+    int64_t r = (int64_t)a * b * 2 + ((int64_t)c << 16) + (round << 15);
+    return do_sat_bhs(r, INT32_MIN, INT32_MAX, sat) >> 16;
+}
+
+static int32_t do_vqdmlah_w(int32_t a, int32_t b, int32_t c, int round, bool *sat)
+{
+    /*
+     * Architecturally we should do the entire add, double, round
+     * and then check for saturation. We do three saturating adds,
+     * but we need to be careful about the order. If the first
+     * m1 + m2 saturates then it's impossible for the *2+rc to
+     * bring it back into the non-saturated range. However, if
+     * m1 + m2 is negative then it's possible that doing the doubling
+     * would take the intermediate result below INT64_MAX and the
+     * addition of the rounding constant then brings it back in range.
+     * So we add half the rounding constant and half the "c << esize"
+     * before doubling rather than adding the rounding constant after
+     * the doubling.
+     */
+    int64_t m1 = (int64_t)a * b;
+    int64_t m2 = (int64_t)c << 31;
+    int64_t r;
+    if(__builtin_add_overflow(m1, m2, &r) || __builtin_add_overflow(r, (round << 30), &r) || __builtin_add_overflow(r, r, &r)) {
+        *sat = true;
+        return r < 0 ? INT32_MAX : INT32_MIN;
+    }
+    return r >> 32;
+}
+
+#define DO_2OP_SAT_ACC_SCALAR(OP, ESIZE, TYPE, FN)                                         \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vn, uint32_t rm)           \
+    {                                                                                      \
+        TYPE *d = vd, *n = vn;                                                             \
+        TYPE m = rm;                                                                       \
+        uint16_t mask = mve_element_mask(env);                                             \
+        unsigned int e;                                                                    \
+        bool qc = false;                                                                   \
+        for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                                  \
+            bool sat = false;                                                              \
+            mergemask(&d[H##ESIZE(e)], FN(d[H##ESIZE(e)], n[H##ESIZE(e)], m, &sat), mask); \
+            qc |= sat & mask & 1;                                                          \
+        }                                                                                  \
+        if(qc) {                                                                           \
+            env->vfp.qc = qc;                                                              \
+        }                                                                                  \
+        mve_advance_vpt(env);                                                              \
+    }
+
+#define DO_VQDMLAH_B(D, N, M, S)  do_vqdmlah_b(N, M, D, 0, S)
+#define DO_VQDMLAH_H(D, N, M, S)  do_vqdmlah_h(N, M, D, 0, S)
+#define DO_VQDMLAH_W(D, N, M, S)  do_vqdmlah_w(N, M, D, 0, S)
+#define DO_VQRDMLAH_B(D, N, M, S) do_vqdmlah_b(N, M, D, 1, S)
+#define DO_VQRDMLAH_H(D, N, M, S) do_vqdmlah_h(N, M, D, 1, S)
+#define DO_VQRDMLAH_W(D, N, M, S) do_vqdmlah_w(N, M, D, 1, S)
+
+DO_2OP_SAT_ACC_SCALAR(vqdmlahb, 1, int8_t, DO_VQDMLAH_B)
+DO_2OP_SAT_ACC_SCALAR(vqdmlahh, 2, int16_t, DO_VQDMLAH_H)
+DO_2OP_SAT_ACC_SCALAR(vqdmlahw, 4, int32_t, DO_VQDMLAH_W)
+DO_2OP_SAT_ACC_SCALAR(vqrdmlahb, 1, int8_t, DO_VQRDMLAH_B)
+DO_2OP_SAT_ACC_SCALAR(vqrdmlahh, 2, int16_t, DO_VQRDMLAH_H)
+DO_2OP_SAT_ACC_SCALAR(vqrdmlahw, 4, int32_t, DO_VQRDMLAH_W)
+
 #endif
