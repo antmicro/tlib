@@ -1109,6 +1109,13 @@ DEF_HELPER_4(mve_vqdmlahw, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vqrdmlahb, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vqrdmlahh, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vqrdmlahw, void, env, ptr, ptr, i32)
+
+DEF_HELPER_4(mve_vqdmlashb, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vqdmlashh, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vqdmlashw, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vqrdmlashb, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vqrdmlashh, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vqrdmlashw, void, env, ptr, ptr, i32)
 #endif
 
 #include "def-helper.h"
