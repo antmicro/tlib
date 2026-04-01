@@ -1220,6 +1220,11 @@ static inline bool is_insn_vqdmlash(uint32_t insn)
     return size != 3 && (insn & 0xFFC11FD0) == 0xEE001E40;
 }
 
+static inline bool is_insn_vqrshrn(uint32_t insn)
+{
+    return (insn & 0xEFA00FD1) == 0xEE800F41;
+}
+
 static inline bool is_insn_vstr(uint32_t insn)
 {
     return (insn & 0xFFB01E00) == 0xEC800E00;

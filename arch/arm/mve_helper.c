@@ -2587,4 +2587,63 @@ DO_VLDR64_SG(vldrd_sg_os_ud, ADDR_ADD_OSD, false)
 DO_VLDR_SG(vldrw_sg_wb_uw, uint32_t, ldl, 4, uint32_t, uint32_t, ADDR_ADD, true)
 DO_VLDR64_SG(vldrd_sg_wb_ud, ADDR_ADD, true)
 
+/* Saturating narrowing right shifts */
+#define DO_VSHRN_SAT(OP, TOP, ESIZE, TYPE, LESIZE, LTYPE, FN)                       \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vm, uint32_t shift) \
+    {                                                                               \
+        LTYPE *m = vm;                                                              \
+        TYPE *d = vd;                                                               \
+        uint16_t mask = mve_element_mask(env);                                      \
+        bool qc = false;                                                            \
+        unsigned int le;                                                            \
+        mask >>= ESIZE * TOP;                                                       \
+        for(le = 0; le < 16 / LESIZE; le++, mask >>= LESIZE) {                      \
+            bool sat = false;                                                       \
+            TYPE r = FN(m[H##LESIZE(le)], shift, &sat);                             \
+            mergemask(&d[H##ESIZE(le * 2 + TOP)], r, mask);                         \
+            qc |= sat & mask & 1;                                                   \
+        }                                                                           \
+        if(qc) {                                                                    \
+            env->vfp.qc = qc;                                                       \
+        }                                                                           \
+        mve_advance_vpt(env);                                                       \
+    }
+
+#define DO_VSHRN_SAT_UB(BOP, TOP, FN)                     \
+    DO_VSHRN_SAT(BOP, false, 1, uint8_t, 2, uint16_t, FN) \
+    DO_VSHRN_SAT(TOP, true, 1, uint8_t, 2, uint16_t, FN)
+
+#define DO_VSHRN_SAT_UH(BOP, TOP, FN)                      \
+    DO_VSHRN_SAT(BOP, false, 2, uint16_t, 4, uint32_t, FN) \
+    DO_VSHRN_SAT(TOP, true, 2, uint16_t, 4, uint32_t, FN)
+
+#define DO_VSHRN_SAT_SB(BOP, TOP, FN)                   \
+    DO_VSHRN_SAT(BOP, false, 1, int8_t, 2, int16_t, FN) \
+    DO_VSHRN_SAT(TOP, true, 1, int8_t, 2, int16_t, FN)
+
+#define DO_VSHRN_SAT_SH(BOP, TOP, FN)                    \
+    DO_VSHRN_SAT(BOP, false, 2, int16_t, 4, int32_t, FN) \
+    DO_VSHRN_SAT(TOP, true, 2, int16_t, 4, int32_t, FN)
+
+#define DO_RSHRN_SB(N, M, SATP) do_sat_bhs(do_srshr(N, M), INT8_MIN, INT8_MAX, SATP)
+#define DO_RSHRN_UB(N, M, SATP) do_sat_bhs(do_urshr(N, M), 0, UINT8_MAX, SATP)
+
+#define DO_RSHRN_SH(N, M, SATP) do_sat_bhs(do_srshr(N, M), INT16_MIN, INT16_MAX, SATP)
+#define DO_RSHRN_UH(N, M, SATP) do_sat_bhs(do_urshr(N, M), 0, UINT16_MAX, SATP)
+
+DO_VSHRN_SAT_SB(vqrshrnb_sb, vqrshrnt_sb, DO_RSHRN_SB)
+DO_VSHRN_SAT_SH(vqrshrnb_sh, vqrshrnt_sh, DO_RSHRN_SH)
+DO_VSHRN_SAT_UB(vqrshrnb_ub, vqrshrnt_ub, DO_RSHRN_UB)
+DO_VSHRN_SAT_UH(vqrshrnb_uh, vqrshrnt_uh, DO_RSHRN_UH)
+
+#undef DO_RSHRN_UH
+#undef DO_RSHRN_UB
+#undef DO_RSHRN_SH
+#undef DO_RSHRN_SB
+#undef DO_VSHRN_SAT_SH
+#undef DO_VSHRN_SAT_SB
+#undef DO_VSHRN_SAT_UH
+#undef DO_VSHRN_SAT_UB
+#undef DO_VSHRN_SAT
+
 #endif

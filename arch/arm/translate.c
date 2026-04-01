@@ -11379,7 +11379,7 @@ DO_TRANS_2SHIFT_SCALAR(vqshl_u_scalar, vqshli_u)
 DO_TRANS_2SHIFT_SCALAR(vqrshl_s_scalar, vqrshli_s)
 DO_TRANS_2SHIFT_SCALAR(vqrshl_u_scalar, vqrshli_u)
 
-#define DO_TRANS_VSHLL(INSN, FN)                               \
+#define DO_TRANS_2SHIFT_N(INSN, FN)                            \
     static bool trans_##INSN(DisasContext *s, arg_2shift *a)   \
     {                                                          \
         static MVEGenTwoOpShiftFn *const fns[] = {             \
@@ -11389,10 +11389,15 @@ DO_TRANS_2SHIFT_SCALAR(vqrshl_u_scalar, vqrshli_u)
         return do_2shift_vec(s, a, fns[a->size], false, NULL); \
     }
 
-DO_TRANS_VSHLL(vshll_bs, vshllbs)
-DO_TRANS_VSHLL(vshll_bu, vshllbu)
-DO_TRANS_VSHLL(vshll_ts, vshllts)
-DO_TRANS_VSHLL(vshll_tu, vshlltu)
+DO_TRANS_2SHIFT_N(vshll_bs, vshllbs)
+DO_TRANS_2SHIFT_N(vshll_bu, vshllbu)
+DO_TRANS_2SHIFT_N(vshll_ts, vshllts)
+DO_TRANS_2SHIFT_N(vshll_tu, vshlltu)
+
+DO_TRANS_2SHIFT_N(vqrshrnb_s, vqrshrnb_s)
+DO_TRANS_2SHIFT_N(vqrshrnt_s, vqrshrnt_s)
+DO_TRANS_2SHIFT_N(vqrshrnb_u, vqrshrnb_u)
+DO_TRANS_2SHIFT_N(vqrshrnt_u, vqrshrnt_u)
 
 static int trans_vpsel(DisasContext *s, arg_2op *a)
 {
@@ -14442,6 +14447,27 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                         return trans_vldrd_sg_imm(s, &a);
                     } else {
                         return trans_vldrw_sg_imm(s, &a);
+                    }
+                }
+                if(is_insn_vqrshrn(insn)) {
+                    ARCH(MVE);
+                    arg_2shift a;
+                    mve_extract_rshift_imm(&a, insn);
+                    uint32_t top_half = extract32(insn, 12, 1) == 1;
+                    uint32_t is_signed = extract32(insn, 28, 1) == 0;
+
+                    if(top_half) {
+                        if(is_signed) {
+                            return trans_vqrshrnt_s(s, &a);
+                        } else {
+                            return trans_vqrshrnt_u(s, &a);
+                        }
+                    } else {
+                        if(is_signed) {
+                            return trans_vqrshrnb_s(s, &a);
+                        } else {
+                            return trans_vqrshrnb_u(s, &a);
+                        }
                     }
                 }
             }
