@@ -2636,6 +2636,15 @@ DO_VSHRN_SAT_SH(vqrshrnb_sh, vqrshrnt_sh, DO_RSHRN_SH)
 DO_VSHRN_SAT_UB(vqrshrnb_ub, vqrshrnt_ub, DO_RSHRN_UB)
 DO_VSHRN_SAT_UH(vqrshrnb_uh, vqrshrnt_uh, DO_RSHRN_UH)
 
+#define DO_RSHRUN_B(N, M, SATP) do_sat_bhs(do_srshr(N, M), 0, UINT8_MAX, SATP)
+
+#define DO_RSHRUN_H(N, M, SATP) do_sat_bhs(do_srshr(N, M), 0, UINT16_MAX, SATP)
+
+DO_VSHRN_SAT_SB(vqrshrunbb, vqrshruntb, DO_RSHRUN_B)
+DO_VSHRN_SAT_SH(vqrshrunbh, vqrshrunth, DO_RSHRUN_H)
+
+#undef DO_RSHRUN_H
+#undef DO_RSHRUN_B
 #undef DO_RSHRN_UH
 #undef DO_RSHRN_UB
 #undef DO_RSHRN_SH

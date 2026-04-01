@@ -1135,6 +1135,11 @@ DEF_HELPER_4(mve_vqrshrnb_uh, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vqrshrnt_ub, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vqrshrnt_uh, void, env, ptr, ptr, i32)
 
+DEF_HELPER_4(mve_vqrshrunbb, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vqrshrunbh, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vqrshruntb, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vqrshrunth, void, env, ptr, ptr, i32)
+
 DEF_HELPER_4(mve_vstrb_sg_ub, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vstrb_sg_uh, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vstrb_sg_uw, void, env, ptr, ptr, i32)

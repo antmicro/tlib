@@ -1225,6 +1225,11 @@ static inline bool is_insn_vqrshrn(uint32_t insn)
     return (insn & 0xEFA00FD1) == 0xEE800F41;
 }
 
+static inline bool is_insn_vqrshrun(uint32_t insn)
+{
+    return (insn & 0xFFA00FD1) == 0xFE800FC0;
+}
+
 static inline bool is_insn_vstr(uint32_t insn)
 {
     return (insn & 0xFFB01E00) == 0xEC800E00;

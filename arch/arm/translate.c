@@ -11399,6 +11399,9 @@ DO_TRANS_2SHIFT_N(vqrshrnt_s, vqrshrnt_s)
 DO_TRANS_2SHIFT_N(vqrshrnb_u, vqrshrnb_u)
 DO_TRANS_2SHIFT_N(vqrshrnt_u, vqrshrnt_u)
 
+DO_TRANS_2SHIFT_N(vqrshrunb, vqrshrunb)
+DO_TRANS_2SHIFT_N(vqrshrunt, vqrshrunt)
+
 static int trans_vpsel(DisasContext *s, arg_2op *a)
 {
     /* This insn updates predication bits */
@@ -14468,6 +14471,18 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                         } else {
                             return trans_vqrshrnb_u(s, &a);
                         }
+                    }
+                }
+                if(is_insn_vqrshrun(insn)) {
+                    ARCH(MVE);
+                    arg_2shift a;
+                    mve_extract_rshift_imm(&a, insn);
+                    uint32_t top_half = extract32(insn, 12, 1) == 1;
+
+                    if(top_half) {
+                        return trans_vqrshrunt(s, &a);
+                    } else {
+                        return trans_vqrshrunb(s, &a);
                     }
                 }
             }
