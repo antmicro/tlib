@@ -991,10 +991,10 @@ static inline uint32_t fpccr_read(CPUState *env, bool is_secure)
         read_mask ^= ARM_FPCCR_TS_MASK | ARM_FPCCR_S_MASK | ARM_FPCCR_LSPENS_MASK | ARM_FPCCR_CLRONRETS_MASK;
     }
     uint32_t fpccr = env->v7m.fpccr[is_secure] & read_mask;
-    /* LSPEN is not banked, and always readable. Always stored in Secure register */
-    fpccr |= env->v7m.fpccr[M_REG_S] & ARM_FPCCR_LSPEN_MASK;
+    /* LSPEN is not banked, and always readable */
+    fpccr |= env->v7m.fpccr[M_REG_COMMON] & ARM_FPCCR_LSPEN_MASK;
     /* Same for CLRONRET */
-    fpccr |= env->v7m.fpccr[M_REG_S] & ARM_FPCCR_CLRONRET_MASK;
+    fpccr |= env->v7m.fpccr[M_REG_COMMON] & ARM_FPCCR_CLRONRET_MASK;
     return fpccr;
 }
 
@@ -1007,15 +1007,15 @@ static inline void fpccr_write(CPUState *env, uint32_t value, bool is_secure)
         /* These are not banked, but exist only in Secure mode */
         write_mask ^= ARM_FPCCR_TS_MASK | ARM_FPCCR_S_MASK | ARM_FPCCR_LSPENS_MASK | ARM_FPCCR_LSPEN_MASK |
                       ARM_FPCCR_CLRONRETS_MASK | ARM_FPCCR_CLRONRET_MASK;
-        /* LSPEN is only writable if LSPENS is unset. Store it in Secure bank */
-        if((env->v7m.fpccr[M_REG_S] & ARM_FPCCR_LSPENS_MASK) == 0) {
-            env->v7m.fpccr[M_REG_S] =
-                deposit32(env->v7m.fpccr[M_REG_S], ARM_FPCCR_LSPEN, 1, value & ARM_FPCCR_LSPEN_MASK ? 1 : 0);
+        /* LSPEN is only writable if LSPENS is unset */
+        if((env->v7m.fpccr[M_REG_COMMON] & ARM_FPCCR_LSPENS_MASK) == 0) {
+            env->v7m.fpccr[M_REG_COMMON] =
+                deposit32(env->v7m.fpccr[M_REG_COMMON], ARM_FPCCR_LSPEN, 1, value & ARM_FPCCR_LSPEN_MASK ? 1 : 0);
         }
         /* Similarly for CLRONRETS */
-        if((env->v7m.fpccr[M_REG_S] & ARM_FPCCR_CLRONRETS_MASK) == 0) {
-            env->v7m.fpccr[M_REG_S] =
-                deposit32(env->v7m.fpccr[M_REG_S], ARM_FPCCR_CLRONRET, 1, value & ARM_FPCCR_CLRONRET_MASK ? 1 : 0);
+        if((env->v7m.fpccr[M_REG_COMMON] & ARM_FPCCR_CLRONRETS_MASK) == 0) {
+            env->v7m.fpccr[M_REG_COMMON] =
+                deposit32(env->v7m.fpccr[M_REG_COMMON], ARM_FPCCR_CLRONRET, 1, value & ARM_FPCCR_CLRONRET_MASK ? 1 : 0);
         }
     }
     env->v7m.fpccr[is_secure] = value & write_mask;

@@ -123,15 +123,11 @@ uint32_t tlib_get_register_value_32_with_security(int reg_number, bool is_secure
 
 #if defined(TARGET_ARM32) && defined(TARGET_PROTO_ARM_M)
     /* CONTROL is a special case, since in TrustZone we hold the Non-banked bits
-     * in the Non-secure bank. So we need to remember to OR the values to get
-     * the real contents of the register (or clear SFPA if in Non-secure mode) */
+     * in the common (Secure) bank. So we need to remember to OR the values to get
+     * the real contents of the register (with SFPA only accessible from Secure state) */
     if(reg_number == Control_32) {
-        if(env->secure) {
-            const uint32_t unbanked_bits = ARM_CONTROL_FPCA_MASK | ARM_CONTROL_SFPA_MASK;
-            return (*ptr) | (env->v7m.control[M_REG_NS] & unbanked_bits);
-        } else {
-            return (*ptr) & ~ARM_CONTROL_SFPA_MASK;
-        }
+        const uint32_t unbanked_bits = ARM_CONTROL_FPCA_MASK | (is_secure << ARM_CONTROL_SFPA);
+        return (*ptr) | (env->v7m.control[M_REG_COMMON] & unbanked_bits);
     }
 #endif
 
@@ -187,12 +183,13 @@ void tlib_set_register_value_32_with_security(int reg_number, uint32_t value, bo
 
 #if defined(TARGET_ARM32) && defined(TARGET_PROTO_ARM_M)
     if(reg_number == Control_32) {
-        if(is_secure) {
-            /* Non-banked bits are always stored in Non-secure CONTROL */
-            uint32_t *control_ns = get_reg_pointer_32_with_security(Control_32, false);
-            *control_ns = *control_ns | (value & (ARM_CONTROL_FPCA_MASK | ARM_CONTROL_SFPA_MASK));
-        } else {
-            value &= ~ARM_CONTROL_SFPA_MASK;
+        /* Not banked bits are always stored in the Secure CONTROL bank.
+         * SFPA bit is not writable from the Non-secure state
+         * FPCA is writable from the Non-secure state only if NSACR.CP10 field is set.
+         * We don't support NSACR register so just clean not banked bits for the Non-secure state
+         */
+        if(!is_secure) {
+            value &= ~(ARM_CONTROL_FPCA_MASK | ARM_CONTROL_SFPA_MASK);
         }
     } else if(reg_number == SP_32 || reg_number == OtherSP_32) {
         //  bits [1:0] of SP are WI or SBZP
