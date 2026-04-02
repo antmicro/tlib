@@ -10060,6 +10060,8 @@ static int do_ldst_sg(DisasContext *s, arg_vldst_sg *a, MVEGenLdStSGFn fn)
         return TRANS_STATUS_SUCCESS;
     }
 
+    gen_helper_fp_lsp(cpu_env);
+
     addr = load_reg(s, a->rn);
     qd = mve_qreg_ptr(a->qd);
     qm = mve_qreg_ptr(a->qm);
@@ -10143,6 +10145,8 @@ static int do_ldst_sg_imm(DisasContext *s, arg_vldst_sg_imm *a, MVEGenLdStSGFn *
         return TRANS_STATUS_SUCCESS;
     }
 
+    gen_helper_fp_lsp(cpu_env);
+
     offset = a->imm << msize;
     if(!a->a) {
         offset = -offset;
@@ -10216,6 +10220,8 @@ static bool do_2shift_vec(DisasContext *s, arg_2shift *a, MVEGenTwoOpShiftFn fn,
     if(!mve_eci_check(s)) {
         return TRANS_STATUS_SUCCESS;
     }
+
+    gen_helper_fp_lsp(cpu_env);
 
     /*
      * When we handle a right shift insn using a left-shift helper
@@ -10798,6 +10804,8 @@ static bool do_2shift_scalar(DisasContext *s, arg_shl_scalar *a, MVEGenTwoOpShif
         return TRANS_STATUS_SUCCESS;
     }
 
+    gen_helper_fp_lsp(cpu_env);
+
     qda = mve_qreg_ptr(a->qda);
     rm = load_reg(s, a->rm);
     fn(cpu_env, qda, qda, rm);
@@ -10860,6 +10868,8 @@ static int do_1op_vec(DisasContext *s, arg_1op *a, MVEGenOneOpFn fn, GVecGen2Fn 
     if(!mve_eci_check(s)) {
         return TRANS_STATUS_SUCCESS;
     }
+
+    gen_helper_fp_lsp(cpu_env);
 
     if(vecfn && mve_no_predication(s)) {
         vecfn(a->size, mve_qreg_offset(a->qd), mve_qreg_offset(a->qm), 16, 16);
@@ -11025,6 +11035,8 @@ static bool do_1imm(DisasContext *s, arg_1imm *a, MVEGenOneOpImmFn *fn, GVecGen2
         return TRANS_STATUS_SUCCESS;
     }
 
+    gen_helper_fp_lsp(cpu_env);
+
     imm = decode_simd_immediate(a->imm, a->cmode, a->op);
 
     if(vecfn && mve_no_predication(s)) {
@@ -11121,6 +11133,8 @@ static bool trans_vmov_to_2gp(DisasContext *s, arg_vmov_2gp *a)
         return TRANS_STATUS_SUCCESS;
     }
 
+    gen_helper_fp_lsp(cpu_env);
+
     /* Convert Qreg index to Dreg for read_neon_element32() etc */
     vd = a->qd * 2;
 
@@ -11161,6 +11175,8 @@ static bool trans_vmov_from_2gp(DisasContext *s, arg_vmov_2gp *a)
     if(!mve_eci_check(s)) {
         return TRANS_STATUS_SUCCESS;
     }
+
+    gen_helper_fp_lsp(cpu_env);
 
     /* Convert Qreg idx to Dreg for read_neon_element32() etc */
     vd = a->qd * 2;
@@ -11223,6 +11239,8 @@ static bool trans_vmov_between_gp_vec(DisasContext *s, arg_vmov_gp *a, bool from
     if(!ENABLE_ARCH_MVE || (!is_mve && !arm_feature(env, ARM_FEATURE_VFP))) {
         return TRANS_STATUS_ILLEGAL_INSN;
     }
+
+    gen_helper_fp_lsp(cpu_env);
 
     int beat = (a->h << 1) | (a->op1 & 1);
     int vd = a->qn * 2 + beat / 2;
@@ -11324,6 +11342,8 @@ static int do_long_dual_acc(DisasContext *s, arg_vmlaldav *a, MVEGenLongDualAccO
     if(!mve_eci_check(s)) {
         return TRANS_STATUS_SUCCESS;
     }
+
+    gen_helper_fp_lsp(cpu_env);
 
     qn = mve_qreg_ptr(a->qn);
     qm = mve_qreg_ptr(a->qm);
@@ -11437,6 +11457,8 @@ static int do_dual_acc(DisasContext *s, arg_vmladav *a, MVEGenDualAccOpFn *fn)
         return TRANS_STATUS_SUCCESS;
     }
 
+    gen_helper_fp_lsp(cpu_env);
+
     qn = mve_qreg_ptr(a->qn);
     qm = mve_qreg_ptr(a->qm);
 
@@ -11510,6 +11532,8 @@ static int trans_vaddv(DisasContext *s, arg_vaddv *a)
         return TRANS_STATUS_SUCCESS;
     }
 
+    gen_helper_fp_lsp(cpu_env);
+
     /*
      * This insn is subject to beat-wise execution. Partial execution
      * of an A=0 (no-accumulate) insn which does not execute the first
@@ -11558,6 +11582,8 @@ static int trans_vaddlv(DisasContext *s, arg_vaddv *a)
     if(!mve_eci_check(s)) {
         return TRANS_STATUS_SUCCESS;
     }
+
+    gen_helper_fp_lsp(cpu_env);
 
     /*
      * This insn is subject to beat-wise execution. Partial execution
