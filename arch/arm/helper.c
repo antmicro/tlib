@@ -1183,7 +1183,7 @@ static inline bool lsp_store_helper(CPUState *env, uint32_t *address, uint32_t v
 }
 
 /* FPU Lazy State Preservation logic */
-void HELPER(fp_lsp)(CPUState *env)
+void fp_lsp_save_to_stack(CPUState *env)
 {
     const int regSize = sizeof(env->vfp.regs[0]);
     tlib_assert(regSize == 8);
@@ -1220,17 +1220,45 @@ void HELPER(fp_lsp)(CPUState *env)
             }
         }
 
-        /* Set default values from FPDSCR to FPSCR in new context
-         * use the current Security state for the context creation.
-         * FPCCR.S bit will be updated at the end of the instruction by generated code in `disas_vfp_insn` */
-        vfp_set_fpscr(env, (fpscr & ~ARM_FPDSCR_VALUES_MASK) | (env->v7m.fpdscr[env->secure] & ARM_FPDSCR_VALUES_MASK));
-
         if(any_failed) {
             env->v7m.secure_fault_status |= SECURE_FAULT_LSPERR;
             env->exception_index = EXCP_SECURE;
             cpu_loop_exit(env);
         }
     }
+}
+
+void fp_lsp_create_context(CPUState *env)
+{
+    bool is_secure = env->secure;
+
+    /* Update the "S" flag*/
+    env->v7m.fpccr[M_REG_COMMON] = FIELD_DP32(env->v7m.fpccr[M_REG_COMMON], V7M_FPCCR, S, is_secure);
+
+    bool is_state_preservation_enabled = env->v7m.fpccr[is_secure] & ARM_FPCCR_ASPEN_MASK;
+    bool fp_context_active = env->v7m.control[M_REG_COMMON] & ARM_CONTROL_FPCA_MASK;
+    bool fp_regs_contain_secure = env->v7m.control[M_REG_COMMON] & ARM_CONTROL_SFPA_MASK;
+    bool need_new_context = is_state_preservation_enabled && (!fp_context_active || (is_secure && !fp_regs_contain_secure));
+
+    if(unlikely(need_new_context)) {
+        env->v7m.control[M_REG_COMMON] |= ARM_CONTROL_FPCA_MASK;
+        if(is_secure) {
+            env->v7m.control[M_REG_COMMON] |= ARM_CONTROL_SFPA_MASK;
+        }
+        vfp_set_fpscr(env, env->v7m.fpdscr[is_secure]);
+        env->v7m.vpr = 0x0;
+    }
+}
+
+void HELPER(fp_lsp_no_context)(CPUState *env)
+{
+    fp_lsp_save_to_stack(env);
+}
+
+void HELPER(fp_lsp)(CPUState *env)
+{
+    fp_lsp_save_to_stack(env);
+    fp_lsp_create_context(env);
 }
 
 static void do_interrupt_v7m(CPUState *env)

@@ -75,11 +75,6 @@
 /* We reuse the same 64-bit temporaries for efficiency.  */
 static TCGv_i64 cpu_V0, cpu_V1, cpu_M0;
 static TCGv_i32 cpu_R[16];
-#ifdef TARGET_PROTO_ARM_M
-static TCGv_i32 cpu_control_ns;
-static TCGv_i32 cpu_fpccr_s;
-static TCGv_i32 cpu_fpccr_ns;
-#endif
 static TCGv_i32 cpu_exclusive_val;
 static TCGv_i32 cpu_exclusive_high;
 
@@ -97,11 +92,6 @@ void translate_init(void)
     for(i = 0; i < 16; i++) {
         cpu_R[i] = tcg_global_mem_new_i32(TCG_AREG0, offsetof(CPUState, regs[i]), regnames[i]);
     }
-#ifdef TARGET_PROTO_ARM_M
-    cpu_control_ns = tcg_global_mem_new_i32(TCG_AREG0, offsetof(CPUState, v7m.control[M_REG_NS]), "control_ns");
-    cpu_fpccr_s = tcg_global_mem_new_i32(TCG_AREG0, offsetof(CPUState, v7m.fpccr[M_REG_S]), "fpccr_s");
-    cpu_fpccr_ns = tcg_global_mem_new_i32(TCG_AREG0, offsetof(CPUState, v7m.fpccr[M_REG_NS]), "fpccr_ns");
-#endif
 #ifdef TARGET_ARM64
     cpu_pc = tcg_global_mem_new(TCG_AREG0, offsetof(CPUState, pc), "pc");
 #endif
@@ -3458,7 +3448,10 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
         }
     }
 #ifdef TARGET_PROTO_ARM_M
-    /* Lazy FP state preservation  */
+    /* Lazy FP state preservation
+     * WARNING: Currently the lazy state preservation will happen even if we hit an UNDEFINED instruction.
+     * We decided to ignore this problem for now.
+     */
     gen_helper_fp_lsp(cpu_env);
 #endif
 
@@ -4400,31 +4393,6 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
         illegal_op:
             return 1;
     }
-#ifdef TARGET_PROTO_ARM_M
-    /* set CONTROL.FPCA if FPCCR.ASPEN is set
-     * additionally set CONTROL.SFPA in Secure state */
-    tmp = tcg_temp_new_i32();
-    if(!s->ns) {
-        tcg_gen_shri_i32(tmp, cpu_fpccr_s, ARM_FPCCR_ASPEN - ARM_CONTROL_SFPA);
-        tcg_gen_andi_i32(tmp, tmp, ARM_CONTROL_SFPA_MASK);
-        tcg_gen_or_i32(cpu_control_ns, cpu_control_ns, tmp);
-    }
-    if(s->ns) {
-        /* Remember that FPCCR.ASPEN is banked */
-        tcg_gen_shri_i32(tmp, cpu_fpccr_ns, ARM_FPCCR_ASPEN - ARM_CONTROL_FPCA);
-    } else {
-        tcg_gen_shri_i32(tmp, cpu_fpccr_s, ARM_FPCCR_ASPEN - ARM_CONTROL_FPCA);
-    }
-
-    tcg_gen_andi_i32(tmp, tmp, ARM_CONTROL_FPCA_MASK);
-    tcg_gen_or_i32(cpu_control_ns, cpu_control_ns, tmp);
-
-    /* Update the "S" flag*/
-    tcg_gen_andi_i32(cpu_fpccr_s, cpu_fpccr_s, ~ARM_FPCCR_S_MASK);
-    tcg_gen_ori_i32(cpu_fpccr_s, cpu_fpccr_s, (!s->ns) << ARM_FPCCR_S);
-
-    tcg_temp_free_i32(tmp);
-#endif
     return 0;
 }
 

@@ -74,7 +74,9 @@ DEF_HELPER_2(set_rmode, i32, i32, ptr)
 DEF_HELPER_3(v7m_msr, void, env, i32, i32)
 DEF_HELPER_2(v7m_mrs, i32, env, i32)
 
+DEF_HELPER_1(fp_lsp_no_context, void, env)
 DEF_HELPER_1(fp_lsp, void, env)
+
 DEF_HELPER_3(v8m_blxns, void, env, i32, i32)
 DEF_HELPER_1(v8m_sg, void, env)
 
