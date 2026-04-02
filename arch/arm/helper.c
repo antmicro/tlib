@@ -1035,7 +1035,7 @@ void do_v7m_exception_exit(CPUState *env)
                 env->vfp.regs[i] = 0;
             }
             vfp_set_fpscr(env, 0);
-            /* TODO: VPR should be cleared too */
+            env->v7m.vpr = 0;
         }
     }
 
@@ -1113,8 +1113,7 @@ void do_v7m_exception_exit(CPUState *env)
                 env->vfp.regs[i] |= ((uint64_t)v7m_pop(env)) << 32;
             }
             vfp_set_fpscr(env, v7m_pop(env));
-            /* Pop Reserved/VPR field  */
-            v7m_pop(env);
+            env->v7m.vpr = v7m_pop(env);
 
             if(arm_feature(env, ARM_FEATURE_V8)) {
                 /* At this point, the internal state is Secure, so it's OK to just use env->secure here,
@@ -1463,8 +1462,14 @@ static void do_interrupt_v7m(CPUState *env)
                     }
                 }
             }
-            /* Reserved for MVE VPR register, UNKNOWN if not implemented */
-            v7m_push(env, 0xBADCAFEE);
+
+            if(arm_feature(env, ARM_FEATURE_MVE)) {
+                v7m_push(env, env->v7m.vpr);
+            } else {
+                /* Write UNKNOWN if MVE is not implemented */
+                v7m_push(env, 0xBADCAFEE);
+            }
+
             uint32_t fpscr = vfp_get_fpscr(env);
             v7m_push(env, fpscr);
 
@@ -4322,15 +4327,20 @@ void HELPER(v8m_vlstm)(CPUState *env, uint32_t rn, uint32_t low_regs_only)
         /* We store, in this order, the following FPU registers, at the address passed in register "rn":
          *  S[0]-S[15]
          *  FPSCR
-         *  VPR (but we don't have it, so 32-bit UNKNOWN value)
+         *  VPR
          *  S[16]-S[31] */
         bool any_failed = false;
         for(int i = 0; i < 8; ++i) {
             any_failed |= !vlstm_store_helper(env, &address, env->vfp.regs[i]);
         }
         any_failed |= !vlstm_store_helper(env, &address, vfp_get_fpscr(env));
-        /* No MVE, store bogus value (same as in lazy preservation) */
-        any_failed |= !vlstm_store_helper(env, &address, 0xBADCAFEE);
+
+        if(arm_feature(env, ARM_FEATURE_MVE)) {
+            any_failed |= !vlstm_store_helper(env, &address, env->v7m.vpr);
+        } else {
+            /* Write UNKNOWN if MVE is not implemented */
+            any_failed |= !vlstm_store_helper(env, &address, 0xBADCAFEE);
+        }
 
         bool push_callee_frame = (env->v7m.fpccr[M_REG_COMMON] & ARM_FPCCR_TS_MASK) > 0;
         if(push_callee_frame) {
