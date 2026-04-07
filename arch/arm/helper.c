@@ -588,9 +588,15 @@ void cpu_reset(CPUState *env)
 #endif
 
 #ifdef TARGET_PROTO_ARM_M
-    //  NOTE: This resets to 4 when MVE is present, and is UNKNOWN otherwise
-    //        We choose to always reset it to 4
-    env->v7m.ltpsize = 4;
+    /* ltpsize field resets to 4 when Low Overhead Branch (LOB) extension is present.
+     * LOB is required extension for v8.1M so we gate it behind this check.
+     * This field should be RES0 if cpu doesn't implement LOB.
+     */
+    if(arm_feature(env, ARM_FEATURE_V8_1M)) {
+        env->v7m.ltpsize = LTPSIZE_PREDICATION_DISABLED;
+        env->v7m.fpdscr[M_REG_NS] = FIELD_DP32(0, VFP_FPSCR, LTPSIZE, LTPSIZE_PREDICATION_DISABLED);
+        env->v7m.fpdscr[M_REG_S] = FIELD_DP32(0, VFP_FPSCR, LTPSIZE, LTPSIZE_PREDICATION_DISABLED);
+    }
 #endif
 
     env->vfp.xregs[ARM_VFP_FPEXC] = 0;

@@ -71,6 +71,9 @@
 #define ARMV7M_EXCP_SYSTICK  15
 #define ARMV7M_EXCP_HARDIRQ0 16 /* Hardware IRQ0. Any exceptions above this one are also hard IRQs */
 
+/* Default value for LTPSIZE field in FPSCR. It indicates that tail predication is switched off */
+#define LTPSIZE_PREDICATION_DISABLED 4
+
 /* For banked exceptions, we store information what Security mode they target
  * in a specific bit of exception number (higher than max supported exceptions).
  * This is just a mechanism on our side, from CPUs perspective, banked exceptions have the same
