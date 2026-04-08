@@ -3150,10 +3150,22 @@ void HELPER(v7m_msr)(CPUState *env, uint32_t reg, uint32_t val)
             break;
         case NON_SECURE_REG(20):
         case 20: /* CONTROL */
+            if(is_secure) {
+                env->v7m.control[M_REG_NS] &= ~ARM_CONTROL_SFPA_MASK;
+                env->v7m.control[M_REG_NS] |= val & ARM_CONTROL_SFPA_MASK;
+            }
+
             if(!in_privileged_mode(env)) {
                 return;
             }
-            env->v7m.control[is_secure] = val & 3;
+
+            env->v7m.control[is_secure] &= ~3;
+            env->v7m.control[is_secure] |= val & 3;
+            if(is_secure) { /* TODO: this bit is also accessible in non-secure mode if NSACR.CP10 is set. We don't support NSACR.
+                               register */
+                env->v7m.control[M_REG_NS] &= ~ARM_CONTROL_FPCA_MASK;
+                env->v7m.control[M_REG_NS] |= val & ARM_CONTROL_FPCA_MASK;
+            }
             //  only switch the stack if in thread mode (handler mode always uses MSP stack)
             if(env->v7m.exception == 0) {
                 //  If security states don't match, we need to use other SPs
