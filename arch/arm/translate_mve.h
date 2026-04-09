@@ -340,6 +340,26 @@ void gen_mve_vld21h(DisasContext *s, uint32_t qdindx, TCGv_i32 base);
 void gen_mve_vld20w(DisasContext *s, uint32_t qdindx, TCGv_i32 base);
 void gen_mve_vld21w(DisasContext *s, uint32_t qdindx, TCGv_i32 base);
 
+void gen_mve_vst40b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vst41b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vst42b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vst43b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vst40h(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vst41h(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vst42h(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vst43h(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vst40w(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vst41w(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vst42w(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vst43w(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+
+void gen_mve_vst20b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vst21b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vst20h(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vst21h(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vst20w(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+void gen_mve_vst21w(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
+
 void gen_mve_vpst(DisasContext *s, uint32_t mask);
 
 static inline bool is_insn_vmsr_vmrs(uint32_t insn)
@@ -583,6 +603,18 @@ static inline bool is_insn_vld2(uint32_t insn)
 {
     uint32_t size = extract32(insn, 7, 2);
     return size != 3 && (insn & 0xFF901E01) == 0xFC901E00;
+}
+
+static inline bool is_insn_vst4(uint32_t insn)
+{
+    uint32_t size = extract32(insn, 7, 2);
+    return size != 3 && (insn & 0xFF901E01) == 0xFC801E01;
+}
+
+static inline bool is_insn_vst2(uint32_t insn)
+{
+    uint32_t size = extract32(insn, 7, 2);
+    return size != 3 && (insn & 0xFF901E01) == 0xFC801E00;
 }
 
 static inline bool is_insn_vcmul(uint32_t insn)

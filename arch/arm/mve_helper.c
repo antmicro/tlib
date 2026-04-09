@@ -658,6 +658,203 @@ DO_VLD2W(vld21w, 8, 12, 16, 20)
 #undef DO_VLD2H
 #undef DO_VLD2B
 
+#define DO_VST4B(OP, O1, O2, O3, O4)                                          \
+    void glue(gen_mve_, OP)(DisasContext * s, uint32_t qnindx, TCGv_i32 base) \
+    {                                                                         \
+        uint16_t mask = mve_eci_mask(env);                                    \
+        int mmu_idx = context_to_mmu_index(s);                                \
+        static const uint8_t off[4] = { O1, O2, O3, O4 };                     \
+        TCGv_i32 addr = tcg_temp_local_new_i32();                             \
+        TCGv_i32 data = tcg_temp_local_new_i32();                             \
+        TCGv_i32 var = tcg_temp_local_new_i32();                              \
+        uint32_t qdoff;                                                       \
+        for(int beat = 0; beat < 4; beat++, mask >>= 4) {                     \
+            if((mask & 1) == 0) {                                             \
+                /* ECI says skip this beat */                                 \
+                continue;                                                     \
+            }                                                                 \
+            tcg_gen_movi_i32(data, 0);                                        \
+            for(int e = 3; e >= 0; e--) {                                     \
+                qdoff = mve_qreg_lane_offset_b(qnindx + e, off[beat]);        \
+                tcg_gen_shli_i32(data, data, 8);                              \
+                tcg_gen_ld8u_i32(var, cpu_env, qdoff);                        \
+                tcg_gen_or_i32(data, data, var);                              \
+            }                                                                 \
+            tcg_gen_addi_i32(addr, base, off[beat] * 4);                      \
+            tcg_gen_qemu_st32(data, addr, mmu_idx);                           \
+        }                                                                     \
+        tcg_temp_free_i32(addr);                                              \
+        tcg_temp_free_i32(data);                                              \
+        tcg_temp_free_i32(var);                                               \
+    }
+
+#define DO_VST4H(OP, O1, O2)                                                  \
+    void glue(gen_mve_, OP)(DisasContext * s, uint32_t qnindx, TCGv_i32 base) \
+    {                                                                         \
+        uint16_t mask = mve_eci_mask(env);                                    \
+        int mmu_idx = context_to_mmu_index(s);                                \
+        static const uint8_t off[4] = { O1, O1, O2, O2 };                     \
+        TCGv_i32 addr = tcg_temp_local_new_i32();                             \
+        TCGv_i32 data = tcg_temp_local_new_i32();                             \
+        TCGv_i32 var = tcg_temp_local_new_i32();                              \
+        uint32_t qdoff;                                                       \
+        for(int beat = 0, y = 0; beat < 4; beat++, mask >>= 4, y ^= 2) {      \
+            if((mask & 1) == 0) {                                             \
+                /* ECI says skip this beat */                                 \
+                continue;                                                     \
+            }                                                                 \
+            qdoff = mve_qreg_lane_offset_h(qnindx + y, off[beat]);            \
+            tcg_gen_ld16u_i32(data, cpu_env, qdoff);                          \
+            qdoff = mve_qreg_lane_offset_h(qnindx + y + 1, off[beat]);        \
+            tcg_gen_ld16u_i32(var, cpu_env, qdoff);                           \
+            tcg_gen_shli_i32(var, var, 16);                                   \
+            tcg_gen_or_i32(data, data, var);                                  \
+            tcg_gen_addi_i32(addr, base, off[beat] * 8 + (beat & 1) * 4);     \
+            tcg_gen_qemu_st32(data, addr, mmu_idx);                           \
+        }                                                                     \
+        tcg_temp_free_i32(addr);                                              \
+        tcg_temp_free_i32(data);                                              \
+        tcg_temp_free_i32(var);                                               \
+    }
+
+#define DO_VST4W(OP, O1, O2, O3, O4)                                          \
+    void glue(gen_mve_, OP)(DisasContext * s, uint32_t qnindx, TCGv_i32 base) \
+    {                                                                         \
+        uint16_t mask = mve_eci_mask(env);                                    \
+        int mmu_idx = context_to_mmu_index(s);                                \
+        static const uint8_t off[4] = { O1, O2, O3, O4 };                     \
+        TCGv_i32 addr = tcg_temp_local_new_i32();                             \
+        TCGv_i32 data = tcg_temp_local_new_i32();                             \
+        uint32_t qdoff, y;                                                    \
+        for(int beat = 0; beat < 4; beat++, mask >>= 4) {                     \
+            if((mask & 1) == 0) {                                             \
+                /* ECI says skip this beat */                                 \
+                continue;                                                     \
+            }                                                                 \
+            y = (beat + (O1 & 2)) & 3;                                        \
+            qdoff = mve_qreg_lane_offset_w(qnindx + y, off[beat] >> 2);       \
+            tcg_gen_ld_i32(data, cpu_env, qdoff);                             \
+            tcg_gen_addi_i32(addr, base, off[beat] * 4);                      \
+            tcg_gen_qemu_st32(data, addr, mmu_idx);                           \
+        }                                                                     \
+        tcg_temp_free_i32(addr);                                              \
+        tcg_temp_free_i32(data);                                              \
+    }
+
+DO_VST4B(vst40b, 0, 1, 10, 11)
+DO_VST4B(vst41b, 2, 3, 12, 13)
+DO_VST4B(vst42b, 4, 5, 14, 15)
+DO_VST4B(vst43b, 6, 7, 8, 9)
+
+DO_VST4H(vst40h, 0, 5)
+DO_VST4H(vst41h, 1, 6)
+DO_VST4H(vst42h, 2, 7)
+DO_VST4H(vst43h, 3, 4)
+
+DO_VST4W(vst40w, 0, 1, 10, 11)
+DO_VST4W(vst41w, 2, 3, 12, 13)
+DO_VST4W(vst42w, 4, 5, 14, 15)
+DO_VST4W(vst43w, 6, 7, 8, 9)
+
+#undef DO_VST4W
+#undef DO_VST4H
+#undef DO_VST4B
+
+#define DO_VST2B(OP, O1, O2, O3, O4)                                                    \
+    void glue(gen_mve_, OP)(DisasContext * s, uint32_t qnindx, TCGv_i32 base)           \
+    {                                                                                   \
+        uint16_t mask = mve_eci_mask(env);                                              \
+        int mmu_idx = context_to_mmu_index(s);                                          \
+        static const uint8_t off[4] = { O1, O2, O3, O4 };                               \
+        TCGv_i32 addr = tcg_temp_local_new_i32();                                       \
+        TCGv_i32 data = tcg_temp_local_new_i32();                                       \
+        TCGv_i32 var = tcg_temp_local_new_i32();                                        \
+        uint32_t qdoff;                                                                 \
+        for(int beat = 0; beat < 4; beat++, mask >>= 4) {                               \
+            if((mask & 1) == 0) {                                                       \
+                /* ECI says skip this beat */                                           \
+                continue;                                                               \
+            }                                                                           \
+            tcg_gen_movi_i32(data, 0);                                                  \
+            for(int e = 3; e >= 0; e--) {                                               \
+                qdoff = mve_qreg_lane_offset_b(qnindx + (e & 1), off[beat] + (e >> 1)); \
+                tcg_gen_shli_i32(data, data, 8);                                        \
+                tcg_gen_ld8u_i32(var, cpu_env, qdoff);                                  \
+                tcg_gen_or_i32(data, data, var);                                        \
+            }                                                                           \
+            tcg_gen_addi_i32(addr, base, off[beat] * 2);                                \
+            tcg_gen_qemu_st32(data, addr, mmu_idx);                                     \
+        }                                                                               \
+        tcg_temp_free_i32(addr);                                                        \
+        tcg_temp_free_i32(data);                                                        \
+        tcg_temp_free_i32(var);                                                         \
+    }
+
+#define DO_VST2H(OP, O1, O2, O3, O4)                                          \
+    void glue(gen_mve_, OP)(DisasContext * s, uint32_t qnindx, TCGv_i32 base) \
+    {                                                                         \
+        uint16_t mask = mve_eci_mask(env);                                    \
+        int mmu_idx = context_to_mmu_index(s);                                \
+        static const uint8_t off[4] = { O1, O2, O3, O4 };                     \
+        TCGv_i32 addr = tcg_temp_local_new_i32();                             \
+        TCGv_i32 data = tcg_temp_local_new_i32();                             \
+        TCGv_i32 var = tcg_temp_local_new_i32();                              \
+        uint32_t qdoff;                                                       \
+        for(int beat = 0; beat < 4; beat++, mask >>= 4) {                     \
+            if((mask & 1) == 0) {                                             \
+                /* ECI says skip this beat */                                 \
+                continue;                                                     \
+            }                                                                 \
+            qdoff = mve_qreg_lane_offset_h(qnindx + 1, off[beat]);            \
+            tcg_gen_ld16u_i32(data, cpu_env, qdoff);                          \
+            qdoff = mve_qreg_lane_offset_h(qnindx, off[beat]);                \
+            tcg_gen_shli_i32(data, data, 16);                                 \
+            tcg_gen_ld16u_i32(var, cpu_env, qdoff);                           \
+            tcg_gen_or_i32(data, data, var);                                  \
+            tcg_gen_addi_i32(addr, base, off[beat] * 4);                      \
+            tcg_gen_qemu_st32(data, addr, mmu_idx);                           \
+        }                                                                     \
+        tcg_temp_free_i32(addr);                                              \
+        tcg_temp_free_i32(data);                                              \
+        tcg_temp_free_i32(var);                                               \
+    }
+
+#define DO_VST2W(OP, O1, O2, O3, O4)                                             \
+    void glue(gen_mve_, OP)(DisasContext * s, uint32_t qnindx, TCGv_i32 base)    \
+    {                                                                            \
+        uint16_t mask = mve_eci_mask(env);                                       \
+        int mmu_idx = context_to_mmu_index(s);                                   \
+        static const uint8_t off[4] = { O1, O2, O3, O4 };                        \
+        TCGv_i32 addr = tcg_temp_local_new_i32();                                \
+        TCGv_i32 data = tcg_temp_local_new_i32();                                \
+        uint32_t qdoff;                                                          \
+        for(int beat = 0; beat < 4; beat++, mask >>= 4) {                        \
+            if((mask & 1) == 0) {                                                \
+                /* ECI says skip this beat */                                    \
+                continue;                                                        \
+            }                                                                    \
+            qdoff = mve_qreg_lane_offset_w(qnindx + (beat & 1), off[beat] >> 3); \
+            tcg_gen_ld_i32(data, cpu_env, qdoff);                                \
+            tcg_gen_addi_i32(addr, base, off[beat]);                             \
+            tcg_gen_qemu_st32(data, addr, mmu_idx);                              \
+        }                                                                        \
+        tcg_temp_free_i32(addr);                                                 \
+        tcg_temp_free_i32(data);                                                 \
+    }
+
+DO_VST2B(vst20b, 0, 2, 12, 14)
+DO_VST2B(vst21b, 4, 6, 8, 10)
+
+DO_VST2H(vst20h, 0, 1, 6, 7)
+DO_VST2H(vst21h, 2, 3, 4, 5)
+
+DO_VST2W(vst20w, 0, 4, 24, 28)
+DO_VST2W(vst21w, 8, 12, 16, 20)
+
+#undef DO_VST2W
+#undef DO_VST2H
+#undef DO_VST2B
+
 #define DO_2OP_FP_SCALAR(OP, ESIZE, TYPE, FN)                                    \
     void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vn, uint32_t rm) \
     {                                                                            \

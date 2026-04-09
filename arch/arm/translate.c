@@ -10000,6 +10000,38 @@ static int trans_vld2(DisasContext *s, arg_vldst_il *a)
     return do_vldst_il(s, a, fns[a->pat][a->size], 32);
 }
 
+static bool trans_vst4(DisasContext *s, arg_vldst_il *a)
+{
+    static MVEGenLdStIlFn *const fns[4][4] = {
+        { F(vst40b), F(vst40h), F(vst40w), NULL },
+        { F(vst41b), F(vst41h), F(vst41w), NULL },
+        { F(vst42b), F(vst42h), F(vst42w), NULL },
+        { F(vst43b), F(vst43h), F(vst43w), NULL },
+    };
+
+    /* We use 4 consecutive vector registers */
+    if(a->qd > 4) {
+        return false;
+    }
+    return do_vldst_il(s, a, fns[a->pat][a->size], 64);
+}
+
+static bool trans_vst2(DisasContext *s, arg_vldst_il *a)
+{
+    static MVEGenLdStIlFn *const fns[4][4] = {
+        { F(vst20b), F(vst20h), F(vst20w), NULL },
+        { F(vst21b), F(vst21h), F(vst21w), NULL },
+        { NULL,      NULL,      NULL,      NULL },
+        { NULL,      NULL,      NULL,      NULL },
+    };
+
+    /* We use 2 consecutive vector registers */
+    if(a->qd > 6) {
+        return false;
+    }
+    return do_vldst_il(s, a, fns[a->pat][a->size], 32);
+}
+
 #undef F
 
 /* This macro is just to make the arrays more compact in these functions */
@@ -13203,6 +13235,18 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_vldst_il a;
                     mve_extract_vldst_il(&a, insn);
                     return trans_vld2(s, &a);
+                }
+                if(is_insn_vst4(insn)) {
+                    ARCH(MVE);
+                    arg_vldst_il a;
+                    mve_extract_vldst_il(&a, insn);
+                    return trans_vst4(s, &a);
+                }
+                if(is_insn_vst2(insn)) {
+                    ARCH(MVE);
+                    arg_vldst_il a;
+                    mve_extract_vldst_il(&a, insn);
+                    return trans_vst2(s, &a);
                 }
                 /* Vector load/store (widening loads/narrowing stores) (encoding T1 & T2) */
                 if(is_insn_vldr_vstr_widening(insn)) {
