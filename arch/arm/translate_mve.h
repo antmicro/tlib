@@ -575,12 +575,14 @@ static inline bool is_insn_vpsel(uint32_t insn)
 
 static inline bool is_insn_vld4(uint32_t insn)
 {
-    return (insn & 0xFF901E01) == 0xFC901E01;
+    uint32_t size = extract32(insn, 7, 2);
+    return size != 3 && (insn & 0xFF901E01) == 0xFC901E01;
 }
 
 static inline bool is_insn_vld2(uint32_t insn)
 {
-    return (insn & 0xFF901E01) == 0xFC901E00;
+    uint32_t size = extract32(insn, 7, 2);
+    return size != 3 && (insn & 0xFF901E01) == 0xFC901E00;
 }
 
 static inline bool is_insn_vcmul(uint32_t insn)
