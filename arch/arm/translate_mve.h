@@ -1331,7 +1331,7 @@ static void mve_extract_vldr_vstr_widening(arg_vldr_vstr *a, uint32_t insn)
 }
 
 /* Extract arguments of (de)interleaving stores/loads */
-static void extract_arg_vldst_il(arg_vldst_il *a, uint32_t insn)
+static void mve_extract_vldst_il(arg_vldst_il *a, uint32_t insn)
 {
     a->qd = extract32(insn, 13, 3);
     a->rn = extract32(insn, 16, 4);

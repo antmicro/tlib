@@ -9966,7 +9966,7 @@ static bool do_mve_shl_ri(DisasContext *s, arg_mve_shl_ri *arg, MVEWideShiftImmF
 /* This macro is just to make the arrays more compact in these functions */
 #define F(OP) glue(gen_mve_, OP)
 
-static int trans_vld4(DisasContext *s, uint32_t insn)
+static int trans_vld4(DisasContext *s, arg_vldst_il *a)
 {
     static MVEGenLdStIlFn *const fns[4][4] = {
         { F(vld40b), F(vld40h), F(vld40w), NULL },
@@ -9974,15 +9974,13 @@ static int trans_vld4(DisasContext *s, uint32_t insn)
         { F(vld42b), F(vld42h), F(vld42w), NULL },
         { F(vld43b), F(vld43h), F(vld43w), NULL },
     };
-    arg_vldst_il a;
-    extract_arg_vldst_il(&a, insn);
 
     /* We use 4 consecutive vector registers */
-    if(a.qd > 4) {
+    if(a->qd > 4) {
         return TRANS_STATUS_ILLEGAL_INSN;
     }
 
-    return do_vldst_il(s, &a, fns[a.pat][a.size], 64);
+    return do_vldst_il(s, a, fns[a->pat][a->size], 64);
 }
 
 static int trans_vld2(DisasContext *s, arg_vldst_il *a)
@@ -13196,12 +13194,14 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                 }
                 if(is_insn_vld4(insn)) {
                     ARCH(MVE);
-                    return trans_vld4(s, insn);
+                    arg_vldst_il a;
+                    mve_extract_vldst_il(&a, insn);
+                    return trans_vld4(s, &a);
                 }
                 if(is_insn_vld2(insn)) {
                     ARCH(MVE);
                     arg_vldst_il a;
-                    extract_arg_vldst_il(&a, insn);
+                    mve_extract_vldst_il(&a, insn);
                     return trans_vld2(s, &a);
                 }
                 /* Vector load/store (widening loads/narrowing stores) (encoding T1 & T2) */
