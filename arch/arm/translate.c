@@ -11919,7 +11919,14 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     int end_label = gen_new_label();
 
                     gen_test_cc(fcond, cond_true_label);
-                    tmp2 = load_reg(s, rm);
+
+                    /* In CSEL/CSINC/CSINV/CSNEG, register field 0b1111 means "zero", not PC */
+                    if(rm == 0xf) {
+                        tmp2 = tcg_temp_new_i32();
+                        tcg_gen_movi_i32(tmp2, 0);
+                    } else {
+                        tmp2 = load_reg(s, rm);
+                    }
 
                     switch(op1) {
                         case 0:
@@ -11947,7 +11954,13 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     tcg_gen_br(end_label);
                     gen_set_label(cond_true_label);
 
-                    tmp = load_reg(s, rn);
+                    /* In CSEL/CSINC/CSINV/CSNEG, register field 0b1111 means "zero", not PC */
+                    if(rn == 0xf) {
+                        tmp = tcg_temp_new_i32();
+                        tcg_gen_movi_i32(tmp, 0);
+                    } else {
+                        tmp = load_reg(s, rn);
+                    }
                     store_reg(s, rd, tmp);
                     gen_set_label(end_label);
                 } else {
