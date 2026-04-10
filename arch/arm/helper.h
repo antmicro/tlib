@@ -104,6 +104,7 @@ DEF_HELPER_2(vfp_set_fpscr, void, env, i32)
 #ifdef TARGET_PROTO_ARM_M
 DEF_HELPER_1(vfp_get_vpr_p0, i32, env)
 DEF_HELPER_2(vfp_set_vpr_p0, void, env, i32)
+DEF_HELPER_1(is_fpu_context_active, i32, env)
 #endif
 
 DEF_HELPER_3(vfp_adds, f32, f32, f32, ptr)

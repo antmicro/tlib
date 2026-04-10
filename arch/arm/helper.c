@@ -3489,6 +3489,29 @@ void HELPER(vfp_set_vpr_p0)(CPUState *env, uint32_t val)
 {
     env->v7m.vpr = val & __REGISTER_V7M_VPR_P0_MASK;
 }
+
+uint32_t HELPER(is_fpu_context_active)(CPUState *env)
+{
+    /* This does not check if we have access to FPU. Check for this needs to be done separately to calling this helper. */
+    bool active;
+    uint32_t fpccr;
+
+    if((env->v7m.fpccr[M_REG_COMMON] & ARM_FPCCR_S) > 0) {
+        fpccr = env->v7m.fpccr[M_REG_S];
+    } else {
+        fpccr = env->v7m.fpccr[M_REG_NS];
+    }
+    active = (fpccr & ARM_FPCCR_LSPACT_MASK) == 0;
+
+    if(active && (env->v7m.fpccr[env->secure] & ARM_FPCCR_ASPEN_MASK) > 0) {
+        bool fp_context_active = env->v7m.control[M_REG_COMMON] & ARM_CONTROL_FPCA_MASK;
+        bool fp_regs_contain_secure = env->v7m.control[M_REG_COMMON] & ARM_CONTROL_SFPA_MASK;
+        active = fp_context_active && (!env->secure || fp_regs_contain_secure);
+    }
+
+    return active;
+}
+
 #endif
 
 /* Convert vfp exception flags to target form.  */
