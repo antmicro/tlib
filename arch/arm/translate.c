@@ -14811,13 +14811,13 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
             }
 #endif
             if(is_insn_wls(insn)) {
-                ARCH(8);
+                ARCH(8_1M);
                 return trans_wls(s, insn);
             } else if(is_insn_dls(insn)) {
-                ARCH(8);
+                ARCH(8_1M);
                 return trans_dls(s, insn);
             } else if(is_insn_le(insn)) {
-                ARCH(8);
+                ARCH(8_1M);
                 return trans_le(s, insn);
             } else if(insn & (1 << 15)) {
                 /* Branches, misc control.  */
