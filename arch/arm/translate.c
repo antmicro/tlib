@@ -9528,9 +9528,8 @@ static int gen_thumb2_data_op(DisasContext *s, int op, int conds, uint32_t shift
     return 0;
 }
 
-#include "translate_lob.h"
-
 #ifdef TARGET_PROTO_ARM_M
+#include "translate_lob.h"
 #include "translate_mve.h"
 #include "tcg-op-gvec.h"
 
@@ -14808,9 +14807,7 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                 arg_vctp a;
                 mve_extract_vctp(&a, insn);
                 return trans_vctp(s, &a);
-            }
-#endif
-            if(is_insn_wls(insn)) {
+            } else if(is_insn_wls(insn)) {
                 ARCH(8_1M);
                 return trans_wls(s, insn);
             } else if(is_insn_dls(insn)) {
@@ -14819,7 +14816,9 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
             } else if(is_insn_le(insn)) {
                 ARCH(8_1M);
                 return trans_le(s, insn);
-            } else if(insn & (1 << 15)) {
+            }
+#endif
+            if(insn & (1 << 15)) {
                 /* Branches, misc control.  */
                 if(insn & 0x5000) {
                     /* Unconditional branch.  */
