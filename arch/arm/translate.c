@@ -14816,6 +14816,10 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
             } else if(is_insn_le(insn)) {
                 ARCH(8_1M);
                 return trans_le(s, insn);
+            } else if(is_insn_lctp(insn)) {
+                ARCH(8_1M);
+                ARCH(MVE);
+                return trans_lctp(s);
             }
 #endif
             if(insn & (1 << 15)) {

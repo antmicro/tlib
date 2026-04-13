@@ -32,6 +32,9 @@
 #define LOB_INSN_LE_MASK 0xFFCFF001
 #define LOB_INSN_LE      0xF00FC001
 
+#define LOB_INSN_LCTP_MASK 0xFFFFFFFF
+#define LOB_INSN_LCTP      0xF00FE001
+
 #define LOB_RN_IDX 16
 #define LOB_RN_LEN 4
 
@@ -98,6 +101,12 @@ static inline bool is_insn_dls(uint32_t insn)
 static inline bool is_insn_le(uint32_t insn)
 {
     return (insn & LOB_INSN_LE_MASK) == LOB_INSN_LE;
+}
+
+/* Check if given instruction is LCTP */
+static inline bool is_insn_lctp(uint32_t insn)
+{
+    return (insn & LOB_INSN_LCTP_MASK) == LOB_INSN_LCTP;
 }
 
 /* Translate WLS(TP) instruction */
@@ -226,6 +235,18 @@ static inline int trans_le(DisasContext *s, uint32_t insn)
 
     lob_gen_le_ir(s, is_inf_loop, imm, is_tp);
 
+    return TRANS_STATUS_SUCCESS;
+}
+
+static int trans_lctp(DisasContext *s)
+{
+    /*
+     * M-profile Loop Clear with Tail Predication. Since our implementation
+     * doesn't cache branch information, all we need to do is reset
+     * FPSCR.LTPSIZE to 4.
+     */
+    gen_helper_fp_lsp(cpu_env);
+    store_cpu_field(tcg_const_i32(LTPSIZE_PREDICATION_DISABLED), v7m.ltpsize);
     return TRANS_STATUS_SUCCESS;
 }
 
