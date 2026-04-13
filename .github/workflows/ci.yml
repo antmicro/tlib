@@ -1,0 +1,30 @@
+name: tlib CI
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  formatting-check:
+    name: Formatting Check
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt -qqy update &> /dev/null
+          sudo apt -qqy install cmake build-essential &> /dev/null
+
+      - name: Clone repository
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Run clang-format check
+        uses: jidicula/clang-format-action@v4.18.0
+        with:
+          clang-format-version: '19'
+          exclude-regex: softfloat-3
+      
+      - name: Build supported cores
+        run: ./.github/scripts/build-tlib.sh
