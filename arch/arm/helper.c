@@ -1210,8 +1210,12 @@ void fp_lsp_save_to_stack(CPUState *env)
         any_failed |= !lsp_store_helper(env, &address, fpscr);
 
         if(arm_feature(env, ARM_FEATURE_V8)) {
-            /* Reserved for MVE VPR register, UNKNOWN if not implemented */
-            any_failed |= !lsp_store_helper(env, &address, 0xBADCAFEE);
+            if(arm_feature(env, ARM_FEATURE_MVE)) {
+                any_failed |= !lsp_store_helper(env, &address, env->v7m.vpr);
+            } else {
+                /* Write UNKNOWN if MVE is not implemented */
+                any_failed |= !lsp_store_helper(env, &address, 0xBADCAFEE);
+            }
             if(is_secure && (env->v7m.fpccr[M_REG_COMMON] & ARM_FPCCR_TS_MASK) > 0) {
                 for(int i = 8; i < 16; ++i) {
                     any_failed |= !lsp_store_helper(env, &address, env->vfp.regs[i]);
