@@ -27,7 +27,8 @@
 /* n must be a constant to be efficient */
 static inline target_long lshift(target_long x, int n)
 {
-    if(n >= 0) {
+    if(n >= 0)
+    {
         return x << n;
     } else {
         return x >> (-n);

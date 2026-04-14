@@ -131,7 +131,7 @@ static void page_init(void)
         tlib_host_page_size = TARGET_PAGE_SIZE;
     }
     tlib_host_page_bits = 0;
-    while((1 << tlib_host_page_bits) < tlib_host_page_size) {
+    while ((1 << tlib_host_page_bits) < tlib_host_page_size) {
         tlib_host_page_bits++;
     }
     tlib_host_page_mask = ~(tlib_host_page_size - 1);

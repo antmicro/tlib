@@ -246,7 +246,7 @@ static void pmp_update_rule(CPUState *env, uint32_t pmp_index)
     tlb_flush(env, 1, true);
 }
 
-static int pmp_is_in_range(CPUState *env, int pmp_index, target_ulong addr)
+static int pmp_is_in_range(CPUState* env, int pmp_index, target_ulong addr)
 {
     int result = 0;
     addr &= cpu->pmp_addr_mask;
