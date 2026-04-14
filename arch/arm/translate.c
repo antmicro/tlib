@@ -13893,17 +13893,17 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                 if(s->ns) {
                     goto illegal_op;
                 }
-                bool lowRegsOnly = ((insn >> 7) & 1) == 0;
-                if(!lowRegsOnly) {
+                bool low_regs_only = ((insn >> 7) & 1) == 0;
+                if(!low_regs_only) {
                     ARCH(8_1M);
                 }
                 /* Sync PC to restore instruction count if an exceptcion is raised at runtime in the helper */
                 int op2 = (insn >> 20) & 1;
                 gen_sync_pc(s);
                 if(op2 == 0) {
-                    gen_helper_v8m_vlstm(cpu_env, rn, lowRegsOnly);
+                    gen_helper_v8m_vlstm(cpu_env, rn, low_regs_only);
                 } else {
-                    gen_helper_v8m_vlldm(cpu_env, rn, lowRegsOnly);
+                    gen_helper_v8m_vlldm(cpu_env, rn, low_regs_only);
                 }
 #else
                 goto illegal_op;

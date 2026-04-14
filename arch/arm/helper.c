@@ -4252,7 +4252,7 @@ static inline bool vlldm_load_helper(CPUState *env, uint32_t *address, uint64_t 
     }
 }
 
-void HELPER(v8m_vlstm)(CPUState *env, uint32_t rn, uint32_t lowRegsOnly)
+void HELPER(v8m_vlstm)(CPUState *env, uint32_t rn, uint32_t low_regs_only)
 {
     /* Instruction is UNDEF in Non-secure state - helper should not be called */
     tlib_assert(env->secure);
@@ -4293,15 +4293,15 @@ void HELPER(v8m_vlstm)(CPUState *env, uint32_t rn, uint32_t lowRegsOnly)
         /* No MVE, store bogus value (same as in lazy preservation) */
         any_failed |= !vlstm_store_helper(env, &address, 0xBADCAFEE);
 
-        bool pushCalleeFrame = (env->v7m.fpccr[M_REG_S] & ARM_FPCCR_TS_MASK) > 0;
-        if(pushCalleeFrame) {
+        bool push_callee_frame = (env->v7m.fpccr[M_REG_S] & ARM_FPCCR_TS_MASK) > 0;
+        if(push_callee_frame) {
             for(int i = 8; i < 16; ++i) {
                 any_failed |= !vlstm_store_helper(env, &address, env->vfp.regs[i]);
             }
         }
 
         memset(env->vfp.regs, 0, 16 * sizeof(env->vfp.regs[0]));
-        if(pushCalleeFrame) {
+        if(push_callee_frame) {
             memset(env->vfp.regs + 16, 0, 16 * sizeof(env->vfp.regs[0]));
         }
         vfp_set_fpscr(env, 0);
@@ -4316,7 +4316,7 @@ void HELPER(v8m_vlstm)(CPUState *env, uint32_t rn, uint32_t lowRegsOnly)
     env->v7m.control[M_REG_NS] &= ~ARM_CONTROL_FPCA_MASK;
 }
 
-void HELPER(v8m_vlldm)(CPUState *env, uint32_t rn, uint32_t lowRegsOnly)
+void HELPER(v8m_vlldm)(CPUState *env, uint32_t rn, uint32_t low_regs_only)
 {
     /* Instruction is UNDEF in Non-secure state - helper should not be called */
     tlib_assert(env->secure);
