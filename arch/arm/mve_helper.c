@@ -1175,6 +1175,31 @@ DO_FP_VMAXMINV(vminnmvs, 4, float32, false, float32_minnum)
 DO_FP_VMAXMINV(vmaxnmavs, 4, float32, true, float32_maxnum)
 DO_FP_VMAXMINV(vminnmavs, 4, float32, true, float32_minnum)
 
+#define DO_VABAV(OP, ESIZE, TYPE)                                                    \
+    uint32_t HELPER(glue(mve_, OP))(CPUState * env, void *vn, void *vm, uint32_t ra) \
+    {                                                                                \
+        uint16_t mask = mve_element_mask(env);                                       \
+        unsigned int e;                                                              \
+        TYPE *m = vm, *n = vn;                                                       \
+        for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                            \
+            if(mask & 1) {                                                           \
+                int64_t n0 = n[H##ESIZE(e)];                                         \
+                int64_t m0 = m[H##ESIZE(e)];                                         \
+                uint32_t r = n0 >= m0 ? (n0 - m0) : (m0 - n0);                       \
+                ra += r;                                                             \
+            }                                                                        \
+        }                                                                            \
+        mve_advance_vpt(env);                                                        \
+        return ra;                                                                   \
+    }
+
+DO_VABAV(vabavsb, 1, int8_t)
+DO_VABAV(vabavsh, 2, int16_t)
+DO_VABAV(vabavsw, 4, int32_t)
+DO_VABAV(vabavub, 1, uint8_t)
+DO_VABAV(vabavuh, 2, uint16_t)
+DO_VABAV(vabavuw, 4, uint32_t)
+
 void HELPER(mve_vpsel)(CPUState *env, void *vd, void *vn, void *vm)
 {
     /*

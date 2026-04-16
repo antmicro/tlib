@@ -11118,6 +11118,46 @@ DO_TRANS_V_MAXMIN_V_FP(vminnmv, vminnmv)
 DO_TRANS_V_MAXMIN_V_FP(vmaxnmav, vmaxnmav)
 DO_TRANS_V_MAXMIN_V_FP(vminnmav, vminnmav)
 
+static int do_vabav(DisasContext *s, arg_vabav *a, MVEGenVABAVFn *fn)
+{
+    /* Absolute difference accumulated across vector */
+    TCGv_ptr qn, qm;
+    TCGv_i32 rda;
+
+    if(!mve_check_qreg_bank(a->qm | a->qn) || !fn || a->rda == 13 || a->rda == 15) {
+        /* These Rda cases are UNPREDICTABLE */
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    gen_helper_fp_lsp(cpu_env);
+
+    qm = mve_qreg_ptr(a->qm);
+    qn = mve_qreg_ptr(a->qn);
+    rda = load_reg(s, a->rda);
+    fn(rda, cpu_env, qn, qm, rda);
+    store_reg(s, a->rda, rda);
+    mve_update_eci(s);
+    return TRANS_STATUS_SUCCESS;
+}
+
+#define DO_VABAV(INSN, FN)                                 \
+    static int trans_##INSN(DisasContext *s, arg_vabav *a) \
+    {                                                      \
+        static MVEGenVABAVFn *const fns[] = {              \
+            gen_helper_mve_##FN##b,                        \
+            gen_helper_mve_##FN##h,                        \
+            gen_helper_mve_##FN##w,                        \
+            NULL,                                          \
+        };                                                 \
+        return do_vabav(s, a, fns[a->size]);               \
+    }
+
+DO_VABAV(vabav_s, vabavs)
+DO_VABAV(vabav_u, vabavu)
+
 #define DO_TRANS_2OP_VEC(INSN, FN, VECFN)                 \
     static bool trans_##INSN(DisasContext *s, arg_2op *a) \
     {                                                     \
@@ -14104,6 +14144,17 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     /* set size to zero if unsized decoding */
                     a.size = is_sized ? a.size : 0;
                     return trans_vmlsdav(s, &a);
+                }
+                if(is_insn_vabav(insn)) {
+                    ARCH(MVE);
+                    arg_vabav a;
+                    mve_extract_vabav(&a, insn);
+                    bool is_signed = extract32(insn, 28, 1) == 0;
+                    if(is_signed) {
+                        return trans_vabav_s(s, &a);
+                    } else {
+                        return trans_vabav_u(s, &a);
+                    }
                 }
                 if(is_insn_vqadd_u(insn)) {
                     ARCH(MVE);

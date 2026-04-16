@@ -752,6 +752,13 @@ DEF_HELPER_4(mve_vcvt_uf, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vcvt_fs, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vcvt_fu, void, env, ptr, ptr, i32)
 
+DEF_HELPER_4(mve_vabavsb, i32, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vabavsh, i32, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vabavsw, i32, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vabavub, i32, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vabavuh, i32, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vabavuw, i32, env, ptr, ptr, i32)
+
 DEF_HELPER_3(mve_vmovnbb, void, env, ptr, ptr)
 DEF_HELPER_3(mve_vmovnbh, void, env, ptr, ptr)
 DEF_HELPER_3(mve_vmovntb, void, env, ptr, ptr)

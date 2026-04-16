@@ -32,6 +32,7 @@ typedef void MVEGenScalarCmpFn(TCGv_ptr, TCGv_ptr, TCGv_i32);
 typedef void MVEGenVIDUPFn(TCGv_i32, TCGv_ptr, TCGv_ptr, TCGv_i32, TCGv_i32);
 typedef void MVEGenVIWDUPFn(TCGv_i32, TCGv_ptr, TCGv_ptr, TCGv_i32, TCGv_i32, TCGv_i32);
 typedef void MVEGenVADDVFn(TCGv_i32, TCGv_ptr, TCGv_ptr, TCGv_i32);
+typedef void MVEGenVABAVFn(TCGv_i32, TCGv_ptr, TCGv_ptr, TCGv_ptr, TCGv_i32);
 typedef void MVEGenOneOpFn(TCGv_ptr, TCGv_ptr, TCGv_ptr);
 typedef void MVEGenOneOpImmFn(TCGv_ptr, TCGv_ptr, TCGv_i64);
 typedef void MVEGenLongDualAccOpFn(TCGv_i64, TCGv_ptr, TCGv_ptr, TCGv_ptr, TCGv_i64);
@@ -88,6 +89,14 @@ typedef struct {
     int pat;
     int w;
 } arg_vldst_il;
+
+/* Arguments of vabav instruction */
+typedef struct {
+    int rda;
+    int qm;
+    int qn;
+    int size;
+} arg_vabav;
 
 /* Arguments of 2 operand scalar instructions */
 typedef struct {
@@ -1007,6 +1016,12 @@ static inline bool is_insn_vfcadd(uint32_t insn)
     return (insn & 0xFEA11F51) == 0xFC800840;
 }
 
+static inline bool is_insn_vabav(uint32_t insn)
+{
+    uint32_t size = extract32(insn, 20, 2);
+    return size != 3 && (insn & 0xEFC10F51) == 0xEE800F01;
+}
+
 static inline bool is_insn_vqadd_u(uint32_t insn)
 {
     return (insn & 0xFF811F51) == 0xFF000050;
@@ -1618,6 +1633,14 @@ static void mve_extract_vmladav(arg_vmladav *a, uint32_t insn)
     a->qm = extract32(insn, 1, 3);
     a->qn = deposit32(extract32(insn, 17, 3), 3, 29, extract32(insn, 7, 1));
     a->rda = 2 * extract32(insn, 13, 3);
+}
+
+static void mve_extract_vabav(arg_vabav *a, uint32_t insn)
+{
+    a->rda = extract32(insn, 12, 4);
+    a->qm = deposit32(extract32(insn, 1, 3), 3, 29, extract32(insn, 5, 1));
+    a->qn = deposit32(extract32(insn, 17, 3), 3, 29, extract32(insn, 7, 1));
+    a->size = extract32(insn, 20, 2);
 }
 
 /* Extract arguments of VCMLA/VCADD floating-point instructions */
