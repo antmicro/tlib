@@ -816,6 +816,16 @@ static inline bool is_insn_vmov_gp(uint32_t insn)
     return (insn & 0xFF000F1F) == 0xEE000B10;
 }
 
+static inline bool is_insn_vadc(uint32_t insn)
+{
+    return (insn & 0xFFB10F51) == 0xEE300F00;
+}
+
+static inline bool is_insn_vsbc(uint32_t insn)
+{
+    return (insn & 0xFFB10F51) == 0xFE300F00;
+}
+
 static inline bool is_insn_vcadd90(uint32_t insn)
 {
     return (insn & 0xFF811F51) == 0xFE000F00;

@@ -11984,6 +11984,43 @@ static int do_long_dual_acc(DisasContext *s, arg_vmlaldav *a, MVEGenLongDualAccO
     return TRANS_STATUS_SUCCESS;
 }
 
+/*
+ * VADC and VSBC: these perform an add-with-carry or subtract-with-carry
+ * of the 32-bit elements in each lane of the input vectors, where the
+ * carry-out of each add is the carry-in of the next.  The initial carry
+ * input is either fixed (0 for VADCI, 1 for VSBCI) or is from FPSCR.C
+ * (for VADC and VSBC); the carry out at the end is written back to FPSCR.C.
+ * These insns are subject to beat-wise execution.  Partial execution
+ * of an I=1 (initial carry input fixed) insn which does not
+ * execute the first beat must start with the current FPSCR.NZCV
+ * value, not the fixed constant input.
+ */
+static int trans_vadc(DisasContext *s, arg_2op *a)
+{
+    return do_2op(s, a, gen_helper_mve_vadc);
+}
+
+static int trans_vadci(DisasContext *s, arg_2op *a)
+{
+    if(mve_skip_first_beat(s)) {
+        return trans_vadc(s, a);
+    }
+    return do_2op(s, a, gen_helper_mve_vadci);
+}
+
+static int trans_vsbc(DisasContext *s, arg_2op *a)
+{
+    return do_2op(s, a, gen_helper_mve_vsbc);
+}
+
+static int trans_vsbci(DisasContext *s, arg_2op *a)
+{
+    if(mve_skip_first_beat(s)) {
+        return trans_vsbc(s, a);
+    }
+    return do_2op(s, a, gen_helper_mve_vsbci);
+}
+
 static int trans_vmlaldav_s(DisasContext *s, arg_vmlaldav *a)
 {
     static MVEGenLongDualAccOpFn *const fns[4][2] = {
@@ -13853,6 +13890,28 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     mve_extract_vmov_gp(&a, insn);
                     int from_gp = extract32(insn, 20, 1) == 0;
                     return trans_vmov_between_gp_vec(s, &a, from_gp);
+                }
+                if(is_insn_vadc(insn)) {
+                    ARCH(MVE);
+                    arg_2op args;
+                    mve_extract_2op_no_size(&args, insn);
+                    bool carry_init = extract32(insn, 12, 1) == 1;
+                    if(carry_init) {
+                        return trans_vadci(s, &args);
+                    } else {
+                        return trans_vadc(s, &args);
+                    }
+                }
+                if(is_insn_vsbc(insn)) {
+                    ARCH(MVE);
+                    arg_2op args;
+                    mve_extract_2op_no_size(&args, insn);
+                    bool carry_init = extract32(insn, 12, 1) == 1;
+                    if(carry_init) {
+                        return trans_vsbci(s, &args);
+                    } else {
+                        return trans_vsbc(s, &args);
+                    }
                 }
                 if(is_insn_vcadd90(insn)) {
                     ARCH(MVE);

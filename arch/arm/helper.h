@@ -689,6 +689,11 @@ DEF_HELPER_4(mve_vaddb, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vaddh, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vaddw, void, env, ptr, ptr, ptr)
 
+DEF_HELPER_4(mve_vadc, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vadci, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vsbc, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vsbci, void, env, ptr, ptr, ptr)
+
 DEF_HELPER_4(mve_vcadd90b, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vcadd90h, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vcadd90w, void, env, ptr, ptr, ptr)

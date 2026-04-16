@@ -1701,6 +1701,58 @@ DO_1OP_IMM(vorri, DO_ORRI)
         mve_advance_vpt(env);                                                 \
     }
 
+static void do_vadc(CPUState *env, uint32_t *d, uint32_t *n, uint32_t *m, uint32_t inv, uint32_t carry_in, bool update_flags)
+{
+    uint16_t mask = mve_element_mask(env);
+    unsigned int e;
+
+    /* If any additions trigger, we will update flags. */
+    if(mask & 0x1111) {
+        update_flags = true;
+    }
+
+    for(e = 0; e < 16 / 4; e++, mask >>= 4) {
+        uint64_t r = carry_in;
+        r += n[H4(e)];
+        r += m[H4(e)] ^ inv;
+        if(mask & 1) {
+            carry_in = r >> 32;
+        }
+        mergemask(&d[H4(e)], r, mask);
+    }
+
+    if(update_flags) {
+        /* Store C, clear NZV.
+         * We know that NZCV bits are contained in vfp.xregs[ARM_VFP_FPSCR] so there's no need to call vfp_get/set_fpscr
+         */
+        env->vfp.xregs[ARM_VFP_FPSCR] &= ~FIELD_MASK(VFP_FPSCR, NZCV);
+        env->vfp.xregs[ARM_VFP_FPSCR] |= carry_in * FIELD_MASK(VFP_FPSCR, C);
+    }
+    mve_advance_vpt(env);
+}
+
+void HELPER(mve_vadc)(CPUState *env, void *vd, void *vn, void *vm)
+{
+    bool carry_in = env->vfp.xregs[ARM_VFP_FPSCR] & FIELD_MASK(VFP_FPSCR, C);
+    do_vadc(env, vd, vn, vm, 0, carry_in, false);
+}
+
+void HELPER(mve_vsbc)(CPUState *env, void *vd, void *vn, void *vm)
+{
+    bool carry_in = env->vfp.xregs[ARM_VFP_FPSCR] & FIELD_MASK(VFP_FPSCR, C);
+    do_vadc(env, vd, vn, vm, -1, carry_in, false);
+}
+
+void HELPER(mve_vadci)(CPUState *env, void *vd, void *vn, void *vm)
+{
+    do_vadc(env, vd, vn, vm, 0, 0, true);
+}
+
+void HELPER(mve_vsbci)(CPUState *env, void *vd, void *vn, void *vm)
+{
+    do_vadc(env, vd, vn, vm, -1, 1, true);
+}
+
 #define DO_VCADD(OP, ESIZE, TYPE, FN0, FN1)                                   \
     void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vn, void *vm) \
     {                                                                         \
