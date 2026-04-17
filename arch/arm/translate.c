@@ -9727,7 +9727,7 @@ static int do_2op_scalar(DisasContext *s, arg_2scalar *a, MVEGenTwoOpScalarFn fn
     TCGv_i32 rm;
 
     if(!mve_check_qreg_bank(a->qd | a->qn) || !fn) {
-        return false;
+        return TRANS_STATUS_ILLEGAL_INSN;
     }
     if(a->rm == 13 || a->rm == 15) {
         /* UNPREDICTABLE */
