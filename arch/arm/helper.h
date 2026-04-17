@@ -660,6 +660,14 @@ DEF_HELPER_3(mve_vfabsh, void, env, ptr, ptr)
 DEF_HELPER_3(mve_vfnegs, void, env, ptr, ptr)
 DEF_HELPER_3(mve_vfnegh, void, env, ptr, ptr)
 
+DEF_HELPER_3(mve_vqabsb, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vqabsh, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vqabsw, void, env, ptr, ptr)
+
+DEF_HELPER_3(mve_vqnegb, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vqnegh, void, env, ptr, ptr)
+DEF_HELPER_3(mve_vqnegw, void, env, ptr, ptr)
+
 DEF_HELPER_3(mve_vmvn, void, env, ptr, ptr)
 
 DEF_HELPER_3(mve_vmaxab, void, env, ptr, ptr)

@@ -1064,6 +1064,16 @@ static inline bool is_insn_vqsub_s_scalar(uint32_t insn)
     return (insn & 0xFF811F70) == 0xEE001F60;
 }
 
+static inline bool is_insn_vqabs(uint32_t insn)
+{
+    return (insn & 0xFFB31FD1) == 0xFFB00740;
+}
+
+static inline bool is_insn_vqneg(uint32_t insn)
+{
+    return (insn & 0xFFB31FD1) == 0xFFB007C0;
+}
+
 static inline bool is_insn_vmull(uint32_t insn)
 {
     uint32_t size = extract32(insn, 20, 2);

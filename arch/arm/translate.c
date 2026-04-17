@@ -11453,6 +11453,8 @@ DO_1OP(vclz, vclz)
 DO_1OP(vcls, vcls)
 DO_1OP_VEC(vabs, vabs, tcg_gen_gvec_abs)
 DO_1OP_VEC(vneg, vneg, tcg_gen_gvec_neg)
+DO_1OP(vqabs, vqabs)
+DO_1OP(vqneg, vqneg)
 
 /*
  * For simple float/int conversions we use the fixed-point
@@ -14211,6 +14213,18 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_2scalar args;
                     mve_extract_2op_scalar(&args, insn);
                     return trans_vqsub_s_scalar(s, &args);
+                }
+                if(is_insn_vqabs(insn)) {
+                    ARCH(MVE);
+                    arg_1op args;
+                    mve_extract_1op(&args, insn);
+                    return trans_vqabs(s, &args);
+                }
+                if(is_insn_vqneg(insn)) {
+                    ARCH(MVE);
+                    arg_1op args;
+                    mve_extract_1op(&args, insn);
+                    return trans_vqneg(s, &args);
                 }
                 if(is_insn_vmull(insn)) {
                     ARCH(MVE);
