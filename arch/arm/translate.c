@@ -10439,7 +10439,9 @@ static inline int trans_vpst(DisasContext *s, arg_vpst *a)
     }
 
     gen_helper_fp_lsp(cpu_env);
+
     gen_mve_vpst(s, a->mask);
+    mve_update_and_store_eci(s);
 
     return TRANS_STATUS_SUCCESS;
 }
