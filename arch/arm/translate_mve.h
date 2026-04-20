@@ -734,6 +734,18 @@ static inline bool is_insn_vcvt_f_and_i(uint32_t insn)
     return !undefined && (insn & 0xFFB31E51) == 0xFFB30640;
 }
 
+/* VCVT from floating-point to integer */
+static inline bool is_insn_vcvt_fp(uint32_t insn)
+{
+    return (insn & 0xFFB31C51) == 0xFFB30040;
+}
+
+/* VRINT (floating-point) */
+static inline bool is_insn_vrint_fp(uint32_t insn)
+{
+    return (insn & 0xFFB31C51) == 0xFFB20440;
+}
+
 static inline bool is_insn_vmovi(uint32_t insn)
 {
     uint32_t cmode = extract32(insn, 8, 4);

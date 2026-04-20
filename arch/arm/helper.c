@@ -3345,26 +3345,30 @@ uint32_t HELPER(logicq_cc)(uint64_t val)
 }
 
 /* Convert ARM rounding mode to softfloat */
-int arm_rmode_to_sf(int rmode)
+int arm_rmode_to_sf(enum arm_fpdecoderm rmode)
 {
+    int output_rmode;
     switch(rmode) {
         case FPROUNDING_TIEAWAY:
-            rmode = float_round_ties_away;
+            output_rmode = float_round_ties_away;
             break;
         case FPROUNDING_TIEEVEN:
-            rmode = float_round_nearest_even;
+            output_rmode = float_round_nearest_even;
             break;
         case FPROUNDING_POSINF:
-            rmode = float_round_up;
+            output_rmode = float_round_up;
             break;
         case FPROUNDING_NEGINF:
-            rmode = float_round_down;
+            output_rmode = float_round_down;
+            break;
+        case FPROUNDING_ZERO:
+            output_rmode = float_round_to_zero;
             break;
         default:
             tlib_abortf("ARM FP rounding: invalid rounding mode %d", rmode);
             __builtin_unreachable();
     }
-    return rmode;
+    return output_rmode;
 }
 
 /* Set the current fp rounding mode and return the old one.

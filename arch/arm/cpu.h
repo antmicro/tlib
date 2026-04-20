@@ -582,6 +582,7 @@ enum arm_fpdecoderm {
     FPROUNDING_TIEEVEN,
     FPROUNDING_POSINF,
     FPROUNDING_NEGINF,
+    FPROUNDING_ZERO,
 };
 
 enum arm_cpu_mode {

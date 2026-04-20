@@ -7,7 +7,7 @@ bool is_impl_def_exempt_from_attribution(uint32_t address, bool *applies_to_whol
 bool try_get_impl_def_attr_exemption_region(uint32_t address, uint32_t start_at, uint32_t *found_index,
                                             bool *applies_to_whole_page);
 
-int arm_rmode_to_sf(int rmode);
+int arm_rmode_to_sf(enum arm_fpdecoderm rmode);
 
 #include "def-helper.h"
 
@@ -685,6 +685,12 @@ DEF_HELPER_3(mve_vmaxaw, void, env, ptr, ptr)
 DEF_HELPER_3(mve_vminab, void, env, ptr, ptr)
 DEF_HELPER_3(mve_vminah, void, env, ptr, ptr)
 DEF_HELPER_3(mve_vminaw, void, env, ptr, ptr)
+
+DEF_HELPER_4(mve_vcvt_s_rm_s, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vcvt_u_rm_s, void, env, ptr, ptr, i32)
+
+DEF_HELPER_4(mve_vrint_rm_s, void, env, ptr, ptr, i32)
+DEF_HELPER_4(mve_vrintx_rm_s, void, env, ptr, ptr, i32)
 
 DEF_HELPER_3(mve_vrev16b, void, env, ptr, ptr)
 DEF_HELPER_3(mve_vrev32b, void, env, ptr, ptr)

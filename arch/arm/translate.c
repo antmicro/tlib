@@ -11593,6 +11593,43 @@ DO_VCVT(vcvt_fu, vcvt_hu, vcvt_fu)
 
 #undef DO_VCVT
 
+#define DO_TRANS_RMODE_ROUNDING(INSN, HELPER, RMODE)                  \
+    static void gen_##INSN##s(TCGv_ptr env, TCGv_ptr qd, TCGv_ptr qm) \
+    {                                                                 \
+        TCGv_i32 rmode = tcg_const_i32(arm_rmode_to_sf(RMODE));       \
+        gen_helper_mve_##HELPER##_rm_s(env, qd, qm, rmode);           \
+        tcg_temp_free_i32(rmode);                                     \
+    }                                                                 \
+    static int trans_##INSN(DisasContext *s, arg_1op *a)              \
+    {                                                                 \
+        static MVEGenOneOpFn *const fns[] = {                         \
+            NULL,                                                     \
+            NULL, /* We don't support half-precision rounding */      \
+            gen_##INSN##s,                                            \
+            NULL,                                                     \
+        };                                                            \
+        return do_1op_vec(s, a, fns[a->size], NULL);                  \
+    }
+
+DO_TRANS_RMODE_ROUNDING(vcvtas, vcvt_s, FPROUNDING_TIEAWAY)
+DO_TRANS_RMODE_ROUNDING(vcvtau, vcvt_u, FPROUNDING_TIEAWAY)
+DO_TRANS_RMODE_ROUNDING(vcvtns, vcvt_s, FPROUNDING_TIEEVEN)
+DO_TRANS_RMODE_ROUNDING(vcvtnu, vcvt_u, FPROUNDING_TIEEVEN)
+DO_TRANS_RMODE_ROUNDING(vcvtps, vcvt_s, FPROUNDING_POSINF)
+DO_TRANS_RMODE_ROUNDING(vcvtpu, vcvt_u, FPROUNDING_POSINF)
+DO_TRANS_RMODE_ROUNDING(vcvtms, vcvt_s, FPROUNDING_NEGINF)
+DO_TRANS_RMODE_ROUNDING(vcvtmu, vcvt_u, FPROUNDING_NEGINF)
+
+DO_TRANS_RMODE_ROUNDING(vrintn, vrint, FPROUNDING_TIEEVEN)
+DO_TRANS_RMODE_ROUNDING(vrinta, vrint, FPROUNDING_TIEAWAY)
+DO_TRANS_RMODE_ROUNDING(vrintz, vrint, FPROUNDING_ZERO)
+DO_TRANS_RMODE_ROUNDING(vrintm, vrint, FPROUNDING_NEGINF)
+DO_TRANS_RMODE_ROUNDING(vrintp, vrint, FPROUNDING_POSINF)
+
+DO_TRANS_RMODE_ROUNDING(vrintx, vrintx, FPROUNDING_TIEEVEN)
+
+#undef DO_TRANS_RMODE_ROUNDING
+
 static int trans_vfabs(DisasContext *s, arg_1op *a)
 {
     static MVEGenOneOpFn *const fns[] = {
@@ -13857,6 +13894,53 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                             return trans_vcvt_fs(s, &a);
                         case 3:
                             return trans_vcvt_fu(s, &a);
+                        default:
+                            g_assert_not_reached();
+                    }
+                }
+                if(is_insn_vcvt_fp(insn)) {
+                    ARCH(MVE);
+                    arg_1op a;
+                    mve_extract_1op(&a, insn);
+                    abort_on_half_prec(insn, a.size, "VCVT (floating-point)");
+                    uint32_t rounding_mode = extract32(insn, 8, 2);
+                    bool is_unsigned = !!extract32(insn, 7, 1);
+                    switch(rounding_mode) {
+                        case 0:
+                            return is_unsigned ? trans_vcvtau(s, &a) : trans_vcvtas(s, &a);
+                        case 1:
+                            return is_unsigned ? trans_vcvtnu(s, &a) : trans_vcvtns(s, &a);
+                        case 2:
+                            return is_unsigned ? trans_vcvtpu(s, &a) : trans_vcvtps(s, &a);
+                        case 3:
+                            return is_unsigned ? trans_vcvtmu(s, &a) : trans_vcvtms(s, &a);
+                        default:
+                            g_assert_not_reached();
+                    }
+                }
+                if(is_insn_vrint_fp(insn)) {
+                    ARCH(MVE);
+                    arg_1op a;
+                    mve_extract_1op(&a, insn);
+                    abort_on_half_prec(insn, a.size, "VRINT (floating-point)");
+                    uint32_t op = extract32(insn, 7, 3);
+                    switch(op) {
+                        case 0:
+                            return trans_vrintn(s, &a);
+                        case 1:
+                            return trans_vrintx(s, &a);
+                        case 2:
+                            return trans_vrinta(s, &a);
+                        case 3:
+                            return trans_vrintz(s, &a);
+                        case 5:
+                            return trans_vrintm(s, &a);
+                        case 7:
+                            return trans_vrintp(s, &a);
+                        case 6:
+                        case 4:
+                            //  op == 0b1x0 is UNDEFINED
+                            return TRANS_STATUS_ILLEGAL_INSN;
                         default:
                             g_assert_not_reached();
                     }

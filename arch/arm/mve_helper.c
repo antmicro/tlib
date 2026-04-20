@@ -1657,6 +1657,44 @@ DO_VCVT_FIXED(vcvt_fu, 4, uint32_t, helper_vfp_touls)
 
 #undef DO_VCVT_FIXED
 
+/* Rounding with a specified rmode */
+#define DO_RMODE_ROUNDING(OP, ESIZE, TYPE, FN)                                                                    \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vm, uint32_t rmode)                               \
+    {                                                                                                             \
+        TYPE *d = vd, *m = vm;                                                                                    \
+        TYPE r;                                                                                                   \
+        uint16_t mask = mve_element_mask(env);                                                                    \
+        unsigned int e;                                                                                           \
+        float_status *fpst;                                                                                       \
+        float_status scratch_fpst;                                                                                \
+        float_status *base_fpst = (ESIZE == 2) ? &env->vfp.standard_fp_status_f16 : &env->vfp.standard_fp_status; \
+        uint32_t prev_rmode = get_float_rounding_mode(base_fpst);                                                 \
+        set_float_rounding_mode(rmode, base_fpst);                                                                \
+        for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE) {                                                         \
+            if((mask & MAKE_64BIT_MASK(0, ESIZE)) == 0) {                                                         \
+                continue;                                                                                         \
+            }                                                                                                     \
+            fpst = base_fpst;                                                                                     \
+            if(!(mask & 1)) {                                                                                     \
+                /* We need the result but without updating flags */                                               \
+                scratch_fpst = *fpst;                                                                             \
+                fpst = &scratch_fpst;                                                                             \
+            }                                                                                                     \
+            r = FN(m[H##ESIZE(e)], fpst);                                                                         \
+            mergemask(&d[H##ESIZE(e)], r, mask);                                                                  \
+        }                                                                                                         \
+        set_float_rounding_mode(prev_rmode, base_fpst);                                                           \
+        mve_advance_vpt(env);                                                                                     \
+    }
+
+DO_RMODE_ROUNDING(vcvt_s_rm_s, 4, uint32_t, helper_vfp_tosis)
+DO_RMODE_ROUNDING(vcvt_u_rm_s, 4, uint32_t, helper_vfp_touis)
+
+DO_RMODE_ROUNDING(vrint_rm_s, 4, uint32_t, helper_rints)
+DO_RMODE_ROUNDING(vrintx_rm_s, 4, uint32_t, helper_rints_exact)
+
+#undef DO_RMODE_ROUNDING
+
 #define DO_1OP_IMM(OP, FN)                                               \
     void HELPER(glue(mve_, OP))(CPUState * env, void *vda, uint64_t imm) \
     {                                                                    \
