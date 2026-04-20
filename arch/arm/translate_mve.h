@@ -294,7 +294,7 @@ typedef struct {
     int rn;
     /* Size of the operation (.S8/S16/S32/S64 suffix) */
     int size;
-    /* Size of memory transaction (B/H/W/D instruction suffix) */
+    /* Width of memory transaction (B/H/W/D instruction suffix) */
     int msize;
     /* Amount by which vector offset is left shifted */
     int os;
