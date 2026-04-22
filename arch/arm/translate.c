@@ -14824,6 +14824,20 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
 #endif
             if(insn & (1 << 15)) {
                 /* Branches, misc control.  */
+#ifdef TARGET_PROTO_ARM_M
+                if(is_insn_bf_bfx_bfl_bflx_bfcsel(insn)) {
+                    /* Check for BF, BFX, BFL, BFLX, BFCSEL (M-profile branch future insns).
+                     * The architecture permits an implementation to implement these as NOPs
+                     * (equivalent to discarding the LO_BRANCH_INFO cache immediately),
+                     * and we take that IMPDEF option.
+                     *
+                     * But if needed we should think of possibility of implementing
+                     * branch cache and these instructions properly.
+                     */
+                    ARCH(8_1M);
+                    return TRANS_STATUS_SUCCESS;
+                }
+#endif
                 if(insn & 0x5000) {
                     /* Unconditional branch.  */
                     /* signextend(hw1[10:0]) -> offset[:12].  */

@@ -109,6 +109,20 @@ static inline bool is_insn_lctp(uint32_t insn)
     return (insn & LOB_INSN_LCTP_MASK) == LOB_INSN_LCTP;
 }
 
+/* Check if given instruction is BF, BFX, BFL, BFLX or BFCSEL */
+static inline bool is_insn_bf_bfx_bfl_bflx_bfcsel(uint32_t insn)
+{
+    bool bfl = (insn & 0xF800F001) == 0xF000C001;
+    bool bfcsel = (insn & 0xF840F001) == 0xF000E001;
+    bool bf = (insn & 0xF860F001) == 0xF040E001;
+    bool bfx = (insn & 0xF870FFFF) == 0xF060E001;
+    bool bflx = (insn & 0xF870FFFF) == 0xF070E001;
+
+    uint32_t boff = extract32(insn, 23, 4);
+
+    return (boff != 0) && (bfl || bfcsel || bf || bfx || bflx);
+}
+
 /* Translate WLS(TP) instruction */
 static inline int trans_wls(DisasContext *s, uint32_t insn)
 {
