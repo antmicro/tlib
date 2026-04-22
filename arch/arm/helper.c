@@ -3440,11 +3440,12 @@ uint32_t HELPER(vfp_get_fpscr)(CPUState *env)
     int i;
     uint32_t fpscr;
 
-    fpscr = (env->vfp.xregs[ARM_VFP_FPSCR] & 0xffc8ffff);
-    fpscr = FIELD_DP32(fpscr, VFP_FPSCR, VEC_STRIDE, env->vfp.vec_stride);
+    fpscr = env->vfp.xregs[ARM_VFP_FPSCR];
+
     fpscr = FIELD_DP32(fpscr, VFP_FPSCR, QC, env->vfp.qc);
 
 #ifndef TARGET_PROTO_ARM_M
+    fpscr = FIELD_DP32(fpscr, VFP_FPSCR, VEC_STRIDE, env->vfp.vec_stride);
     fpscr = FIELD_DP32(fpscr, VFP_FPSCR, VEC_LEN, env->vfp.vec_len);
 #else
     fpscr = FIELD_DP32(fpscr, VFP_FPSCR, LTPSIZE, env->v7m.ltpsize);
@@ -3522,10 +3523,10 @@ void HELPER(vfp_set_fpscr)(CPUState *env, uint32_t val)
     uint32_t changed;
 
     changed = env->vfp.xregs[ARM_VFP_FPSCR];
-    env->vfp.xregs[ARM_VFP_FPSCR] = (val & 0xffc8ffff);
+    env->vfp.xregs[ARM_VFP_FPSCR] = val;
 
-    env->vfp.vec_stride = FIELD_EX32(val, VFP_FPSCR, VEC_STRIDE);
 #ifndef TARGET_PROTO_ARM_M
+    env->vfp.vec_stride = FIELD_EX32(val, VFP_FPSCR, VEC_STRIDE);
     env->vfp.vec_len = FIELD_EX32(val, VFP_FPSCR, VEC_LEN);
 #else
     env->v7m.ltpsize = FIELD_EX32(val, VFP_FPSCR, LTPSIZE);
