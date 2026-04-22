@@ -38,6 +38,7 @@ typedef void MVEGenOneOpImmFn(TCGv_ptr, TCGv_ptr, TCGv_i64);
 typedef void MVEGenLongDualAccOpFn(TCGv_i64, TCGv_ptr, TCGv_ptr, TCGv_ptr, TCGv_i64);
 typedef void MVEGenDualAccOpFn(TCGv_i32, TCGv_ptr, TCGv_ptr, TCGv_ptr, TCGv_i32);
 typedef void MVEWideShiftImmFn(TCGv_i64, TCGv_i64, int64_t shift);
+typedef void MVEShiftImmFn(TCGv_i32, TCGv_i32, int32_t shift);
 
 /* Note that the gvec expanders operate on offsets + sizes.  */
 typedef void GVecGen3Fn(unsigned, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
@@ -264,6 +265,12 @@ typedef struct {
     /* Only valid for VADDLV */
     int rdahi;
 } arg_vaddv;
+
+/* Shift by immediate */
+typedef struct {
+    int rda;   //  Register containing the value to be shifted
+    int shim;  //  The number of bits to shift by, in the range 1-32.
+} arg_mve_sh_i;
 
 /* Arguments of long (64-bit) shifts by immediate (1-32) */
 typedef struct {
@@ -1148,6 +1155,16 @@ static inline bool is_insn_sqshll_imm(uint32_t insn)
     return !related_encoding && (insn & 0xFFF1813F) == 0xEA51013F;
 }
 
+static inline bool is_insn_sqshl_imm(uint32_t insn)
+{
+    return (insn & 0xFFF08F3F) == 0xEA500F3F;
+}
+
+static inline bool is_insn_uqshl_imm(uint32_t insn)
+{
+    return (insn & 0xFFF08F3F) == 0xEA500F0F;
+}
+
 static inline bool is_insn_vrmlaldavh(uint32_t insn)
 {
     /* RdaHi == '11x' is related encoding */
@@ -1702,6 +1719,13 @@ static void mve_extract_vaddv(arg_vaddv *a, uint32_t insn)
     a->qm = extract32(insn, 1, 3);
     a->rda = 2 * extract32(insn, 13, 3);
     a->rdahi = 2 * extract32(insn, 20, 3) + 1;
+}
+
+/* Extract arguments of shifts by immediate (1-32) */
+static void extract_mve_sh_i(DisasContext *context, arg_mve_sh_i *args, uint32_t instruction)
+{
+    args->rda = extract32(instruction, 16, 4);
+    args->shim = deposit32(extract32(instruction, 6, 2), 2, 30, extract32(instruction, 12, 3));
 }
 
 /* Extract arguments of long (64-bit) shifts by immediate (1-32) */

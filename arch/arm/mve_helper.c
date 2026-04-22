@@ -2303,6 +2303,16 @@ DO_VADDLV(vaddlvu, uint32_t, uint64_t)
 
 #undef DO_VADDLV
 
+uint32_t HELPER(mve_sqshl)(CPUState *env, uint32_t n, uint32_t shift)
+{
+    return do_sqrshl_bhs(n, (int8_t)shift, 32, false, &env->QF);
+}
+
+uint32_t HELPER(mve_uqshl)(CPUState *env, uint32_t n, uint32_t shift)
+{
+    return do_uqrshl_bhs(n, (int8_t)shift, 32, false, &env->QF);
+}
+
 uint64_t HELPER(mve_sqshll)(CPUState *env, uint64_t n, uint32_t shift)
 {
     return do_sqrshl_d(n, (int8_t)shift, false, &env->QF);
@@ -2689,4 +2699,4 @@ DO_VSHRN_SAT_SH(vqrshrunbh, vqrshrunth, DO_RSHRUN_H)
 #undef DO_VSHRN_SAT_UB
 #undef DO_VSHRN_SAT
 
-#endif
+#endif /* TARGET_PROTO_ARM_M */

@@ -9906,6 +9906,27 @@ static int do_vmaxv(DisasContext *s, arg_vmaxv *a, MVEGenVADDVFn fn)
 }
 
 /*
+ * v8.1M MVE shifts
+ */
+static bool do_mve_sh_i(DisasContext *s, arg_mve_sh_i *arg, MVEShiftImmFn *fn)
+{
+    if(!ENABLE_ARCH_8_1M) {
+        /* Decode falls through to ORR/MOV UNPREDICTABLE handling */
+        return TRANS_STATUS_SUCCESS;
+    }
+    if(!ENABLE_ARCH_MVE || arg->rda == 13 || arg->rda == 15) {
+        /* Rda == 13 or 15 is UNPREDICTABLE; we choose to treat it as ILLEGAL */
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+    if(arg->shim == 0) {
+        arg->shim = 32;
+    }
+    fn(cpu_R[arg->rda], cpu_R[arg->rda], arg->shim);
+
+    return TRANS_STATUS_SUCCESS;
+}
+
+/*
  * v8.1M MVE wide-shifts
  */
 static bool do_mve_shl_ri(DisasContext *s, arg_mve_shl_ri *arg, MVEWideShiftImmFn *fn)
@@ -12187,6 +12208,20 @@ DO_TRANS_LOGIC(vorr, gen_helper_mve_vorr, tcg_gen_gvec_or)
 DO_TRANS_LOGIC(vorn, gen_helper_mve_vorn, tcg_gen_gvec_orc)
 DO_TRANS_LOGIC(veor, gen_helper_mve_veor, tcg_gen_gvec_xor)
 
+static void gen_mve_sqshl(TCGv_i64 r, TCGv_i64 n, int32_t shift)
+{
+    TCGv_i32 tcg_shift = tcg_const_i32(shift);
+    gen_helper_mve_sqshl(r, cpu_env, n, tcg_shift);
+    tcg_temp_free_i32(tcg_shift);
+}
+
+static void gen_mve_uqshl(TCGv_i64 r, TCGv_i64 n, int32_t shift)
+{
+    TCGv_i32 tcg_shift = tcg_const_i32(shift);
+    gen_helper_mve_uqshl(r, cpu_env, n, tcg_shift);
+    tcg_temp_free_i32(tcg_shift);
+}
+
 static void gen_mve_sqshll(TCGv_i64 r, TCGv_i64 n, int64_t shift)
 {
     TCGv_i32 tcg_shift = tcg_const_i32(shift);
@@ -12750,6 +12785,18 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                         extract_mve_shl_ri(s, &args, insn);
                         return do_mve_shl_ri(s, &args, tcg_gen_shri_i64);
                     }
+                    if(is_insn_sqshl_imm(insn)) {
+                        ARCH(MVE);
+                        arg_mve_sh_i args;
+                        extract_mve_sh_i(s, &args, insn);
+                        return do_mve_sh_i(s, &args, gen_mve_sqshl);
+                    }
+                    if(is_insn_uqshl_imm(insn)) {
+                        ARCH(MVE);
+                        arg_mve_sh_i args;
+                        extract_mve_sh_i(s, &args, insn);
+                        return do_mve_sh_i(s, &args, gen_mve_uqshl);
+                    }
                     if(is_insn_sqshll_imm(insn)) {
                         ARCH(MVE);
                         arg_mve_shl_ri args;
@@ -12777,8 +12824,7 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
 #endif
 
                     //  TODO: The following ARMv8.1-M MVE extension instructions should be handled here:
-                    //  SQSHL
-                    //  SRSHR, UQSHL, URSHR, SQRSHR, SQRSHRL, UQRSHL, UQRSHLL
+                    //  SRSHR, URSHR, SQRSHR, SQRSHRL, UQRSHL, UQRSHLL
                     goto illegal_op;
                 }
             } else {

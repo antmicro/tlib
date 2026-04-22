@@ -1046,6 +1046,8 @@ DEF_HELPER_4(mve_vabduw, void, env, ptr, ptr, ptr)
 
 DEF_HELPER_4(mve_vfabds, void, env, ptr, ptr, ptr)
 
+DEF_HELPER_3(mve_uqshl, i32, env, i32, i32)
+DEF_HELPER_3(mve_sqshl, i32, env, i32, i32)
 DEF_HELPER_3(mve_sqshll, i64, env, i64, i32)
 DEF_HELPER_3(mve_uqshll, i64, env, i64, i32)
 
