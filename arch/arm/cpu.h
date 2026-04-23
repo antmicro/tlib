@@ -337,7 +337,7 @@ typedef struct CPUState {
         uint32_t vecbase[M_REG_NUM_BANKS];
         uint32_t basepri[M_REG_NUM_BANKS];
         /* SFPA and FPCA bits are not banked - required for FPU support in TrustZone.
-         * When accessing them, make sure to always use `M_REG_NS` (Non-secure)
+         * When accessing them, make sure to always use `M_REG_COMMON` or `M_REG_S`
          * bank for this register. The rest of the bits are banked. */
         uint32_t control[M_REG_NUM_BANKS];
         uint32_t fault_status[M_REG_NUM_BANKS];
