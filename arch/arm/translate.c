@@ -12827,6 +12827,18 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                         extract_mve_sh_i(s, &args, insn);
                         return do_mve_sh_i(s, &args, gen_mve_uqshl);
                     }
+                    if(is_insn_srshr_imm(insn)) {
+                        ARCH(MVE);
+                        arg_mve_sh_i args;
+                        extract_mve_sh_i(s, &args, insn);
+                        return do_mve_sh_i(s, &args, gen_srshr32_i32);
+                    }
+                    if(is_insn_urshr_imm(insn)) {
+                        ARCH(MVE);
+                        arg_mve_sh_i args;
+                        extract_mve_sh_i(s, &args, insn);
+                        return do_mve_sh_i(s, &args, gen_urshr32_i32);
+                    }
                     if(is_insn_sqshll_imm(insn)) {
                         ARCH(MVE);
                         arg_mve_shl_ri args;

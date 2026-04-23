@@ -1199,6 +1199,16 @@ static inline bool is_insn_uqshl_imm(uint32_t insn)
     return (insn & 0xFFF08F3F) == 0xEA500F0F;
 }
 
+static inline bool is_insn_srshr_imm(uint32_t insn)
+{
+    return (insn & 0xFFF08F3F) == 0xEA500F2F;
+}
+
+static inline bool is_insn_urshr_imm(uint32_t insn)
+{
+    return (insn & 0xFFF08F3F) == 0xEA500F1F;
+}
+
 static inline bool is_insn_vrmlaldavh(uint32_t insn)
 {
     /* RdaHi == '11x' is related encoding */
