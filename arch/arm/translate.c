@@ -9917,10 +9917,6 @@ static bool do_mve_shl_ri(DisasContext *s, arg_mve_shl_ri *arg, MVEWideShiftImmF
         /* Decode falls through to ORR/MOV UNPREDICTABLE handling */
         return TRANS_STATUS_SUCCESS;
     }
-    if(arg->rdahi == 15) {
-        /* These are a different encoding (SQSHL/SRSHR/UQSHL/URSHR) */
-        return TRANS_STATUS_SUCCESS;
-    }
     if(!ENABLE_ARCH_MVE || arg->rdahi == 13) {
         /* RdaHi == 13 is UNPREDICTABLE; we choose to treat it as ILLEGAL */
         return TRANS_STATUS_ILLEGAL_INSN;
