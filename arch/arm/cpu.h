@@ -606,10 +606,17 @@ enum arm_fp_precision {
     DOUBLE_PRECISION = 3,
 };
 
+#ifdef TARGET_PROTO_ARM_M
+static inline bool in_handler_mode(CPUState *env)
+{
+    return env->v7m.exception != 0;
+}
+#endif
+
 static inline bool in_user_mode(CPUState *env)
 {
 #ifdef TARGET_PROTO_ARM_M
-    return (env->v7m.exception == 0) && (env->v7m.control[env->secure] & 1);
+    return (!in_handler_mode(env)) && (env->v7m.control[env->secure] & 1);
 #else
     return (env->uncached_cpsr & CPSR_M) == ARM_CPU_MODE_USR;
 #endif
@@ -645,6 +652,7 @@ static inline bool in_user_mode(CPUState *env)
 #define ARM_FPCCR_LSPENS     29
 #define ARM_FPCCR_LSPEN      30
 #define ARM_FPCCR_ASPEN      31
+#define ARM_FPCAR_ADDRESS    3
 #define ARM_EXC_RETURN_NFPCA 4
 #define ARM_VFP_FPEXC_FPUEN  30
 
@@ -658,6 +666,7 @@ static inline bool in_user_mode(CPUState *env)
 #define ARM_FPCCR_LSPENS_MASK    (1 << ARM_FPCCR_LSPENS)
 #define ARM_FPCCR_LSPEN_MASK     (1 << ARM_FPCCR_LSPEN)
 #define ARM_FPCCR_ASPEN_MASK     (1 << ARM_FPCCR_ASPEN)
+#define ARM_FPCAR_ADDRESS_MASK   (0xfffffff8)
 /* Also known as EXC_RETURN.FType */
 #define ARM_EXC_RETURN_NFPCA_MASK        (1 << ARM_EXC_RETURN_NFPCA)
 #define ARM_VFP_FPEXC_FPUEN_MASK         (1 << ARM_VFP_FPEXC_FPUEN)

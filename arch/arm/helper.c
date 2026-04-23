@@ -1163,15 +1163,16 @@ void do_v7m_secure_return(CPUState *env)
     tlib_printf(LOG_LEVEL_NOISY, "Secure return to 0x%08" PRIx32 ", xpsr: 0x%08" PRIx32, env->regs[15], xpsr_read(env));
 }
 
-static inline bool lsp_store_helper(CPUState *env, uint32_t *address, uint32_t val)
+static inline bool lsp_store_helper(CPUState *env, uint32_t *address, uint32_t val, bool is_secure)
 {
+    bool is_user = !!(env->v7m.fpccr[is_secure] & FIELD_MASK(V7M_FPCCR, USER));
+
     /* No address translation in ARM-M, so discard phys_ptr */
     uint32_t phys_ptr = 0;
     target_ulong page_size = 0;
     int prot = 0;
 
-    int ret = get_phys_addr(env, *address, !!(fpccr_read(env, true) & ARM_FPCCR_S_MASK), ACCESS_DATA_STORE,
-                            /* TODO: FPCCR_USER should determine this */ false, &phys_ptr, &prot, &page_size, false);
+    int ret = get_phys_addr(env, *address, is_secure, ACCESS_DATA_STORE, is_user, &phys_ptr, &prot, &page_size, false);
     if(ret == TRANSLATE_SUCCESS) {
         stl_phys(*address, val);
         *address += sizeof(val);
@@ -1195,30 +1196,29 @@ void fp_lsp_save_to_stack(CPUState *env)
         env->v7m.fpccr[M_REG_S] &= ~ARM_FPCCR_LSPACT_MASK;
         env->v7m.fpccr[M_REG_NS] &= ~ARM_FPCCR_LSPACT_MASK;
         /* Bits[0:2] are RES0 (range inclusive) */
-        uint32_t address = env->v7m.fpcar[is_secure] & ~0b111;
+        uint32_t address = env->v7m.fpcar[is_secure] & ARM_FPCAR_ADDRESS_MASK;
         /* Remember, we operate with double-precision aliases here
          * so for D7, up to S14, S15 are preserved, and so on
-         * TODO: Memory operations should be done with privilege
-         * (Security attribution) of FPCCR.S bit */
+         */
         bool any_failed = false;
         for(int i = 0; i < 8; ++i) {
-            any_failed |= !lsp_store_helper(env, &address, env->vfp.regs[i]);
-            any_failed |= !lsp_store_helper(env, &address, env->vfp.regs[i] >> 32);
+            any_failed |= !lsp_store_helper(env, &address, env->vfp.regs[i], is_secure);
+            any_failed |= !lsp_store_helper(env, &address, env->vfp.regs[i] >> 32, is_secure);
         }
         uint32_t fpscr = vfp_get_fpscr(env);
-        any_failed |= !lsp_store_helper(env, &address, fpscr);
+        any_failed |= !lsp_store_helper(env, &address, fpscr, is_secure);
 
         if(arm_feature(env, ARM_FEATURE_V8)) {
             if(arm_feature(env, ARM_FEATURE_MVE)) {
-                any_failed |= !lsp_store_helper(env, &address, env->v7m.vpr);
+                any_failed |= !lsp_store_helper(env, &address, env->v7m.vpr, is_secure);
             } else {
                 /* Write UNKNOWN if MVE is not implemented */
-                any_failed |= !lsp_store_helper(env, &address, 0xBADCAFEE);
+                any_failed |= !lsp_store_helper(env, &address, 0xBADCAFEE, is_secure);
             }
             if(is_secure && (env->v7m.fpccr[M_REG_COMMON] & ARM_FPCCR_TS_MASK) > 0) {
                 for(int i = 8; i < 16; ++i) {
-                    any_failed |= !lsp_store_helper(env, &address, env->vfp.regs[i]);
-                    any_failed |= !lsp_store_helper(env, &address, env->vfp.regs[i] >> 32);
+                    any_failed |= !lsp_store_helper(env, &address, env->vfp.regs[i], is_secure);
+                    any_failed |= !lsp_store_helper(env, &address, env->vfp.regs[i] >> 32, is_secure);
                 }
             }
         }
@@ -1262,6 +1262,25 @@ void HELPER(fp_lsp)(CPUState *env)
 {
     fp_lsp_save_to_stack(env);
     fp_lsp_create_context(env);
+}
+
+static inline void fpccr_update(CPUState *env, uint32_t frameptr)
+{
+    bool is_secure = env->secure;
+    /* Set address of the FP frame on the stack */
+    env->v7m.fpcar[is_secure] = frameptr & ARM_FPCAR_ADDRESS_MASK;
+
+    /* Mark that Lazy Floating Point preservation will happen */
+    env->v7m.fpccr[is_secure] |= FIELD_MASK(V7M_FPCCR, LSPACT);
+
+    /* TODO: Check if SP violates the current stack limit and set SPLIMVIOL accordingly */
+
+    /* Update fields to information about the current CPU state */
+    env->v7m.fpccr[M_REG_COMMON] = FIELD_DP32(env->v7m.fpccr[M_REG_COMMON], V7M_FPCCR, S, is_secure);
+    env->v7m.fpccr[is_secure] = FIELD_DP32(env->v7m.fpccr[is_secure], V7M_FPCCR, USER, in_user_mode(env));
+    env->v7m.fpccr[is_secure] = FIELD_DP32(env->v7m.fpccr[is_secure], V7M_FPCCR, THREAD, !in_handler_mode(env));
+
+    /* Here we should update other FPCCR fields related to interrupt priorities */
 }
 
 static void do_interrupt_v7m(CPUState *env)
@@ -1441,9 +1460,8 @@ static void do_interrupt_v7m(CPUState *env)
         env->v7m.control[M_REG_COMMON] &= ~ARM_CONTROL_SFPA_MASK;
         if(fpccr_read(env, env->secure) & ARM_FPCCR_LSPEN_MASK) {
             /* Set lazy FP state preservation  */
-            env->v7m.fpccr[env->secure] |= ARM_FPCCR_LSPACT_MASK;
             env->regs[13] -= fp_get_reservation_size(env);
-            env->v7m.fpcar[env->secure] = env->regs[13];
+            fpccr_update(env, env->regs[13]);
         } else {
             if(~env->vfp.xregs[ARM_VFP_FPEXC] & ARM_VFP_FPEXC_FPUEN_MASK) {
                 /* FPU is disabled, revert SP and raise Usage Fault  */
@@ -4344,9 +4362,9 @@ void HELPER(v8m_vlstm)(CPUState *env, uint32_t rn, uint32_t low_regs_only)
 
     uint32_t address = env->regs[rn];
     if((env->v7m.fpccr[M_REG_COMMON] & ARM_FPCCR_LSPEN_MASK) > 0) {
-        /* If Lazy preservation is already enabled, just update the FPCAR address
+        /* If Lazy preservation is enabled, just update the FPCCR and FPCAR
          * Low three bits are RES0 */
-        env->v7m.fpcar[env->secure] = address & ~0x7;
+        fpccr_update(env, address);
     } else {
         /* We store, in this order, the following FPU registers, at the address passed in register "rn":
          *  S[0]-S[15]
