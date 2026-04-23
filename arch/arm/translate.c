@@ -10226,6 +10226,51 @@ static int trans_vldrd_sg_imm(DisasContext *s, arg_vldst_sg_imm *a)
 }
 
 /*
+ * Handle M-profile early check for disabled coprocessor.
+ * The NOCP exception is emited if the coprocessor is disabled.
+ * Otherwise we return that check was successful
+ * and the proper VFP/etc decode will handle the instruction.
+ */
+static bool check_coproc_enabled(DisasContext *s, uint32_t insn)
+{
+
+    /* If the instruction is in one of the following spaces it is a coprocessor instruction. */
+    bool in_corpoc_space_1 = (insn & 0xEF000000) == 0xEE000000;
+    bool in_corpoc_space_2 = (insn & 0xEE000000) == 0xEC000000;
+    bool in_corpoc_space_v81m = (insn & 0xEF000000) == 0xEF000000;
+
+    uint32_t cp;
+
+    if(in_corpoc_space_1 || in_corpoc_space_2) {
+        cp = extract32(insn, 8, 4);
+
+        if(cp == 11) {
+            /* cp11 is governed by the cp10 enable */
+            cp = 10;
+        }
+
+        if(arm_feature(env, ARM_FEATURE_V8_1M) && (cp == 8 || cp == 9 || cp == 14 || cp == 15)) {
+            /* in v8.1M cp 8, 9, 14, 15 also are governed by the cp10 enable */
+            cp = 10;
+        }
+    } else if(arm_feature(env, ARM_FEATURE_V8_1M) && in_corpoc_space_v81m) {
+        /* for v8.1M instructions in this space are assigned to cp10 */
+        cp = 10;
+    } else {
+        /* return true and continue decoding if instruction is not in any coprocessor space */
+        return true;
+    }
+
+    if(cp != 10 || !s->vfp_enabled) {
+        /* we don't support tb flags for other coprocessors so just raise NOCP if it's not a coprocessor guarded by cp10 */
+        gen_exception_insn(s, 4, EXCP_NOCP);
+        return false;
+    }
+
+    return true;
+}
+
+/*
  * M-profile provides two different sets of instructions that can
  * access floating point system registers: VMSR/VMRS (which move
  * to/from a general purpose register) and VLDR/VSTR sysreg (which
@@ -13498,6 +13543,7 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                 return trans_vmsr_vmrs(s, &a);
             }
             if(arm_feature(env, ARM_FEATURE_V8)) {
+
                 if(is_insn_vldr_vstr_sysreg(insn)) {
                     arg_vldr_vstr_sysreg a;
                     mve_extract_vldr_vstr_sysreg(&a, insn);
@@ -13521,7 +13567,11 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     return trans_vscclrm(s, &a);
                 }
 
-                /* TODO: Check access to coprocessor */
+                if(!check_coproc_enabled(s, insn)) {
+                    /* Execution of the instruction generated NOCP, finish translation of it */
+                    return TRANS_STATUS_SUCCESS;
+                }
+                /* Execution of the instruction didn't generate NOCP, continue to decode the instruction properly */
 
                 if(is_insn_vld4(insn)) {
                     ARCH(MVE);
