@@ -11476,6 +11476,11 @@ DO_TRANS_2SHIFT_N(vqrshrnt_u, vqrshrnt_u)
 DO_TRANS_2SHIFT_N(vqrshrunb, vqrshrunb)
 DO_TRANS_2SHIFT_N(vqrshrunt, vqrshrunt)
 
+DO_TRANS_2SHIFT_N(vqshrnb_s, vqshrnb_s)
+DO_TRANS_2SHIFT_N(vqshrnt_s, vqshrnt_s)
+DO_TRANS_2SHIFT_N(vqshrnb_u, vqshrnb_u)
+DO_TRANS_2SHIFT_N(vqshrnt_u, vqshrnt_u)
+
 static int trans_vpsel(DisasContext *s, arg_2op *a)
 {
     /* This insn updates predication bits */
@@ -14717,6 +14722,27 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                         return trans_vqrshrunt(s, &a);
                     } else {
                         return trans_vqrshrunb(s, &a);
+                    }
+                }
+                if(is_insn_vqshrn(insn)) {
+                    ARCH(MVE);
+                    arg_2shift a;
+                    mve_extract_rshift_imm(&a, insn);
+                    uint32_t top_half = extract32(insn, 12, 1) == 1;
+                    uint32_t is_signed = extract32(insn, 28, 1) == 0;
+
+                    if(top_half) {
+                        if(is_signed) {
+                            return trans_vqshrnt_s(s, &a);
+                        } else {
+                            return trans_vqshrnt_u(s, &a);
+                        }
+                    } else {
+                        if(is_signed) {
+                            return trans_vqshrnb_s(s, &a);
+                        } else {
+                            return trans_vqshrnb_u(s, &a);
+                        }
                     }
                 }
             }

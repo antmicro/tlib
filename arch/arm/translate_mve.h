@@ -1374,6 +1374,11 @@ static inline bool is_insn_vldr_imm(uint32_t insn)
     return (insn & 0xFF111E00) == 0xFD101E00;
 }
 
+static inline bool is_insn_vqshrn(uint32_t insn)
+{
+    return (insn & 0xEFA00FD1) == 0xEE800F40;
+}
+
 static void mve_extract_vmsr_vmrs(arg_vmsr_vmrs *a, uint32_t insn)
 {
     a->rt = extract32(insn, 12, 4);

@@ -3032,6 +3032,23 @@ DO_VSHRN_SAT_UH(vqrshrnb_uh, vqrshrnt_uh, DO_RSHRN_UH)
 DO_VSHRN_SAT_SB(vqrshrunbb, vqrshruntb, DO_RSHRUN_B)
 DO_VSHRN_SAT_SH(vqrshrunbh, vqrshrunth, DO_RSHRUN_H)
 
+#define DO_SHRN_SB(N, M, SATP) do_sat_bhs((int64_t)(N) >> (M), INT8_MIN, INT8_MAX, SATP)
+
+#define DO_SHRN_UB(N, M, SATP) do_sat_bhs((uint64_t)(N) >> (M), 0, UINT8_MAX, SATP)
+
+#define DO_SHRN_SH(N, M, SATP) do_sat_bhs((int64_t)(N) >> (M), INT16_MIN, INT16_MAX, SATP)
+
+#define DO_SHRN_UH(N, M, SATP) do_sat_bhs((uint64_t)(N) >> (M), 0, UINT16_MAX, SATP)
+
+DO_VSHRN_SAT_SB(vqshrnb_sb, vqshrnt_sb, DO_SHRN_SB)
+DO_VSHRN_SAT_SH(vqshrnb_sh, vqshrnt_sh, DO_SHRN_SH)
+DO_VSHRN_SAT_UB(vqshrnb_ub, vqshrnt_ub, DO_SHRN_UB)
+DO_VSHRN_SAT_UH(vqshrnb_uh, vqshrnt_uh, DO_SHRN_UH)
+
+#undef DO_SHRN_UH
+#undef DO_SHRN_UB
+#undef DO_SHRN_SH
+#undef DO_SHRN_SB
 #undef DO_RSHRUN_H
 #undef DO_RSHRUN_B
 #undef DO_RSHRN_UH
