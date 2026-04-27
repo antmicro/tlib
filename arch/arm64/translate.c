@@ -3450,22 +3450,6 @@ static void gen_srshr16_i64(TCGv_i64 d, TCGv_i64 a, int64_t sh)
     tcg_temp_free_i64(t);
 }
 
-static void gen_srshr32_i32(TCGv_i32 d, TCGv_i32 a, int32_t sh)
-{
-    TCGv_i32 t;
-
-    /* Handle shift by the input size for the benefit of trans_SRSHR_ri */
-    if(sh == 32) {
-        tcg_gen_movi_i32(d, 0);
-        return;
-    }
-    t = tcg_temp_new_i32();
-    tcg_gen_extract_i32(t, a, sh - 1, 1);
-    tcg_gen_sari_i32(d, a, sh);
-    tcg_gen_add_i32(d, d, t);
-    tcg_temp_free_i32(t);
-}
-
 static void gen_srshr_vec(unsigned vece, TCGv_vec d, TCGv_vec a, int64_t sh)
 {
     TCGv_vec t = tcg_temp_new_vec_matching(d);
@@ -3627,22 +3611,6 @@ static void gen_urshr16_i64(TCGv_i64 d, TCGv_i64 a, int64_t sh)
     tcg_gen_vec_shr16i_i64(d, a, sh);
     tcg_gen_vec_add16_i64(d, d, t);
     tcg_temp_free_i64(t);
-}
-
-static void gen_urshr32_i32(TCGv_i32 d, TCGv_i32 a, int32_t sh)
-{
-    TCGv_i32 t;
-
-    /* Handle shift by the input size for the benefit of trans_URSHR_ri */
-    if(sh == 32) {
-        tcg_gen_extract_i32(d, a, sh - 1, 1);
-        return;
-    }
-    t = tcg_temp_new_i32();
-    tcg_gen_extract_i32(t, a, sh - 1, 1);
-    tcg_gen_shri_i32(d, a, sh);
-    tcg_gen_add_i32(d, d, t);
-    tcg_temp_free_i32(t);
 }
 
 static void gen_urshr_vec(unsigned vece, TCGv_vec d, TCGv_vec a, int64_t shift)

@@ -61,3 +61,5 @@ static inline int rsub_8(DisasContext *s, int x)
 
 void gen_srshr64_i64(TCGv_i64 d, TCGv_i64 a, int64_t sh);
 void gen_urshr64_i64(TCGv_i64 d, TCGv_i64 a, int64_t sh);
+void gen_srshr32_i32(TCGv_i32 d, TCGv_i32 a, int32_t sh);
+void gen_urshr32_i32(TCGv_i32 d, TCGv_i32 a, int32_t sh);
