@@ -3045,6 +3045,15 @@ DO_VSHRN_SAT_SH(vqshrnb_sh, vqshrnt_sh, DO_SHRN_SH)
 DO_VSHRN_SAT_UB(vqshrnb_ub, vqshrnt_ub, DO_SHRN_UB)
 DO_VSHRN_SAT_UH(vqshrnb_uh, vqshrnt_uh, DO_SHRN_UH)
 
+#define DO_SHRUN_B(N, M, SATP) do_sat_bhs((int64_t)(N) >> (M), 0, UINT8_MAX, SATP)
+
+#define DO_SHRUN_H(N, M, SATP) do_sat_bhs((int64_t)(N) >> (M), 0, UINT16_MAX, SATP)
+
+DO_VSHRN_SAT_SB(vqshrunbb, vqshruntb, DO_SHRUN_B)
+DO_VSHRN_SAT_SH(vqshrunbh, vqshrunth, DO_SHRUN_H)
+
+#undef DO_SHRUN_H
+#undef DO_SHRUN_B
 #undef DO_SHRN_UH
 #undef DO_SHRN_UB
 #undef DO_SHRN_SH

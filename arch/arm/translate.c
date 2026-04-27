@@ -11480,6 +11480,8 @@ DO_TRANS_2SHIFT_N(vqshrnb_s, vqshrnb_s)
 DO_TRANS_2SHIFT_N(vqshrnt_s, vqshrnt_s)
 DO_TRANS_2SHIFT_N(vqshrnb_u, vqshrnb_u)
 DO_TRANS_2SHIFT_N(vqshrnt_u, vqshrnt_u)
+DO_TRANS_2SHIFT_N(vqshrunb, vqshrunb)
+DO_TRANS_2SHIFT_N(vqshrunt, vqshrunt)
 
 static int trans_vpsel(DisasContext *s, arg_2op *a)
 {
@@ -14743,6 +14745,18 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                         } else {
                             return trans_vqshrnb_u(s, &a);
                         }
+                    }
+                }
+                if(is_insn_vqshrun(insn)) {
+                    ARCH(MVE);
+                    arg_2shift a;
+                    mve_extract_rshift_imm(&a, insn);
+                    uint32_t top_half = extract32(insn, 12, 1) == 1;
+
+                    if(top_half) {
+                        return trans_vqshrunt(s, &a);
+                    } else {
+                        return trans_vqshrunb(s, &a);
                     }
                 }
             }
