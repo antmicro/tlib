@@ -9963,6 +9963,33 @@ static bool do_mve_shl_ri(DisasContext *s, arg_mve_shl_ri *arg, MVEWideShiftImmF
     return TRANS_STATUS_SUCCESS;
 }
 
+static int do_mve_shl_rr(DisasContext *s, arg_mve_shl_rr *a, MVEWideShiftFn *fn)
+{
+    TCGv_i64 rda;
+    TCGv_i32 rdalo, rdahi;
+
+    if(!ENABLE_ARCH_MVE || a->rdahi == 13 || a->rm == 13 || a->rm == 15 || a->rm == a->rdahi || a->rm == a->rdalo) {
+        /* These rdahi/rdalo/rm cases are UNPREDICTABLE; we choose to UNDEF */
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+
+    rda = tcg_temp_new_i64();
+    rdalo = load_reg(s, a->rdalo);
+    rdahi = load_reg(s, a->rdahi);
+    tcg_gen_concat_i32_i64(rda, rdalo, rdahi);
+
+    /* The helper takes care of the sign-extension of the low 8 bits of Rm */
+    fn(rda, cpu_env, rda, cpu_R[a->rm]);
+
+    tcg_gen_extrl_i64_i32(rdalo, rda);
+    tcg_gen_extrh_i64_i32(rdahi, rda);
+    store_reg(s, a->rdalo, rdalo);
+    store_reg(s, a->rdahi, rdahi);
+    tcg_temp_free_i64(rda);
+
+    return TRANS_STATUS_SUCCESS;
+}
+
 /* This macro is just to make the arrays more compact in these functions */
 #define F(OP) glue(gen_mve_, OP)
 
@@ -12901,11 +12928,45 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                             extract_mve_shl_ri(s, &args, insn);
                             return do_mve_shl_ri(s, &args, gen_urshr64_i64);
                         }
+                        if(is_insn_asrl_reg(insn)) {
+                            ARCH(MVE);
+                            arg_mve_shl_rr args;
+                            extract_mve_shl_rr(s, &args, insn);
+                            return do_mve_shl_rr(s, &args, gen_helper_mve_sshrl);
+                        }
+                        if(is_insn_lsll_reg(insn)) {
+                            ARCH(MVE);
+                            arg_mve_shl_rr args;
+                            extract_mve_shl_rr(s, &args, insn);
+                            return do_mve_shl_rr(s, &args, gen_helper_mve_ushll);
+                        }
+                        if(is_insn_sqrshrl(insn)) {
+                            ARCH(MVE);
+                            arg_mve_shl_rr args;
+                            extract_mve_shl_rr(s, &args, insn);
+                            bool saturate_48 = !!extract32(insn, 7, 1);
+                            if(saturate_48) {
+                                return do_mve_shl_rr(s, &args, gen_helper_mve_sqrshrl48);
+                            } else {
+                                return do_mve_shl_rr(s, &args, gen_helper_mve_sqrshrl);
+                            }
+                        }
+                        if(is_insn_uqrshll(insn)) {
+                            ARCH(MVE);
+                            arg_mve_shl_rr args;
+                            extract_mve_shl_rr(s, &args, insn);
+                            bool saturate_48 = !!extract32(insn, 7, 1);
+                            if(saturate_48) {
+                                return do_mve_shl_rr(s, &args, gen_helper_mve_uqrshll48);
+                            } else {
+                                return do_mve_shl_rr(s, &args, gen_helper_mve_uqrshll);
+                            }
+                        }
                     }
 #endif
 
                     //  TODO: The following ARMv8.1-M MVE extension instructions should be handled here:
-                    //  SRSHR, URSHR, SQRSHR, SQRSHRL, UQRSHL, UQRSHLL
+                    //  SRSHR, URSHR, SQRSHR, UQRSHL
                     goto illegal_op;
                 }
             } else {

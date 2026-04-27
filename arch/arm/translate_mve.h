@@ -38,6 +38,7 @@ typedef void MVEGenOneOpImmFn(TCGv_ptr, TCGv_ptr, TCGv_i64);
 typedef void MVEGenLongDualAccOpFn(TCGv_i64, TCGv_ptr, TCGv_ptr, TCGv_ptr, TCGv_i64);
 typedef void MVEGenDualAccOpFn(TCGv_i32, TCGv_ptr, TCGv_ptr, TCGv_ptr, TCGv_i32);
 typedef void MVEWideShiftImmFn(TCGv_i64, TCGv_i64, int64_t shift);
+typedef void MVEWideShiftFn(TCGv_i64, TCGv_ptr, TCGv_i64, TCGv_i32);
 typedef void MVEShiftImmFn(TCGv_i32, TCGv_i32, int32_t shift);
 
 /* Note that the gvec expanders operate on offsets + sizes.  */
@@ -278,6 +279,13 @@ typedef struct {
     int rdahi;  //  Rda register containing upper bits of 64-bit value
     int shim;   //  "shift immediate", the immediate value
 } arg_mve_shl_ri;
+
+/* Arguments of long (64-bit) shifts by register */
+typedef struct {
+    int rdalo;  //  Rda register containing lower bits of 64-bit value
+    int rdahi;  //  Rda register containing upper bits of 64-bit value
+    int rm;     //  Register containing the amount to shift by
+} arg_mve_shl_rr;
 
 typedef struct {
     /* Vector register used as destination */
@@ -1219,6 +1227,34 @@ static inline bool is_insn_urshr_imm(uint32_t insn)
     return (insn & 0xFFF08F3F) == 0xEA500F1F;
 }
 
+static inline bool is_insn_asrl_reg(uint32_t insn)
+{
+    /* RdaHi == '111' is related encoding */
+    uint32_t rdahi = extract32(insn, 9, 3);
+    return rdahi != 7 && (insn & 0xFFF101FF) == 0xEA50012D;
+}
+
+static inline bool is_insn_lsll_reg(uint32_t insn)
+{
+    /* RdaHi == '111' is related encoding */
+    uint32_t rdahi = extract32(insn, 9, 3);
+    return rdahi != 7 && (insn & 0xFFF101FF) == 0xEA50010D;
+}
+
+static inline bool is_insn_sqrshrl(uint32_t insn)
+{
+    /* RdaHi == '111' is related encoding */
+    uint32_t rdahi = extract32(insn, 9, 3);
+    return rdahi != 7 && (insn & 0xFFF1017F) == 0xEA51012D;
+}
+
+static inline bool is_insn_uqrshll(uint32_t insn)
+{
+    /* RdaHi == '111' is related encoding */
+    uint32_t rdahi = extract32(insn, 9, 3);
+    return rdahi != 7 && (insn & 0xFFF1017F) == 0xEA51010D;
+}
+
 static inline bool is_insn_vrmlaldavh(uint32_t insn)
 {
     /* RdaHi == '11x' is related encoding */
@@ -1786,6 +1822,14 @@ static void extract_mve_sh_i(DisasContext *context, arg_mve_sh_i *args, uint32_t
 static void extract_mve_shl_ri(DisasContext *context, arg_mve_shl_ri *args, uint32_t instruction)
 {
     args->shim = deposit32(extract32(instruction, 6, 2), 2, 30, extract32(instruction, 12, 3));
+    args->rdalo = times_2(context, extract32(instruction, 17, 3));
+    args->rdahi = times_2_plus_1(context, extract32(instruction, 9, 3));
+}
+
+/* Extract arguments of long (64-bit) shifts by register */
+static void extract_mve_shl_rr(DisasContext *context, arg_mve_shl_rr *args, uint32_t instruction)
+{
+    args->rm = extract32(instruction, 12, 4);
     args->rdalo = times_2(context, extract32(instruction, 17, 3));
     args->rdahi = times_2_plus_1(context, extract32(instruction, 9, 3));
 }

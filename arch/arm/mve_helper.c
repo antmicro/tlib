@@ -2562,6 +2562,16 @@ uint32_t HELPER(mve_uqshl)(CPUState *env, uint32_t n, uint32_t shift)
     return do_uqrshl_bhs(n, (int8_t)shift, 32, false, &env->QF);
 }
 
+uint64_t HELPER(mve_sshrl)(CPUState *env, uint64_t n, uint32_t shift)
+{
+    return do_sqrshl_d(n, -(int8_t)shift, false, NULL);
+}
+
+uint64_t HELPER(mve_ushll)(CPUState *env, uint64_t n, uint32_t shift)
+{
+    return do_uqrshl_d(n, (int8_t)shift, false, NULL);
+}
+
 uint64_t HELPER(mve_sqshll)(CPUState *env, uint64_t n, uint32_t shift)
 {
     return do_sqrshl_d(n, (int8_t)shift, false, &env->QF);
@@ -2570,6 +2580,92 @@ uint64_t HELPER(mve_sqshll)(CPUState *env, uint64_t n, uint32_t shift)
 uint64_t HELPER(mve_uqshll)(CPUState *env, uint64_t n, uint32_t shift)
 {
     return do_uqrshl_d(n, (int8_t)shift, false, &env->QF);
+}
+
+uint64_t HELPER(mve_sqrshrl)(CPUState *env, uint64_t n, uint32_t shift)
+{
+    return do_sqrshl_d(n, -(int8_t)shift, true, &env->QF);
+}
+
+uint64_t HELPER(mve_uqrshll)(CPUState *env, uint64_t n, uint32_t shift)
+{
+    return do_uqrshl_d(n, (int8_t)shift, true, &env->QF);
+}
+
+/* Operate on 64-bit values, but saturate at 48 bits */
+static inline int64_t do_sqrshl48_d(int64_t src, int64_t shift, bool round, uint32_t *sat)
+{
+    int64_t val, extval;
+
+    if(shift <= -48) {
+        /* Rounding the sign bit always produces 0. */
+        if(round) {
+            return 0;
+        }
+        return src >> 63;
+    } else if(shift < 0) {
+        if(round) {
+            src >>= -shift - 1;
+            val = (src >> 1) + (src & 1);
+        } else {
+            val = src >> -shift;
+        }
+        extval = sextract64(val, 0, 48);
+        if(!sat || val == extval) {
+            return extval;
+        }
+    } else if(shift < 48) {
+        extval = sextract64(src << shift, 0, 48);
+        if(!sat || src == (extval >> shift)) {
+            return extval;
+        }
+    } else if(!sat || src == 0) {
+        return 0;
+    }
+
+    *sat = 1;
+    return src >= 0 ? MAKE_64BIT_MASK(0, 47) : MAKE_64BIT_MASK(47, 17);
+}
+
+/* Operate on 64-bit values, but saturate at 48 bits */
+static inline uint64_t do_uqrshl48_d(uint64_t src, int64_t shift, bool round, uint32_t *sat)
+{
+    uint64_t val, extval;
+
+    if(shift <= -(48 + round)) {
+        return 0;
+    } else if(shift < 0) {
+        if(round) {
+            val = src >> (-shift - 1);
+            val = (val >> 1) + (val & 1);
+        } else {
+            val = src >> -shift;
+        }
+        extval = extract64(val, 0, 48);
+        if(!sat || val == extval) {
+            return extval;
+        }
+    } else if(shift < 48) {
+        extval = extract64(src << shift, 0, 48);
+        if(!sat || src == (extval >> shift)) {
+            return extval;
+        }
+    } else if(!sat || src == 0) {
+        return 0;
+    }
+
+    *sat = 1;
+    return MAKE_64BIT_MASK(0, 48);
+}
+
+uint64_t HELPER(mve_sqrshrl48)(CPUState *env, uint64_t n, uint32_t shift)
+{
+    return do_sqrshl48_d(n, -(int8_t)shift, true, &env->QF);
+}
+
+uint64_t HELPER(mve_uqrshll48)(CPUState *env, uint64_t n, uint32_t shift)
+{
+    return do_uqrshl48_d(n, (int8_t)shift, true, &env->QF);
 }
 
 #define DO_VFMA(OP, ESIZE, TYPE, CHS)                                            \
