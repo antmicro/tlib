@@ -9925,6 +9925,18 @@ static bool do_mve_sh_i(DisasContext *s, arg_mve_sh_i *arg, MVEShiftImmFn *fn)
     return TRANS_STATUS_SUCCESS;
 }
 
+static int do_mve_sh_rr(DisasContext *s, arg_mve_sh_rr *a, MVEShiftFn *fn)
+{
+    if(!ENABLE_ARCH_MVE || a->rda == 13 || a->rda == 15 || a->rm == 13 || a->rm == 15 || a->rm == a->rda) {
+        /* These rda/rm cases are UNPREDICTABLE; we choose to UNDEF */
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+
+    /* The helper takes care of the sign-extension of the low 8 bits of Rm */
+    fn(cpu_R[a->rda], cpu_env, cpu_R[a->rda], cpu_R[a->rm]);
+    return TRANS_STATUS_SUCCESS;
+}
+
 /*
  * v8.1M MVE wide-shifts
  */
@@ -12924,6 +12936,18 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                             extract_mve_shl_ri(s, &args, insn);
                             return do_mve_shl_ri(s, &args, gen_urshr64_i64);
                         }
+                        if(is_insn_sqrshr_reg(insn)) {
+                            ARCH(MVE);
+                            arg_mve_sh_rr args;
+                            extract_mve_sh_rr(s, &args, insn);
+                            return do_mve_sh_rr(s, &args, gen_helper_mve_sqrshr);
+                        }
+                        if(is_insn_uqrshl_reg(insn)) {
+                            ARCH(MVE);
+                            arg_mve_sh_rr args;
+                            extract_mve_sh_rr(s, &args, insn);
+                            return do_mve_sh_rr(s, &args, gen_helper_mve_uqrshl);
+                        }
                         if(is_insn_asrl_reg(insn)) {
                             ARCH(MVE);
                             arg_mve_shl_rr args;
@@ -12960,9 +12984,6 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                         }
                     }
 #endif
-
-                    //  TODO: The following ARMv8.1-M MVE extension instructions should be handled here:
-                    //  SRSHR, URSHR, SQRSHR, UQRSHL
                     goto illegal_op;
                 }
             } else {

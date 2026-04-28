@@ -40,6 +40,7 @@ typedef void MVEGenDualAccOpFn(TCGv_i32, TCGv_ptr, TCGv_ptr, TCGv_ptr, TCGv_i32)
 typedef void MVEWideShiftImmFn(TCGv_i64, TCGv_i64, int64_t shift);
 typedef void MVEWideShiftFn(TCGv_i64, TCGv_ptr, TCGv_i64, TCGv_i32);
 typedef void MVEShiftImmFn(TCGv_i32, TCGv_i32, int32_t shift);
+typedef void MVEShiftFn(TCGv_i32, TCGv_ptr, TCGv_i32, TCGv_i32);
 
 /* Note that the gvec expanders operate on offsets + sizes.  */
 typedef void GVecGen3Fn(unsigned, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
@@ -272,6 +273,12 @@ typedef struct {
     int rda;   //  Register containing the value to be shifted
     int shim;  //  The number of bits to shift by, in the range 1-32.
 } arg_mve_sh_i;
+
+/* Shift by register */
+typedef struct {
+    int rda;  //  Register containing the value to be shifted
+    int rm;   //  Register containing the value to shift by
+} arg_mve_sh_rr;
 
 /* Arguments of long (64-bit) shifts by immediate (1-32) */
 typedef struct {
@@ -1227,6 +1234,16 @@ static inline bool is_insn_urshr_imm(uint32_t insn)
     return (insn & 0xFFF08F3F) == 0xEA500F1F;
 }
 
+static inline bool is_insn_sqrshr_reg(uint32_t insn)
+{
+    return (insn & 0xFFF00FFF) == 0xEA500F2D;
+}
+
+static inline bool is_insn_uqrshl_reg(uint32_t insn)
+{
+    return (insn & 0xFFF00FFF) == 0xEA500F0D;
+}
+
 static inline bool is_insn_asrl_reg(uint32_t insn)
 {
     /* RdaHi == '111' is related encoding */
@@ -1833,6 +1850,13 @@ static void extract_mve_sh_i(DisasContext *context, arg_mve_sh_i *args, uint32_t
 {
     args->rda = extract32(instruction, 16, 4);
     args->shim = deposit32(extract32(instruction, 6, 2), 2, 30, extract32(instruction, 12, 3));
+}
+
+/* Extract arguments of shifts by register */
+static void extract_mve_sh_rr(DisasContext *context, arg_mve_sh_rr *args, uint32_t instruction)
+{
+    args->rda = extract32(instruction, 16, 4);
+    args->rm = extract32(instruction, 12, 4);
 }
 
 /* Extract arguments of long (64-bit) shifts by immediate (1-32) */

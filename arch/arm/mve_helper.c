@@ -2583,6 +2583,16 @@ uint32_t HELPER(mve_uqshl)(CPUState *env, uint32_t n, uint32_t shift)
     return do_uqrshl_bhs(n, (int8_t)shift, 32, false, &env->QF);
 }
 
+uint32_t HELPER(mve_sqrshr)(CPUState *env, uint32_t n, uint32_t shift)
+{
+    return do_sqrshl_bhs(n, -(int8_t)shift, 32, true, &env->QF);
+}
+
+uint32_t HELPER(mve_uqrshl)(CPUState *env, uint32_t n, uint32_t shift)
+{
+    return do_uqrshl_bhs(n, (int8_t)shift, 32, true, &env->QF);
+}
+
 uint64_t HELPER(mve_sshrl)(CPUState *env, uint64_t n, uint32_t shift)
 {
     return do_sqrshl_d(n, -(int8_t)shift, false, NULL);
