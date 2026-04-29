@@ -10921,6 +10921,9 @@ DO_TRANS_2OP_SCALAR(vqrdmlash, vqrdmlash)
 
 DO_TRANS_2OP_SCALAR(vbrsr, vbrsr)
 
+DO_TRANS_2OP_SCALAR(vmla, vmla)
+DO_TRANS_2OP_SCALAR(vmlas, vmlas)
+
 #undef DO_TRANS_2OP_FP_SCALAR
 #undef DO_TRANS_2OP_FP
 #undef DO_TRANS_2OP_SCALAR
@@ -11926,21 +11929,6 @@ static bool trans_vmov_between_gp_vec(DisasContext *s, arg_vmov_gp *a, bool from
     mve_update_and_store_eci(s);
     return TRANS_STATUS_SUCCESS;
 }
-
-#define DO_2OP_SCALAR(INSN, FN)                               \
-    static bool trans_##INSN(DisasContext *s, arg_2scalar *a) \
-    {                                                         \
-        static MVEGenTwoOpScalarFn *const fns[] = {           \
-            gen_helper_mve_##FN##b,                           \
-            gen_helper_mve_##FN##h,                           \
-            gen_helper_mve_##FN##w,                           \
-            NULL,                                             \
-        };                                                    \
-        return do_2op_scalar(s, a, fns[a->size]);             \
-    }
-
-DO_2OP_SCALAR(vmla, vmla)
-DO_2OP_SCALAR(vmlas, vmlas)
 
 static bool mve_skip_first_beat(DisasContext *s)
 {
