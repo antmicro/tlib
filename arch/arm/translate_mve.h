@@ -64,6 +64,20 @@ typedef struct {
     int p;
 } arg_vldr_vstr_sysreg;
 
+/* Arguments for VLSTM/VLLDM instructions */
+typedef struct {
+    bool low_regs_only;
+    bool is_vlldm;
+    int rn;
+} arg_vlstm_vlldm;
+
+/* Arguments for VSCCLRM instruction */
+typedef struct {
+    int vd;
+    int imm;
+    int size;
+} arg_vscclrm;
+
 /*
  * Arguments of stores/loads:
  * VSTRB, VSTRH, VSTRW, VLDRB, VLDRH, VLDRW
@@ -385,6 +399,18 @@ void gen_mve_vst20w(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vst21w(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 
 void gen_mve_vpst(DisasContext *s, uint32_t mask);
+
+static inline bool is_insn_vlstm_vlldm(uint32_t insn)
+{
+    return (insn & 0xFFE0FF7F) == 0xEC200A00;
+}
+
+static inline bool is_insn_vscclrm(uint32_t insn)
+{
+    /* First bit of the instruction has to be 0 for T1 */
+    bool t1_check = extract32(insn, 8, 1) == 0 || extract32(insn, 0, 1) == 0;
+    return t1_check && (insn & 0xFFBF0E00) == 0xEC9F0A00;
+}
 
 static inline bool is_insn_vmsr_vmrs(uint32_t insn)
 {
@@ -1452,6 +1478,32 @@ static inline bool is_insn_vshrn(uint32_t insn)
 static inline bool is_insn_vrshrn(uint32_t insn)
 {
     return (insn & 0xFFA00FD1) == 0xFE800FC1;
+}
+
+static void mve_extract_vlstm_vlldm(arg_vlstm_vlldm *a, uint32_t insn)
+{
+    a->low_regs_only = !extract32(insn, 7, 1);
+    a->is_vlldm = !!extract32(insn, 20, 1);
+    a->rn = extract32(insn, 16, 4);
+}
+
+static void mve_extract_vscclrm(arg_vscclrm *a, uint32_t insn)
+{
+    if(extract32(insn, 8, 1)) {
+        a->size = DOUBLE_PRECISION;
+    } else {
+        a->size = SINGLE_PRECISION;
+    }
+
+    uint32_t vd = extract32(insn, 12, 4);
+    uint32_t d = extract32(insn, 22, 1);
+    if(a->size == DOUBLE_PRECISION) {
+        a->vd = deposit32(vd, 4, 1, d);
+        a->imm = extract32(insn, 1, 7);
+    } else {
+        a->vd = deposit32(d, 1, 4, vd);
+        a->imm = extract32(insn, 0, 8);
+    }
 }
 
 static void mve_extract_vmsr_vmrs(arg_vmsr_vmrs *a, uint32_t insn)

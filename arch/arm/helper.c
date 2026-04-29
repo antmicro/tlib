@@ -932,6 +932,23 @@ static void switch_v7m_sp(CPUState *env, bool process)
     }
 }
 
+static void invalidate_vfp_regs(CPUState *env, bool should_clear, bool do_callee)
+{
+    if(!should_clear) {
+        /* Registers are UNKNOWN if should_clear is false, we decide to just not clear them */
+        return;
+    }
+
+    const int value = 0;
+
+    memset(env->vfp.regs, value, 16 * sizeof(env->vfp.regs[0]));
+    if(do_callee) {
+        memset(env->vfp.regs + 16, value, 16 * sizeof(env->vfp.regs[0]));
+    }
+    vfp_set_fpscr(env, value);
+    env->v7m.vpr = value;
+}
+
 static void switch_v7m_security_state(CPUState *env, bool secure)
 {
     if(secure == env->secure) {
@@ -4314,8 +4331,8 @@ static inline bool vlstm_store_helper(CPUState *env, uint32_t *address, uint64_t
     target_ulong page_size = 0;
     int prot = 0;
 
-    int ret = get_phys_addr(env, *address, !!(fpccr_read(env, true) & ARM_FPCCR_S_MASK), ACCESS_DATA_STORE,
-                            !in_privileged_mode(env), &phys_ptr, &prot, &page_size, false);
+    int ret = get_phys_addr(env, *address, env->secure, ACCESS_DATA_STORE, !in_privileged_mode(env), &phys_ptr, &prot, &page_size,
+                            false);
     if(ret == TRANSLATE_SUCCESS) {
         stq_phys(*address, val);
         *address += sizeof(val);
@@ -4331,8 +4348,8 @@ static inline bool vlldm_load_helper(CPUState *env, uint32_t *address, uint64_t 
     target_ulong page_size = 0;
     int prot = 0;
 
-    int ret = get_phys_addr(env, *address, !!(fpccr_read(env, true) & ARM_FPCCR_S_MASK), ACCESS_DATA_LOAD,
-                            !in_privileged_mode(env), &phys_ptr, &prot, &page_size, false);
+    int ret = get_phys_addr(env, *address, env->secure, ACCESS_DATA_LOAD, !in_privileged_mode(env), &phys_ptr, &prot, &page_size,
+                            false);
     if(ret == TRANSLATE_SUCCESS) {
         *val = ldq_phys(*address);
         *address += sizeof(*val);
@@ -4342,7 +4359,7 @@ static inline bool vlldm_load_helper(CPUState *env, uint32_t *address, uint64_t 
     }
 }
 
-void HELPER(v8m_vlstm)(CPUState *env, uint32_t rn, uint32_t low_regs_only)
+void HELPER(v8m_vlstm)(CPUState *env, uint32_t address)
 {
     /* Instruction is UNDEF in Non-secure state - helper should not be called */
     tlib_assert(env->secure);
@@ -4364,7 +4381,6 @@ void HELPER(v8m_vlstm)(CPUState *env, uint32_t rn, uint32_t low_regs_only)
         cpu_loop_exit_restore(env, insn_pc, true);
     }
 
-    uint32_t address = env->regs[rn];
     if((env->v7m.fpccr[M_REG_COMMON] & ARM_FPCCR_LSPEN_MASK) > 0) {
         /* If Lazy preservation is enabled, just update the FPCCR and FPCAR
          * Low three bits are RES0 */
@@ -4379,14 +4395,17 @@ void HELPER(v8m_vlstm)(CPUState *env, uint32_t rn, uint32_t low_regs_only)
         for(int i = 0; i < 8; ++i) {
             any_failed |= !vlstm_store_helper(env, &address, env->vfp.regs[i]);
         }
-        any_failed |= !vlstm_store_helper(env, &address, vfp_get_fpscr(env));
 
+        /* Pack fpscr and vpr into single 64 bit long value */
+        uint64_t fpscr_vpr;
         if(arm_feature(env, ARM_FEATURE_MVE)) {
-            any_failed |= !vlstm_store_helper(env, &address, env->v7m.vpr);
+            fpscr_vpr = env->v7m.vpr;
         } else {
             /* Write UNKNOWN if MVE is not implemented */
-            any_failed |= !vlstm_store_helper(env, &address, 0xBADCAFEE);
+            fpscr_vpr = 0xBADCAFFE;
         }
+        fpscr_vpr = (fpscr_vpr << 32) | vfp_get_fpscr(env);
+        any_failed |= !vlstm_store_helper(env, &address, fpscr_vpr);
 
         bool push_callee_frame = (env->v7m.fpccr[M_REG_COMMON] & ARM_FPCCR_TS_MASK) > 0;
         if(push_callee_frame) {
@@ -4395,11 +4414,7 @@ void HELPER(v8m_vlstm)(CPUState *env, uint32_t rn, uint32_t low_regs_only)
             }
         }
 
-        memset(env->vfp.regs, 0, 16 * sizeof(env->vfp.regs[0]));
-        if(push_callee_frame) {
-            memset(env->vfp.regs + 16, 0, 16 * sizeof(env->vfp.regs[0]));
-        }
-        vfp_set_fpscr(env, 0);
+        invalidate_vfp_regs(env, push_callee_frame, push_callee_frame);
 
         if(any_failed) {
             env->v7m.secure_fault_address = insn_pc;
@@ -4411,7 +4426,7 @@ void HELPER(v8m_vlstm)(CPUState *env, uint32_t rn, uint32_t low_regs_only)
     env->v7m.control[M_REG_COMMON] &= ~ARM_CONTROL_FPCA_MASK;
 }
 
-void HELPER(v8m_vlldm)(CPUState *env, uint32_t rn, uint32_t low_regs_only)
+void HELPER(v8m_vlldm)(CPUState *env, uint32_t address)
 {
     /* Instruction is UNDEF in Non-secure state - helper should not be called */
     tlib_assert(env->secure);
@@ -4427,20 +4442,18 @@ void HELPER(v8m_vlldm)(CPUState *env, uint32_t rn, uint32_t low_regs_only)
         /* The state is still active, doesn't need to be restored. So do nothing at all */
         env->v7m.fpccr[M_REG_S] &= ~ARM_FPCCR_LSPACT_MASK;
     } else {
-        uint32_t address = env->regs[rn];
-
         uint64_t scratch = 0;
         bool any_failed = false;
         for(int i = 0; i < 8; ++i) {
             any_failed |= !vlldm_load_helper(env, &address, &scratch);
             env->vfp.regs[i] = scratch;
         }
+        /* Unpack fpscr and vpr from one 64-bit value */
         any_failed |= !vlldm_load_helper(env, &address, &scratch);
-        vfp_set_fpscr(env, scratch);
-        /* No MVE, these we can ignore */
-        any_failed |= !vlldm_load_helper(env, &address, &scratch);
-
-        if((env->v7m.fpccr[M_REG_COMMON] & ARM_FPCCR_TS_MASK) > 0) {
+        vfp_set_fpscr(env, extract64(scratch, 0, 32));
+        env->v7m.vpr = extract64(scratch, 32, 32);
+        bool pop_callee_frame = (env->v7m.fpccr[M_REG_COMMON] & ARM_FPCCR_TS_MASK) > 0;
+        if(pop_callee_frame) {
             for(int i = 8; i < 16; ++i) {
                 any_failed |= !vlldm_load_helper(env, &address, &scratch);
                 env->vfp.regs[i] = scratch;
@@ -4449,6 +4462,7 @@ void HELPER(v8m_vlldm)(CPUState *env, uint32_t rn, uint32_t low_regs_only)
 
         if(any_failed) {
             /* This is Thumb2 instruction, PC needs to be subtracted, since it'll point to next half of insn */
+            invalidate_vfp_regs(env, true, pop_callee_frame);
             const uint32_t insn_pc = env->regs[15] - 2;
             env->v7m.secure_fault_address = insn_pc;
             env->v7m.secure_fault_status |= SECURE_FAULT_AUVIOL | SECURE_FAULT_SFARVALID;

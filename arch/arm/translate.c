@@ -4213,53 +4213,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
                     rd = VFP_SREG_D(insn);
                 }
 
-                if(rn == 0xf && (insn & 0x1B00000) == 0x900000 && (insn & 0xE00) == 0xA00) {
-#ifdef TARGET_PROTO_ARM_M
-                    /* VSCCLRM T1/T2 encodings */
-                    ARCH(8_1M);
-                    if(s->ns) {
-                        goto illegal_op;
-                    }
-
-                    /* T1 encoding */
-                    int reg_count = insn & 0xFF;
-                    int first_reg = 0;
-
-                    if(precision == DOUBLE_PRECISION) {
-                        reg_count >>= 1;
-                        first_reg = (insn >> 18) | ((insn >> 12) & 0xf);
-                    } else {
-                        first_reg = ((insn >> 11) & 0x1e) | ((insn >> 22) & 1);
-                    }
-
-                    TCGv_i64 zero;
-                    if(precision == DOUBLE_PRECISION) {
-                        zero = tcg_const_i64(0);
-                    } else {
-                        zero = tcg_const_i32(0);
-                    }
-                    for(int i = 0; i < reg_count; ++i) {
-                        int currentReg = i + first_reg;
-                        if(precision == DOUBLE_PRECISION) {
-                            tcg_gen_st_i64(zero, cpu_env, vfp_reg_offset(precision, currentReg));
-                        } else {
-                            tcg_gen_st_i32(zero, cpu_env, vfp_reg_offset(precision, currentReg));
-                        }
-                    }
-                    if(precision == DOUBLE_PRECISION) {
-                        tcg_temp_free_i64(zero);
-                    } else {
-                        tcg_temp_free_i32(zero);
-                    }
-
-                    /* Clear VPR */
-                    TCGv_i32 vpr_zeroed = tcg_const_i32(0);
-                    tcg_gen_st_i32(vpr_zeroed, cpu_env, load_cpu_field(v7m.vpr));
-                    tcg_temp_free_i32(vpr_zeroed);
-#else
-                    goto illegal_op;
-#endif
-                } else if((insn & 0x01200000) == 0x01000000) {
+                if((insn & 0x01200000) == 0x01000000) {
                     /* Single load/store */
                     offset = (insn & 0xff);
                     if(precision == HALF_PRECISION) {
@@ -4359,7 +4313,6 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
             break;
         default:
             /* Should never happen.  */
-        illegal_op:
             return 1;
     }
     return 0;
@@ -10796,6 +10749,86 @@ static int trans_vldr_sysreg(DisasContext *s, arg_vldr_vstr_sysreg *a)
     return gen_M_fp_sysreg_write(s, a->reg, memory_to_fp_sysreg, a);
 }
 
+static int trans_vlstm_vlldm(DisasContext *s, arg_vlstm_vlldm *a)
+{
+    if(s->ns) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+
+    if(!a->low_regs_only) {
+        if(!(arm_feature(env, ARM_FEATURE_V8_1M))) {
+            return TRANS_STATUS_ILLEGAL_INSN;
+        }
+    }
+
+    /* Sync PC to restore instruction count if an exception is raised at runtime in the helper */
+    gen_sync_pc(s);
+    TCGv_i32 rn = load_reg(s, a->rn);
+    if(a->is_vlldm) {
+        gen_helper_v8m_vlldm(cpu_env, rn);
+    } else {
+        gen_helper_v8m_vlstm(cpu_env, rn);
+    }
+    tcg_temp_free_i32(rn);
+
+    return TRANS_STATUS_SUCCESS;
+}
+
+static int trans_vscclrm(DisasContext *s, arg_vscclrm *a)
+{
+    if(s->ns) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+
+    if(!(arm_feature(env, ARM_FEATURE_MVE) || arm_feature(env, ARM_FEATURE_VFP5))) {
+        /* Treat as NOP if MVE nor FPU is not implemented */
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    gen_helper_fp_lsp(cpu_env);
+
+    /* T1 encoding */
+    uint32_t first_reg = a->vd;
+    uint32_t last_reg = first_reg + a->imm - 1;
+
+    if(a->size == DOUBLE_PRECISION) {
+        if(last_reg > 15) {
+            tlib_abort("We don't support more than 16 double floating point registers for Cortex-M");
+        }
+    } else {
+        if(last_reg > 31) {
+            tlib_abort("We don't support more than 32 single floating point registers for Cortex-M");
+        }
+    }
+
+    TCGv_i64 zero;
+
+    if(a->size == DOUBLE_PRECISION) {
+        zero = tcg_const_i64(0);
+    } else {
+        zero = tcg_const_i32(0);
+    }
+
+    for(uint32_t i = first_reg; i <= last_reg; ++i) {
+        if(a->size == DOUBLE_PRECISION) {
+            tcg_gen_st_i64(zero, cpu_env, vfp_reg_offset(a->size, i));
+        } else {
+            tcg_gen_st_i32(zero, cpu_env, vfp_reg_offset(a->size, i));
+        }
+    }
+
+    if(a->size == DOUBLE_PRECISION) {
+        tcg_temp_free_i64(zero);
+    } else {
+        tcg_temp_free_i32(zero);
+    }
+
+    /* Clear VPR */
+    store_cpu_field(tcg_const_i32(0), v7m.vpr);
+
+    return TRANS_STATUS_SUCCESS;
+}
+
 static bool do_2shift_vec(DisasContext *s, arg_2shift *a, MVEGenTwoOpShiftFn fn, bool negateshift, GVecGen2iFn vecfn)
 {
     TCGv_ptr qd, qm;
@@ -12480,7 +12513,6 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
     TCGv addr;
     TCGv_i64 tmp64;
     int op;
-    int op1, op4;
     int sz;
     int shiftop;
     int conds;
@@ -13412,9 +13444,6 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                7, 15 are MCR/MRC T1,T2
              */
 
-            op1 = (insn >> 21) & 0xf;
-            op4 = (insn >> 6) & 0x7;
-
 #ifdef TARGET_PROTO_ARM_M
             if(is_insn_vmsr_vmrs(insn)) {
                 arg_vmsr_vmrs a;
@@ -13433,6 +13462,20 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                         return trans_vstr_sysreg(s, &a);
                     }
                 }
+                if(is_insn_vlstm_vlldm(insn)) {
+                    arg_vlstm_vlldm a;
+                    mve_extract_vlstm_vlldm(&a, insn);
+                    return trans_vlstm_vlldm(s, &a);
+                }
+                if(is_insn_vscclrm(insn)) {
+                    ARCH(8_1M);
+                    arg_vscclrm a;
+                    mve_extract_vscclrm(&a, insn);
+                    return trans_vscclrm(s, &a);
+                }
+
+                /* TODO: Check access to coprocessor */
+
                 if(is_insn_vld4(insn)) {
                     ARCH(MVE);
                     arg_vldst_il a;
@@ -14947,28 +14990,6 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                 if(disas_neon_data_insn(env, s, insn)) {
                     goto illegal_op;
                 }
-            } else if(((insn >> 25) & 0xf) == 0b0110 && (op1 & 0b1101) == 0b0001 && (op4 >> 2) == 0) {
-#ifdef TARGET_PROTO_ARM_M
-                /* VLSTM, VLLDM */
-                ARCH(8);
-                if(s->ns) {
-                    goto illegal_op;
-                }
-                bool low_regs_only = ((insn >> 7) & 1) == 0;
-                if(!low_regs_only) {
-                    ARCH(8_1M);
-                }
-                /* Sync PC to restore instruction count if an exceptcion is raised at runtime in the helper */
-                int op2 = (insn >> 20) & 1;
-                gen_sync_pc(s);
-                if(op2 == 0) {
-                    gen_helper_v8m_vlstm(cpu_env, rn, low_regs_only);
-                } else {
-                    gen_helper_v8m_vlldm(cpu_env, rn, low_regs_only);
-                }
-#else
-                goto illegal_op;
-#endif
             } else {
                 gen_set_pc(current_pc);
 
