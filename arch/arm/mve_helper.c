@@ -24,6 +24,7 @@
 #include "common.h"
 #include "vec_common.h"
 #include "softfloat-2.h"
+#include "host-utils.h"
 
 #define DO_ADD(N, M) ((N) + (M))
 #define DO_SUB(N, M) ((N) - (M))
@@ -385,6 +386,26 @@ DO_2OP_SCALAR_S(vhadds_scalar, do_vhadd_s)
 DO_2OP_SCALAR_U(vhaddu_scalar, do_vhadd_u)
 DO_2OP_SCALAR_S(vhsubs_scalar, do_vhsub_s)
 DO_2OP_SCALAR_U(vhsubu_scalar, do_vhsub_u)
+
+#define DO_VBRSR(width, bits)                                      \
+    static inline uint32_t do_vbrsr##width(uint32_t n, uint32_t m) \
+    {                                                              \
+        m &= 0xff;                                                 \
+        if(m == 0)                                                 \
+            return 0;                                              \
+        n = revbit##bits(n);                                       \
+        if(m < (bits))                                             \
+            n >>= (bits) - m;                                      \
+        return n;                                                  \
+    }
+
+DO_VBRSR(b, 8)
+DO_VBRSR(h, 16)
+DO_VBRSR(w, 32)
+
+DO_2OP_SCALAR(vbrsrb, 1, uint8_t, do_vbrsrb)
+DO_2OP_SCALAR(vbrsrh, 2, uint16_t, do_vbrsrh)
+DO_2OP_SCALAR(vbrsrw, 4, uint32_t, do_vbrsrw)
 
 /*
  * Polynomial multiply. We can always do this generating 64 bits

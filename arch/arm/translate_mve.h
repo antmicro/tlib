@@ -1384,6 +1384,13 @@ static inline bool is_insn_vqshrun(uint32_t insn)
     return (insn & 0xFFA00FD1) == 0xEE800FC0;
 }
 
+static inline bool is_insn_vbrsr(uint32_t insn)
+{
+    /* size == 3 is related encoding */
+    uint32_t size = extract32(insn, 20, 2);
+    return size != 3 && (insn & 0xFF811F70) == 0xFE011E60;
+}
+
 static void mve_extract_vmsr_vmrs(arg_vmsr_vmrs *a, uint32_t insn)
 {
     a->rt = extract32(insn, 12, 4);
