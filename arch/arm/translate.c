@@ -119,6 +119,16 @@ void gen_sync_pc(DisasContext *dc)
     gen_set_pc(dc->base.pc);
 }
 
+/* Generate a label used for skipping this instruction */
+int gen_condlabel(DisasContext *s)
+{
+    if(!s->condjmp) {
+        s->condlabel = gen_new_label();
+        s->condjmp = 1;
+    }
+    return s->condlabel;
+}
+
 /* Set a variable to the value of a CPU register.  */
 static void load_reg_var(DisasContext *s, TCGv var, int reg)
 {
@@ -10761,6 +10771,18 @@ static int trans_vlstm_vlldm(DisasContext *s, arg_vlstm_vlldm *a)
         }
     }
 
+    /* If CONTROL_S.SFPA == 0 then treat this instruction as NOP */
+    TCGv_i32 sfpa = load_cpu_field(v7m.control[M_REG_COMMON]);
+    tcg_gen_andi_i32(sfpa, sfpa, FIELD_MASK(V7M_CONTROL, SFPA));
+    /* Skip instruction if needed */
+    tcg_gen_brcondi_i32(TCG_COND_EQ, sfpa, 0, gen_condlabel(s));
+    tcg_temp_free_i32(sfpa);
+
+    if(!s->vfp_enabled) {
+        gen_exception_insn(s, 4, EXCP_NOCP);
+        return TRANS_STATUS_SUCCESS;
+    }
+
     /* Sync PC to restore instruction count if an exception is raised at runtime in the helper */
     gen_sync_pc(s);
     TCGv_i32 rn = load_reg(s, a->rn);
@@ -10780,8 +10802,30 @@ static int trans_vscclrm(DisasContext *s, arg_vscclrm *a)
         return TRANS_STATUS_ILLEGAL_INSN;
     }
 
-    if(!(arm_feature(env, ARM_FEATURE_MVE) || arm_feature(env, ARM_FEATURE_VFP5))) {
-        /* Treat as NOP if MVE nor FPU is not implemented */
+    if(!(arm_feature(env, ARM_FEATURE_MVE) || arm_feature(env, ARM_FEATURE_VFP))) {
+        /* Treat as NOP if neither MVE nor FPU is implemented */
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    /*
+     * If FPCCR.ASPEN != 0 && CONTROL_S.SFPA == 0 then there is no
+     * active floating point context so we must NOP (without doing
+     * any lazy state preservation or the NOCP check).
+     */
+    TCGv_i32 aspen = load_cpu_field(v7m.fpccr[M_REG_S]);
+    TCGv_i32 sfpa = load_cpu_field(v7m.control[M_REG_COMMON]);
+    tcg_gen_andi_i32(aspen, aspen, FIELD_MASK(V7M_FPCCR, ASPEN));
+    tcg_gen_xori_i32(aspen, aspen, FIELD_MASK(V7M_FPCCR, ASPEN)); /* Inverts the check */
+    tcg_gen_andi_i32(sfpa, sfpa, FIELD_MASK(V7M_CONTROL, SFPA));
+    tcg_gen_or_i32(sfpa, sfpa, aspen);
+
+    /* Skip instruction if needed */
+    tcg_gen_brcondi_i32(TCG_COND_EQ, sfpa, 0, gen_condlabel(s));
+    tcg_temp_free_i32(aspen);
+    tcg_temp_free_i32(sfpa);
+
+    if(!s->vfp_enabled) {
+        gen_exception_insn(s, 4, EXCP_NOCP);
         return TRANS_STATUS_SUCCESS;
     }
 

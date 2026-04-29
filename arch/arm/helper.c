@@ -4364,10 +4364,6 @@ void HELPER(v8m_vlstm)(CPUState *env, uint32_t address)
     /* Instruction is UNDEF in Non-secure state - helper should not be called */
     tlib_assert(env->secure);
 
-    if((env->v7m.control[M_REG_COMMON] & ARM_CONTROL_SFPA_MASK) == 0) {
-        /* Secure FPU disabled; this bit is not banked, SS doesn't matter when reading */
-        return;
-    }
     /* This is a Thumb2 instruction, PC needs to be subtracted, since it points to next half of insn
      * the PC was synced before calling this helper */
     const uint32_t insn_pc = env->regs[15] - 2;
@@ -4430,12 +4426,6 @@ void HELPER(v8m_vlldm)(CPUState *env, uint32_t address)
 {
     /* Instruction is UNDEF in Non-secure state - helper should not be called */
     tlib_assert(env->secure);
-    tlib_assert(sizeof(env->vfp.regs[0]) <= sizeof(uint64_t));
-
-    if((env->v7m.control[M_REG_COMMON] & ARM_CONTROL_SFPA_MASK) == 0) {
-        /* Secure FPU disabled; this bit is not banked, SS doesn't matter when reading */
-        return;
-    }
 
     /* Do writes and reads directly on FPCCR is risky, but we know what we are doing */
     if((env->v7m.fpccr[M_REG_S] & ARM_FPCCR_LSPACT_MASK) > 0) {
