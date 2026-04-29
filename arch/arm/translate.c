@@ -12834,71 +12834,73 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     gen_set_label(end_label);
                 } else {
 #ifdef TARGET_PROTO_ARM_M
-                    if(is_insn_asrl_imm(insn)) {
-                        ARCH(MVE);
-                        arg_mve_shl_ri args;
-                        extract_mve_shl_ri(s, &args, insn);
-                        return do_mve_shl_ri(s, &args, tcg_gen_sari_i64);
-                    }
-                    if(is_insn_lsll_imm(insn)) {
-                        ARCH(MVE);
-                        arg_mve_shl_ri args;
-                        extract_mve_shl_ri(s, &args, insn);
-                        return do_mve_shl_ri(s, &args, tcg_gen_shli_i64);
-                    }
-                    if(is_insn_lsrl_imm(insn)) {
-                        ARCH(MVE);
-                        arg_mve_shl_ri args;
-                        extract_mve_shl_ri(s, &args, insn);
-                        return do_mve_shl_ri(s, &args, tcg_gen_shri_i64);
-                    }
-                    if(is_insn_sqshl_imm(insn)) {
-                        ARCH(MVE);
-                        arg_mve_sh_i args;
-                        extract_mve_sh_i(s, &args, insn);
-                        return do_mve_sh_i(s, &args, gen_mve_sqshl);
-                    }
-                    if(is_insn_uqshl_imm(insn)) {
-                        ARCH(MVE);
-                        arg_mve_sh_i args;
-                        extract_mve_sh_i(s, &args, insn);
-                        return do_mve_sh_i(s, &args, gen_mve_uqshl);
-                    }
-                    if(is_insn_srshr_imm(insn)) {
-                        ARCH(MVE);
-                        arg_mve_sh_i args;
-                        extract_mve_sh_i(s, &args, insn);
-                        return do_mve_sh_i(s, &args, gen_srshr32_i32);
-                    }
-                    if(is_insn_urshr_imm(insn)) {
-                        ARCH(MVE);
-                        arg_mve_sh_i args;
-                        extract_mve_sh_i(s, &args, insn);
-                        return do_mve_sh_i(s, &args, gen_urshr32_i32);
-                    }
-                    if(is_insn_sqshll_imm(insn)) {
-                        ARCH(MVE);
-                        arg_mve_shl_ri args;
-                        extract_mve_shl_ri(s, &args, insn);
-                        return do_mve_shl_ri(s, &args, gen_mve_sqshll);
-                    }
-                    if(is_insn_uqshll_imm(insn)) {
-                        ARCH(MVE);
-                        arg_mve_shl_ri args;
-                        extract_mve_shl_ri(s, &args, insn);
-                        return do_mve_shl_ri(s, &args, gen_mve_uqshll);
-                    }
-                    if(is_insn_srshrl_imm(insn)) {
-                        ARCH(MVE);
-                        arg_mve_shl_ri args;
-                        extract_mve_shl_ri(s, &args, insn);
-                        return do_mve_shl_ri(s, &args, gen_srshr64_i64);
-                    }
-                    if(is_insn_urshrl_imm(insn)) {
-                        ARCH(MVE);
-                        arg_mve_shl_ri args;
-                        extract_mve_shl_ri(s, &args, insn);
-                        return do_mve_shl_ri(s, &args, gen_urshr64_i64);
+                    if(arm_feature(env, ARM_FEATURE_V8_1M)) {
+                        if(is_insn_asrl_imm(insn)) {
+                            ARCH(MVE);
+                            arg_mve_shl_ri args;
+                            extract_mve_shl_ri(s, &args, insn);
+                            return do_mve_shl_ri(s, &args, tcg_gen_sari_i64);
+                        }
+                        if(is_insn_lsll_imm(insn)) {
+                            ARCH(MVE);
+                            arg_mve_shl_ri args;
+                            extract_mve_shl_ri(s, &args, insn);
+                            return do_mve_shl_ri(s, &args, tcg_gen_shli_i64);
+                        }
+                        if(is_insn_lsrl_imm(insn)) {
+                            ARCH(MVE);
+                            arg_mve_shl_ri args;
+                            extract_mve_shl_ri(s, &args, insn);
+                            return do_mve_shl_ri(s, &args, tcg_gen_shri_i64);
+                        }
+                        if(is_insn_sqshl_imm(insn)) {
+                            ARCH(MVE);
+                            arg_mve_sh_i args;
+                            extract_mve_sh_i(s, &args, insn);
+                            return do_mve_sh_i(s, &args, gen_mve_sqshl);
+                        }
+                        if(is_insn_uqshl_imm(insn)) {
+                            ARCH(MVE);
+                            arg_mve_sh_i args;
+                            extract_mve_sh_i(s, &args, insn);
+                            return do_mve_sh_i(s, &args, gen_mve_uqshl);
+                        }
+                        if(is_insn_srshr_imm(insn)) {
+                            ARCH(MVE);
+                            arg_mve_sh_i args;
+                            extract_mve_sh_i(s, &args, insn);
+                            return do_mve_sh_i(s, &args, gen_srshr32_i32);
+                        }
+                        if(is_insn_urshr_imm(insn)) {
+                            ARCH(MVE);
+                            arg_mve_sh_i args;
+                            extract_mve_sh_i(s, &args, insn);
+                            return do_mve_sh_i(s, &args, gen_urshr32_i32);
+                        }
+                        if(is_insn_sqshll_imm(insn)) {
+                            ARCH(MVE);
+                            arg_mve_shl_ri args;
+                            extract_mve_shl_ri(s, &args, insn);
+                            return do_mve_shl_ri(s, &args, gen_mve_sqshll);
+                        }
+                        if(is_insn_uqshll_imm(insn)) {
+                            ARCH(MVE);
+                            arg_mve_shl_ri args;
+                            extract_mve_shl_ri(s, &args, insn);
+                            return do_mve_shl_ri(s, &args, gen_mve_uqshll);
+                        }
+                        if(is_insn_srshrl_imm(insn)) {
+                            ARCH(MVE);
+                            arg_mve_shl_ri args;
+                            extract_mve_shl_ri(s, &args, insn);
+                            return do_mve_shl_ri(s, &args, gen_srshr64_i64);
+                        }
+                        if(is_insn_urshrl_imm(insn)) {
+                            ARCH(MVE);
+                            arg_mve_shl_ri args;
+                            extract_mve_shl_ri(s, &args, insn);
+                            return do_mve_shl_ri(s, &args, gen_urshr64_i64);
+                        }
                     }
 #endif
 
