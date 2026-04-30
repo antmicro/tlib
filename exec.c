@@ -1451,7 +1451,6 @@ void tlb_flush_masked(CPUState *env, uint32_t mmu_indexes_mask)
 
 void tlb_flush_page_masked(CPUState *env, target_ulong addr, uint32_t mmu_indexes_mask, bool from_generated_code)
 {
-    int i;
     int mmu_idx;
 
     /* Check if we need to flush due to large pages.  */
@@ -1465,15 +1464,21 @@ void tlb_flush_page_masked(CPUState *env, target_ulong addr, uint32_t mmu_indexe
         env->current_tb = NULL;
     }
 
-    addr &= TARGET_PAGE_MASK;
-    i = (addr >> TARGET_PAGE_BITS) & (CPU_TLB_SIZE - 1);
-    for(mmu_idx = 0; mmu_idx < NB_MMU_MODES; mmu_idx += 1) {
-        if(extract32(mmu_indexes_mask, mmu_idx, 1)) {
-            tlb_flush_entry(&env->tlb_table[mmu_idx][i], addr);
+    /* ARM's minimum page size is 4K, but TARGET_PAGE_BITS is 10 (1K).
+       When the guest flushes a 4K page, we must invalidate all 1K
+       sub-pages within that 4K region, otherwise stale TLB entries
+       for sibling sub-pages cause writes to hit wrong physical pages. */
+    target_ulong base_4k = addr & ~(target_ulong)0xFFF;
+    for(target_ulong subpage = base_4k; subpage < base_4k + 0x1000; subpage += TARGET_PAGE_SIZE) {
+        target_ulong sp_addr = subpage & TARGET_PAGE_MASK;
+        int i = (sp_addr >> TARGET_PAGE_BITS) & (CPU_TLB_SIZE - 1);
+        for(mmu_idx = 0; mmu_idx < NB_MMU_MODES; mmu_idx += 1) {
+            if(extract32(mmu_indexes_mask, mmu_idx, 1)) {
+                tlb_flush_entry(&env->tlb_table[mmu_idx][i], sp_addr);
+            }
         }
+        tlb_flush_jmp_cache(env, sp_addr);
     }
-
-    tlb_flush_jmp_cache(env, addr);
 }
 
 void tlb_flush_page(CPUState *env, target_ulong addr, bool from_generated_code)
