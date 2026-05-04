@@ -11267,6 +11267,8 @@ DO_TRANS_2OP(vsub, vsub)
 DO_TRANS_2OP(vmul, vmul)
 DO_TRANS_2OP(vhadd_s, vhadds)
 DO_TRANS_2OP(vhadd_u, vhaddu)
+DO_TRANS_2OP(vrhadd_s, vrhadds)
+DO_TRANS_2OP(vrhadd_u, vrhaddu)
 DO_TRANS_2OP(vhsub_s, vhsubs)
 DO_TRANS_2OP(vhsub_u, vhsubu)
 DO_TRANS_2OP(vcadd90, vcadd90)
@@ -13928,6 +13930,18 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_2op args;
                     mve_extract_2op(&args, insn);
                     return trans_vhadd_u(s, &args);
+                }
+                if(is_insn_vrhadd_s(insn)) {
+                    ARCH(MVE);
+                    arg_2op args;
+                    mve_extract_2op(&args, insn);
+                    return trans_vrhadd_s(s, &args);
+                }
+                if(is_insn_vrhadd_u(insn)) {
+                    ARCH(MVE);
+                    arg_2op args;
+                    mve_extract_2op(&args, insn);
+                    return trans_vrhadd_u(s, &args);
                 }
                 if(is_insn_vhsub_s(insn)) {
                     ARCH(MVE);

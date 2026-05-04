@@ -569,6 +569,13 @@ DEF_HELPER_4(mve_vhaddub, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vhadduh, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vhadduw, void, env, ptr, ptr, ptr)
 
+DEF_HELPER_4(mve_vrhaddsb, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vrhaddsh, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vrhaddsw, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vrhaddub, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vrhadduh, void, env, ptr, ptr, ptr)
+DEF_HELPER_4(mve_vrhadduw, void, env, ptr, ptr, ptr)
+
 DEF_HELPER_4(mve_vhsubsb, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vhsubsh, void, env, ptr, ptr, ptr)
 DEF_HELPER_4(mve_vhsubsw, void, env, ptr, ptr, ptr)

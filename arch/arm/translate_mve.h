@@ -796,6 +796,16 @@ static inline bool is_insn_vhadd_u(uint32_t insn)
     return (insn & 0xFF811F51) == 0xFF000040;
 }
 
+static inline bool is_insn_vrhadd_s(uint32_t insn)
+{
+    return (insn & 0xFF811F51) == 0xEF000140;
+}
+
+static inline bool is_insn_vrhadd_u(uint32_t insn)
+{
+    return (insn & 0xFF811F51) == 0xFF000140;
+}
+
 static inline bool is_insn_vhsub_s(uint32_t insn)
 {
     return (insn & 0xFF811F51) == 0xEF000240;
