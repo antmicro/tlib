@@ -1418,6 +1418,16 @@ static inline bool is_insn_vbrsr(uint32_t insn)
     return size != 3 && (insn & 0xFF811F70) == 0xFE011E60;
 }
 
+static inline bool is_insn_vshrn(uint32_t insn)
+{
+    return (insn & 0xFFA00FD1) == 0xEE800FC1;
+}
+
+static inline bool is_insn_vrshrn(uint32_t insn)
+{
+    return (insn & 0xFFA00FD1) == 0xFE800FC1;
+}
+
 static void mve_extract_vmsr_vmrs(arg_vmsr_vmrs *a, uint32_t insn)
 {
     a->rt = extract32(insn, 12, 4);

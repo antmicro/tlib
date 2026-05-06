@@ -11486,6 +11486,11 @@ DO_TRANS_2SHIFT_N(vshll_bu, vshllbu)
 DO_TRANS_2SHIFT_N(vshll_ts, vshllts)
 DO_TRANS_2SHIFT_N(vshll_tu, vshlltu)
 
+DO_TRANS_2SHIFT_N(vshrnb, vshrnb)
+DO_TRANS_2SHIFT_N(vshrnt, vshrnt)
+DO_TRANS_2SHIFT_N(vrshrnb, vrshrnb)
+DO_TRANS_2SHIFT_N(vrshrnt, vrshrnt)
+
 DO_TRANS_2SHIFT_N(vqrshrnb_s, vqrshrnb_s)
 DO_TRANS_2SHIFT_N(vqrshrnt_s, vqrshrnt_s)
 DO_TRANS_2SHIFT_N(vqrshrnb_u, vqrshrnb_u)
@@ -14788,6 +14793,28 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_2scalar a;
                     mve_extract_2op_scalar(&a, insn);
                     return trans_vbrsr(s, &a);
+                }
+                if(is_insn_vshrn(insn)) {
+                    ARCH(MVE);
+                    arg_2shift a;
+                    mve_extract_rshift_imm(&a, insn);
+                    uint32_t top_half = extract32(insn, 12, 1) == 1;
+                    if(top_half) {
+                        return trans_vshrnt(s, &a);
+                    } else {
+                        return trans_vshrnb(s, &a);
+                    }
+                }
+                if(is_insn_vrshrn(insn)) {
+                    ARCH(MVE);
+                    arg_2shift a;
+                    mve_extract_rshift_imm(&a, insn);
+                    uint32_t top_half = extract32(insn, 12, 1) == 1;
+                    if(top_half) {
+                        return trans_vrshrnt(s, &a);
+                    } else {
+                        return trans_vrshrnb(s, &a);
+                    }
                 }
             }
 #endif

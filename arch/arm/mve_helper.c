@@ -2785,7 +2785,6 @@ DO_2SHIFT_INSERT(vsliw, 4, DO_SHL, SHL_MASK)
 
 #undef SHR_MASK
 #undef SHL_MASK
-#undef DO_SHR
 #undef DO_SHL
 #undef DO_2SHIFT_INSERT
 
@@ -3109,5 +3108,37 @@ DO_VSHRN_SAT_SH(vqshrunbh, vqshrunth, DO_SHRUN_H)
 #undef DO_VSHRN_SAT_UH
 #undef DO_VSHRN_SAT_UB
 #undef DO_VSHRN_SAT
+
+/*
+ * Narrowing right shifts, taking a double sized input, shifting it
+ * and putting the result in either the top or bottom half of the output.
+ * ESIZE, TYPE are the output, and LESIZE, LTYPE the input.
+ */
+#define DO_VSHRN(OP, TOP, ESIZE, TYPE, LESIZE, LTYPE, FN)                           \
+    void HELPER(glue(mve_, OP))(CPUState * env, void *vd, void *vm, uint32_t shift) \
+    {                                                                               \
+        LTYPE *m = vm;                                                              \
+        TYPE *d = vd;                                                               \
+        uint16_t mask = mve_element_mask(env);                                      \
+        unsigned le;                                                                \
+        for(le = 0; le < 16 / LESIZE; le++, mask >>= LESIZE) {                      \
+            TYPE r = FN(m[H##LESIZE(le)], shift);                                   \
+            mergemask(&d[H##ESIZE(le * 2 + TOP)], r, mask);                         \
+        }                                                                           \
+        mve_advance_vpt(env);                                                       \
+    }
+
+#define DO_VSHRN_ALL(OP, FN)                              \
+    DO_VSHRN(OP##bb, false, 1, uint8_t, 2, uint16_t, FN)  \
+    DO_VSHRN(OP##bh, false, 2, uint16_t, 4, uint32_t, FN) \
+    DO_VSHRN(OP##tb, true, 1, uint8_t, 2, uint16_t, FN)   \
+    DO_VSHRN(OP##th, true, 2, uint16_t, 4, uint32_t, FN)
+
+DO_VSHRN_ALL(vshrn, DO_SHR)
+DO_VSHRN_ALL(vrshrn, do_urshr)
+
+#undef DO_VSHRN_ALL
+#undef DO_VSHRN
+#undef DO_SHR
 
 #endif /* TARGET_PROTO_ARM_M */
