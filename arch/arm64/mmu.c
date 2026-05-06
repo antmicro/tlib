@@ -37,11 +37,18 @@ static inline int check_ap(int ap, int is_user)
     return prot;
 }
 
-static uint64_t get_table_address(CPUState *env, target_ulong address, uint64_t base_addr, int page_size_shift, int level)
+static uint64_t get_table_address(CPUState *env, target_ulong address, uint64_t base_addr, int page_size_shift, int level,
+                                  int va_bits)
 {
     uint64_t table_offset = 0;
-    uint64_t mask = (1 << MMU_Ln_XLAT_VA_SIZE_SHIFT(page_size_shift)) - 1;
-    table_offset = (address >> MMU_LEVEL_TO_VA_SIZE_SHIFT(level, page_size_shift)) & mask;
+    int va_size_shift = MMU_LEVEL_TO_VA_SIZE_SHIFT(level, page_size_shift);
+    //  Index width is normally Ln (e.g. 9 bits for 4K), but at the base translation level it
+    //  can be narrower when va_bits doesn't fully cover the next-higher level's range.
+    int ln_bits = MMU_Ln_XLAT_VA_SIZE_SHIFT(page_size_shift);
+    int remaining_bits = va_bits - va_size_shift;
+    int idx_bits = remaining_bits < ln_bits ? remaining_bits : ln_bits;
+    uint64_t mask = (1ULL << idx_bits) - 1;
+    table_offset = (address >> va_size_shift) & mask;
 
     return base_addr + (table_offset * 8);
 }
@@ -202,8 +209,9 @@ int get_phys_addr_v8(CPUState *env, target_ulong address, int access_type, int m
     ISSFaultStatusCode fault_code = -1;
     uint64_t desc_addr;
     uint64_t desc;
-    for(level = MMU_GET_BASE_XLAT_LEVEL(64 - tsz, page_size_shift); level <= MMU_XLAT_LAST_LEVEL; level++) {
-        desc_addr = get_table_address(env, address, table_addr, page_size_shift, level);
+    int va_bits = 64 - tsz;
+    for(level = MMU_GET_BASE_XLAT_LEVEL(va_bits, page_size_shift); level <= MMU_XLAT_LAST_LEVEL; level++) {
+        desc_addr = get_table_address(env, address, table_addr, page_size_shift, level, va_bits);
         desc = ldq_phys(desc_addr);
 
 #if DEBUG
