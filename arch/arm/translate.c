@@ -12430,6 +12430,42 @@ static bool trans_vqrdmlsdh(DisasContext *s, arg_vqdmladh *a)
     return do_2op_vec(s, &arg, fns[a->size][a->x], NULL);
 }
 
+static bool trans_vshlc(DisasContext *s, arg_vshlc *a)
+{
+    /*
+     * Whole Vector Left Shift with Carry. The carry is taken
+     * from a general purpose register and written back there.
+     * An immediate of 0 means "shift by 32".
+     */
+    TCGv_ptr qd;
+    TCGv_i32 rdm;
+
+    if(!mve_check_qreg_bank(a->qd)) {
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+
+    if(a->rdm == 13 || a->rdm == 15) {
+        /* CONSTRAINED UNPREDICTABLE: we UNDEF */
+        return TRANS_STATUS_ILLEGAL_INSN;
+    }
+
+    if(!mve_eci_check(s)) {
+        return TRANS_STATUS_SUCCESS;
+    }
+
+    gen_helper_fp_lsp(cpu_env);
+
+    qd = mve_qreg_ptr(a->qd);
+    rdm = load_reg(s, a->rdm);
+    TCGv_i32 imm = tcg_const_i32(a->imm);
+    gen_helper_mve_vshlc(rdm, cpu_env, qd, rdm, imm);
+    tcg_temp_free_i32(imm);
+    store_reg(s, a->rdm, rdm);
+    tcg_temp_free_ptr(qd);
+    mve_update_eci(s);
+    return TRANS_STATUS_SUCCESS;
+}
+
 #endif /* TARGET_PROTO_ARM_M */
 
 /* Translate a 32-bit thumb instruction.  Returns nonzero if the instruction
@@ -14874,6 +14910,12 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     arg_2scalar a;
                     mve_extract_2op_scalar(&a, insn);
                     return trans_vbrsr(s, &a);
+                }
+                if(is_insn_vshlc(insn)) {
+                    ARCH(MVE);
+                    arg_vshlc a;
+                    mve_extract_vshlc(&a, insn);
+                    return trans_vshlc(s, &a);
                 }
                 if(is_insn_vshrn(insn)) {
                     ARCH(MVE);

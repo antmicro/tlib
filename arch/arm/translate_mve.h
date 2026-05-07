@@ -335,6 +335,15 @@ typedef struct {
     int imm;
 } arg_vldst_sg_imm;
 
+typedef struct {
+    /* Source and destination general-purpose register for carry in and out */
+    int rdm;
+    /* Source and destination vector register. */
+    int qd;
+    /* The number of bits to shift by, in the range 1-32. */
+    int imm;
+} arg_vshlc;
+
 void gen_mve_vld40b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld41b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
 void gen_mve_vld42b(DisasContext *s, uint32_t qnindx, TCGv_i32 base);
@@ -1430,6 +1439,11 @@ static inline bool is_insn_vbrsr(uint32_t insn)
     return size != 3 && (insn & 0xFF811F70) == 0xFE011E60;
 }
 
+static inline bool is_insn_vshlc(uint32_t insn)
+{
+    return (insn & 0xFFA01FF0) == 0xEEA00FC0;
+}
+
 static inline bool is_insn_vshrn(uint32_t insn)
 {
     return (insn & 0xFFA00FD1) == 0xEE800FC1;
@@ -1936,4 +1950,12 @@ static void mve_extract_vldst_sg_imm(arg_vldst_sg_imm *a, uint32_t insn)
     a->imm = extract32(insn, 0, 7);
     a->qm = deposit32(extract32(insn, 17, 3), 3, 29, extract32(insn, 7, 1));
     a->w = extract32(insn, 21, 1);
+}
+
+/* Extract arguments of VSHLC instruction */
+static void mve_extract_vshlc(arg_vshlc *a, uint32_t insn)
+{
+    a->rdm = extract32(insn, 0, 4);
+    a->qd = deposit32(extract32(insn, 13, 3), 3, 29, extract32(insn, 22, 1));
+    a->imm = extract32(insn, 16, 5);
 }

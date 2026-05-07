@@ -1233,6 +1233,8 @@ DEF_HELPER_4(mve_vbrsrb, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vbrsrh, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vbrsrw, void, env, ptr, ptr, i32)
 
+DEF_HELPER_4(mve_vshlc, i32, env, ptr, i32, i32)
+
 DEF_HELPER_4(mve_vshrnbb, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vshrnbh, void, env, ptr, ptr, i32)
 DEF_HELPER_4(mve_vshrntb, void, env, ptr, ptr, i32)
