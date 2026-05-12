@@ -200,6 +200,10 @@ add_definitions (
     ${DEBUG_DEF}
     )
 
+if(FAIL_ON_WARNINGS)
+    add_definitions(-Werror)
+endif()
+
 if("${TARGET_ACTUAL_ARCH}" STREQUAL "arm" OR "${TARGET_ACTUAL_ARCH}" STREQUAL "arm64")
     file (GLOB ARM_COMMON_SRC "arch/arm_common/*.c")
     set (ARM_COMMON_INCL "arch/arm_common")
