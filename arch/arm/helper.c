@@ -1245,6 +1245,9 @@ void fp_lsp_save_to_stack(CPUState *env)
             env->exception_index = EXCP_SECURE;
             cpu_loop_exit(env);
         }
+
+        bool treat_secure = env->v7m.fpccr[M_REG_COMMON] & FIELD_MASK(V7M_FPCCR, TS);
+        invalidate_vfp_regs(env, is_secure && treat_secure, is_secure && treat_secure);
     }
 }
 
@@ -1489,8 +1492,9 @@ static void do_interrupt_v7m(CPUState *env)
                 cpu_loop_exit(env);
             }
 
+            bool push_callee_frame = (env->v7m.fpccr[M_REG_COMMON] & ARM_FPCCR_TS_MASK) > 0;
             if(arm_feature(env, ARM_FEATURE_V8)) {
-                if(env->secure && (env->v7m.fpccr[M_REG_COMMON] & ARM_FPCCR_TS_MASK) > 0) {
+                if(push_callee_frame) {
                     for(int i = 15; i >= 8; --i) {
                         v7m_push(env, env->vfp.regs[i] >> 32);
                         v7m_push(env, env->vfp.regs[i]);
@@ -1514,8 +1518,8 @@ static void do_interrupt_v7m(CPUState *env)
                 v7m_push(env, env->vfp.regs[i] >> 32);
                 v7m_push(env, env->vfp.regs[i]);
             }
-            /* Set default values from FPDSCR to FPSCR in new context */
-            vfp_set_fpscr(env, (fpscr & ~ARM_FPDSCR_VALUES_MASK) | (env->v7m.fpdscr[env->secure] & ARM_FPDSCR_VALUES_MASK));
+
+            invalidate_vfp_regs(env, push_callee_frame, push_callee_frame);
         }
     }
     /* Switch to the handler mode.  */
