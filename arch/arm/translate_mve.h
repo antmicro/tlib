@@ -1404,6 +1404,13 @@ static inline bool is_insn_vqdmulh(uint32_t insn)
     return size != 3 && (insn & 0xEFC11FF1) == 0xEF000B40;
 }
 
+static inline bool is_insn_vqdmulh_scalar(uint32_t insn)
+{
+    /* size == '11' is undefined */
+    uint32_t size = extract32(insn, 20, 2);
+    return size != 3 && (insn & 0xEF811F70) == 0xEE010E60;
+}
+
 static inline bool is_insn_vqdmlah(uint32_t insn)
 {
     /* size == '11' is related encoding */
