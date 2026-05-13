@@ -3292,10 +3292,10 @@ static int generate_vcvt_insn(uint32_t insn, uint32_t rd, uint32_t rm, enum arm_
     return TRANS_STATUS_SUCCESS;
 }
 
-static void abort_on_half_prec(uint32_t insn, enum arm_fp_precision precision)
+static void abort_on_half_prec(uint32_t insn, enum arm_fp_precision precision, const char *name)
 {
     if(precision == HALF_PRECISION) {
-        tlib_abortf("Half-precision not yet supported for instruction with opcode: 0x%x\n", insn);
+        tlib_abortf("Half-precision not yet supported for instruction %s with opcode: 0x%x\n", name, insn);
     }
 }
 
@@ -3390,15 +3390,15 @@ static int disas_fpv5_insn(CPUState *env, DisasContext *s, enum arm_fp_precision
         return generate_vsel_insn(insn, rd, rn, rm, precision);
     } else if(is_insn_vminmaxnm(insn)) {
         /* VMINNM, VMAXNM */
-        abort_on_half_prec(insn, precision);
+        abort_on_half_prec(insn, precision, "VMINNM/VMAXNM");
         return generate_vminmaxnm_insn(insn, rd, rn, rm, precision);
     } else if(is_insn_vcvt(insn)) {
         /* VCVTA, VCVTN, VCVTP, VCVTM */
-        abort_on_half_prec(insn, precision);
+        abort_on_half_prec(insn, precision, "VCVTA/VCVTN/VCVTP/VCVTM");
         return generate_vcvt_insn(insn, rd, rm, precision);
     } else if(is_insn_vrint(insn)) {
         /* VRINTA, VRINTN, VRINTP, VRINTM */
-        abort_on_half_prec(insn, precision);
+        abort_on_half_prec(insn, precision, "VRINTA/VRINTN/VRINTP/VRINTM");
         return generate_vrint_insn(insn, rd, rm, precision);
     } else if(is_insn_vinsmovx(insn)) {
         /* VINS, VMOVX */
@@ -13826,9 +13826,8 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                         case 1:
                         case 2:
                         case 3:
-                            tlib_abortf("VCVT between float and fixed-point not implemented for half-precision, opcode: %x",
-                                        insn);
-                            return TRANS_STATUS_ILLEGAL_INSN;
+                            abort_on_half_prec(insn, HALF_PRECISION, "VCVT between float and fixed-point");
+                            __builtin_unreachable();
                         case 4:
                             return trans_vcvt_sf_fixed(s, &a);
                         case 5:
@@ -13845,10 +13844,8 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     ARCH(MVE);
                     arg_1op a;
                     mve_extract_1op(&a, insn);
-                    if(a.size == 1) {
-                        tlib_abortf("VCVT between float and integer not implemented for half-precision, opcode: %x", insn);
-                        return TRANS_STATUS_ILLEGAL_INSN;
-                    }
+                    abort_on_half_prec(insn, a.size, "VCVT between float and integer");
+
                     uint32_t op = extract32(insn, 7, 2);
                     switch(op) {
                         //  vcvt_<from><to>, s = signed int, u = unsigned int, f = float
