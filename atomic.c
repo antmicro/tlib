@@ -39,8 +39,9 @@ static void initialize_atomic_memory_state(atomic_memory_state_t *sm)
         if(unlikely(pthread_mutexattr_init(&attributes))) {
             tlib_abortf("Failed to initialize phthread_muttexattr_t");
         }
-//  This flag is only supported on Linux
-#if defined(__linux__)
+//  This flag is only supported on Linux, excluding Android
+//  https://github.com/android/ndk/issues/1181
+#if defined(__linux__) && !defined(__ANDROID__)
         if(unlikely(pthread_mutexattr_setrobust(&attributes, PTHREAD_MUTEX_ROBUST))) {
             tlib_abortf("Failed to make the mutex robust");
         }
