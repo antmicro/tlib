@@ -2918,53 +2918,53 @@ DO_2OP_SAT_ACC_SCALAR(vqrdmlashb, 1, int8_t, DO_VQRDMLASH_B)
 DO_2OP_SAT_ACC_SCALAR(vqrdmlashh, 2, int16_t, DO_VQRDMLASH_H)
 DO_2OP_SAT_ACC_SCALAR(vqrdmlashw, 4, int32_t, DO_VQRDMLASH_W)
 /* We know here TYPE is unsigned so always the same as the offset type */
-#define DO_VSTR_SG(OP, STTYPE, ESIZE, TYPE, ADDRFN, WB)                       \
+#define DO_VSTR_SG(OP, STTYPE, ESIZE, TYPE, ADDRFN, WB)                                    \
+    void HELPER(mve_##OP)(CPUState * env, void *vd, void *vm, uint32_t base)               \
+    {                                                                                      \
+        TYPE *d = vd;                                                                      \
+        TYPE *m = vm;                                                                      \
+        uint16_t mask = mve_element_mask(env);                                             \
+        uint16_t eci_mask = mve_eci_mask(env);                                             \
+        unsigned int e;                                                                    \
+        uint32_t addr;                                                                     \
+        for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE, eci_mask >>= ESIZE) {              \
+            if(!(eci_mask & 1)) {                                                          \
+                continue;                                                                  \
+            }                                                                              \
+            addr = ADDRFN(base, m[H##ESIZE(e)]);                                           \
+            if(mask & 1) {                                                                 \
+                __inner_##STTYPE##_mmu(addr, d[H##ESIZE(e)], cpu_mmu_index(env), GETPC()); \
+            }                                                                              \
+            if(WB) {                                                                       \
+                m[H##ESIZE(e)] = addr;                                                     \
+            }                                                                              \
+        }                                                                                  \
+        mve_advance_vpt(env);                                                              \
+    }
+
+#define DO_VSTR64_SG(OP, ADDRFN, WB)                                          \
     void HELPER(mve_##OP)(CPUState * env, void *vd, void *vm, uint32_t base)  \
     {                                                                         \
-        TYPE *d = vd;                                                         \
-        TYPE *m = vm;                                                         \
+        uint32_t *d = vd;                                                     \
+        uint32_t *m = vm;                                                     \
         uint16_t mask = mve_element_mask(env);                                \
         uint16_t eci_mask = mve_eci_mask(env);                                \
         unsigned int e;                                                       \
         uint32_t addr;                                                        \
-        for(e = 0; e < 16 / ESIZE; e++, mask >>= ESIZE, eci_mask >>= ESIZE) { \
+        for(e = 0; e < 16 / 4; e++, mask >>= 4, eci_mask >>= 4) {             \
             if(!(eci_mask & 1)) {                                             \
                 continue;                                                     \
             }                                                                 \
-            addr = ADDRFN(base, m[H##ESIZE(e)]);                              \
+            addr = ADDRFN(base, m[H4(e & ~1)]);                               \
+            addr += 4 * (e & 1);                                              \
             if(mask & 1) {                                                    \
-                __##STTYPE##_mmu(addr, d[H##ESIZE(e)], cpu_mmu_index(env));   \
+                __inner_stq_mmu(addr, d[H4(e)], cpu_mmu_index(env), GETPC()); \
             }                                                                 \
-            if(WB) {                                                          \
-                m[H##ESIZE(e)] = addr;                                        \
+            if(WB && (e & 1)) {                                               \
+                m[H4(e & ~1)] = addr - 4;                                     \
             }                                                                 \
         }                                                                     \
         mve_advance_vpt(env);                                                 \
-    }
-
-#define DO_VSTR64_SG(OP, ADDRFN, WB)                                         \
-    void HELPER(mve_##OP)(CPUState * env, void *vd, void *vm, uint32_t base) \
-    {                                                                        \
-        uint32_t *d = vd;                                                    \
-        uint32_t *m = vm;                                                    \
-        uint16_t mask = mve_element_mask(env);                               \
-        uint16_t eci_mask = mve_eci_mask(env);                               \
-        unsigned int e;                                                      \
-        uint32_t addr;                                                       \
-        for(e = 0; e < 16 / 4; e++, mask >>= 4, eci_mask >>= 4) {            \
-            if(!(eci_mask & 1)) {                                            \
-                continue;                                                    \
-            }                                                                \
-            addr = ADDRFN(base, m[H4(e & ~1)]);                              \
-            addr += 4 * (e & 1);                                             \
-            if(mask & 1) {                                                   \
-                __stq_mmu(addr, d[H4(e)], cpu_mmu_index(env));               \
-            }                                                                \
-            if(WB && (e & 1)) {                                              \
-                m[H4(e & ~1)] = addr - 4;                                    \
-            }                                                                \
-        }                                                                    \
-        mve_advance_vpt(env);                                                \
     }
 
 #define ADDR_ADD(BASE, OFFSET)     ((BASE) + (OFFSET))
