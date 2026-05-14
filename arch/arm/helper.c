@@ -583,6 +583,11 @@ void cpu_reset(CPUState *env)
     //  Set initial Security State to Secure if there is TrustZone support
     env->secure = env->v7m.has_trustzone;
 
+    if(!env->v7m.has_trustzone) {
+        /* If TrustZone is disabled, set NSACR to value that would allow access to FPU from Non-secure state */
+        env->v7m.nsacr = 0xcff;
+    }
+
     fpccr_write(env, (fpccr_read(env, false) & ~ARM_FPCCR_LSPACT_MASK) | ARM_FPCCR_ASPEN_MASK | ARM_FPCCR_LSPEN_MASK, false);
     fpccr_write(env, (fpccr_read(env, true) & ~ARM_FPCCR_LSPACT_MASK) | ARM_FPCCR_ASPEN_MASK | ARM_FPCCR_LSPEN_MASK, true);
 #endif
@@ -3244,8 +3249,7 @@ void HELPER(v7m_msr)(CPUState *env, uint32_t reg, uint32_t val)
 
             env->v7m.control[is_secure] &= ~3;
             env->v7m.control[is_secure] |= val & 3;
-            if(is_secure) { /* TODO: this bit is also accessible in non-secure mode if NSACR.CP10 is set. We don't support NSACR.
-                               register */
+            if(is_secure || env->v7m.nsacr & ARM_NSACR_CP10_MASK) {
                 env->v7m.control[M_REG_COMMON] &= ~ARM_CONTROL_FPCA_MASK;
                 env->v7m.control[M_REG_COMMON] |= val & ARM_CONTROL_FPCA_MASK;
             }

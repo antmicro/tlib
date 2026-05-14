@@ -348,6 +348,7 @@ typedef struct CPUState {
         uint32_t primask[M_REG_NUM_BANKS];
         uint32_t faultmask[M_REG_NUM_BANKS];
         uint32_t cpacr[M_REG_NUM_BANKS];
+        uint32_t nsacr; /* RAZ/WI from Non-secure state */
         /* Generally, helpers: `fpccr_write/read` should be used to interact with it
          * but right now the Secure variant can as well be operated on directly
          * since it's a superset of Non-secure bits (including Non-banked ones
@@ -679,6 +680,9 @@ static inline bool in_user_mode(CPUState *env)
 #define ARM_CPACR_CP10      20
 #define ARM_CPACR_CP10_MASK (3 << ARM_CPACR_CP10)
 
+#define ARM_NSACR_CP10      10
+#define ARM_NSACR_CP10_MASK (1 << ARM_NSACR_CP10)
+
 #define ARM_CPN_ACCESS_NONE 0
 #define ARM_CPN_ACCESS_PRIV 1
 #define ARM_CPN_ACCESS_FULL 3
@@ -906,7 +910,10 @@ static inline void cpu_get_tb_cpu_state(CPUState *env, target_ulong *pc, target_
     if((env->vfp.xregs[ARM_VFP_FPEXC] & ARM_VFP_FPEXC_FPUEN_MASK)
 #ifdef TARGET_PROTO_ARM_M
        /* We encode "env->secure" before into flags */
+       /* CPU either has to be in privileged mode or have CPACR CP10 field set to allow access from non privileged mode. */
        && (privmode || ((env->v7m.cpacr[env->secure] & ARM_CPACR_CP10_MASK) >> ARM_CPACR_CP10) == ARM_CPN_ACCESS_FULL)
+       /* CPU either has to be in Secure state or have NSACR CP10 field set to allow access from Non-secure state */
+       && (env->secure || (env->v7m.nsacr & ARM_NSACR_CP10_MASK))
 #endif
     ) {
         *flags |= ARM_TBFLAG_VFPEN_MASK;

@@ -71,6 +71,8 @@ uint32_t *get_reg_pointer_32_with_security(int reg, bool is_secure)
             return &(cpu->v7m.fpdscr[is_secure]);
         case CPACR_32:
             return &(cpu->v7m.cpacr[is_secure]);
+        case NSACR_32:
+            return &(cpu->v7m.nsacr);
         case PRIMASK_32:
             return &(cpu->v7m.primask[is_secure]);
         case FAULTMASK_32:
@@ -186,10 +188,14 @@ void tlib_set_register_value_32_with_security(int reg_number, uint32_t value, bo
         /* Not banked bits are always stored in the Secure CONTROL bank.
          * SFPA bit is not writable from the Non-secure state
          * FPCA is writable from the Non-secure state only if NSACR.CP10 field is set.
-         * We don't support NSACR register so just clean not banked bits for the Non-secure state
          */
+
         if(!is_secure) {
-            value &= ~(ARM_CONTROL_FPCA_MASK | ARM_CONTROL_SFPA_MASK);
+            if(env->v7m.nsacr & ARM_NSACR_CP10_MASK) {
+                env->v7m.control[M_REG_COMMON] &= ARM_CONTROL_FPCA_MASK;
+                env->v7m.control[M_REG_COMMON] |= value & ARM_CONTROL_FPCA_MASK;
+            }
+            value &= ~(ARM_CONTROL_SFPA_MASK | ARM_CONTROL_FPCA_MASK);
         }
     } else if(reg_number == SP_32 || reg_number == OtherSP_32) {
         //  bits [1:0] of SP are WI or SBZP
