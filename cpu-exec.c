@@ -105,8 +105,8 @@ target_ulong virt_to_phys(target_ulong virtual, uint32_t access_type, uint32_t n
 
     if(physical & TLB_MMIO) {
         //  The virtual address is mapping IO mem, not ram - use the IO page table
-        physical = (target_ulong)env->iotlb[found_idx][page_index];
-        physical = (physical + virtual) & TARGET_PAGE_MASK;
+        physical = (target_ulong)(env->iotlb[found_idx][page_index] & TARGET_PAGE_MASK);
+        physical = physical + masked_virtual;
     } else {
         p = (void *)(uintptr_t)masked_virtual + env->tlb_table[found_idx][page_index].addend;
         physical = tlib_host_ptr_to_guest_offset(p);
