@@ -1,4 +1,14 @@
 #pragma once
+/* Common softmmu declarations.
+ * For implementations refer to softmmu_template.h
+ */
+
+/* When accessing memory from a helper function, use the __inner versions. The non-__inner versions are intended to be called only
+ * from generated code, because they retrieve the calling TB's return address directly from the call stack to identify the current
+ * translation block. When called from a C helper instead, the return address points into the helper, not into generated code,
+ * causing TB lookup to fail or return a wrong result. In spite of being declared with always_inline attribute the non-__inner
+ * functions won't inline into helpers.
+ */
 
 uint8_t REGPARM __ldb_mmu(target_ulong addr, int mmu_idx);
 uint8_t REGPARM __ldb_err_mmu(target_ulong addr, int mmu_idx, int *err);
