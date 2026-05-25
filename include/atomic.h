@@ -50,3 +50,5 @@ void reserve_address(struct CPUState *env, target_phys_addr_t address, uint8_t m
 uint32_t check_address_reservation(struct CPUState *env, target_phys_addr_t address);
 void register_address_access(struct CPUState *env, target_phys_addr_t address);
 void cancel_reservation(struct CPUState *env);
+
+void unlock_dangling_locks(struct CPUState *env);

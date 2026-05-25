@@ -1,3 +1,5 @@
+#include <stdatomic.h>
+
 #include "atomic.h"
 #include "cpu.h"
 #include "pthread.h"
@@ -280,5 +282,37 @@ void cancel_reservation(struct CPUState *env)
     address_reservation_t *reservation = find_reservation_by_cpu(env);
     if(reservation != NULL) {
         free_reservation(env, reservation, 1);
+    }
+}
+
+/*
+ * It is possible that an atomic operation takes a lock, performs a ld/st
+ * and then fails to unlock it, due to the instruction getting interrupted by
+ * a softmmu fault while doing the ld/st. This eventually triggers a longjump
+ * back to cpu_exec, but notably _the translation block does not get to finish executing_.
+ * I.e., the lock is never released when this happens. Therefore, this function checks
+ * for any dangling locks that should've been unlocked, and does so.
+ */
+void unlock_dangling_locks(struct CPUState *env)
+{
+    //  For the "old" atomics.
+    if(env->atomic_memory_state != NULL && env->atomic_memory_state->locking_cpu_id == env->atomic_id) {
+        clear_global_memory_lock(env);
+    }
+
+    //  For the "new" atomics.
+    if(unlikely(env->locked_address != 0)) {
+        store_table_entry_t *entry = (store_table_entry_t *)address_hash(env, env->locked_address);
+        uint32_t coreId = get_core_id(env);
+        env->locked_address = 0;
+        //  Unlock, _if it was locked by this core_, otherwise leave untouched.
+        //  No point in retrying this, so just do it as a one-off.
+        atomic_compare_exchange_strong((_Atomic uint32_t *)&entry->lock, &coreId, HST_UNLOCKED);
+    }
+    if(unlikely(env->locked_address_high != 0)) {
+        store_table_entry_t *entry_high = (store_table_entry_t *)address_hash(env, env->locked_address_high);
+        uint32_t coreId = get_core_id(env);
+        env->locked_address_high = 0;
+        atomic_compare_exchange_strong((_Atomic uint32_t *)&entry_high->lock, &coreId, HST_UNLOCKED);
     }
 }
