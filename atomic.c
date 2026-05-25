@@ -10,12 +10,13 @@
 //  False is returned if `atomic_memory_state` hasn't been initialized at all.
 inline bool are_multiple_cpus_registered()
 {
+    bool multiple_cpus_registered = env->atomic_memory_state != NULL && env->atomic_memory_state->number_of_registered_cpus > 1;
 #if DEBUG
-    if(env->atomic_memory_state != NULL && env->atomic_memory_state->number_of_registered_cpus > 1) {
+    if(!multiple_cpus_registered) {
         tlib_printf(LOG_LEVEL_NOISY, "%s: Only one CPU registered", __func__);
     }
 #endif
-    return env->atomic_memory_state != NULL && env->atomic_memory_state->number_of_registered_cpus > 1;
+    return multiple_cpus_registered;
 }
 
 static inline void ensure_locked_by_me(struct CPUState *env)
