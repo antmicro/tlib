@@ -123,35 +123,40 @@ void gen_store_table_check(CPUState *env, TCGv result, TCGv_guestptr guest_addre
     tcg_temp_free_hostptr(hashed_address);
 }
 
+void gen_lock_not_owned_warning(TCGv_i64 holder_id, uint32_t current_core_id, TCGv_guestptr guest_address,
+                                const char *function_name)
+{
+    generate_log(0, "%s: hash table entry lock for guest address:", function_name);
+    generate_var_log(guest_address);
+    generate_log(0, "is not held by current core (id %u), it is held by:", current_core_id);
+    generate_var_log(holder_id);
+}
+
 /* Debug assert that ensures the current core owns the hash table entry lock
  * of the entry associated with the given `guest_address`.
  */
-void ensure_entry_locked(CPUState *env, TCGv_guestptr guest_address, const char *function_name)
+void gen_ensure_entry_locked(CPUState *env, TCGv_guestptr guest_address, const char *function_name)
 {
 #ifdef DEBUG
     TCGv_hostptr hashed_address = tcg_temp_local_new_hostptr();
     gen_hash_address(env, hashed_address, guest_address);
 
-    TCGv_i32 lock = tcg_temp_local_new_i32();
+    TCGv_i32 holder_id = tcg_temp_local_new_i32();
     //  Load lock from store table, to see which core holds it.
-    tcg_gen_ld32u_tl(lock, hashed_address, offsetof(store_table_entry_t, lock));
+    tcg_gen_ld32u_tl(holder_id, hashed_address, offsetof(store_table_entry_t, lock));
 
     int done = gen_new_label();
-    uint32_t core_id = get_core_id(env);
+    uint32_t current_core_id = get_core_id(env);
     //  Check if the lock is owned by the current core.
-    tcg_gen_brcondi_i32(TCG_COND_EQ, lock, core_id, done);
-
+    tcg_gen_brcondi_i32(TCG_COND_EQ, holder_id, current_core_id, done);
     //  Lock isn't owned by the current core, abort.
-    generate_log(0, "%s: %s: hash table entry lock for guest address:", __func__, function_name);
-    generate_var_log(guest_address);
-    generate_log(0, "is not held by current core (id %u), it is held by:", core_id);
-    generate_var_log(lock);
+    gen_lock_not_owned_warning(holder_id, current_core_id, guest_address, __func__);
     generate_backtrace_print();
     gen_helper_abort();
 
     gen_set_label(done);
 
-    tcg_temp_free_i32(lock);
+    tcg_temp_free_i32(holder_id);
     tcg_temp_free_hostptr(hashed_address);
 #endif
 }
@@ -164,7 +169,10 @@ void gen_store_table_set(CPUState *env, TCGv_guestptr guest_address)
         return;
     }
 
-    ensure_entry_locked(env, guest_address, __func__);
+    //  In the normal RAM case this is called while the HST lock is still held.
+    //  MMIO accesses may release dangling locks before the access completes to
+    //  avoid deadlocks in managed callbacks; the reservation marker still has to
+    //  be updated after the access so LR/SC observes the completed store.
 
     TCGv_hostptr hashed_address = tcg_temp_local_new_hostptr();
     gen_hash_address(env, hashed_address, guest_address);
@@ -266,15 +274,29 @@ static void gen_store_table_unlock_address(CPUState *env, TCGv_guestptr guest_ad
         return;
     }
 
-    ensure_entry_locked(env, guest_address, __func__);
-
     TCGv_hostptr hashed_address = tcg_temp_new_hostptr();
     gen_hash_address(env, hashed_address, guest_address);
 
+    //  Add the offset of the lock field, since we want to access the lock and not the core id.
+    TCGv_hostptr lock_address = tcg_temp_new_hostptr();
+    tcg_gen_addi_i64(lock_address, hashed_address, offsetof(store_table_entry_t, lock));
+
     TCGv_i32 unlocked = tcg_const_i32(HST_UNLOCKED);
 
-    //  Unlock the table entry.
-    tcg_gen_st32_tl(unlocked, hashed_address, offsetof(store_table_entry_t, lock));
+    uint32_t current_core_id_val = get_core_id(env);
+    TCGv_i32 current_core_id = tcg_const_local_i32(current_core_id_val);
+    TCGv_i32 holder_id = tcg_temp_local_new_i32();
+    //  We must verify ownership over the lock in the table entry before releasing it.
+    //  MMIO callbacks may call `unlock_dangling_locks` to prevent a deadlock
+    //  while managed code blocks or pauses emulation.
+    //  As a result, another core may acquire the lock, and we must not release it on its behalf.
+    tcg_gen_atomic_compare_and_swap_host_intrinsic_i32(holder_id, current_core_id, lock_address, unlocked);
+#ifdef DEBUG
+    int done = gen_new_label();
+    tcg_gen_brcond_i32(TCG_COND_EQ, holder_id, current_core_id, done);
+    gen_lock_not_owned_warning(holder_id, current_core_id_val, guest_address, __func__);
+    gen_set_label(done);
+#endif
     //  Emit a barrier to ensure that the store is visible to other processors.
     tcg_gen_mb(TCG_MO_ST_ST);
 
@@ -282,9 +304,12 @@ static void gen_store_table_unlock_address(CPUState *env, TCGv_guestptr guest_ad
     TCGv_guestptr null = tcg_const_tl(0);
     tcg_gen_st_tl(null, cpu_env, locked_address_offset);
 
-    tcg_temp_free(null);
     tcg_temp_free_hostptr(hashed_address);
+    tcg_temp_free_hostptr(lock_address);
     tcg_temp_free_i32(unlocked);
+    tcg_temp_free_i32(current_core_id);
+    tcg_temp_free_i32(holder_id);
+    tcg_temp_free(null);
 }
 
 void gen_store_table_unlock(CPUState *env, TCGv_guestptr guest_address)
