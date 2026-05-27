@@ -20,6 +20,17 @@ typedef struct address_reservation_t {
     uint8_t manual_free;
 } address_reservation_t;
 
+//  Accessing peripherals invokes managed MMIO callbacks that may block, pause
+//  emulation, or otherwise wait for other cores. Before such callbacks,
+//  `unlock_dangling_locks()` releases memory locks to avoid deadlocks.
+//
+//  We assume that atomic instructions are not used to perform operations that
+//  invoke managed MMIO callbacks. If such a callback is invoked, the atomicity of the
+//  current instruction is no longer guaranteed.
+//
+//  Atomic instructions executed concurrently on other cores remain atomic
+//  because lock release paths verify ownership before unlocking, preventing a
+//  core from releasing locks held by another core.
 typedef struct atomic_memory_state_t {
     uint8_t is_mutex_initialized;
     uint8_t are_reservations_valid;
@@ -30,6 +41,9 @@ typedef struct atomic_memory_state_t {
     uint32_t entries_count;
 
     int reservations_count;
+    //  Invariant:
+    //  A CPU may access reservations table only if it currently
+    //  owns the global memory lock
     int reservations_by_cpu[MAX_NUMBER_OF_CPUS];
     address_reservation_t reservations[MAX_NUMBER_OF_CPUS];
 
@@ -44,7 +58,6 @@ int32_t register_in_atomic_memory_state(atomic_memory_state_t *sm, int32_t atomi
 
 void acquire_global_memory_lock(struct CPUState *env);
 void release_global_memory_lock(struct CPUState *env);
-void clear_global_memory_lock(struct CPUState *env);
 
 void reserve_address(struct CPUState *env, target_phys_addr_t address, uint8_t manual_free);
 uint32_t check_address_reservation(struct CPUState *env, target_phys_addr_t address);

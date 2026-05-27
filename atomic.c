@@ -199,7 +199,18 @@ void release_global_memory_lock(struct CPUState *env)
     }
 
     pthread_mutex_lock(&env->atomic_memory_state->global_mutex);
-    ensure_locked_by_me(env);
+
+    //  We must verify that the operation is still valid (i.e. no
+    //  `unlock_dangling_locks()` has invalidated global lock ownership).
+    //  Ownership can be transferred to another CPU after invalidation, so
+    //  validation and release must happen under the same mutex acquisition.
+    if(env->atomic_memory_state->locking_cpu_id != env->atomic_id) {
+        //  Ownership mismatch implies the global lock has been released or
+        //  invalidated; the operation is no longer valid.
+        pthread_mutex_unlock(&env->atomic_memory_state->global_mutex);
+        return;
+    }
+
     env->atomic_memory_state->entries_count--;
     if(env->atomic_memory_state->entries_count == 0) {
         env->atomic_memory_state->locking_cpu_id = NO_CPU_ID;
@@ -208,21 +219,32 @@ void release_global_memory_lock(struct CPUState *env)
     pthread_mutex_unlock(&env->atomic_memory_state->global_mutex);
 }
 
-void clear_global_memory_lock(struct CPUState *env)
+static void clear_global_memory_lock(struct CPUState *env)
 {
     if(!are_multiple_cpus_registered()) {
         return;
     }
 
     pthread_mutex_lock(&env->atomic_memory_state->global_mutex);
-    ensure_locked_by_me(env);
+
+    //  We must verify that the operation is still valid (i.e. no
+    //  `unlock_dangling_locks()` has invalidated global lock ownership).
+    //  Ownership can be transferred to another CPU after invalidation, so
+    //  validation and release must happen under the same mutex acquisition.
+    if(env->atomic_memory_state->locking_cpu_id != env->atomic_id) {
+        //  Ownership mismatch implies the global lock has been released or
+        //  invalidated; the operation is no longer valid.
+        pthread_mutex_unlock(&env->atomic_memory_state->global_mutex);
+        return;
+    }
+
     env->atomic_memory_state->locking_cpu_id = NO_CPU_ID;
     env->atomic_memory_state->entries_count = 0;
     pthread_cond_signal(&env->atomic_memory_state->global_cond);
     pthread_mutex_unlock(&env->atomic_memory_state->global_mutex);
 }
 
-//  ! this function should be called when holding the mutex !
+//  ! This function must be called after acquiring the mutex and before performing any access to memory !
 //  If manual_free is true then the performed reservation will only be able to be cancelled explicitly,
 //  by calling `cancel_reservation` or by performing a different reservation on a CPU that already had
 //  had a reserved address.
@@ -241,6 +263,7 @@ void reserve_address(struct CPUState *env, target_phys_addr_t address, uint8_t m
     make_reservation(env, address, manual_free);
 }
 
+//  ! This function must be called after acquiring the mutex and before performing any access to memory !
 //  Returns zero if the reservation was made for the given address
 uint32_t check_address_reservation(struct CPUState *env, target_phys_addr_t address)
 {
@@ -249,10 +272,11 @@ uint32_t check_address_reservation(struct CPUState *env, target_phys_addr_t addr
     return (reservation == NULL || reservation->address != address);
 }
 
+//  ! This function must be called after acquiring the mutex and before performing any access to memory !
 void register_address_access(struct CPUState *env, target_phys_addr_t address)
 {
     if(env->atomic_memory_state == NULL) {
-        //  no atomic_memory_state so no registration needed
+        //  No atomic_memory_state so no registration needed
         return;
     }
 
@@ -276,28 +300,35 @@ void register_address_access(struct CPUState *env, target_phys_addr_t address)
     }
 }
 
+//  ! This function may be called after performing memory accesses, hence it must reacquire the global memory lock !
 void cancel_reservation(struct CPUState *env)
 {
-    ensure_locked_by_me(env);
-
+    acquire_global_memory_lock(env);
     address_reservation_t *reservation = find_reservation_by_cpu(env);
     if(reservation != NULL) {
         free_reservation(env, reservation, 1);
     }
+    release_global_memory_lock(env);
 }
 
 /*
- * It is possible that an atomic operation takes a lock, performs a ld/st
- * and then fails to unlock it, due to the instruction getting interrupted by
- * a softmmu fault while doing the ld/st. This eventually triggers a longjump
- * back to cpu_exec, but notably _the translation block does not get to finish executing_.
- * I.e., the lock is never released when this happens. Therefore, this function checks
- * for any dangling locks that should've been unlocked, and does so.
+ * Atomic operations may acquire a lock, perform a load/store operation,
+ * and fail to release the lock if execution is interrupted by a softmmu
+ * fault during the memory access.
+ *
+ * In such cases, execution longjmps back to cpu_exec before the translation
+ * block finishes executing, meaning the lock release path is never reached.
+ *
+ * This function detects and releases any dangling locks left behind by
+ * interrupted translation blocks.
+ *
+ * It is also invoked before MMIO accesses to prevent deadlocks when managed
+ * callbacks block or pause emulation while another CPU is waiting on a lock.
  */
 void unlock_dangling_locks(struct CPUState *env)
 {
     //  For the "old" atomics.
-    if(env->atomic_memory_state != NULL && env->atomic_memory_state->locking_cpu_id == env->atomic_id) {
+    if(env->atomic_memory_state != NULL) {
         clear_global_memory_lock(env);
     }
 
