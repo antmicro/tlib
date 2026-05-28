@@ -307,6 +307,7 @@ static void cpu_reset_model_id(CPUState *env, uint32_t id)
             set_feature(env, ARM_FEATURE_THUMB_DIV);
             set_feature(env, ARM_FEATURE_DSP);
             break;
+        case ARM_CPUID_CORTEXM52:
         case ARM_CPUID_CORTEXM55:
             set_feature(env, ARM_FEATURE_VFP_FP16);
             set_feature(env, ARM_FEATURE_VFP5);
@@ -664,6 +665,7 @@ static const struct arm_cpu_t arm_cpu_names[] = {
     //  TODO: M4F should be separate from M4.
     { ARM_CPUID_CORTEXM4,       "cortex-m4"      },
     { ARM_CPUID_CORTEXM7,       "cortex-m4f"     },
+    { ARM_CPUID_CORTEXM52,      "cortex-m52"     },
     { ARM_CPUID_CORTEXM55,      "cortex-m55"     },
     { ARM_CPUID_CORTEXM7,       "cortex-m7"      },
     { ARM_CPUID_CORTEXM85,      "cortex-m85"     },
