@@ -257,6 +257,17 @@ uint32_t tlib_get_xpsr()
 
 EXC_INT_0(uint32_t, tlib_get_xpsr)
 
+void tlib_do_lazy_floating_point_state_preservation(bool createContext)
+{
+    if(createContext) {
+        helper_fp_lsp(env);
+    } else {
+        helper_fp_lsp_no_context(env);
+    }
+}
+
+EXC_VOID_1(tlib_do_lazy_floating_point_state_preservation, bool, createContext)
+
 uint32_t tlib_get_fault_status(bool secure)
 {
     return cpu->v7m.fault_status[secure];
