@@ -1185,6 +1185,23 @@ void do_v7m_secure_return(CPUState *env)
     tlib_printf(LOG_LEVEL_NOISY, "Secure return to 0x%08" PRIx32 ", xpsr: 0x%08" PRIx32, env->regs[15], xpsr_read(env));
 }
 
+bool need_fp_lazy_state_preservation(CPUState *env)
+{
+    bool is_secure = !!(env->v7m.fpccr[M_REG_S] & ARM_FPCCR_S_MASK);
+    return env->v7m.fpccr[is_secure] & ARM_FPCCR_LSPACT_MASK;
+}
+
+bool need_fp_context(CPUState *env)
+{
+    bool need_new_context = false;
+    if((env->v7m.fpccr[env->secure] & ARM_FPCCR_ASPEN_MASK) > 0) {
+        bool fp_context_active = env->v7m.control[M_REG_COMMON] & ARM_CONTROL_FPCA_MASK;
+        bool fp_regs_contain_secure = env->v7m.control[M_REG_COMMON] & ARM_CONTROL_SFPA_MASK;
+        need_new_context = (!fp_context_active || (env->secure && !fp_regs_contain_secure));
+    }
+    return need_new_context;
+}
+
 static inline bool lsp_store_helper(CPUState *env, uint32_t *address, uint32_t val, bool is_secure)
 {
     bool is_user = !!(env->v7m.fpccr[is_secure] & FIELD_MASK(V7M_FPCCR, USER));
@@ -1212,7 +1229,7 @@ void fp_lsp_save_to_stack(CPUState *env)
 
     bool is_secure = !!(env->v7m.fpccr[M_REG_S] & ARM_FPCCR_S_MASK);
     /* Save FP state if FPCCR.LSPACT is set  */
-    if(unlikely(env->v7m.fpccr[is_secure] & ARM_FPCCR_LSPACT_MASK)) {
+    if(unlikely(need_fp_lazy_state_preservation(env))) {
         /* Rule ITWPT: Arm recommends that when performing lazy Floating-point state preservation both the Secure and Non-secure
          * FPCCR.LSPACT flags should be cleared. */
         env->v7m.fpccr[M_REG_S] &= ~ARM_FPCCR_LSPACT_MASK;
@@ -1263,12 +1280,7 @@ void fp_lsp_create_context(CPUState *env)
     /* Update the "S" flag*/
     env->v7m.fpccr[M_REG_COMMON] = FIELD_DP32(env->v7m.fpccr[M_REG_COMMON], V7M_FPCCR, S, is_secure);
 
-    bool is_state_preservation_enabled = env->v7m.fpccr[is_secure] & ARM_FPCCR_ASPEN_MASK;
-    bool fp_context_active = env->v7m.control[M_REG_COMMON] & ARM_CONTROL_FPCA_MASK;
-    bool fp_regs_contain_secure = env->v7m.control[M_REG_COMMON] & ARM_CONTROL_SFPA_MASK;
-    bool need_new_context = is_state_preservation_enabled && (!fp_context_active || (is_secure && !fp_regs_contain_secure));
-
-    if(unlikely(need_new_context)) {
+    if(unlikely(need_fp_context(env))) {
         env->v7m.control[M_REG_COMMON] |= ARM_CONTROL_FPCA_MASK;
         if(is_secure) {
             env->v7m.control[M_REG_COMMON] |= ARM_CONTROL_SFPA_MASK;
@@ -3540,25 +3552,12 @@ void HELPER(vfp_set_vpr_p0)(CPUState *env, uint32_t val)
 uint32_t HELPER(is_fpu_context_active)(CPUState *env)
 {
     /* This does not check if we have access to FPU. Check for this needs to be done separately to calling this helper. */
-    bool active;
-    uint32_t fpccr;
-
-    if((env->v7m.fpccr[M_REG_COMMON] & ARM_FPCCR_S) > 0) {
-        fpccr = env->v7m.fpccr[M_REG_S];
-    } else {
-        fpccr = env->v7m.fpccr[M_REG_NS];
+    bool active = !need_fp_lazy_state_preservation(env);
+    if(active) {
+        active = !need_fp_context(env);
     }
-    active = (fpccr & ARM_FPCCR_LSPACT_MASK) == 0;
-
-    if(active && (env->v7m.fpccr[env->secure] & ARM_FPCCR_ASPEN_MASK) > 0) {
-        bool fp_context_active = env->v7m.control[M_REG_COMMON] & ARM_CONTROL_FPCA_MASK;
-        bool fp_regs_contain_secure = env->v7m.control[M_REG_COMMON] & ARM_CONTROL_SFPA_MASK;
-        active = fp_context_active && (!env->secure || fp_regs_contain_secure);
-    }
-
     return active;
 }
-
 #endif
 
 /* Convert vfp exception flags to target form.  */

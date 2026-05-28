@@ -40,6 +40,28 @@ uint64_t *get_reg_pointer_64(int reg)
 CPU_REGISTER_ACCESSOR(64)
 #endif
 #if defined(TARGET_ARM32) || defined(TARGET_ARM64)
+#ifdef TARGET_PROTO_ARM_M
+void warn_about_fp_lsp(const char *reg_name, int reg_number)
+{
+    if(need_fp_lazy_state_preservation(env)) {
+        tlib_printf(LOG_LEVEL_WARNING,
+                    "Writing to %s%d register when lazy state preservation flag is set; register might be overwritten on the "
+                    "execution of the next floating point instruction",
+                    reg_name, reg_number);
+    }
+}
+
+void warn_about_fp_context(const char *reg_name)
+{
+    if(need_fp_context(env) || need_fp_lazy_state_preservation(env)) {
+        tlib_printf(LOG_LEVEL_WARNING,
+                    "Writing to %s register without floating point context; register might be reset on the execution of the next "
+                    "floating point instruction",
+                    reg_name);
+    }
+}
+#endif
+
 uint32_t *get_reg_pointer_32_with_security(int reg, bool is_secure);
 
 uint32_t *get_reg_pointer_32(int reg)
@@ -174,7 +196,12 @@ void tlib_set_register_value_32_with_security(int reg_number, uint32_t value, bo
         }
         return;
     } else if(reg_number == FPSCR_32) {
+        warn_about_fp_context("FPSCR");
         vfp_set_fpscr(cpu, value);
+    } else if(reg_number == VPR_32) {
+        warn_about_fp_context("VPR");
+    } else if(S_0_32 <= reg_number && reg_number <= S_31_32) {
+        warn_about_fp_lsp("S", reg_number - S_0_32);
     }
 #endif
 
@@ -248,6 +275,10 @@ EXC_INT_1(uint64_t, tlib_get_register_value_64, int, reg_number)
 
 void tlib_set_register_value_64(int reg_number, uint64_t value)
 {
+    if(D_0_64 <= reg_number && reg_number <= D_31_64) {
+        warn_about_fp_lsp("D", reg_number - D_0_64);
+    }
+
     uint64_t *ptr = get_reg_pointer_64(reg_number);
     if(ptr == NULL) {
         tlib_abortf("Write to undefined CPU register number %d detected", reg_number);

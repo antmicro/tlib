@@ -545,6 +545,9 @@ static inline void xpsr_write(CPUState *env, uint32_t val, uint32_t mask)
 
 void vfp_trigger_exception();
 
+bool need_fp_lazy_state_preservation(CPUState *env);
+bool need_fp_context(CPUState *env);
+
 //  More secure options intentionally have greater numbers so take care when modifying this enum.
 //  Make sure any security attribution comparisons, e.g. in the functions below, are still correct.
 enum security_attribution {
