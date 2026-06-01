@@ -113,12 +113,12 @@ void tlib_set_sev_on_pending(int32_t value)
 
 EXC_VOID_1(tlib_set_sev_on_pending, int32_t, value)
 
-void tlib_set_event_flag(int value)
+void tlib_set_event_flag(void)
 {
-    cpu->sev_pending = !!value;
+    cpu->event_register = 1;
 }
 
-EXC_VOID_1(tlib_set_event_flag, int, value)
+EXC_VOID_0(tlib_set_event_flag)
 
 void tlib_set_thumb(int value)
 {

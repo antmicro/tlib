@@ -243,7 +243,7 @@ typedef struct CPUState {
     bool secure;            /* Is CPU executing in Secure mode (TrustZone) */
 
     bool wfe;
-    bool sev_pending;
+    bool event_register;
 
     struct {
         uint32_t c1_dbgdrar; /* Debug ROM Address Register */
@@ -1042,7 +1042,7 @@ static inline void cpu_get_tb_cpu_state(CPUState *env, target_ulong *pc, target_
 static inline bool is_cpu_event_pending(CPUState *env)
 {
     //  The execution of an SEV instruction on any processor in the multiprocessor system.
-    bool event_pending = env->sev_pending;
+    bool event_pending = env->event_register;
 #ifdef TARGET_PROTO_ARM_M
     //  Any exception entering the Pending state if SEVONPEND in the System Control Register is set.
     event_pending |= env->sev_on_pending && tlib_nvic_get_pending_masked_irq();
@@ -1068,7 +1068,7 @@ static inline bool is_cpu_event_pending(CPUState *env)
 static inline bool cpu_has_work(CPUState *env)
 {
     if(env->wfe && is_cpu_event_pending(env)) {
-        env->sev_pending = 0;
+        env->event_register = 0;
         env->wfe = 0;
     }
 

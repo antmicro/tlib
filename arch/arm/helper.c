@@ -5173,7 +5173,7 @@ void tlib_arch_dispose()
 
 void HELPER(set_system_event)(void)
 {
-    tlib_set_system_event(1);
+    tlib_set_system_event();
 }
 
 void cpu_before_cycles_per_instruction_change(CPUState *env)
