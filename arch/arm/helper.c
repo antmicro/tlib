@@ -1429,6 +1429,8 @@ void do_v7m_exception_exit(CPUState *env)
             cpu_loop_exit(env);
         }
     }
+
+    env->event_register = 1;
 }
 
 void do_v7m_secure_return(CPUState *env)
@@ -1444,6 +1446,8 @@ void do_v7m_secure_return(CPUState *env)
     env->v7m.control[M_REG_COMMON] |=
         deposit32(env->v7m.control[M_REG_COMMON], ARM_CONTROL_SFPA, 1, partialRETPSR & RETPSR_SFPA ? 1 : 0);
     env->v7m.exception = partialRETPSR & ~RETPSR_SFPA;
+
+    env->event_register = 1;
 
     tlib_printf(LOG_LEVEL_NOISY, "Secure return to 0x%08" PRIx32 ", xpsr: 0x%08" PRIx32, env->regs[15], xpsr_read(env));
 }
