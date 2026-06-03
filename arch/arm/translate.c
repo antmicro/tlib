@@ -12684,6 +12684,7 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     /* Secure Gateway */
                     gen_sync_pc(s);
                     gen_helper_v8m_sg(cpu_env);
+                    s->base.is_jmp = DISAS_UPDATE;
                 } else if(insn & 0x01200000) {
 #else
                 //  This line is duplicated to satisfy the formatter

@@ -7,6 +7,7 @@
 #include "helper.h"
 #include "host-utils.h"
 #include "infrastructure.h"
+#include "translate_trustzone.h"
 #include "arch_callbacks.h"
 #include "pmu.h"
 
@@ -2773,13 +2774,13 @@ uint64_t cpu_get_state_for_memory_transaction(CPUState *env, target_ulong addr, 
 
 #ifdef TARGET_PROTO_ARM_M
 static inline bool pmsav8_check_security_attribution(CPUState *env, uint32_t address, bool is_secure, int access_type,
-                                                     bool suppress_faults, uint32_t *page_size, int *allowed_permissions)
+                                                     bool suppress_faults, uint32_t *page_size, int *allowed_permissions,
+                                                     enum security_attribution *attribution)
 {
     bool idau_valid, sau_valid, applies_to_whole_page = true;
     int idau_region, sau_region;
-    enum security_attribution attribution;
     pmsav8_get_security_attribution(env, address, is_secure, access_type, /* access_width */ 1, &idau_valid, &idau_region,
-                                    &sau_valid, &sau_region, &attribution, &applies_to_whole_page);
+                                    &sau_valid, &sau_region, attribution, &applies_to_whole_page);
     *page_size = applies_to_whole_page ? TARGET_PAGE_SIZE : PMSAV8_IDAU_SAU_REGION_GRANULARITY_B;
 
     uint32_t fault_status = 0;
@@ -2789,7 +2790,7 @@ static inline bool pmsav8_check_security_attribution(CPUState *env, uint32_t add
      *   Access:        Memory: SA_NONSECURE  SA_SECURE_NSC  SA_SECURE
      *   Secure fetch           FAULT         OK             OK
      *   Secure store/load      OK            OK             OK
-     *   Non-secure fetch       OK            OK             FAULT
+     *   Non-secure fetch       OK            OK (SG only)   FAULT
      *   Non-secure store/load  OK            FAULT          FAULT
      *
      * In secure access to SA_NONSECURE memory and non-secure access to SA_SECURE_NSC memory cases
@@ -2799,7 +2800,7 @@ static inline bool pmsav8_check_security_attribution(CPUState *env, uint32_t add
      * In these cases MPU permissions will be restricted using `allowed_permissions`.
      */
     *allowed_permissions = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
-    if(((attribution == SA_NONSECURE) && is_secure) || ((attribution == SA_SECURE) && !is_secure)) {
+    if(((*attribution == SA_NONSECURE) && is_secure) || ((*attribution == SA_SECURE) && !is_secure)) {
         if(access_type == ACCESS_INST_FETCH) {
             /* The fault ocurred, the fault type is determined by the direction into which domain we are crossing
              * while trying to execute code (fetch instruction for execution) */
@@ -2809,7 +2810,7 @@ static inline bool pmsav8_check_security_attribution(CPUState *env, uint32_t add
         }
     }
 
-    if(fault_status == 0 && attribution_is_secure(attribution) && !is_secure) {
+    if(fault_status == 0 && attribution_is_secure(*attribution) && !is_secure) {
         if(access_type != ACCESS_INST_FETCH) {
             fault_status = SECURE_FAULT_AUVIOL;
         } else {
@@ -2860,10 +2861,12 @@ inline int get_phys_addr(CPUState *env, uint32_t address, bool is_secure, int ac
 
     int ret;
 #ifdef TARGET_PROTO_ARM_M
+    enum security_attribution idau_sau_attribution;
+
     /* TrustZone: Security attribution happens here */
     if(env->v7m.has_trustzone) {
         if(!pmsav8_check_security_attribution(env, address, is_secure, access_type, /* suppress_faults: */ no_page_fault,
-                                              &idau_sau_page_size, &idau_sau_allowed_permissions)) {
+                                              &idau_sau_page_size, &idau_sau_allowed_permissions, &idau_sau_attribution)) {
             //  No need to update `page_size` in this case, we only cache successful translations.
             return TRANSLATE_FAIL;
         }
@@ -2910,6 +2913,31 @@ inline int get_phys_addr(CPUState *env, uint32_t address, bool is_secure, int ac
     //  See the comment above `idau_sau_page_size` and `idau_sau_allowed_permissions` declarations.
     *page_size = MIN(idau_sau_page_size, *page_size);
     *prot = *prot & idau_sau_allowed_permissions;
+
+#ifdef TARGET_PROTO_ARM_M
+    /* TrustZone translation fetch succeeded and MPU check passed.
+     * We have to check if the Non-secure instruction fetch to Secure but Non-secure callable address space will call SG
+     * instruction. Because the fetch is executed twice: first for the first half of the instruction and then for the second, we
+     * have to check for each half of the instruction one at a time. We take IMPDEF allowing us to abort instruction fetch when
+     * first half of the instruction is invalid.
+     */
+    if(env->v7m.has_trustzone && ret == TRANSLATE_SUCCESS && !is_secure && access_type == ACCESS_INST_FETCH &&
+       idau_sau_attribution == SA_SECURE_NSC) {
+        if(!is_insn_sg_half(lduw_phys(address))) {
+            if(!no_page_fault) {
+                tlib_printf(LOG_LEVEL_WARNING,
+                            "[PC=0x%" PRIx32
+                            "] SecureFault (INVEP): Non-secure code attempted to enter Secure state at address 0x%" PRIx32
+                            " which does not contain an SG instruction",
+                            env->regs[15], address);
+                env->v7m.secure_fault_address = address;
+                env->v7m.secure_fault_status |= SECURE_FAULT_INVEP;
+                env->exception_index = EXCP_SECURE;
+            }
+            return TRANSLATE_FAIL;
+        }
+    }
+#endif
 
     if(ret == TRANSLATE_SUCCESS || no_page_fault) {
         return ret;
