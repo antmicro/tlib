@@ -207,6 +207,12 @@ void HELPER(wfi)(void)
 
 void HELPER(wfe)(void)
 {
+    /* WFE should finish immediatly if an event register is set. */
+    if(env->event_register) {
+        env->event_register = 0;
+        return;
+    }
+
     env->exception_index = EXCP_WFI;
     env->wfe = 1;
 }
