@@ -9494,6 +9494,7 @@ static int gen_thumb2_data_op(DisasContext *s, int op, int conds, uint32_t shift
 #ifdef TARGET_PROTO_ARM_M
 #include "translate_lob.h"
 #include "translate_mve.h"
+#include "translate_trustzone.h"
 #include "tcg-op-gvec.h"
 
 static bool mve_check_qreg_bank(int qmask)
@@ -12679,7 +12680,7 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
             if(insn & (1 << 22)) {
                 /* Other load/store, table branch.  */
 #ifdef TARGET_PROTO_ARM_M
-                if(insn == 0xe97fe97f) {
+                if(is_insn_sg(insn)) {
                     /* Secure Gateway */
                     gen_sync_pc(s);
                     gen_helper_v8m_sg(cpu_env);
