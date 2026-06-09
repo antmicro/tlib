@@ -1068,7 +1068,6 @@ static inline bool is_cpu_event_pending(CPUState *env)
 static inline bool cpu_has_work(CPUState *env)
 {
     if(env->wfe && is_cpu_event_pending(env)) {
-        env->event_register = 0;
         env->wfe = 0;
     }
 
