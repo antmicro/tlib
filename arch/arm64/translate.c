@@ -8984,6 +8984,14 @@ static bool trans_CSEL(DisasContext *s, arg_CSEL *a)
 
 static void disas_arm_insn(DisasContext *s, unsigned int insn)
 {
+    if(insn == 0x0) {
+        /* Zero is equivalent to `andeq   r0, r0, r0` which is a NOP.
+         * Translating would result in generating a conditional label. When executing unitialized memory,
+         * this can easily result in exceeding TCG_MAX_LABELS and causing a TCG abort.
+         */
+        return;
+    }
+
     unsigned int cond = insn >> 28;
 
     /* M variants do not implement ARM mode; this must raise the INVSTATE
