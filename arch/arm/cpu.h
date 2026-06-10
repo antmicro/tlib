@@ -669,9 +669,14 @@ static inline uint32_t get_psp(CPUState *env)
     return *pointer_psp(env);
 }
 
+static inline bool in_privileged_mode_with_security(CPUState *env, bool is_secure)
+{
+    return in_handler_mode(env) || !(env->v7m.control[is_secure] & 1);
+}
+
 static inline bool in_privileged_mode(CPUState *env)
 {
-    return in_handler_mode(env) || !(env->v7m.control[env->secure] & 1);
+    return in_privileged_mode_with_security(env, env->secure);
 }
 #endif
 

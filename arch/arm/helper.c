@@ -4382,6 +4382,31 @@ void HELPER(v8m_sg)(CPUState *env)
         return;
     }
 
+    uint32_t *sp_secure;
+    if(is_using_process_sp(env, false, true)) {
+        sp_secure = &env->v7m.other_ss_psp;
+    } else {
+        sp_secure = &env->v7m.other_ss_msp;
+    }
+
+    /* We're only checking if the read from this address is valid */
+    uint32_t phys_ptr = 0;
+    target_ulong page_size = 0;
+    int prot = 0;
+    if(get_phys_addr(env, *sp_secure, true, ACCESS_DATA_LOAD, !in_privileged_mode_with_security(env, true), &phys_ptr, &prot,
+                     &page_size, false) == TRANSLATE_FAIL) {
+        cpu_loop_exit(env);
+    }
+
+    if(env->v7m.ccr[M_REG_COMMON] & FIELD_MASK(V7M_CCR, TRD)) {
+        uint32_t sp_data = ldl_phys(phys_ptr);
+        if((sp_data >> 1) == (INTEGRITY_SIGN >> 1) || sp_secure == &env->v7m.other_ss_msp) {
+            env->v7m.secure_fault_status |= SECURE_FAULT_INVEP;
+            env->exception_index = EXCP_SECURE;
+            cpu_loop_exit(env);
+        }
+    }
+
     /* Clear bit[0] of LR to indicate we will return to Non-Secure mode, if we were previously in Non-Secure state */
     env->regs[14] &= ~1;
     switch_v7m_security_state(env, true);
