@@ -782,9 +782,15 @@ uint32_t HELPER(clz)(uint32_t x)
     return clz32(x);
 }
 
-int32_t HELPER(sdiv)(int32_t num, int32_t den)
+int32_t HELPER(sdiv)(CPUState *env, int32_t num, int32_t den)
 {
     if(den == 0) {
+#ifdef TARGET_PROTO_ARM_M
+        if(env->v7m.ccr[env->secure] & FIELD_MASK(V7M_CCR, DIV_0_TRP)) {
+            env->exception_index = EXCP_DIV_0;
+            cpu_loop_exit(env);
+        }
+#endif
         return 0;
     }
     if(num == INT_MIN && den == -1) {
@@ -793,9 +799,15 @@ int32_t HELPER(sdiv)(int32_t num, int32_t den)
     return num / den;
 }
 
-uint32_t HELPER(udiv)(uint32_t num, uint32_t den)
+uint32_t HELPER(udiv)(CPUState *env, uint32_t num, uint32_t den)
 {
     if(den == 0) {
+#ifdef TARGET_PROTO_ARM_M
+        if(env->v7m.ccr[env->secure] & FIELD_MASK(V7M_CCR, DIV_0_TRP)) {
+            env->exception_index = EXCP_DIV_0;
+            cpu_loop_exit(env);
+        }
+#endif
         return 0;
     }
     return num / den;
@@ -1391,6 +1403,10 @@ static void do_interrupt_v7m(CPUState *env)
         case EXCP_INVSTATE:
             tlib_nvic_set_pending_irq(env->secure ? BANKED_SECURE_EXCP(ARMV7M_EXCP_USAGE) : ARMV7M_EXCP_USAGE);
             env->v7m.fault_status[env->secure] |= USAGE_FAULT_INVSTATE;
+            return;
+        case EXCP_DIV_0:
+            tlib_nvic_set_pending_irq(env->secure ? BANKED_SECURE_EXCP(ARMV7M_EXCP_USAGE) : ARMV7M_EXCP_USAGE);
+            env->v7m.fault_status[env->secure] |= USAGE_FAULT_DIVBYZERO;
             return;
         case EXCP_SWI:
             tlib_nvic_set_pending_irq(env->secure ? BANKED_SECURE_EXCP(ARMV7M_EXCP_SVC) : ARMV7M_EXCP_SVC);

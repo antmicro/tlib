@@ -9103,9 +9103,9 @@ static void disas_arm_insn(CPUState *env, DisasContext *s)
                                     tmp = load_reg(s, rm);
                                     tmp2 = load_reg(s, rs);
                                     if(insn & (1 << 21)) {
-                                        gen_helper_udiv(tmp, tmp, tmp2);
+                                        gen_helper_udiv(tmp, cpu_env, tmp, tmp2);
                                     } else {
-                                        gen_helper_sdiv(tmp, tmp, tmp2);
+                                        gen_helper_sdiv(tmp, cpu_env, tmp, tmp2);
                                     }
                                     tcg_temp_free_i32(tmp2);
                                     store_reg(s, rn, tmp);
@@ -13472,9 +13472,9 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                             goto illegal_op;
                         }
                         if(op & 0x20) {
-                            gen_helper_udiv(tmp, tmp, tmp2);
+                            gen_helper_udiv(tmp, cpu_env, tmp, tmp2);
                         } else {
-                            gen_helper_sdiv(tmp, tmp, tmp2);
+                            gen_helper_sdiv(tmp, cpu_env, tmp, tmp2);
                         }
                         tcg_temp_free_i32(tmp2);
                         store_reg(s, rd, tmp);
