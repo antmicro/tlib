@@ -1212,6 +1212,41 @@ bool need_fp_context(CPUState *env)
     return need_new_context;
 }
 
+uint32_t ccr_read(CPUState *env, bool is_secure)
+{
+    uint32_t common = env->v7m.ccr[M_REG_COMMON];
+    uint32_t banked = env->v7m.ccr[is_secure];
+    uint32_t value = (common & V7M_CCR_NOT_BANKED_FIELDS) | (banked & ~V7M_CCR_NOT_BANKED_FIELDS);
+
+    if(!is_secure) {
+        value &= ~FIELD_MASK(V7M_CCR, TRD);
+    }
+
+    return value;
+}
+
+void ccr_write(CPUState *env, uint32_t value, bool is_secure)
+{
+    if(arm_feature(env, ARM_FEATURE_V8_1M) && (FIELD_MASK(V7M_CCR, LOB) & value)) {
+        tlib_printf(LOG_LEVEL_WARNING, "Trying to enable branch info cache, but it's not supported");
+        value &= ~FIELD_MASK(V7M_CCR, LOB);
+    }
+    if(FIELD_MASK(V7M_CCR, BP) & value) {
+        tlib_printf(LOG_LEVEL_WARNING, "Trying to enable branch predication, but it's not supported");
+        value &= ~FIELD_MASK(V7M_CCR, BP);
+    }
+    if(FIELD_MASK(V7M_CCR, IC) & value) {
+        tlib_printf(LOG_LEVEL_WARNING, "Trying to enable instruction cache, but it's not supported");
+        value &= ~FIELD_MASK(V7M_CCR, IC);
+    }
+    if(!is_secure) {
+        value &= ~FIELD_MASK(V7M_CCR, TRD);
+    }
+
+    env->v7m.ccr[M_REG_COMMON] = value & V7M_CCR_NOT_BANKED_FIELDS;
+    env->v7m.ccr[is_secure] = value & ~V7M_CCR_NOT_BANKED_FIELDS;
+}
+
 static inline bool lsp_store_helper(CPUState *env, uint32_t *address, uint32_t val, bool is_secure)
 {
     bool is_user = !!(env->v7m.fpccr[is_secure] & FIELD_MASK(V7M_FPCCR, USER));

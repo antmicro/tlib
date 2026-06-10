@@ -350,6 +350,7 @@ typedef struct CPUState {
         uint32_t exception;
         uint32_t primask[M_REG_NUM_BANKS];
         uint32_t faultmask[M_REG_NUM_BANKS];
+        uint32_t ccr[M_REG_NUM_BANKS];
         uint32_t cpacr[M_REG_NUM_BANKS];
         uint32_t nsacr; /* RAZ/WI from Non-secure state */
         /* Generally, helpers: `fpccr_write/read` should be used to interact with it
@@ -1080,6 +1081,9 @@ static inline enum arm_cpu_mode cpu_get_current_execution_mode()
 #ifdef TARGET_PROTO_ARM_M
 void switch_v7m_sp(CPUState *env, bool process);
 
+uint32_t ccr_read(CPUState *env, bool is_secure);
+void ccr_write(CPUState *env, uint32_t value, bool is_secure);
+
 static inline uint32_t fpccr_read(CPUState *env, bool is_secure)
 {
     /* Some bits are RES0 [25:11] inclusive */
@@ -1251,5 +1255,24 @@ FIELD(V7M_CONTROL, UBTI_EN, 5, 1)
 FIELD(V7M_CONTROL, PAC_EN, 6, 1)
 FIELD(V7M_CONTROL, UPAC_EN, 7, 1)
 /* Bits [31:8] are RES0 on Cortex-M */
+
+/* V7M CCR bits */
+FIELD(V7M_CCR, NONBASETHRDENA, 0, 1) /* RES1 on Armv8M */
+FIELD(V7M_CCR, USERSETMPEND, 1, 1)
+/* [2] RES0 */
+FIELD(V7M_CCR, UNALIGN_TRP, 3, 1)
+FIELD(V7M_CCR, DIV_0_TRP, 4, 1)
+FIELD(V7M_CCR, BFHFNMIGN, 8, 1) /* not banked */
+FIELD(V7M_CCR, STKALIGN, 9, 1)  /* RES1 on Armv8M */
+FIELD(V7M_CCR, STKOFHFNMIGN, 10, 1)
+/* [15:11] RES0 */
+FIELD(V7M_CCR, DC, 16, 1)
+FIELD(V7M_CCR, IC, 17, 1)
+FIELD(V7M_CCR, BP, 18, 1)
+FIELD(V7M_CCR, LOB, 19, 1)
+FIELD(V7M_CCR, TRD, 20, 1) /* not banked */
+/* [31:21] RES0 */
+
+#define V7M_CCR_NOT_BANKED_FIELDS (FIELD_MASK(V7M_CCR, BFHFNMIGN) | FIELD_MASK(V7M_CCR, TRD))
 
 #undef FIELD

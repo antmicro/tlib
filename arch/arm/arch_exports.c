@@ -250,6 +250,20 @@ uint32_t tlib_get_interrupt_vector_base(bool secure)
 
 EXC_INT_1(uint32_t, tlib_get_interrupt_vector_base, bool, secure)
 
+uint32_t tlib_get_ccr(bool secure)
+{
+    return ccr_read(env, secure);
+}
+
+EXC_INT_1(uint32_t, tlib_get_ccr, bool, secure)
+
+void tlib_set_ccr(uint32_t value, bool secure)
+{
+    ccr_write(env, value, secure);
+}
+
+EXC_VOID_2(tlib_set_ccr, uint32_t, value, bool, secure)
+
 uint32_t tlib_get_xpsr()
 {
     return xpsr_read(cpu);

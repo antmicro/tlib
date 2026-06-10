@@ -34,6 +34,8 @@ void tlib_do_lazy_floating_point_state_preservation(bool createContext);
 uint32_t tlib_get_primask(bool secure);
 uint32_t tlib_get_faultmask(bool secure);
 
+uint32_t tlib_get_ccr(bool secure);
+void tlib_set_ccr(uint32_t value, bool secure);
 uint32_t tlib_get_xpsr(void);
 uint32_t tlib_get_fault_status(bool secure);
 void tlib_set_fault_status(uint32_t value, bool secure);
