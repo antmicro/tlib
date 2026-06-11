@@ -114,7 +114,10 @@ static inline target_ulong get_counter_enabled_mask(CPUState *env)
             case PRV_S:
                 return env->mcounteren;
             case PRV_U:
-                return riscv_has_ext(env, RISCV_FEATURE_RVS) ? env->scounteren : env->mcounteren;
+                if(riscv_has_ext(env, RISCV_FEATURE_RVS)) {
+                    return env->mcounteren & env->scounteren;
+                }
+                return env->mcounteren;
             default:
                 tlib_abortf("Invalid privilege level: %d", env->priv);
                 return 0;
@@ -185,13 +188,26 @@ void helper_raise_illegal_instruction(CPUState *env)
     do_raise_exception_err(env, RISCV_EXCP_ILLEGAL_INST, 0, 1);
 }
 
+static inline void validate_vector_state(CPUState *env)
+{
+    if(get_field(env->mstatus, MSTATUS_VS) == 0) {
+        helper_raise_illegal_instruction(env);
+    }
+}
+
 static inline uint64_t get_minstret_current(CPUState *env)
 {
+    if(env->privilege_architecture >= RISCV_PRIV1_11 && (env->mcountinhibit & 0x4)) {
+        return env->minstret_snapshot_offset > 0 ? env->minstret_snapshot_offset - 1 : 0;
+    }
     return cpu_riscv_read_instret(env) - env->minstret_snapshot + env->minstret_snapshot_offset;
 }
 
 static inline uint64_t get_mcycles_current(CPUState *env)
 {
+    if(env->privilege_architecture >= RISCV_PRIV1_11 && (env->mcountinhibit & 0x1)) {
+        return env->mcycle_snapshot_offset > 0 ? env->mcycle_snapshot_offset - 1 : 0;
+    }
     uint64_t instructions = cpu_riscv_read_instret(env) - env->mcycle_snapshot + env->mcycle_snapshot_offset;
     return instructions_to_cycles(env, instructions);
 }
@@ -396,6 +412,10 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
             target_ulong mask = MSTATUS_MIE | MSTATUS_MPIE | MSTATUS_FS | MSTATUS_MPRV | MSTATUS_MPP | MSTATUS_MXR | MSTATUS_VS;
             if(riscv_has_ext(env, RISCV_FEATURE_RVS)) {
                 mask |= MSTATUS_SIE | MSTATUS_SPIE | MSTATUS_SUM | MSTATUS_SPP;
+
+                if(env->privilege_architecture >= RISCV_PRIV1_10) {
+                    mask |= MSTATUS_TVM | MSTATUS_TW | MSTATUS_TSR;
+                }
             }
 
             if(env->privilege_architecture < RISCV_PRIV1_10) {
@@ -516,7 +536,16 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
             if(env->privilege_architecture == RISCV_PRIV1_09) {
                 env->mucounteren = val_to_write;
             } else if(env->privilege_architecture >= RISCV_PRIV1_11) {
+                uint64_t current_mcycle = get_mcycles_current(env);
+                uint64_t current_minstret = get_minstret_current(env);
+                uint64_t current_instret = cpu_riscv_read_instret(env);
+
                 env->mcountinhibit = val_to_write;
+
+                env->mcycle_snapshot_offset = current_mcycle;
+                env->mcycle_snapshot = current_instret;
+                env->minstret_snapshot_offset = current_minstret;
+                env->minstret_snapshot = current_instret;
             }
             break;
         case CSR_MSCOUNTEREN:
@@ -592,7 +621,7 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
             break;
         }
         case CSR_SEPC:
-            env->sepc = val_to_write;
+            env->sepc = val_to_write & ~((target_ulong)1);
             break;
         case CSR_STVEC:
             env->stvec = mtvec_stvec_write_handler(val_to_write, "STVEC");
@@ -616,7 +645,7 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
             env->stval = val_to_write;
             break;
         case CSR_MEPC:
-            env->mepc = val_to_write;
+            env->mepc = val_to_write & ~((target_ulong)1);
             break;
         case CSR_MTVEC:
             env->mtvec = mtvec_stvec_write_handler(val_to_write, "MTVEC");
@@ -715,24 +744,42 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
         case CSR_PMPADDR0 ... CSR_PMPADDR_LAST:
             pmpaddr_csr_write(env, csrno - CSR_PMPADDR0, val_to_write);
             break;
-        case CSR_VSTART:
-            env->vstart = val_to_write;
+        case CSR_VSTART: {
+            validate_vector_state(env);
+            target_ulong vstart_mask = (env->vlenb << 3) - 1;
+            env->vstart = val_to_write & vstart_mask;
+            env->mstatus = set_field(env->mstatus, MSTATUS_VS, 3);
             break;
+        }
         case CSR_VXSAT:
-            env->vxsat = val_to_write;
+            validate_vector_state(env);
+            env->vxsat = val_to_write & 0x1;
+            env->vcsr = (env->vcsr & ~0x1) | env->vxsat;
+            env->mstatus = set_field(env->mstatus, MSTATUS_VS, 3);
             break;
         case CSR_VXRM:
-            env->vxrm = val_to_write;
+            validate_vector_state(env);
+            env->vxrm = val_to_write & 0x3;
+            env->vcsr = (env->vcsr & ~0x6) | ((env->vxrm & 0x3) << 1);
+            env->mstatus = set_field(env->mstatus, MSTATUS_VS, 3);
             break;
         case CSR_VCSR:
-            env->vcsr = val_to_write;
+            validate_vector_state(env);
+            env->vcsr = val_to_write & 0x7;
+            env->vxsat = env->vcsr & 0x1;
+            env->vxrm = (env->vcsr >> 1) & 0x3;
+            env->mstatus = set_field(env->mstatus, MSTATUS_VS, 3);
             break;
-        case CSR_MENVCFG:
-            env->menvcfg = val_to_write;
+        case CSR_MENVCFG: {
+            target_ulong menvcfg_mask = 0;
+            env->menvcfg = val_to_write & menvcfg_mask;
             break;
-        case CSR_MENVCFGH:
-            env->menvcfgh = val_to_write;
+        }
+        case CSR_MENVCFGH: {
+            target_ulong menvcfgh_mask = 0;
+            env->menvcfgh = val_to_write & menvcfgh_mask;
             break;
+        }
         case CSR_MSECCFG:
             //  Based on the SMEPMP documentation Version 1.0
             if(!riscv_has_additional_ext(env, RISCV_FEATURE_SMEPMP)) {
@@ -986,18 +1033,25 @@ static inline target_ulong csr_read_helper(CPUState *env, target_ulong csrno)
         case CSR_PMPADDR0 ... CSR_PMPADDR_LAST:
             return pmpaddr_csr_read(env, csrno - CSR_PMPADDR0);
         case CSR_VSTART:
+            validate_vector_state(env);
             return env->vstart;
         case CSR_VXSAT:
-            return env->vxsat;
+            validate_vector_state(env);
+            return env->vxsat & 0x1;
         case CSR_VXRM:
-            return env->vxrm;
+            validate_vector_state(env);
+            return env->vxrm & 0x3;
         case CSR_VCSR:
-            return env->vcsr;
+            validate_vector_state(env);
+            return (env->vxsat & 0x1) | ((env->vxrm & 0x3) << 1);
         case CSR_VL:
+            validate_vector_state(env);
             return env->vl;
         case CSR_VTYPE:
+            validate_vector_state(env);
             return env->vtype;
         case CSR_VLENB:
+            validate_vector_state(env);
             return env->vlenb;
         case CSR_SCOUNTOVF:
             if(!riscv_has_additional_ext(env, RISCV_FEATURE_SSCOFPMF)) {
@@ -1077,6 +1131,12 @@ void validate_csr(CPUState *env, uint64_t which, uint64_t write)
             tlib_abortf("Unexpected CSR validation level: %d", env->csr_validation_level);
             break;
     }
+}
+
+void helper_csrrw_no_read(CPUState *env, target_ulong src, target_ulong csr)
+{
+    validate_csr(env, csr, 1);
+    csr_write_helper(env, src, csr);
 }
 
 target_ulong helper_csrrw(CPUState *env, target_ulong src, target_ulong csr)
