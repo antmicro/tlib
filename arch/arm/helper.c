@@ -161,7 +161,9 @@ static void cpu_reset_model_id(CPUState *env, uint32_t id)
             set_feature(env, ARM_FEATURE_AUXCR);
             set_feature(env, ARM_FEATURE_THUMB2);
             set_feature(env, ARM_FEATURE_VFP);
+            set_feature(env, ARM_FEATURE_VFP3);
             set_feature(env, ARM_FEATURE_VFP4);
+            set_feature(env, ARM_FEATURE_VFP_FP16);
             set_feature(env, ARM_FEATURE_NEON);
             set_feature(env, ARM_FEATURE_GENERIC_TIMER);
             set_feature(env, ARM_FEATURE_THUMB2EE);
@@ -247,6 +249,8 @@ static void cpu_reset_model_id(CPUState *env, uint32_t id)
             set_feature(env, ARM_FEATURE_THUMB2);
             set_feature(env, ARM_FEATURE_V7);
             set_feature(env, ARM_FEATURE_V7SEC);
+            set_feature(env, ARM_FEATURE_VFP);
+            set_feature(env, ARM_FEATURE_VFP3);
             set_feature(env, ARM_FEATURE_VFP4);
             set_feature(env, ARM_FEATURE_VFP_FP16);
             set_feature(env, ARM_FEATURE_NEON);
