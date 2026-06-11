@@ -2781,6 +2781,45 @@ static void gen_atomic_compare_and_swap(DisasContext *dc, uint32_t opc, TCGv res
     }
 }
 
+static void gen_atomic_alignment_check(DisasContext *dc, uint32_t opc, TCGv address)
+{
+    int aligned = gen_new_label();
+    TCGv misalignment = tcg_temp_new();
+    int exception = RISCV_EXCP_STORE_AMO_ADDR_MIS;
+    target_ulong alignment_mask = 0;
+
+    switch(opc) {
+        case OPC_RISC_LR_W:
+            exception = RISCV_EXCP_LOAD_ADDR_MIS;
+            alignment_mask = 0x3;
+            break;
+        case OPC_RISC_SC_W:
+            exception = RISCV_EXCP_STORE_AMO_ADDR_MIS;
+            alignment_mask = 0x3;
+            break;
+#if defined(TARGET_RISCV64)
+        case OPC_RISC_LR_D:
+            exception = RISCV_EXCP_LOAD_ADDR_MIS;
+            alignment_mask = 0x7;
+            break;
+        case OPC_RISC_SC_D:
+            exception = RISCV_EXCP_STORE_AMO_ADDR_MIS;
+            alignment_mask = 0x7;
+            break;
+#endif
+        default:
+            tcg_temp_free(misalignment);
+            return;
+    }
+
+    tcg_gen_andi_tl(misalignment, address, alignment_mask);
+    tcg_gen_brcondi_tl(TCG_COND_EQ, misalignment, 0, aligned);
+    generate_exception_mbadaddr(dc, exception);
+    gen_set_label(aligned);
+
+    tcg_temp_free(misalignment);
+}
+
 static void gen_atomic(CPUState *env, DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
 {
     if(!ensure_extension(dc, RISCV_FEATURE_RVA)) {
@@ -2801,8 +2840,10 @@ static void gen_atomic(CPUState *env, DisasContext *dc, uint32_t opc, int rd, in
     gen_get_gpr(source2, rs2);
     gen_get_gpr(result, rd);
 
+    gen_atomic_alignment_check(dc, opc, source1);
+
     if(rs1 == SP) {
-        //  LR is the only pure read atomic instruciton
+        // LR is the only pure read atomic instruciton
         bool is_write = MASK_FUNCT5(opc) != FUNCT5_LR;
         switch(MASK_FUNCT3(opc)) {
             case FUNCT3_WORD:
@@ -2815,8 +2856,6 @@ static void gen_atomic(CPUState *env, DisasContext *dc, uint32_t opc, int rd, in
                 try_run_pre_stack_access_hook(source1, 128, is_write);
                 break;
             default:
-                //  Can only happen if the instruction is malformed somehow
-                //  so it will throw an illegal instruction exception later
                 break;
         }
     }
@@ -3546,6 +3585,20 @@ static void gen_system(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2,
                 }
                 break;
             case 0x9: /* SFENCE.VMA */
+                /* SFENCE.VMA is privileged: U-mode must always trap */
+                if(env->priv < PRV_S) {
+                    generate_exception(dc, RISCV_EXCP_ILLEGAL_INST);
+                    break;
+                }
+
+                /* In S-mode, TVM=1 also traps (priv spec >= 1.10) */
+                if(env->privilege_architecture >= RISCV_PRIV1_10 &&
+                   env->priv == PRV_S &&
+                   get_field(env->mstatus, MSTATUS_TVM)) {
+                    generate_exception(dc, RISCV_EXCP_ILLEGAL_INST);
+                    break;
+                }
+
                 /* TODO: handle ASID specific fences */
                 gen_helper_tlb_flush(cpu_env);
                 break;
@@ -3585,8 +3638,12 @@ static void gen_system(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2,
 
         switch(opc) {
             case OPC_RISC_CSRRW:
-                gen_helper_csrrw(dest, cpu_env, source1, csr_store);
-                gen_set_gpr(rd, dest);
+                if(rd == 0) {
+                    gen_helper_csrrw_no_read(cpu_env, source1, csr_store);
+                } else {
+                    gen_helper_csrrw(dest, cpu_env, source1, csr_store);
+                    gen_set_gpr(rd, dest);
+                }
                 break;
             case OPC_RISC_CSRRS:
                 gen_helper_csrrs(dest, cpu_env, source1, csr_store, rs1_pass);
@@ -3597,8 +3654,12 @@ static void gen_system(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2,
                 gen_set_gpr(rd, dest);
                 break;
             case OPC_RISC_CSRRWI:
-                gen_helper_csrrw(dest, cpu_env, imm_rs1, csr_store);
-                gen_set_gpr(rd, dest);
+                if(rd == 0) {
+                    gen_helper_csrrw_no_read(cpu_env, imm_rs1, csr_store);
+                } else {
+                    gen_helper_csrrw(dest, cpu_env, imm_rs1, csr_store);
+                    gen_set_gpr(rd, dest);
+                }
                 break;
             case OPC_RISC_CSRRSI:
                 gen_helper_csrrs(dest, cpu_env, imm_rs1, csr_store, rs1_pass);
