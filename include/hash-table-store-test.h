@@ -26,6 +26,18 @@ typedef uint64_t target_ulong __attribute__((aligned(TARGET_LONG_ALIGNMENT)));
 #define HST_UNLOCKED 0xFFFFFFFF
 #define HST_NO_CORE  0xFFFFFFFF
 
+//  Accessing peripherals invokes managed MMIO callbacks that may block, pause
+//  emulation, or otherwise wait for other cores. Before such callbacks,
+//  `unlock_dangling_locks()` releases memory locks to avoid deadlocks.
+//
+//  We assume that atomic instructions are not used to perform operations that
+//  invoke managed MMIO callbacks. If such a callback is invoked, the atomicity of the
+//  current instruction is no longer guaranteed.
+//
+//  Atomic instructions executed concurrently on other cores remain atomic
+//  because lock release paths verify ownership before unlocking, preventing a
+//  core from releasing locks held by another core.
+
 /* A single entry in the store table. */
 typedef struct {
     /*  The ID of the core that last wrote to (or reserved)

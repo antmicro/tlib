@@ -84,6 +84,7 @@ static inline DATA_TYPE glue(io_read, SUFFIX)(target_phys_addr_t physaddr, targe
     cpu->mem_io_pc = (uintptr_t)retaddr;
     cpu->mem_io_vaddr = addr;
     uint64_t cpustate = cpu_get_state_for_memory_transaction(env, physaddr, READ_ACCESS_TYPE);
+    unlock_dangling_locks(cpu);
 #if SHIFT == 0
     res = tlib_read_byte(physaddr, cpustate);
 #elif SHIFT == 1
@@ -394,6 +395,7 @@ static inline void glue(io_write, SUFFIX)(target_phys_addr_t physaddr, DATA_TYPE
     cpu->mem_io_vaddr = addr;
     cpu->mem_io_pc = (uintptr_t)retaddr;
     uint64_t cpustate = cpu_get_state_for_memory_transaction(env, physaddr, ACCESS_DATA_STORE);
+    unlock_dangling_locks(cpu);
     /* TODO: added stuff */
 #if SHIFT <= 2
     if(index == IO_MEM_NOTDIRTY >> IO_MEM_SHIFT) {
