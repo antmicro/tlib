@@ -932,7 +932,7 @@ static inline void swap_u32(uint32_t *a, uint32_t *b)
 }
 
 /* Switch to V7M main or process stack pointer.  */
-static void switch_v7m_sp(CPUState *env, bool process)
+void switch_v7m_sp(CPUState *env, bool process)
 {
     if(env->v7m.process_sp != process) {
         swap_u32(&env->v7m.other_sp, &env->regs[13]);

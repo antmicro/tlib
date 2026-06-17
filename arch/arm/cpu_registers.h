@@ -34,7 +34,6 @@ typedef enum {
     Control_32 = 18,
     BasePri_32 = 19,
     VecBase_32 = 20,
-    CurrentSP_32 = 21,
     OtherSP_32 = 22,
     FPCCR_32 = 23,
     FPCAR_32 = 24,

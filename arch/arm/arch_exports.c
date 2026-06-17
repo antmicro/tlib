@@ -673,6 +673,20 @@ uint32_t tlib_get_idau_region_limit_address_register(uint32_t index)
 
 EXC_INT_1(uint32_t, tlib_get_idau_region_limit_address_register, uint32_t, index)
 
+bool tlib_get_process_sp()
+{
+    return env->v7m.process_sp;
+}
+
+EXC_INT_0(bool, tlib_get_process_sp)
+
+void tlib_set_process_sp(bool use_process_sp)
+{
+    switch_v7m_sp(env, use_process_sp);
+}
+
+EXC_VOID_1(tlib_set_process_sp, bool, use_process_sp)
+
 bool tlib_try_add_implementation_defined_exemption_region(uint32_t start, uint32_t end)
 {
     if(cpu->impl_def_attr_exemptions.count + 1 >= MAX_IMPL_DEF_ATTRIBUTION_EXEMPTIONS) {

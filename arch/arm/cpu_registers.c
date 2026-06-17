@@ -83,8 +83,6 @@ uint32_t *get_reg_pointer_32_with_security(int reg, bool is_secure)
             return &(cpu->v7m.basepri[is_secure]);
         case VecBase_32:
             return &(cpu->v7m.vecbase[is_secure]);
-        case CurrentSP_32:
-            return &(cpu->v7m.process_sp);
         case OtherSP_32:
             return &(cpu->v7m.other_sp);
         case FPCAR_32:

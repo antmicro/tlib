@@ -1076,6 +1076,8 @@ static inline enum arm_cpu_mode cpu_get_current_execution_mode()
 }
 
 #ifdef TARGET_PROTO_ARM_M
+void switch_v7m_sp(CPUState *env, bool process);
+
 static inline uint32_t fpccr_read(CPUState *env, bool is_secure)
 {
     /* Some bits are RES0 [25:11] inclusive */

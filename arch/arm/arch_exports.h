@@ -75,4 +75,7 @@ uint32_t tlib_get_idau_enabled();
 uint32_t tlib_get_number_of_idau_regions();
 uint32_t tlib_get_idau_region_base_address_register(uint32_t index);
 uint32_t tlib_get_idau_region_limit_address_register(uint32_t index);
+
+bool tlib_get_process_sp();
+void tlib_set_process_sp(bool use_process_sp);
 #endif
