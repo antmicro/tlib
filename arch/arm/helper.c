@@ -1003,7 +1003,7 @@ void do_v7m_exception_exit(CPUState *env)
     if(env->v7m.has_trustzone) {
         /* RNCQN: If the PE was in Non-secure state when EXC_RETURN was loaded into the PC
          * and EXC_RETURN.ES is one, an INVER SecureFault is generated [...] */
-        if(!env->secure && (type & 0x1) == 1) {
+        if(!env->secure && (type & ARM_EXC_RETURN_ES_MASK) == 1) {
             type &= ~0x1;
             env->v7m.secure_fault_status |= SECURE_FAULT_INVER;
             env->exception_index = EXCP_SECURE;
@@ -1164,7 +1164,7 @@ void do_v7m_exception_exit(CPUState *env)
        if there is a mismatch.  */
     /* ??? Likewise for mismatches between the CONTROL register and the stack
        pointer.  */
-    if((type & ARM_EXC_RETURN_HANDLER_MODE_MASK) != 0) {
+    if((type & ARM_EXC_RETURN_MODE_MASK) != 0) {
         env->v7m.handler_mode = false;
     } else {
         env->v7m.handler_mode = true;
@@ -1341,9 +1341,8 @@ static void do_interrupt_v7m(CPUState *env)
          */
         lr = 0xffffffb0;
 
-        /* Mode */
         if(env->v7m.handler_mode == 0) {
-            lr |= 1 << 3;
+            lr |= ARM_EXC_RETURN_MODE_MASK;
         }
 
         /* SPSEL */
@@ -1364,13 +1363,13 @@ static void do_interrupt_v7m(CPUState *env)
              * - for banked IRQs, the security state the PE was in when the exception was taken. We cheat a little, and use
              * `BANKED_SECURE_EXCP` to reserve extra exception. Look at "EXCP_IRQ" for how this logic works
              */
-            lr |= env->secure << 6;
+            lr |= env->secure << ARM_EXC_RETURN_S;
         }
 
     } else {
         lr = 0xfffffff1;
         if(env->v7m.exception == 0) {
-            lr |= 0x8;
+            lr |= ARM_EXC_RETURN_MODE_MASK;
             lr |= (env->v7m.process_sp != 0) << 2;
         }
     }
@@ -1474,7 +1473,7 @@ static void do_interrupt_v7m(CPUState *env)
                             break;
                     }
                 }
-                lr |= deposit32(lr, 0, 1, secure_target);
+                lr |= deposit32(lr, ARM_EXC_RETURN_ES, 1, secure_target);
             }
             break;
         default:
@@ -1556,7 +1555,7 @@ static void do_interrupt_v7m(CPUState *env)
         /* RSHNX: On taking an exception, excluding tail-chaining that requires a transition from Secure to Non-secure state, the
          * PE hardware saves Additional state context registers. We don't do tail-chaining at all in our implementation. Push
          * additional state context registers, when switching from Secure to Non-secure */
-        if(cpu->secure && (lr & 1) == 0) {
+        if(cpu->secure && (lr & ARM_EXC_RETURN_ES_MASK) == 0) {
             tlib_printf(LOG_LEVEL_NOISY, "Pushing additional state context registers on stack");
             stack_status |= v7m_push(env, env->regs[11]);
             stack_status |= v7m_push(env, env->regs[10]);
@@ -1582,9 +1581,9 @@ static void do_interrupt_v7m(CPUState *env)
         }
 
         tlib_printf(LOG_LEVEL_NOISY, "Loading to LR, while entering exception with TrustZone, value 0x%" PRIx32, lr);
-        switch_v7m_security_state(env, lr & 1);
+        switch_v7m_security_state(env, lr & ARM_EXC_RETURN_ES_MASK);
     }
-    switch_v7m_sp(env, 0);
+    switch_v7m_sp(env, false);
 
     env->uncached_cpsr &= ~CPSR_IT;
 

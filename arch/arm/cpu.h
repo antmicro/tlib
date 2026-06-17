@@ -647,19 +647,25 @@ static inline bool in_user_mode(CPUState *env)
 #define INTERNAL_VFP_FPSCR_NZCV 0xffff
 
 /* FP fields.  */
-#define ARM_CONTROL_FPCA     2
-#define ARM_CONTROL_SFPA     3
-#define ARM_FPCCR_LSPACT     0
-#define ARM_FPCCR_S          2
-#define ARM_FPCCR_TS         26
-#define ARM_FPCCR_CLRONRETS  27
-#define ARM_FPCCR_CLRONRET   28
-#define ARM_FPCCR_LSPENS     29
-#define ARM_FPCCR_LSPEN      30
-#define ARM_FPCCR_ASPEN      31
-#define ARM_FPCAR_ADDRESS    3
-#define ARM_EXC_RETURN_NFPCA 4
-#define ARM_VFP_FPEXC_FPUEN  30
+#define ARM_CONTROL_FPCA    2
+#define ARM_CONTROL_SFPA    3
+#define ARM_FPCCR_LSPACT    0
+#define ARM_FPCCR_S         2
+#define ARM_FPCCR_TS        26
+#define ARM_FPCCR_CLRONRETS 27
+#define ARM_FPCCR_CLRONRET  28
+#define ARM_FPCCR_LSPENS    29
+#define ARM_FPCCR_LSPEN     30
+#define ARM_FPCCR_ASPEN     31
+#define ARM_FPCAR_ADDRESS   3
+#define ARM_VFP_FPEXC_FPUEN 30
+
+#define ARM_EXC_RETURN_ES    0
+#define ARM_EXC_RETURN_SPSEL 2
+#define ARM_EXC_RETURN_MODE  3
+#define ARM_EXC_RETURN_NFPCA 4 /* Also known as EXC_RETURN.FType */
+#define ARM_EXC_RETURN_DCRS  5
+#define ARM_EXC_RETURN_S     6
 
 #define ARM_CONTROL_FPCA_MASK    (1 << ARM_CONTROL_FPCA)
 #define ARM_CONTROL_SFPA_MASK    (1 << ARM_CONTROL_SFPA)
@@ -672,11 +678,15 @@ static inline bool in_user_mode(CPUState *env)
 #define ARM_FPCCR_LSPEN_MASK     (1 << ARM_FPCCR_LSPEN)
 #define ARM_FPCCR_ASPEN_MASK     (1 << ARM_FPCCR_ASPEN)
 #define ARM_FPCAR_ADDRESS_MASK   (0xfffffff8)
-/* Also known as EXC_RETURN.FType */
-#define ARM_EXC_RETURN_NFPCA_MASK        (1 << ARM_EXC_RETURN_NFPCA)
-#define ARM_VFP_FPEXC_FPUEN_MASK         (1 << ARM_VFP_FPEXC_FPUEN)
-#define ARM_FPDSCR_VALUES_MASK           0x07c00000
-#define ARM_EXC_RETURN_HANDLER_MODE_MASK 0x8
+#define ARM_VFP_FPEXC_FPUEN_MASK (1 << ARM_VFP_FPEXC_FPUEN)
+#define ARM_FPDSCR_VALUES_MASK   0x07c00000
+
+#define ARM_EXC_RETURN_ES_MASK    (1 << ARM_EXC_RETURN_ES)
+#define ARM_EXC_RETURN_SPSEL_MASK (1 << ARM_EXC_RETURN_SPSEL)
+#define ARM_EXC_RETURN_MODE_MASK  (1 << ARM_EXC_RETURN_MODE)
+#define ARM_EXC_RETURN_NFPCA_MASK (1 << ARM_EXC_RETURN_NFPCA)
+#define ARM_EXC_RETURN_DCRS_MASK  (1 << ARM_EXC_RETURN_DCRS)
+#define ARM_EXC_RETURN_S_MASK     (1 << ARM_EXC_RETURN_S)
 
 #define RETPSR_SFPA (1 << 20)
 
