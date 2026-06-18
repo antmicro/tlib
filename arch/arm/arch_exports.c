@@ -768,11 +768,25 @@ void tlib_set_fpu_interrupt_number(int32_t irq_number)
 
 EXC_VOID_1(tlib_set_fpu_interrupt_number, int32_t, irq_number)
 
-uint32_t tlib_is_v8()
+uint32_t tlib_get_architecture_version()
 {
-    return arm_feature(env, ARM_FEATURE_V8);
+    if(arm_feature(env, ARM_FEATURE_V8)) {
+        return 8;
+    } else if(arm_feature(env, ARM_FEATURE_V7)) {
+        return 7;
+    } else if(arm_feature(env, ARM_FEATURE_V6)) {
+        return 6;
+    } else if(arm_feature(env, ARM_FEATURE_V5)) {
+        return 5;
+    } else if(arm_feature(env, ARM_FEATURE_V4T)) {
+        return 4;
+    } else {
+        tlib_printf(LOG_LEVEL_WARNING,
+                    "Getting architecture version below ARMv4T, returning 3, but the version might be different than that");
+        return 3;
+    }
 }
-EXC_INT_0(uint32_t, tlib_is_v8)
+EXC_INT_0(uint32_t, tlib_get_architecture_version)
 
 /* PMSAv8 */
 

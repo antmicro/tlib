@@ -52,7 +52,7 @@ uint32_t tlib_get_mpu_region_size_and_enable();
 uint32_t tlib_get_mpu_region_access_control();
 uint32_t tlib_get_mpu_region_number();
 
-uint32_t tlib_is_v8();
+uint32_t tlib_get_architecture_version();
 
 void tlib_set_pmsav8_ctrl(uint32_t value, bool secure);
 void tlib_set_pmsav8_rnr(uint32_t value, bool secure);
