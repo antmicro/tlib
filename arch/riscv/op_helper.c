@@ -592,7 +592,7 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
             break;
         }
         case CSR_SEPC:
-            env->sepc = val_to_write;
+            env->sepc = val_to_write & ~((target_ulong)1);
             break;
         case CSR_STVEC:
             env->stvec = mtvec_stvec_write_handler(val_to_write, "STVEC");
@@ -616,7 +616,7 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
             env->stval = val_to_write;
             break;
         case CSR_MEPC:
-            env->mepc = val_to_write;
+            env->mepc = val_to_write & ~((target_ulong)1);
             break;
         case CSR_MTVEC:
             env->mtvec = mtvec_stvec_write_handler(val_to_write, "MTVEC");
@@ -727,12 +727,16 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
         case CSR_VCSR:
             env->vcsr = val_to_write;
             break;
-        case CSR_MENVCFG:
-            env->menvcfg = val_to_write;
+        case CSR_MENVCFG: {
+            target_ulong menvcfg_mask = 0;
+            env->menvcfg = val_to_write & menvcfg_mask;
             break;
-        case CSR_MENVCFGH:
-            env->menvcfgh = val_to_write;
+        }
+        case CSR_MENVCFGH: {
+            target_ulong menvcfgh_mask = 0;
+            env->menvcfgh = val_to_write & menvcfgh_mask;
             break;
+        }
         case CSR_MSECCFG:
             //  Based on the SMEPMP documentation Version 1.0
             if(!riscv_has_additional_ext(env, RISCV_FEATURE_SMEPMP)) {
