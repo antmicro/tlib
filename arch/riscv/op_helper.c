@@ -592,7 +592,7 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
             break;
         }
         case CSR_SEPC:
-            env->sepc = val_to_write;
+            env->sepc = val_to_write & ~((target_ulong)1);
             break;
         case CSR_STVEC:
             env->stvec = mtvec_stvec_write_handler(val_to_write, "STVEC");
@@ -616,7 +616,7 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
             env->stval = val_to_write;
             break;
         case CSR_MEPC:
-            env->mepc = val_to_write;
+            env->mepc = val_to_write & ~((target_ulong)1);
             break;
         case CSR_MTVEC:
             env->mtvec = mtvec_stvec_write_handler(val_to_write, "MTVEC");
