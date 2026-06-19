@@ -2925,6 +2925,47 @@ static void gen_atomic_compare_and_swap(DisasContext *dc, uint32_t opc, TCGv res
     }
 }
 
+static void gen_alignment_check(DisasContext *dc, TCGv address, target_ulong alignment, int exception)
+{
+    int aligned = gen_new_label();
+    TCGv misalignment = tcg_temp_new();
+
+    tcg_gen_andi_tl(misalignment, address, alignment);
+    tcg_gen_brcondi_tl(TCG_COND_EQ, misalignment, 0, aligned);
+    generate_exception_mbadaddr(dc, exception);
+    gen_set_label(aligned);
+
+    tcg_temp_free(misalignment);
+}
+
+static void gen_atomic_alignment_check(DisasContext *dc, uint32_t opc, TCGv address)
+{
+    target_ulong alignment_mask = 0;
+
+    switch(opc) {
+        case OPC_RISC_LR_W:
+            alignment_mask = 0x3;
+            gen_alignment_check(dc, address, alignment_mask, RISCV_EXCP_LOAD_ADDR_MIS);
+            break;
+        case OPC_RISC_SC_W:
+            alignment_mask = 0x3;
+            gen_alignment_check(dc, address, alignment_mask, RISCV_EXCP_STORE_AMO_ADDR_MIS);
+            break;
+#if defined(TARGET_RISCV64)
+        case OPC_RISC_LR_D:
+            alignment_mask = 0x7;
+            gen_alignment_check(dc, address, alignment_mask, RISCV_EXCP_LOAD_ADDR_MIS);
+            break;
+        case OPC_RISC_SC_D:
+            alignment_mask = 0x7;
+            gen_alignment_check(dc, address, alignment_mask, RISCV_EXCP_STORE_AMO_ADDR_MIS);
+            break;
+#endif
+        default:
+            return;
+    }
+}
+
 static void gen_atomic(CPUState *env, DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
 {
     if(!ensure_extension(dc, RISCV_FEATURE_RVA)) {
@@ -2944,6 +2985,8 @@ static void gen_atomic(CPUState *env, DisasContext *dc, uint32_t opc, int rd, in
     gen_get_gpr(source1, rs1);
     gen_get_gpr(source2, rs2);
     gen_get_gpr(result, rd);
+
+    gen_atomic_alignment_check(dc, opc, source1);
 
     if(rs1 == SP) {
         //  LR is the only pure read atomic instruciton
