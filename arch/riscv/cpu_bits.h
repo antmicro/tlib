@@ -429,6 +429,10 @@
 #define SSTATUS_SD  SSTATUS64_SD
 #endif
 
+/* mcountinhibit bits */
+#define MCOUNTINHIBIT_CY 0x00000001
+#define MCOUNTINHIBIT_IR 0x00000004
+
 /* irqs */
 #define IRQ_US (1 << IRQ_U_SOFT)
 #define IRQ_SS (1 << IRQ_S_SOFT)
