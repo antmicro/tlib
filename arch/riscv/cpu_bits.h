@@ -312,6 +312,8 @@
 #define MSTATUS_TSR  0x40000000 /* since: priv-1.10 */
 
 #define MSTATUS_VS_INITIAL 0x00000600
+#define MSTATUS_VS_DIRTY   0x3
+#define MSTATUS_VS_OFF     0x0
 #define MSTATUS_FS_INITIAL 0x00002000
 #define MSTATUS_XS_INITIAL 0x00008000
 
@@ -401,6 +403,16 @@
 #define MSECCFG_MML  (1 << 0)
 #define MSECCFG_MMWP (1 << 1)
 #define MSECCFG_RLB  (1 << 2)
+
+/* vcsr bits */
+#define VXRM_MASK       0x3
+#define VXRM_VCSR_SHIFT 0x1
+
+#define VXSAT_MASK 0x1
+
+#define VCSR_VXSAT VXSAT_MASK /* starts at lsb */
+#define VCSR_VXRM  (VXRM_MASK << VXRM_VCSR_SHIFT)
+#define VCSR_MASK  (VCSR_VXSAT | VCSR_VXRM)
 
 /* sintthresh bits */
 #define SINTTHRESH_TH 0x000000ff
