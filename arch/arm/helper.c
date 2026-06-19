@@ -972,15 +972,28 @@ static void switch_v7m_security_state(CPUState *env, bool secure)
     /* If we were in thread mode before the switch, we need to remember to swap them
      * to make sure that MSP is really the Main Stack Pointer
      */
+    uint32_t new_ss_msp = env->v7m.other_ss_msp;
+    uint32_t new_ss_psp = env->v7m.other_ss_psp;
+
     if(env->v7m.process_sp) {
-        swap_u32(&env->v7m.other_ss_psp, &env->regs[13]);
-        swap_u32(&env->v7m.other_ss_msp, &env->v7m.other_sp);
+        env->v7m.other_ss_psp = env->regs[13];
+        env->v7m.other_ss_msp = env->v7m.other_sp;
     } else {
-        swap_u32(&env->v7m.other_ss_msp, &env->regs[13]);
-        swap_u32(&env->v7m.other_ss_psp, &env->v7m.other_sp);
+        env->v7m.other_ss_msp = env->regs[13];
+        env->v7m.other_ss_psp = env->v7m.other_sp;
     }
 
     env->secure = secure;
+
+    if(is_using_process_sp_current(env)) {
+        env->regs[13] = new_ss_psp;
+        env->v7m.other_sp = new_ss_msp;
+        env->v7m.process_sp = true;
+    } else {
+        env->regs[13] = new_ss_msp;
+        env->v7m.other_sp = new_ss_psp;
+        env->v7m.process_sp = false;
+    }
 }
 
 static inline bool tz_v8m_should_pop_additional_registers(uint32_t type)
@@ -1041,12 +1054,16 @@ void do_v7m_exception_exit(CPUState *env)
         tlib_on_interrupt_end(env->exception_index);
     }
 
+    bool secure_stack = env->v7m.has_trustzone && (type & ARM_EXC_RETURN_ES_MASK) > 0;
+    env->v7m.control[secure_stack] = FIELD_DP32(env->v7m.control[secure_stack], V7M_CONTROL, SPSEL, type >> ARM_EXC_RETURN_SPSEL);
+
     if(env->v7m.has_trustzone) {
-        /* Location of return stack type (Secure/Non-Secure) */
-        switch_v7m_security_state(env, type & (1 << 6));
+        /* Location of return stack type (Secure/Non-secure) */
+        switch_v7m_security_state(env, type & ARM_EXC_RETURN_S_MASK);
     }
-    /* Switch to the target stack.  */
-    switch_v7m_sp(env, (type & 4) != 0);
+
+    /* Switch to the target stack */
+    switch_v7m_sp(env, is_using_process_sp(env, (type & ARM_EXC_RETURN_MODE_MASK) == 0, env->secure));
 
     if((env->v7m.control[M_REG_COMMON] & ARM_CONTROL_FPCA_MASK) && (fpccr_read(env, env->secure) & ARM_FPCCR_CLRONRET_MASK)) {
         if(fpccr_read(env, true) & ARM_FPCCR_LSPACT_MASK) {
@@ -1345,11 +1362,6 @@ static void do_interrupt_v7m(CPUState *env)
             lr |= ARM_EXC_RETURN_MODE_MASK;
         }
 
-        /* SPSEL */
-        if(env->v7m.process_sp != 0) {
-            lr |= 1 << 2;
-        }
-
         if(env->v7m.has_trustzone) {
             /* There are two most relevant bits here
              * [0] ES (Exception Secure) - "The security domain the exception was taken to"
@@ -1365,12 +1377,11 @@ static void do_interrupt_v7m(CPUState *env)
              */
             lr |= env->secure << ARM_EXC_RETURN_S;
         }
-
     } else {
         lr = 0xfffffff1;
         if(env->v7m.exception == 0) {
             lr |= ARM_EXC_RETURN_MODE_MASK;
-            lr |= (env->v7m.process_sp != 0) << 2;
+            lr |= FIELD_EX32(env->v7m.control[env->secure], V7M_CONTROL, SPSEL) << ARM_EXC_RETURN_SPSEL;
         }
     }
 
@@ -1380,7 +1391,8 @@ static void do_interrupt_v7m(CPUState *env)
     }
 
     /* For exceptions we just mark as pending on the NVIC, and let that
-       handle it.  */
+       handle it. We'll return to this function with exception_index set
+       to EXCP_IRQ when exception actually gets processed. */
     /* TODO: Need to escalate if the current priority is higher than the
        one we're raising.  */
     switch(env->exception_index) {
@@ -1433,10 +1445,10 @@ static void do_interrupt_v7m(CPUState *env)
                 tlib_printf(LOG_LEVEL_DEBUG, "Spurious NVIC IRQ ignored");
                 return;
             }
+            bool secure_target = env->secure;
             if(env->v7m.has_trustzone) {
                 /* If we have TrustZone, NVIC_ITNSx determines the security state
                  * the hardware IRQ is taken to */
-                bool secure_target = env->secure;
                 if(env->v7m.exception >= ARMV7M_EXCP_HARDIRQ0 && env->v7m.exception < BANKED_SECURE_EXCP_BIT) {
                     secure_target = tlib_nvic_interrupt_targets_secure(env->v7m.exception);
                 } else {
@@ -1473,8 +1485,9 @@ static void do_interrupt_v7m(CPUState *env)
                             break;
                     }
                 }
-                lr |= deposit32(lr, ARM_EXC_RETURN_ES, 1, secure_target);
             }
+            lr |= FIELD_EX32(env->v7m.control[secure_target], V7M_CONTROL, SPSEL) << ARM_EXC_RETURN_SPSEL;
+            lr |= deposit32(lr, ARM_EXC_RETURN_ES, 1, secure_target);
             break;
         default:
             cpu_abort(env, "Unhandled exception 0x%x\n", env->exception_index);
@@ -1584,6 +1597,7 @@ static void do_interrupt_v7m(CPUState *env)
         switch_v7m_security_state(env, lr & ARM_EXC_RETURN_ES_MASK);
     }
     switch_v7m_sp(env, false);
+    env->v7m.control[env->secure] &= ~FIELD_MASK(V7M_CONTROL, SFPA);
 
     env->uncached_cpsr &= ~CPSR_IT;
 
@@ -3115,11 +3129,11 @@ uint32_t HELPER(v7m_mrs)(CPUState *env, uint32_t reg)
         case 7: /* IEPSR */
             return xpsr_read(env) & 0x0700edff;
         case 8: /* MSP */
-            return env->v7m.process_sp ? env->v7m.other_sp : env->regs[13];
+            return get_msp(env);
         case NON_SECURE_REG(8): /* MSP_NS */
             return env->v7m.other_ss_msp;
         case 9: /* PSP */
-            return env->v7m.process_sp ? env->regs[13] : env->v7m.other_sp;
+            return get_psp(env);
         case NON_SECURE_REG(9): /* PSP_NS */
             return env->v7m.other_ss_psp;
         case NON_SECURE_REG(10):
@@ -3143,7 +3157,7 @@ uint32_t HELPER(v7m_mrs)(CPUState *env, uint32_t reg)
             return env->v7m.control[is_secure] | (env->v7m.control[M_REG_COMMON] & ARM_CONTROL_FPCA_MASK) |
                    (is_secure ? (env->v7m.control[M_REG_COMMON] & ARM_CONTROL_SFPA_MASK) : 0);
         case NON_SECURE_REG(24): /* SP_NS */
-            return env->v7m.process_sp ? env->v7m.other_ss_psp : env->v7m.other_ss_msp;
+            return is_using_process_sp(env, in_handler_mode(env), false) ? env->v7m.other_ss_psp : env->v7m.other_ss_msp;
         default:
             /* ??? For debugging only.  */
             cpu_abort(env, "Unimplemented system register read (%d)\n", reg);
@@ -3210,10 +3224,8 @@ void HELPER(v7m_msr)(CPUState *env, uint32_t reg, uint32_t val)
             val &= 0xFFFFFFFC;
             if(!in_privileged_mode(env)) {
                 return;
-            } else if(env->v7m.process_sp) {
-                env->v7m.other_sp = val;
             } else {
-                env->regs[13] = val;
+                set_msp(env, val);
             }
             break;
         case NON_SECURE_REG(8): /* MSP_NS */
@@ -3223,11 +3235,7 @@ void HELPER(v7m_msr)(CPUState *env, uint32_t reg, uint32_t val)
         case 9: /* PSP */
             //  bits [1:0] of SP are WI or SBZP
             val &= 0xFFFFFFFC;
-            if(env->v7m.process_sp) {
-                env->regs[13] = val;
-            } else {
-                env->v7m.other_sp = val;
-            }
+            set_psp(env, val);
             break;
         case NON_SECURE_REG(9): /* PSP_NS */
             //  bits [1:0] of SP are WI or SBZP
@@ -3295,24 +3303,14 @@ void HELPER(v7m_msr)(CPUState *env, uint32_t reg, uint32_t val)
                 env->v7m.control[M_REG_COMMON] |= val & ARM_CONTROL_FPCA_MASK;
             }
             //  only switch the stack if in thread mode (handler mode always uses MSP stack)
-            if(env->v7m.exception == 0) {
-                //  If security states don't match, we need to use other SPs
-                bool other_sps = is_secure != cpu->secure;
-                if(other_sps) {
-                    switch_v7m_security_state(env, is_secure);
-                }
-                switch_v7m_sp(env, (val & 2) != 0);
-                //  ... and restore them afterwards
-                if(other_sps) {
-                    //  negation is ok, since we for sure have switched Security State before
-                    switch_v7m_security_state(env, !is_secure);
-                }
+            if(is_secure == cpu->secure) {
+                switch_v7m_sp(env, is_using_process_sp_current(env));
             }
             break;
         case NON_SECURE_REG(24): /* SP_NS */
             //  bits [1:0] of SP are WI or SBZP
             val &= 0xFFFFFFFC;
-            if(env->v7m.process_sp) {
+            if(is_using_process_sp(env, in_handler_mode(env), false)) {
                 env->v7m.other_ss_psp = val;
             } else {
                 env->v7m.other_ss_msp = val;

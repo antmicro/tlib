@@ -328,12 +328,17 @@ typedef struct CPUState {
          * Usually there are two (for handler and process),
          * but with TrustZone there are four (additional two for each mode)
          * They should be exchanged via `switch_v7m_sp`/`switch_v7m_security`.
-         * regs[13] contains the current "active" pointer
+         * regs[13] contains the current "active" pointer.
+         * Use is_using_process_sp_current(env) to tell which stack pointer
+         * should be used for the current state.
+         * process_sp tells which stack pointer is currently in sp field.
+         * It should always be equal to is_using_process_sp_current(env)
+         * after finished state modification.
          */
         uint32_t other_sp;     /* Other Stack Pointer */
         uint32_t other_ss_msp; /* Other Security State Main Stack */
         uint32_t other_ss_psp; /* Other Security State Process Stack */
-        uint32_t process_sp;   /* Is the currently selected SP Process or Main SP */
+        bool process_sp;       /* Is the currently selected SP Process or Main SP */
         uint32_t vecbase[M_REG_NUM_BANKS];
         uint32_t basepri[M_REG_NUM_BANKS];
         /* SFPA and FPCA bits are not banked - required for FPU support in TrustZone.
@@ -615,6 +620,54 @@ enum arm_fp_precision {
 static inline bool in_handler_mode(CPUState *env)
 {
     return env->v7m.exception != 0;
+}
+
+static inline bool is_using_process_sp(CPUState *env, bool is_handler, bool is_secure)
+{
+    return !is_handler && (env->v7m.control[is_secure] & 2);
+}
+
+static inline bool is_using_process_sp_current(CPUState *env)
+{
+    return is_using_process_sp(env, in_handler_mode(env), env->secure);
+}
+
+static inline uint32_t *pointer_msp(CPUState *env)
+{
+    if(env->v7m.process_sp) {
+        return &env->v7m.other_sp;
+    } else {
+        return &env->regs[13];
+    }
+}
+
+static inline uint32_t *pointer_psp(CPUState *env)
+{
+    if(env->v7m.process_sp) {
+        return &env->regs[13];
+    } else {
+        return &env->v7m.other_sp;
+    }
+}
+
+static inline void set_msp(CPUState *env, uint32_t value)
+{
+    *pointer_msp(env) = value;
+}
+
+static inline uint32_t get_msp(CPUState *env)
+{
+    return *pointer_msp(env);
+}
+
+static inline void set_psp(CPUState *env, uint32_t value)
+{
+    *pointer_psp(env) = value;
+}
+
+static inline uint32_t get_psp(CPUState *env)
+{
+    return *pointer_psp(env);
 }
 #endif
 
