@@ -6,7 +6,7 @@
 uint32_t tlib_get_cpu_model_id(void);
 uint32_t tlib_get_it_state(void);
 uint32_t tlib_evaluate_condition_code(uint32_t);
-uint32_t tlib_get_arm_feature(uint32_t feature);
+uint32_t tlib_get_arm_feature(int32_t feature);
 
 void tlib_set_cpu_model_id(uint32_t value);
 void tlib_toggle_fpu(int32_t enabled);
@@ -29,7 +29,7 @@ void tlib_set_interrupt_vector_base(uint32_t address, bool secure);
 uint32_t tlib_get_interrupt_vector_base(bool secure);
 void tlib_set_fpu_interrupt_number(int32_t enabled);
 
-void tlib_do_lazy_floating_point_preservation(bool createContext);
+void tlib_do_lazy_floating_point_state_preservation(bool createContext);
 
 uint32_t tlib_get_primask(bool secure);
 uint32_t tlib_get_faultmask(bool secure);
@@ -44,12 +44,10 @@ uint32_t tlib_get_secure_fault_address(void);
 void tlib_enable_mpu(int32_t enabled);
 void tlib_set_mpu_region_base_address(uint32_t value);
 void tlib_set_mpu_region_size_and_enable(uint32_t value);
-void tlib_set_mpu_region_access_control(uint32_t value);
 void tlib_set_mpu_region_number(uint32_t value);
 uint32_t tlib_is_mpu_enabled();
 uint32_t tlib_get_mpu_region_base_address();
 uint32_t tlib_get_mpu_region_size_and_enable();
-uint32_t tlib_get_mpu_region_access_control();
 uint32_t tlib_get_mpu_region_number();
 
 uint32_t tlib_get_architecture_version();
@@ -59,7 +57,6 @@ void tlib_set_pmsav8_rnr(uint32_t value, bool secure);
 void tlib_set_pmsav8_rbar(uint32_t value, uint32_t region_offset, bool secure);
 void tlib_set_pmsav8_rlar(uint32_t value, uint32_t region_offset, bool secure);
 void tlib_set_pmsav8_mair(uint32_t index, uint32_t value, bool secure);
-uint32_t tlib_get_pmsav8_type(bool secure);
 uint32_t tlib_get_pmsav8_ctrl(bool secure);
 uint32_t tlib_get_pmsav8_rnr(bool secure);
 uint32_t tlib_get_pmsav8_rbar(uint32_t region_offset, bool secure);
