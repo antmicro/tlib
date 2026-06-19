@@ -104,6 +104,7 @@ DEF_HELPER_2(fclass_h, tl, env, i64)
 
 /* Special functions */
 DEF_HELPER_3(csrrw, tl, env, tl, tl)
+DEF_HELPER_3(csrrw_no_read, void, env, tl, tl)
 DEF_HELPER_4(csrrs, tl, env, tl, tl, tl)
 DEF_HELPER_4(csrrc, tl, env, tl, tl, tl)
 DEF_HELPER_2(sret, tl, env, tl)

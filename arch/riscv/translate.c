@@ -3585,8 +3585,12 @@ static void gen_system(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2,
 
         switch(opc) {
             case OPC_RISC_CSRRW:
-                gen_helper_csrrw(dest, cpu_env, source1, csr_store);
-                gen_set_gpr(rd, dest);
+                if(rd == 0) {
+                    gen_helper_csrrw_no_read(cpu_env, source1, csr_store);
+                } else {
+                    gen_helper_csrrw(dest, cpu_env, source1, csr_store);
+                    gen_set_gpr(rd, dest);
+                }
                 break;
             case OPC_RISC_CSRRS:
                 gen_helper_csrrs(dest, cpu_env, source1, csr_store, rs1_pass);
@@ -3597,8 +3601,12 @@ static void gen_system(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2,
                 gen_set_gpr(rd, dest);
                 break;
             case OPC_RISC_CSRRWI:
-                gen_helper_csrrw(dest, cpu_env, imm_rs1, csr_store);
-                gen_set_gpr(rd, dest);
+                if(rd == 0) {
+                    gen_helper_csrrw_no_read(cpu_env, imm_rs1, csr_store);
+                } else {
+                    gen_helper_csrrw(dest, cpu_env, imm_rs1, csr_store);
+                    gen_set_gpr(rd, dest);
+                }
                 break;
             case OPC_RISC_CSRRSI:
                 gen_helper_csrrs(dest, cpu_env, imm_rs1, csr_store, rs1_pass);
