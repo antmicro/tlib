@@ -412,6 +412,10 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
             target_ulong mask = MSTATUS_MIE | MSTATUS_MPIE | MSTATUS_FS | MSTATUS_MPRV | MSTATUS_MPP | MSTATUS_MXR | MSTATUS_VS;
             if(riscv_has_ext(env, RISCV_FEATURE_RVS)) {
                 mask |= MSTATUS_SIE | MSTATUS_SPIE | MSTATUS_SUM | MSTATUS_SPP;
+
+                if(env->privilege_architecture >= RISCV_PRIV1_10) {
+                    mask |= MSTATUS_TVM | MSTATUS_TSR;
+                }
             }
 
             if(env->privilege_architecture < RISCV_PRIV1_10) {
@@ -606,6 +610,9 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
             }
             if(env->privilege_architecture >= RISCV_PRIV1_10 && validate_vm(env, get_field(val_to_write, SATP_MODE)) &&
                ((val_to_write ^ env->satp) & (SATP_MODE | SATP_ASID | SATP_PPN))) {
+                if(env->priv == PRV_S && env->mstatus & MSTATUS_TVM) {
+                    helper_raise_illegal_instruction(env);
+                }
                 tlb_flush(env, 1, true);
                 env->satp = val_to_write;
                 if(unlikely(env->guest_profiler_enabled)) {
@@ -971,6 +978,10 @@ static inline target_ulong csr_read_helper(CPUState *env, target_ulong csrno)
             return env->scause;
         case CSR_SATP: /* CSR_SPTBR */
             if(env->privilege_architecture >= RISCV_PRIV1_10) {
+                if(env->priv == PRV_S && env->mstatus & MSTATUS_TVM) {
+                    helper_raise_illegal_instruction(env);
+                    break;
+                }
                 return env->satp;
             } else {
                 return env->sptbr;
@@ -1225,6 +1236,22 @@ target_ulong helper_csrrs(CPUState *env, target_ulong src, target_ulong csr, tar
     return csr_backup;
 }
 
+void helper_sfence_vma(CPUState *env)
+{
+    /* SFENCE.VMA is privileged: U-mode must always trap */
+    if(env->priv < PRV_S) {
+        helper_raise_illegal_instruction(env);
+    }
+
+    /* In S-mode, TVM=1 also traps (priv spec >= 1.10) */
+    if(env->privilege_architecture >= RISCV_PRIV1_10 && env->priv == PRV_S && get_field(env->mstatus, MSTATUS_TVM)) {
+        helper_raise_illegal_instruction(env);
+    }
+
+    /* TODO: handle ASID specific fences */
+    tlb_flush(env, 1, true);
+}
+
 target_ulong helper_csrrc(CPUState *env, target_ulong src, target_ulong csr, target_ulong rs1_pass)
 {
     validate_csr(env, csr, rs1_pass != 0);
@@ -1271,6 +1298,10 @@ target_ulong helper_sret(CPUState *env, target_ulong cpu_pc_deb)
 
     if(env->priv < PRV_S) {
         tlib_printf(LOG_LEVEL_ERROR, "Trying to execute Sret from privilege level %u", env->priv);
+        helper_raise_illegal_instruction(env);
+    }
+
+    if(env->privilege_architecture >= RISCV_PRIV1_10 && env->priv == PRV_S && get_field(env->mstatus, MSTATUS_TSR)) {
         helper_raise_illegal_instruction(env);
     }
 

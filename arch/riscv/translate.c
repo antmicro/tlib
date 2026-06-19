@@ -3690,8 +3690,7 @@ static void gen_system(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2,
                 }
                 break;
             case 0x9: /* SFENCE.VMA */
-                /* TODO: handle ASID specific fences */
-                gen_helper_tlb_flush(cpu_env);
+                gen_helper_sfence_vma(cpu_env);
                 break;
             case 0x10: /* HRET */
                 kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);

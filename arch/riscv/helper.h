@@ -111,6 +111,7 @@ DEF_HELPER_2(sret, tl, env, tl)
 DEF_HELPER_2(mret, tl, env, tl)
 DEF_HELPER_1(wfi, void, env)
 DEF_HELPER_1(fence_i, void, env)
+DEF_HELPER_1(sfence_vma, void, env)
 
 //  Vector helpers require 128-bit ints which aren't supported on 32-bit hosts.
 #if HOST_LONG_BITS != 32
