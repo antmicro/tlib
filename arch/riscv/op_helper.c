@@ -1079,6 +1079,12 @@ void validate_csr(CPUState *env, uint64_t which, uint64_t write)
     }
 }
 
+void helper_csrrw_no_read(CPUState *env, target_ulong src, target_ulong csr)
+{
+    validate_csr(env, csr, 1);
+    csr_write_helper(env, src, csr);
+}
+
 target_ulong helper_csrrw(CPUState *env, target_ulong src, target_ulong csr)
 {
     validate_csr(env, csr, 1);
