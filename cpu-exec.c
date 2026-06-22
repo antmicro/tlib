@@ -30,7 +30,6 @@ target_ulong virt_to_phys(target_ulong virtual, uint32_t access_type, uint32_t n
      *      0 : read
      *      1 : write
      *      2 : instr fetch */
-    void *p;
     int8_t found_idx = -1;
     uint16_t mmu_idx = cpu_mmu_index(env);
 
@@ -103,17 +102,11 @@ target_ulong virt_to_phys(target_ulong virtual, uint32_t access_type, uint32_t n
         }
     }
 
-    if(physical & TLB_MMIO) {
-        //  The virtual address is mapping IO mem, not ram - use the IO page table
-        physical = (target_ulong)(env->iotlb[found_idx][page_index] & TARGET_PAGE_MASK);
-        physical = physical + masked_virtual;
-    } else {
-        p = (void *)(uintptr_t)masked_virtual + env->tlb_table[found_idx][page_index].addend;
-        physical = tlib_host_ptr_to_guest_offset(p);
-        if(physical == -1) {
-            return -1;
-        }
-    }
+    /* The iotlb entry contains the physical/RAM page offset both for MMIO and normal RAM.
+     * We use it for normal RAM too which is less fragile than using tlib_host_ptr_to_guest_offset
+     * as Renode host memory blocks are discovered lazily. */
+    physical = masked_virtual + env->iotlb[found_idx][page_index];
+
     return (physical & TARGET_PAGE_MASK) | (virtual & ~TARGET_PAGE_MASK);
 }
 

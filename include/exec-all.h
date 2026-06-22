@@ -315,7 +315,6 @@ static inline tb_page_addr_t get_page_addr_code(CPUState *env1, target_ulong add
 {
     int mmu_idx, page_index;
     ram_addr_t pd;
-    void *p;
     target_ulong page_addr = addr & TARGET_PAGE_MASK;
 
     page_index = (addr >> TARGET_PAGE_BITS) & (CPU_TLB_SIZE - 1);
@@ -344,15 +343,11 @@ static inline tb_page_addr_t get_page_addr_code(CPUState *env1, target_ulong add
         cpu_abort(env1, "Trying to execute code %s at 0x" TARGET_FMT_lx "\n", reason, addr);
     }
 
-    if(unlikely(pd & IO_MEM_EXECUTABLE_IO)) {
-        /* In this case we don't return page address nor a ram pointer, for MMIO we return only
-         * address aligned to page size.
-         */
-        return page_addr + (env1->iotlb[mmu_idx][page_index] & ~IO_MEM_EXECUTABLE_IO);
-    }
-
-    p = (void *)((uintptr_t)page_addr + env1->tlb_table[mmu_idx][page_index].addend);
-    return ram_addr_from_host(p);
+    /* The iotlb entry contains the physical/RAM page offset both for MMIO and normal RAM,
+     * as well as executable IO pages. Use it instead of tlib_host_ptr_to_guest_offset, as
+     * Renode host memory blocks are discovered lazily and we can't rely on it having been
+     * discovered in all cases. */
+    return (page_addr + env1->iotlb[mmu_idx][page_index]) & TARGET_PAGE_MASK;
 }
 
 static inline int find_last_mmu_window_possibly_covering(uint64_t address)
