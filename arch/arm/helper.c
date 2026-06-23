@@ -931,7 +931,7 @@ static inline void swap_u32(uint32_t *a, uint32_t *b)
     *b = tmp;
 }
 
-/* Switch to V7M main or process stack pointer.  */
+/* Switch to v7-M main or process stack pointer.  */
 void switch_v7m_sp(CPUState *env, bool process)
 {
     if(env->v7m.process_sp != process) {
@@ -1347,48 +1347,7 @@ static void do_interrupt_v7m(CPUState *env)
     uint32_t addr;
     int nr;
     int stack_status = 0;
-
-    if(arm_feature(env, ARM_FEATURE_V8)) {
-        /* [31:7] PREFIX and RES1.
-         *
-         * All SecureExtensions bits are set to their disabled state:
-         * [6]: 0
-         * [5]: 1
-         * [0]: 0
-         */
-        lr = 0xffffffb0;
-
-        if(env->v7m.handler_mode == 0) {
-            lr |= ARM_EXC_RETURN_MODE_MASK;
-        }
-
-        if(env->v7m.has_trustzone) {
-            /* There are two most relevant bits here
-             * [0] ES (Exception Secure) - "The security domain the exception was taken to"
-             * so whether we will be in secure mode after taking this exception
-             * [6] S (Secure or Non-secure stack) - "Indicates whether a Secure or Non-secure stack is used to restore stack frame
-             * on exception return" so if we will return to secure or non-secure mode, when executing exception return later
-             *
-             * This will be changed later depending on:
-             * - value of NVIC_ITNSx registers for hardware IRQ
-             * - value of AIRCR.BFHFNMINS for HardFault, NMI, BusFault
-             * - for banked IRQs, the security state the PE was in when the exception was taken. We cheat a little, and use
-             * `BANKED_SECURE_EXCP` to reserve extra exception. Look at "EXCP_IRQ" for how this logic works
-             */
-            lr |= env->secure << ARM_EXC_RETURN_S;
-        }
-    } else {
-        lr = 0xfffffff1;
-        if(env->v7m.exception == 0) {
-            lr |= ARM_EXC_RETURN_MODE_MASK;
-            lr |= FIELD_EX32(env->v7m.control[env->secure], V7M_CONTROL, SPSEL) << ARM_EXC_RETURN_SPSEL;
-        }
-    }
-
-    /* v7-M and v8-M share FP stack FP context active fields */
-    if(env->v7m.control[M_REG_COMMON] & ARM_CONTROL_FPCA_MASK) {
-        lr ^= ARM_EXC_RETURN_NFPCA_MASK;
-    }
+    bool secure_target = env->secure;
 
     /* For exceptions we just mark as pending on the NVIC, and let that
        handle it. We'll return to this function with exception_index set
@@ -1438,60 +1397,115 @@ static void do_interrupt_v7m(CPUState *env)
             tlib_nvic_set_pending_irq(ARMV7M_EXCP_SECURE);
             return;
         case EXCP_IRQ:
-            env->v7m.exception = tlib_nvic_acknowledge_irq();
-            if(env->v7m.exception == 0) {
-                //  We were notified of an IRQ but there isn't one anymore - this can happen if the interrupt was triggered right
-                //  before an instruction (eg. a write to BASEPRI) that makes us ignore the interrupt
-                tlib_printf(LOG_LEVEL_DEBUG, "Spurious NVIC IRQ ignored");
-                return;
-            }
-            bool secure_target = env->secure;
-            if(env->v7m.has_trustzone) {
-                /* If we have TrustZone, NVIC_ITNSx determines the security state
-                 * the hardware IRQ is taken to */
-                if(env->v7m.exception >= ARMV7M_EXCP_HARDIRQ0 && env->v7m.exception < BANKED_SECURE_EXCP_BIT) {
-                    secure_target = tlib_nvic_interrupt_targets_secure(env->v7m.exception);
-                } else {
-                    switch(env->v7m.exception) {
-                        case ARMV7M_EXCP_NMI:
-                        case ARMV7M_EXCP_BUS:
-                            /* `AIRCR.BFHFNMINS` determines this behavior, but we store its value
-                             * within this structure, the same as for hard IRQ */
-                            secure_target = tlib_nvic_interrupt_targets_secure(env->v7m.exception);
-                            break;
-                        case ARMV7M_EXCP_HARD:
-                            /* If `AIRCR.BFHFNMINS` is set to 1, HardFault is a regular banked IRQ
-                             * so nothing special here - the other HardFault will be handled automatically in the other clause
-                             * otherwise, escalate to Secure */
-                            secure_target = tlib_nvic_interrupt_targets_secure(env->v7m.exception);
-                            /* It's negation, since it's a Non-secure target! It's as expected */
-                            if(!secure_target) {
-                                goto banked_exception;
-                            }
-                            break;
-                        /* Reset and Secure Fault are secure only */
-                        case ARMV7M_EXCP_RESET:
-                        case ARMV7M_EXCP_SECURE:
-                            secure_target = true;
-                            break;
-                        /* Debug monitor (ARMV7M_EXCP_DEBUG) should be configured with `DEMCR.SDME` but since it's unimplemented
-                         * we implement it as banked, to minimize side-effects
-                         * Any other exception is banked too */
-                        banked_exception:
-                        default:
-                            secure_target = (env->v7m.exception & BANKED_SECURE_EXCP_BIT) > 0;
-                            /* We need to clear the "SECURE" bit, so everything works correctly */
-                            env->v7m.exception &= ~BANKED_SECURE_EXCP_BIT;
-                            break;
-                    }
-                }
-            }
-            lr |= FIELD_EX32(env->v7m.control[secure_target], V7M_CONTROL, SPSEL) << ARM_EXC_RETURN_SPSEL;
-            lr |= deposit32(lr, ARM_EXC_RETURN_ES, 1, secure_target);
+            /* Continue the execution after the switch */
             break;
         default:
             cpu_abort(env, "Unhandled exception 0x%x\n", env->exception_index);
             return; /* Never happens.  Keep compiler happy.  */
+    }
+
+    if(arm_feature(env, ARM_FEATURE_V8)) {
+        /* [31:7] PREFIX and RES1.
+         *
+         * All SecureExtensions bits are set to their disabled state:
+         * [6]: 0
+         * [5]: 1
+         * [0]: 0
+         */
+        lr = 0xffffffb0;
+    } else {
+        /* [31:7] PREFIX and RES1.
+         *
+         * SecureExtension doesn't exist on v7-M but extension's bits are still set to 1. It's the difference between v7-M and
+         * v8-M [6]: 1 [5]: 1 [0]: 1
+         */
+        lr = 0xfffffff1;
+        /* We have to set SPSEL for v7-M before we'll change the mode. We're setting it only when leaving Thread mode. */
+        if(!in_handler_mode(env)) {
+            lr |= FIELD_EX32(env->v7m.control[M_REG_NS], V7M_CONTROL, SPSEL) << ARM_EXC_RETURN_SPSEL;
+        }
+    }
+
+    /* Set Mode field to the current execution mode
+     * 0 - handler mode
+     * 1 - thread mode
+     */
+    if(!in_handler_mode(env)) {
+        lr |= ARM_EXC_RETURN_MODE_MASK;
+    }
+
+    /* v7-M and v8-M share FP stack FP context active fields */
+    if(env->v7m.control[M_REG_COMMON] & ARM_CONTROL_FPCA_MASK) {
+        lr ^= ARM_EXC_RETURN_NFPCA_MASK;
+    }
+
+    env->v7m.exception = tlib_nvic_acknowledge_irq();
+    if(env->v7m.exception == 0) {
+        //  We were notified of an IRQ but there isn't one anymore - this can happen if the interrupt was triggered right
+        //  before an instruction (eg. a write to BASEPRI) that makes us ignore the interrupt
+        tlib_printf(LOG_LEVEL_DEBUG, "Spurious NVIC IRQ ignored");
+        return;
+    }
+
+    if(env->v7m.has_trustzone) {
+        /* There are two most relevant bits here
+         * [0] ES (Exception Secure) - "The security domain the exception was taken to"
+         * so whether we will be in secure mode after taking this exception
+         * [6] S (Secure or Non-secure stack) - "Indicates whether a Secure or Non-secure stack is used to restore stack frame
+         * on exception return" so if we will return to secure or non-secure mode, when executing exception return later
+         *
+         * This will be changed later depending on:
+         * - value of NVIC_ITNSx registers for hardware IRQ
+         * - value of AIRCR.BFHFNMINS for HardFault, NMI, BusFault
+         * - for banked IRQs, the security state the PE was in when the exception was taken. We cheat a little, and use
+         * `BANKED_SECURE_EXCP` to reserve extra exception. Look at "EXCP_IRQ" for how this logic works
+         */
+        lr |= env->secure << ARM_EXC_RETURN_S;
+
+        /* If we have TrustZone, NVIC_ITNSx determines the security state
+         * the hardware IRQ is taken to */
+        if(env->v7m.exception >= ARMV7M_EXCP_HARDIRQ0 && env->v7m.exception < BANKED_SECURE_EXCP_BIT) {
+            secure_target = tlib_nvic_interrupt_targets_secure(env->v7m.exception);
+        } else {
+            switch(env->v7m.exception) {
+                case ARMV7M_EXCP_NMI:
+                case ARMV7M_EXCP_BUS:
+                    /* `AIRCR.BFHFNMINS` determines this behavior, but we store its value
+                     * within this structure, the same as for hard IRQ */
+                    secure_target = tlib_nvic_interrupt_targets_secure(env->v7m.exception);
+                    break;
+                case ARMV7M_EXCP_HARD:
+                    /* If `AIRCR.BFHFNMINS` is set to 1, HardFault is a regular banked IRQ
+                     * so nothing special here - the other HardFault will be handled automatically in the other clause
+                     * otherwise, escalate to Secure */
+                    secure_target = tlib_nvic_interrupt_targets_secure(env->v7m.exception);
+                    /* It's negation, since it's a Non-secure target! It's as expected */
+                    if(!secure_target) {
+                        goto banked_exception;
+                    }
+                    break;
+                /* Reset and Secure Fault are secure only */
+                case ARMV7M_EXCP_RESET:
+                case ARMV7M_EXCP_SECURE:
+                    secure_target = true;
+                    break;
+                /* Debug monitor (ARMV7M_EXCP_DEBUG) should be configured with `DEMCR.SDME` but since it's unimplemented
+                 * we implement it as banked, to minimize side-effects
+                 * Any other exception is banked too */
+                banked_exception:
+                default:
+                    secure_target = (env->v7m.exception & BANKED_SECURE_EXCP_BIT) > 0;
+                    /* We need to clear the "SECURE" bit, so everything works correctly */
+                    env->v7m.exception &= ~BANKED_SECURE_EXCP_BIT;
+                    break;
+            }
+        }
+        lr |= deposit32(lr, ARM_EXC_RETURN_ES, 1, secure_target);
+    }
+
+    if(arm_feature(env, ARM_FEATURE_V8)) {
+        /* We're changing v8-M mode here after we know which security state we're targeting. On v8-M SPSEL is always saved. */
+        lr |= FIELD_EX32(env->v7m.control[secure_target], V7M_CONTROL, SPSEL) << ARM_EXC_RETURN_SPSEL;
     }
 
     env->v7m.handler_mode = true;
