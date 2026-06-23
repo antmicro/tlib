@@ -25,6 +25,8 @@ uint64_t tlib_get_register_value_64(int reg_number)
             return vfp_get_fpsr(cpu);
         case R_0_32 ... R_15_32:
             return cpu->regs[reg_number - R_0_32];
+        case D_0_64 ... D_31_64:
+            return cpu->vfp.zregs[reg_number - D_0_64].d[0];
         case PC_64:
             //  The PC register's index is the same for both AArch32 and AArch64.
             return is_a64(cpu) ? cpu->pc : cpu->regs[15];
