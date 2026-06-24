@@ -103,8 +103,8 @@ target_ulong virt_to_phys(target_ulong virtual, uint32_t access_type, uint32_t n
     }
 
     /* The iotlb entry contains the physical/RAM page offset both for MMIO and normal RAM.
-     * We use it for normal RAM too which is less fragile than using tlib_host_ptr_to_guest_offset
-     * as Renode host memory blocks are discovered lazily. */
+     * We use it for normal RAM too because Renode host memory blocks are discovered lazily,
+     * making reverse host-pointer lookups unreliable. */
     physical = masked_virtual + env->iotlb[found_idx][page_index];
 
     return (physical & TARGET_PAGE_MASK) | (virtual & ~TARGET_PAGE_MASK);

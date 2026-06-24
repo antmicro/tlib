@@ -344,9 +344,8 @@ static inline tb_page_addr_t get_page_addr_code(CPUState *env1, target_ulong add
     }
 
     /* The iotlb entry contains the physical/RAM page offset both for MMIO and normal RAM,
-     * as well as executable IO pages. Use it instead of tlib_host_ptr_to_guest_offset, as
-     * Renode host memory blocks are discovered lazily and we can't rely on it having been
-     * discovered in all cases. */
+     * as well as executable IO pages. Renode host memory blocks are discovered lazily, so
+     * reverse host-pointer lookups cannot be relied on here. */
     return (page_addr + env1->iotlb[mmu_idx][page_index]) & TARGET_PAGE_MASK;
 }
 

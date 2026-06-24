@@ -1854,11 +1854,6 @@ void *get_ram_ptr(ram_addr_t addr)
     return tlib_guest_offset_to_host_ptr(addr);
 }
 
-ram_addr_t ram_addr_from_host(void *ptr)
-{
-    return tlib_host_ptr_to_guest_offset(ptr);
-}
-
 void notdirty_mem_writeb(void *opaque, target_phys_addr_t ram_addr, uint32_t val)
 {
     PhysPageDesc *p = phys_page_find(ram_addr >> TARGET_PAGE_BITS);

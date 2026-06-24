@@ -43,8 +43,6 @@ static inline void cpu_register_physical_memory(target_phys_addr_t start_addr, r
 ram_addr_t cpu_get_physical_page_desc(target_phys_addr_t addr);
 /* This should only be used for ram local to a device.  */
 void *get_ram_ptr(ram_addr_t addr);
-/* This should not be used by devices.  */
-ram_addr_t ram_addr_from_host(void *ptr);
 
 void cpu_physical_memory_rw(target_phys_addr_t addr, uint8_t *buf, int len, int is_write);
 static inline void cpu_physical_memory_read(target_phys_addr_t addr, void *buf, int len)
