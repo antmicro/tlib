@@ -207,6 +207,12 @@ void HELPER(wfi)(void)
 
 void HELPER(wfe)(void)
 {
+    // ARMv7-M ARM B1.4.2: if the event register is set, WFE clears it
+    // and returns immediately without suspending execution.
+    if(env->sev_pending) {
+        env->sev_pending = 0;
+        return;
+    }
     env->exception_index = EXCP_WFI;
     env->wfe = 1;
 }
