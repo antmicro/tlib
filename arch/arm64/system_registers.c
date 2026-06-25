@@ -525,7 +525,7 @@ READ_CONFIG(revidr_el1,        revidr)
 READ_CONFIG(mpuir,             mpuir)
 READ_CONFIG(hmpuir,            hmpuir)
 
-ARMCPRegInfo aarch32_registers[] = {
+ARMCPRegInfo common_registers[] = {
     // The params are:  name              cp, op1, crn, crm, op2, el, extra_type, ...
     ARM32_CP_REG_DEFINE(ACTLR,            15,   0,   1,   0,   1,   1, RW)  // Auxiliary Control Register
     ARM32_CP_REG_DEFINE(ACTLR2,           15,   0,   1,   0,   3,   1, RW)  // Auxiliary Control Register 2
@@ -553,15 +553,8 @@ ARMCPRegInfo aarch32_registers[] = {
     ARM32_CP_REG_DEFINE(CCSIDR,           15,   1,   0,   0,   0,   1, RW, READFN(ccsidr_el1))  // Current Cache Size ID Register
     ARM32_CP_REG_DEFINE(CCSIDR2,          15,   1,   0,   0,   2,   1, RW, READFN(ccsidr2_el1))  // Current Cache Size ID Register 2
     ARM32_CP_REG_DEFINE(CLIDR,            15,   1,   0,   0,   1,   1, RW, READFN(clidr_el1))  // Cache Level ID Register
-    ARM32_CP_REG_DEFINE(CNTFRQ,           15,   0,  14,   0,   0,   0, RW | GTIMER, RW_FNS(generic_timer_aarch32_32))  // Counter-timer Frequency register
-    ARM32_CP_REG_DEFINE(CNTHCTL,          15,   4,  14,   1,   0,   2, RW | GTIMER, RW_FNS(generic_timer_aarch32_32))  // Counter-timer Hyp Control register
-    ARM32_CP_REG_DEFINE(CNTHP_CTL,        15,   4,  14,   2,   1,   2, RW | GTIMER, RW_FNS(generic_timer_aarch32_32))  // Counter-timer Hyp Physical Timer Control register
-    ARM32_CP_REG_DEFINE(CNTHP_TVAL,       15,   4,  14,   2,   0,   2, RW | GTIMER, RW_FNS(generic_timer_aarch32_32))  // Counter-timer Hyp Physical Timer Timer Value register
     ARM32_CP_REG_DEFINE(CNTKCTL,          15,   0,  14,   1,   0,   1, RW | GTIMER)  // Counter-timer Kernel Control register
-    ARM32_CP_REG_DEFINE(CNTP_CTL,         15,   0,  14,   2,   1,   0, RW | GTIMER, RW_FNS(generic_timer_aarch32_32))  // Counter-timer Physical Timer Control register
-    ARM32_CP_REG_DEFINE(CNTP_TVAL,        15,   0,  14,   2,   0,   0, RW | GTIMER, RW_FNS(generic_timer_aarch32_32))  // Counter-timer Physical Timer Timer Value register
-    ARM32_CP_REG_DEFINE(CNTV_CTL,         15,   0,  14,   3,   1,   0, RW | GTIMER, RW_FNS(generic_timer_aarch32_32))  // Counter-timer Virtual Timer Control register
-    ARM32_CP_REG_DEFINE(CNTV_TVAL,        15,   0,  14,   3,   0,   0, RW | GTIMER, RW_FNS(generic_timer_aarch32_32))  // Counter-timer Virtual Timer Timer Value register
+
     ARM32_CP_REG_DEFINE(CONTEXTIDR,       15,   0,  13,   0,   1,   1, RW, FIELD(cp15.contextidr_ns))  // Context ID Register
     ARM32_CP_REG_DEFINE(CPACR,            15,   0,   1,   0,   2,   1, RW, FIELD(cp15.cpacr_el1))  // Architectural Feature Access Control Register
     ARM32_CP_REG_DEFINE(CSSELR,           15,   2,   0,   0,   0,   1, RW, FIELD(cp15.csselr_ns))  // Cache Size Selection Register
@@ -972,6 +965,17 @@ ARMCPRegInfo aarch32_registers[] = {
      *   CNTHPS_CTL, CNTHPS_CVAL, CNTHPS_TVAL, CNTHV_CTL, CNTHV_CVAL, CNTHV_TVAL,
      *   CNTHVS_CTL, CNTHVS_CVAL, CNTHVS_TVAL, DBGDTRTXint, MVBAR, NMRR, PRRR
      */
+};
+
+ARMCPRegInfo aarch32_only_registers[] = {
+    ARM32_CP_REG_DEFINE(CNTFRQ,           15,   0,  14,   0,   0,   0, RW | GTIMER, RW_FNS(generic_timer_aarch32_32))  // Counter-timer Frequency register
+    ARM32_CP_REG_DEFINE(CNTHCTL,          15,   4,  14,   1,   0,   2, RW | GTIMER, RW_FNS(generic_timer_aarch32_32))  // Counter-timer Hyp Control register
+    ARM32_CP_REG_DEFINE(CNTHP_CTL,        15,   4,  14,   2,   1,   2, RW | GTIMER, RW_FNS(generic_timer_aarch32_32))  // Counter-timer Hyp Physical Timer Control register
+    ARM32_CP_REG_DEFINE(CNTHP_TVAL,       15,   4,  14,   2,   0,   2, RW | GTIMER, RW_FNS(generic_timer_aarch32_32))  // Counter-timer Hyp Physical Timer Timer Value register
+    ARM32_CP_REG_DEFINE(CNTP_CTL,         15,   0,  14,   2,   1,   0, RW | GTIMER, RW_FNS(generic_timer_aarch32_32))  // Counter-timer Physical Timer Control register
+    ARM32_CP_REG_DEFINE(CNTP_TVAL,        15,   0,  14,   2,   0,   0, RW | GTIMER, RW_FNS(generic_timer_aarch32_32))  // Counter-timer Physical Timer Timer Value register
+    ARM32_CP_REG_DEFINE(CNTV_CTL,         15,   0,  14,   3,   1,   0, RW | GTIMER, RW_FNS(generic_timer_aarch32_32))  // Counter-timer Virtual Timer Control register
+    ARM32_CP_REG_DEFINE(CNTV_TVAL,        15,   0,  14,   3,   0,   0, RW | GTIMER, RW_FNS(generic_timer_aarch32_32))  // Counter-timer Virtual Timer Timer Value register
 };
 
 ARMCPRegInfo aarch32_instructions[] = {
@@ -2265,24 +2269,28 @@ void entry_remove_callback(TTable_entry *entry)
 
 void system_instructions_and_registers_init(CPUState *env, uint32_t cpu_model_id)
 {
-    uint32_t ttable_size = ARM_CP_ARRAY_COUNT(aarch32_instructions) + ARM_CP_ARRAY_COUNT(aarch32_registers);
+    uint32_t ttable_size = ARM_CP_ARRAY_COUNT(aarch32_instructions) + ARM_CP_ARRAY_COUNT(common_registers);
     ttable_size += get_implementation_defined_registers_count(cpu_model_id);
     if(arm_feature(env, ARM_FEATURE_PMSA)) {
         ttable_size += ARM_CP_ARRAY_COUNT(mpu_registers);
     }
     if(arm_feature(env, ARM_FEATURE_AARCH64)) {
         ttable_size += ARM_CP_ARRAY_COUNT(aarch64_instructions) + ARM_CP_ARRAY_COUNT(aarch64_registers);
+    } else {
+        ttable_size += ARM_CP_ARRAY_COUNT(aarch32_only_registers);
     }
     env->cp_regs = ttable_create(ttable_size, entry_remove_callback, ttable_compare_key_uint32);
 
     cp_regs_add(env, aarch32_instructions, ARM_CP_ARRAY_COUNT(aarch32_instructions));
-    cp_regs_add(env, aarch32_registers, ARM_CP_ARRAY_COUNT(aarch32_registers));
+    cp_regs_add(env, common_registers, ARM_CP_ARRAY_COUNT(common_registers));
 
     add_implementation_defined_registers(env, cpu_model_id);
 
     if(arm_feature(env, ARM_FEATURE_AARCH64)) {
         cp_regs_add(env, aarch64_instructions, ARM_CP_ARRAY_COUNT(aarch64_instructions));
         cp_regs_add(env, aarch64_registers, ARM_CP_ARRAY_COUNT(aarch64_registers));
+    } else {
+        cp_regs_add(env, aarch32_only_registers, ARM_CP_ARRAY_COUNT(aarch32_only_registers));
     }
 
     if(arm_feature(env, ARM_FEATURE_PMSA)) {
