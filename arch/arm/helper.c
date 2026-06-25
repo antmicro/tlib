@@ -2861,7 +2861,7 @@ inline int get_phys_addr(CPUState *env, uint32_t address, bool is_secure, int ac
 
     int ret;
 #ifdef TARGET_PROTO_ARM_M
-    enum security_attribution idau_sau_attribution;
+    enum security_attribution idau_sau_attribution = SA_NONSECURE;
 
     /* TrustZone: Security attribution happens here */
     if(env->v7m.has_trustzone) {
