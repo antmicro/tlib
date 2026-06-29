@@ -85,6 +85,12 @@ enum {
     OPC_RISC_SH2ADD = OPC_RISC_ARITH | (0x4 << 12) | (0x10 << 25),
     OPC_RISC_SH3ADD = OPC_RISC_ARITH | (0x6 << 12) | (0x10 << 25),
 
+    /* Zbb / Zbkb alias group:
+     * zext.h is pack with rs2=x0.
+     */
+    OPC_RISC_PACK = OPC_RISC_ARITH | (0x4 << 12) | (0x04 << 25),
+    OPC_RISC_PACKH = OPC_RISC_ARITH | (0x7 << 12) | (0x04 << 25),
+
     /* Zbb: */
     OPC_RISC_ZEXT_H_32 = OPC_RISC_ARITH | (0x4 << 12) | (0x80 << 20),
 
@@ -210,6 +216,9 @@ enum {
     OPC_RISC_SH1ADD_UW = OPC_RISC_ARITH_W | (0x2 << 12) | (0x10 << 25),
     OPC_RISC_SH2ADD_UW = OPC_RISC_ARITH_W | (0x4 << 12) | (0x10 << 25),
     OPC_RISC_SH3ADD_UW = OPC_RISC_ARITH_W | (0x6 << 12) | (0x10 << 25),
+
+    /* Zbkb: */
+    OPC_RISC_PACKW = OPC_RISC_ARITH_W | (0x4 << 12) | (0x04 << 25),
 
     /* Zbb: */
     OPC_RISC_ZEXT_H_64 = OPC_RISC_ARITH_W | (0x4 << 12) | (0x80 << 20),
