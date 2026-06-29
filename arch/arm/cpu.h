@@ -104,8 +104,6 @@
 #define SECURE_FAULT_INVIS     (1 << 1)
 #define SECURE_FAULT_INVEP     (1 << 0)
 
-#define in_privileged_mode(ENV) (((ENV)->v7m.control[env->secure] & 0x1) == 0 || (ENV)->v7m.handler_mode)
-
 //  256 is a hard limit based on width of their respective region number fields in TT instructions.
 #define MAX_MPU_REGIONS  256
 #define MAX_SAU_REGIONS  256
@@ -364,7 +362,6 @@ typedef struct CPUState {
         /* msplim/psplim are armv8-m specific */
         uint32_t msplim[M_REG_NUM_BANKS];
         uint32_t psplim[M_REG_NUM_BANKS];
-        uint32_t handler_mode;
         uint32_t has_trustzone;
         uint32_t ltpsize;
         uint32_t vpr;
@@ -669,12 +666,17 @@ static inline uint32_t get_psp(CPUState *env)
 {
     return *pointer_psp(env);
 }
+
+static inline bool in_privileged_mode(CPUState *env)
+{
+    return in_handler_mode(env) || !(env->v7m.control[env->secure] & 1);
+}
 #endif
 
 static inline bool in_user_mode(CPUState *env)
 {
 #ifdef TARGET_PROTO_ARM_M
-    return (!in_handler_mode(env)) && (env->v7m.control[env->secure] & 1);
+    return !in_privileged_mode(env);
 #else
     return (env->uncached_cpsr & CPSR_M) == ARM_CPU_MODE_USR;
 #endif

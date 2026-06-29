@@ -1176,16 +1176,6 @@ void do_v7m_exception_exit(CPUState *env)
     if(xpsr & 0x200) {
         env->regs[13] |= 4;
     }
-    /* ??? The exception return type specifies Thread/Handler mode.  However
-       this is also implied by the xPSR value. Not sure what to do
-       if there is a mismatch.  */
-    /* ??? Likewise for mismatches between the CONTROL register and the stack
-       pointer.  */
-    if((type & ARM_EXC_RETURN_MODE_MASK) != 0) {
-        env->v7m.handler_mode = false;
-    } else {
-        env->v7m.handler_mode = true;
-    }
 }
 
 void do_v7m_secure_return(CPUState *env)
@@ -1508,7 +1498,6 @@ static void do_interrupt_v7m(CPUState *env)
         lr |= FIELD_EX32(env->v7m.control[secure_target], V7M_CONTROL, SPSEL) << ARM_EXC_RETURN_SPSEL;
     }
 
-    env->v7m.handler_mode = true;
     env->condexec_bits = 0;
 
     /* Align stack pointer.  */
@@ -4302,7 +4291,7 @@ void HELPER(v8m_blxns)(CPUState *env, uint32_t addr, uint32_t link)
             env->regs[14] = FNC_RETURN;
             /* If in handler mode, we should set exception number to invalid but non-zero value
              * to prevent information leakage */
-            if(env->v7m.handler_mode) {
+            if(in_handler_mode(env)) {
                 env->v7m.exception = ARMV7M_EXCP_RESET;
             }
         } else {
