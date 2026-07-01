@@ -4343,7 +4343,26 @@ void HELPER(v8m_bx_update_pc)(CPUState *env, uint32_t pc)
     /* is not EXC_RETURN */
     if(pc < ARM_M_EXC_RETURN_MIN) {
         if((pc & 1) == 0) {
-            env->exception_index = EXCP_INVSTATE;
+            bool raise_secure_exception = false;
+
+            if(env->v7m.has_trustzone && !env->secure) {
+                bool idau_valid, sau_valid;
+                int idau_region, sau_region;
+                enum security_attribution attribution;
+                pmsav8_get_security_attribution(env, pc, env->secure, ACCESS_INST_FETCH, /* access_width */ 1, &idau_valid,
+                                                &idau_region, &sau_valid, &sau_region, &attribution,
+                                                /* applies_to_whole_page: */ NULL);
+                if(attribution != SA_NONSECURE) {
+                    raise_secure_exception = true;
+                }
+            }
+
+            if(raise_secure_exception) {
+                env->v7m.secure_fault_status |= SECURE_FAULT_INVEP;
+                env->exception_index = EXCP_SECURE;
+            } else {
+                env->exception_index = EXCP_INVSTATE;
+            }
             cpu_loop_exit(env);
         }
         pc &= ~1;
