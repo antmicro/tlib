@@ -2574,6 +2574,13 @@ static void gen_store_exclusive(DisasContext *s, int rd, int rt, int rt2, TCGv_i
     //  If address is not reserved (i.e. reserved_result = 0), jump to fail block.
     tcg_gen_brcondi_i64(TCG_COND_EQ, reserved_result, 0, fail);
 
+    if(is_128_pair) {
+        gen_store_table_check(cpu, reserved_result, addr_high);
+
+        //  If address is not reserved (i.e. reserved_result = 0), jump to fail block.
+        tcg_gen_brcondi_i64(TCG_COND_EQ, reserved_result, 0, fail);
+    }
+
     if(is_pair) {
         /* STXP */
         if(size == MO_32) {
@@ -2587,17 +2594,6 @@ static void gen_store_exclusive(DisasContext *s, int rd, int rt, int rt2, TCGv_i
             tcg_gen_qemu_st_i64_unsafe(tmp, addr, get_mem_index(s), MO_64 | MO_ALIGN | s->be_data);
         } else {
             /* 64-bit+64-bit */
-            gen_store_table_check(cpu, reserved_result, addr_high);
-
-            //  If address is not reserved (i.e. reserved_result = 0), jump to fail block.
-            tcg_gen_brcondi_i64(TCG_COND_EQ, reserved_result, 0, fail);
-
-            //  Didn't branch to fail block, this means STX should perform the store.
-            //  The ARMv8-A architecture reference manual states that:
-            //      STX clears the global monitor only if the STX updates memory.
-            //
-            //  This means the hash table reservation is invalidated only at this point.
-            gen_store_table_set(cpu, addr_high);
             if(s->be_data == MO_LE) {
                 tcg_gen_qemu_st_i64_unsafe(cpu_reg(s, rt), addr, get_mem_index(s), MO_64 | MO_LE | MO_ALIGN_16);
                 tcg_gen_qemu_st_i64_unsafe(cpu_reg(s, rt2), addr_high, get_mem_index(s), MO_64 | MO_LE);
@@ -2611,15 +2607,18 @@ static void gen_store_exclusive(DisasContext *s, int rd, int rt, int rt2, TCGv_i
         /* Didn't branch to fail block, this means STX should perform the store... */
         tcg_gen_qemu_st_i64_unsafe(cpu_reg(s, rt), addr, get_mem_index(s), size | MO_ALIGN | s->be_data);
     }
-    //  Zero value in rd indicates STX success.
-    tcg_gen_movi_i64(cpu_reg(s, rd), 0);
-
-    //  Didn't branch to fail block, this means STX should perform the store.
+    //  Didn't branch to fail block, this means STX performed the store.
     //  The ARMv8-A architecture reference manual states that:
     //      STX clears the global monitor only if the STX updates memory.
     //
     //  This means the hash table reservation is invalidated only at this point.
+    if(is_128_pair) {
+        gen_store_table_set(cpu, addr_high);
+    }
     gen_store_table_set(cpu, addr);
+    //  Zero value in rd indicates STX success.
+    tcg_gen_movi_i64(cpu_reg(s, rd), 0);
+
     //  Skip over the fail block below.
     tcg_gen_br(done);
 

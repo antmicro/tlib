@@ -5028,15 +5028,14 @@ static void gen_store_exclusive(DisasContext *s, int rd, int rt, int rt2, TCGv_i
     }
     tcg_temp_free_i32(t1);
     tcg_temp_free(taddr);
-    tcg_gen_movi_i32(cpu_R[rd], 0);
-    tcg_temp_free_i32(t0);
-
-    //  Didn't branch to fail block, this means STREX should perform the store.
+    //  Didn't branch to fail block, this means STREX performed the store.
     //  The ARMv8-A architecture reference manual states that:
     //      STREX clears the global monitor only if the STREX updates memory.
     //
     //  This means the hash table reservation is invalidated only at this point.
     gen_store_table_set(cpu, addr);
+    tcg_gen_movi_i32(cpu_R[rd], 0);
+    tcg_temp_free_i32(t0);
     tcg_gen_br(done);
 
     gen_set_label(fail);
