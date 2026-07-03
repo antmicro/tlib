@@ -2876,36 +2876,36 @@ static inline void tcg_gen_goto_tb(int idx)
 static inline void tcg_gen_qemu_st_op_i64_i32(TCGOpcode opc, TCGv_i64 val, TCGv_i32 addr, TCGArg mem_index)
 {
     gen_store_table_lock(cpu, addr);
-    gen_store_table_set(cpu, addr);
     tcg_request_block_interrupt_check();
     tcg_gen_qemu_ldst_op_i64_i32(opc, val, addr, mem_index);
+    gen_store_table_set(cpu, addr);
     gen_store_table_unlock(cpu, addr);
 }
 
 static inline void tcg_gen_st_op_i32(TCGOpcode opc, TCGv_i32 arg, TCGv_i32 addr, TCGArg mem_index)
 {
     gen_store_table_lock(cpu, addr);
-    gen_store_table_set(cpu, addr);
     tcg_request_block_interrupt_check();
     tcg_gen_op3i_i32(opc, arg, addr, mem_index);
+    gen_store_table_set(cpu, addr);
     gen_store_table_unlock(cpu, addr);
 }
 
 static inline void tcg_gen_qemu_st_op_i64_i64(TCGOpcode opc, TCGv_i64 val, TCGv_i64 addr, TCGArg mem_index)
 {
     gen_store_table_lock(cpu, addr);
-    gen_store_table_set(cpu, addr);
     tcg_request_block_interrupt_check();
     tcg_gen_qemu_ldst_op_i64_i64(opc, val, addr, mem_index);
+    gen_store_table_set(cpu, addr);
     gen_store_table_unlock(cpu, addr);
 }
 
 static inline void tcg_gen_st_op_i64(TCGOpcode opc, TCGv_i64 arg, TCGv_i64 addr, TCGArg mem_index)
 {
     gen_store_table_lock(cpu, addr);
-    gen_store_table_set(cpu, addr);
     tcg_request_block_interrupt_check();
     tcg_gen_op3i_i64(opc, arg, addr, mem_index);
+    gen_store_table_set(cpu, addr);
     gen_store_table_unlock(cpu, addr);
 }
 
@@ -2982,52 +2982,52 @@ static inline void tcg_gen_qemu_ld64(TCGv_i64 ret, TCGv addr, int mem_index)
 static inline void tcg_gen_qemu_st8(TCGv arg, TCGv addr, int mem_index)
 {
     gen_store_table_lock(cpu, addr);
-    gen_store_table_set(cpu, addr);
     tcg_request_block_interrupt_check();
 #if TARGET_LONG_BITS == 32
     tcg_gen_op3i_i32(INDEX_op_qemu_st8, arg, addr, mem_index);
 #else
     tcg_gen_op4i_i32(INDEX_op_qemu_st8, TCGV_LOW(arg), TCGV_LOW(addr), TCGV_HIGH(addr), mem_index);
 #endif
+    gen_store_table_set(cpu, addr);
     gen_store_table_unlock(cpu, addr);
 }
 
 static inline void tcg_gen_qemu_st16(TCGv arg, TCGv addr, int mem_index)
 {
     gen_store_table_lock(cpu, addr);
-    gen_store_table_set(cpu, addr);
     tcg_request_block_interrupt_check();
 #if TARGET_LONG_BITS == 32
     tcg_gen_op3i_i32(INDEX_op_qemu_st16, arg, addr, mem_index);
 #else
     tcg_gen_op4i_i32(INDEX_op_qemu_st16, TCGV_LOW(arg), TCGV_LOW(addr), TCGV_HIGH(addr), mem_index);
 #endif
+    gen_store_table_set(cpu, addr);
     gen_store_table_unlock(cpu, addr);
 }
 
 static inline void tcg_gen_qemu_st32(TCGv arg, TCGv addr, int mem_index)
 {
     gen_store_table_lock(cpu, addr);
-    gen_store_table_set(cpu, addr);
     tcg_request_block_interrupt_check();
 #if TARGET_LONG_BITS == 32
     tcg_gen_op3i_i32(INDEX_op_qemu_st32, arg, addr, mem_index);
 #else
     tcg_gen_op4i_i32(INDEX_op_qemu_st32, TCGV_LOW(arg), TCGV_LOW(addr), TCGV_HIGH(addr), mem_index);
 #endif
+    gen_store_table_set(cpu, addr);
     gen_store_table_unlock(cpu, addr);
 }
 
 static inline void tcg_gen_qemu_st64(TCGv_i64 arg, TCGv addr, int mem_index)
 {
     gen_store_table_lock(cpu, addr);
-    gen_store_table_set(cpu, addr);
     tcg_request_block_interrupt_check();
 #if TARGET_LONG_BITS == 32
     tcg_gen_op4i_i32(INDEX_op_qemu_st64, TCGV_LOW(arg), TCGV_HIGH(arg), addr, mem_index);
 #else
     tcg_gen_op5i_i32(INDEX_op_qemu_st64, TCGV_LOW(arg), TCGV_HIGH(arg), TCGV_LOW(addr), TCGV_HIGH(addr), mem_index);
 #endif
+    gen_store_table_set(cpu, addr);
     gen_store_table_unlock(cpu, addr);
 }
 
