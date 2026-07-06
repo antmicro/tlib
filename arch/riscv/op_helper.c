@@ -727,16 +727,12 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
         case CSR_VCSR:
             env->vcsr = val_to_write;
             break;
-        case CSR_MENVCFG: {
-            target_ulong menvcfg_mask = 0;
-            env->menvcfg = val_to_write & menvcfg_mask;
+        case CSR_MENVCFG:
+            env->menvcfg = val_to_write;
             break;
-        }
-        case CSR_MENVCFGH: {
-            target_ulong menvcfgh_mask = 0;
-            env->menvcfgh = val_to_write & menvcfgh_mask;
+        case CSR_MENVCFGH:
+            env->menvcfgh = val_to_write;
             break;
-        }
         case CSR_MSECCFG:
             //  Based on the SMEPMP documentation Version 1.0
             if(!riscv_has_additional_ext(env, RISCV_FEATURE_SMEPMP)) {
