@@ -30,11 +30,11 @@
 
 #include "core-esp32s2/core-isa.h"
 #include "overlay_tool.h"
+#include "xtensa-isa-internal.h"
 
-#define xtensa_modules xtensa_modules_esp32s2
-
-//  use the common implementation of ESP32
-#include "core-esp32/xtensa-modules.c.inc"
+//  ESP32-S2 is an LX7 core, like the ESP32-S3: use the same decode tables
+extern xtensa_isa_internal xtensa_modules_esp32s3;
+#define xtensa_modules xtensa_modules_esp32s3
 
 XtensaConfig esp32s2
     __attribute__((unused)) = { .name = "esp32s2", .isa_internal = &xtensa_modules, .clock_freq_khz = 140000, DEFAULT_SECTIONS };
