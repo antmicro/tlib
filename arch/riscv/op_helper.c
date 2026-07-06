@@ -728,11 +728,21 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
             env->vcsr = val_to_write;
             break;
         case CSR_MENVCFG:
-            env->menvcfg = val_to_write;
+            if(!riscv_has_ext(env, RISCV_FEATURE_RVU)) {
+                goto unhandled_csr_write;
+            }
+            env->menvcfg = val_to_write & ~((target_ulong)MENVCFG_RO_ZERO_MASK);
             break;
         case CSR_MENVCFGH:
-            env->menvcfgh = val_to_write;
+#if defined(TARGET_RISCV32)
+            if(!riscv_has_ext(env, RISCV_FEATURE_RVU)) {
+                goto unhandled_csr_write;
+            }
+            env->menvcfgh = val_to_write & ~((target_ulong)(MENVCFG_RO_ZERO_MASK >> 32));
             break;
+#else
+            goto unhandled_csr_write;
+#endif
         case CSR_MSECCFG:
             //  Based on the SMEPMP documentation Version 1.0
             if(!riscv_has_additional_ext(env, RISCV_FEATURE_SMEPMP)) {

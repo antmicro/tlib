@@ -378,6 +378,25 @@
 /* mintthresh bits */
 #define MINTTHRESH_TH 0x000000ff
 
+/* menvcfg fields required to be read-only zero because the related
+ * extensions are not implemented by tlib. */
+#define MENVCFG_STCE  (1ULL << 63) /* Sstc */
+#define MENVCFG_PBMTE (1ULL << 62) /* Svpbmt */
+#define MENVCFG_ADUE  (1ULL << 61) /* Svadu */
+#define MENVCFG_CDE   (1ULL << 60) /* Smcdeleg */
+#define MENVCFG_DTE   (1ULL << 59) /* Ssdbltrp */
+#define MENVCFG_PMM   (3ULL << 32) /* Smnpm */
+#define MENVCFG_CBZE  (1ULL << 7)  /* Zicboz */
+#define MENVCFG_CBCFE (1ULL << 6)  /* Zicbom */
+#define MENVCFG_CBIE  (3ULL << 4)  /* Zicbom */
+#define MENVCFG_SSE   (1ULL << 3)  /* Zicfiss */
+#define MENVCFG_LPE   (1ULL << 2)  /* Zicflip */
+#define MENVCFG_FIOM  (1ULL << 0)  /* Zicbom */
+
+#define MENVCFG_RO_ZERO_MASK                                                                                                \
+    (MENVCFG_STCE | MENVCFG_PBMTE | MENVCFG_ADUE | MENVCFG_CDE | MENVCFG_DTE | MENVCFG_PMM | MENVCFG_CBZE | MENVCFG_CBCFE | \
+     MENVCFG_CBIE | MENVCFG_SSE | MENVCFG_LPE | MENVCFG_FIOM)
+
 /* mseccfg bits */
 #define MSECCFG_MML  (1 << 0)
 #define MSECCFG_MMWP (1 << 1)
