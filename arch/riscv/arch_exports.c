@@ -159,6 +159,7 @@ void tlib_allow_additional_feature(uint32_t feature)
         case RISCV_FEATURE_ZBB:
         case RISCV_FEATURE_ZBC:
         case RISCV_FEATURE_ZBS:
+        case RISCV_FEATURE_ZBKB:
         case RISCV_FEATURE_ZICSR:
         case RISCV_FEATURE_ZIFENCEI:
         case RISCV_FEATURE_ZACAS:
