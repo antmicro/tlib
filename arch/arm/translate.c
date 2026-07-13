@@ -9572,7 +9572,13 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                 uint8_t op0 = (insn >> 15) & 0x1;
                 uint8_t op1 = (insn >> 12) & 0x3;
 
-                if(op0 == 0 && rm != 0xd && rm != 0xf) {
+                //  The rm==0xd (SP) encodings in this space are the ARMv8.1-M MVE
+                //  long-shift instructions (ASRL/LSLL/...), so they are only
+                //  reserved on cores that implement MVE. On a non-MVE M-profile
+                //  core (e.g. Cortex-M33) `MOV.W Rd, SP` (rn==0xf, rm==0xd) is a
+                //  legal plain MOV; without allowing it here the decoder rejects
+                //  it as UNDEFINSTR and real firmware faults/reset-loops.
+                if(op0 == 0 && rm != 0xf && (rm != 0xd || !ENABLE_ARCH_MVE)) {
                     tmp = load_reg(s, rn);
                     tmp2 = load_reg(s, rm);
                     gen_arm_shift_im(tmp2, shiftop, shift, logic_cc);
