@@ -481,9 +481,9 @@ void pmpcfg_csr_write(CPUState *env, uint32_t reg_index, target_ulong val)
     //  there is NO pmpcfg1
     //  pmpcfg2 = [pmp8cfg, pmp9cfg, ..., pmp15cfg]
     //  so we obtain the effective index by dividing by 2
-    if(reg_index % 2 != 0) {
-        PMP_DEBUG("ignoring write - incorrect address");
-        return;
+    if(unlikely(reg_index % 2 != 0)) {
+        tlib_printf(LOG_LEVEL_WARNING, "Attempted illegal write to pmpcfg register with odd-numbered index (%d)", reg_index);
+        helper_raise_illegal_instruction(env);
     }
     reg_index /= 2;
 #endif
@@ -514,6 +514,10 @@ target_ulong pmpcfg_csr_read(CPUState *env, uint32_t reg_index)
 #if defined(TARGET_RISCV64)
     //  for RV64 only even pmpcfg registers are used
     //  see a comment in pmpcfg_csr_write for details
+    if(unlikely(reg_index % 2 != 0)) {
+        tlib_printf(LOG_LEVEL_WARNING, "Attempted illegal read from pmpcfg register with odd-numbered index (%d)", reg_index);
+        helper_raise_illegal_instruction(env);
+    }
     reg_index /= 2;
 #endif
     base_offset = reg_index * sizeof(target_ulong);
