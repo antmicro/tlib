@@ -474,14 +474,26 @@ void tlib_enable_external_pmp(bool value)
 
 EXC_VOID_1(tlib_enable_external_pmp, bool, value)
 
+static_assert(MAX_RISCV_PMPS >= 64, "Pre-defined PMP entry count must not be lesser than max settable count");
+void tlib_set_pmp_entry_count(uint32_t entry_count)
+{
+    if(entry_count != 0 && entry_count != 16 && entry_count != 64) {
+        tlib_abortf("Unexpected PMP entry count %d, only 0, 16, and 64 are allowed", entry_count);
+        return;
+    }
+    cpu->pmp_entry_count = entry_count;
+}
+
+EXC_VOID_1(tlib_set_pmp_entry_count, uint32_t, max_entry_count)
+
 void tlib_set_pmpaddr(uint32_t index, uint64_t start_address, uint64_t end_address)
 {
-    if(index < MAX_RISCV_PMPS) {
+    if(index < cpu->pmp_entry_count) {
         cpu->pmp_state.addr[index].sa = start_address & cpu->pmp_addr_mask;
         cpu->pmp_state.addr[index].ea = end_address & cpu->pmp_addr_mask;
     } else {
         tlib_printf(LOG_LEVEL_ERROR, "Tried to set the address of PMP entry %u but the maximum index is %u, write ignored", index,
-                    MAX_RISCV_PMPS - 1);
+                    cpu->pmp_entry_count - 1);
     }
 }
 EXC_VOID_3(tlib_set_pmpaddr, uint32_t, index, uint64_t, start_address, uint64_t, end_address)

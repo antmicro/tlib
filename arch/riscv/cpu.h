@@ -29,10 +29,6 @@
 
 #define MAX_RISCV_PMPS (64)
 
-#if MAX_RISCV_PMPS != 16 && MAX_RISCV_PMPS != 64
-#error "Invalid maximum PMP region count. Supported values are 16 and 64"
-#endif
-
 //  In MISA register the extensions are encoded on bits [25:0] (see:
 //  https://five-embeddev.com/riscv-isa-manual/latest/machine.html), but because these additional features are not there
 //  RISCV_ADDITIONAL_FEATURE_OFFSET allows to show that they are unrelated to MISA.
@@ -227,6 +223,8 @@ struct CPUState {
 
     /* since priv-1.11.0 pmp grain size must be the same across all pmp regions */
     int32_t pmp_napot_grain;
+
+    uint32_t pmp_entry_count;
 
     /* Supported modes:
      * 0 (INTERRUPT_MODE_AUTO) - check mtvec's LSB to detect mode: 0->direct, 1->vectored, 3->clic

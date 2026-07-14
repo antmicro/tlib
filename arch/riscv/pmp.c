@@ -62,7 +62,7 @@ static inline int pmp_is_locked(CPUState *env, uint32_t pmp_index)
     }
 
     /* Top PMP has no 'next' to check */
-    if((pmp_index + 1u) >= MAX_RISCV_PMPS) {
+    if((pmp_index + 1u) >= env->pmp_entry_count) {
         return 0;
     }
 
@@ -117,11 +117,8 @@ static inline uint32_t pmp_get_num_rules(CPUState *env)
  */
 static inline uint8_t pmp_read_cfg(CPUState *env, uint32_t pmp_index)
 {
-    if(pmp_index < MAX_RISCV_PMPS) {
-        return env->pmp_state.pmp[pmp_index].cfg_reg;
-    }
-
-    return 0;
+    tlib_assert(pmp_index < env->pmp_entry_count);
+    return env->pmp_state.pmp[pmp_index].cfg_reg;
 }
 
 /*
@@ -130,11 +127,7 @@ static inline uint8_t pmp_read_cfg(CPUState *env, uint32_t pmp_index)
  */
 static void pmp_write_cfg(CPUState *env, uint32_t pmp_index, uint8_t val)
 {
-    if(pmp_index >= MAX_RISCV_PMPS) {
-        PMP_DEBUG("Ignoring pmpcfg write - out of bounds");
-        return;
-    }
-
+    tlib_assert(pmp_index < env->pmp_entry_count);
     if(pmp_is_locked(env, pmp_index) && !(env->mseccfg & MSECCFG_RLB)) {
         PMP_DEBUG("Ignoring pmpcfg write - locked");
         return;
@@ -247,7 +240,7 @@ static void pmp_update_rule(CPUState *env, uint32_t pmp_index)
     env->pmp_state.addr[pmp_index].sa = sa & cpu->pmp_addr_mask;
     env->pmp_state.addr[pmp_index].ea = ea & cpu->pmp_addr_mask;
 
-    for(i = 0; i < MAX_RISCV_PMPS; i++) {
+    for(i = 0; i < env->pmp_entry_count; i++) {
         const uint8_t a_field = pmp_get_a_field(env->pmp_state.pmp[i].cfg_reg);
         if(PMP_AMATCH_OFF != a_field) {
             env->pmp_state.num_rules++;
@@ -287,7 +280,7 @@ int pmp_find_overlapping(CPUState *env, target_ulong addr, target_ulong size, in
         return tlib_extpmp_find_overlapping(addr, size, starting_index);
     }
 
-    for(i = starting_index; i < MAX_RISCV_PMPS; i++) {
+    for(i = starting_index; i < env->pmp_entry_count; i++) {
         a_field = pmp_get_a_field(env->pmp_state.pmp[i].cfg_reg);
         if(a_field == PMP_AMATCH_OFF) {
             continue;
@@ -412,7 +405,7 @@ int pmp_get_access(CPUState *env, target_ulong addr, target_ulong size, int acce
 
     /* 1.10 draft priv spec states there is an implicit order
          from low to high */
-    for(i = 0; i < MAX_RISCV_PMPS; i++) {
+    for(i = 0; i < env->pmp_entry_count; i++) {
         s = pmp_is_in_range(env, i, addr);
         e = pmp_is_in_range(env, i, addr + size - 1);
         const uint8_t a_field = pmp_get_a_field(env->pmp_state.pmp[i].cfg_reg);
@@ -488,6 +481,13 @@ void pmpcfg_csr_write(CPUState *env, uint32_t reg_index, target_ulong val)
     reg_index /= 2;
 #endif
     base_offset = reg_index * sizeof(target_ulong);
+    //  PMP entry counts are multiples of 16, so if the first entry exists (at `base_offset`),
+    //  the last entry will exist too (at `base_offset + sizeof(target_ulong)`)
+    if(unlikely(base_offset >= env->pmp_entry_count)) {
+        tlib_printf(LOG_LEVEL_WARNING, "Attempted illegal write to pmpcfg entry beyond entry count (%d, entry count is %d)",
+                    base_offset, env->pmp_entry_count);
+        helper_raise_illegal_instruction(env);
+    }
 
     for(i = 0; i < sizeof(target_ulong); i++) {
         //  Bits 5 and 6 are WARL since Priviledged ISA 1.11
@@ -521,6 +521,12 @@ target_ulong pmpcfg_csr_read(CPUState *env, uint32_t reg_index)
     reg_index /= 2;
 #endif
     base_offset = reg_index * sizeof(target_ulong);
+    //  Same logic as in pmpcfg_csr_write
+    if(unlikely(base_offset >= env->pmp_entry_count)) {
+        tlib_printf(LOG_LEVEL_WARNING, "Attempted illegal read from pmpcfg entry beyond entry count (%d, entry count is %d)",
+                    base_offset, env->pmp_entry_count);
+        helper_raise_illegal_instruction(env);
+    }
 
     for(i = 0; i < sizeof(target_ulong); i++) {
         val = pmp_read_cfg(env, base_offset + i);
@@ -543,16 +549,18 @@ void pmpaddr_csr_write(CPUState *env, uint32_t addr_index, target_ulong val)
 
     PMP_DEBUG("hart " TARGET_FMT_ld " writes: addr%d, val: 0x" TARGET_FMT_lx, env->mhartid, addr_index, val);
 
-    if(addr_index < MAX_RISCV_PMPS) {
-        if(!pmp_is_locked(env, addr_index) || env->mseccfg & MSECCFG_RLB) {
-            env->pmp_state.pmp[addr_index].addr_reg = val & cpu->pmp_addr_mask;
-            pmp_update_rule(env, addr_index);
-        } else {
-            PMP_DEBUG("ignoring pmpaddr write - locked");
-        }
-    } else {
-        PMP_DEBUG("ignoring pmpaddr write - out of bounds");
+    if(addr_index >= env->pmp_entry_count) {
+        tlib_printf(LOG_LEVEL_WARNING, "Attempted illegal write to pmpaddr register beyond entry count (%d, entry count is %d)",
+                    addr_index, env->pmp_entry_count);
+        helper_raise_illegal_instruction(env);
     }
+
+    if(pmp_is_locked(env, addr_index) && !(env->mseccfg & MSECCFG_RLB)) {
+        PMP_DEBUG("ignoring pmpaddr write - locked");
+        return;
+    }
+    env->pmp_state.pmp[addr_index].addr_reg = val & cpu->pmp_addr_mask;
+    pmp_update_rule(env, addr_index);
 }
 
 /*
@@ -566,12 +574,14 @@ target_ulong pmpaddr_csr_read(CPUState *env, uint32_t addr_index)
 
     PMP_DEBUG("hart " TARGET_FMT_ld "  reads: addr%d, val: 0x" TARGET_FMT_lx, env->mhartid, addr_index,
               env->pmp_state.pmp[addr_index].addr_reg);
-    if(addr_index < MAX_RISCV_PMPS) {
-        return env->pmp_state.pmp[addr_index].addr_reg;
-    } else {
-        PMP_DEBUG("ignoring read - out of bounds");
-        return 0;
+
+    if(addr_index >= env->pmp_entry_count) {
+        tlib_printf(LOG_LEVEL_WARNING, "Attempted illegal read from pmpaddr register beyond entry count (%d, entry count is %d)",
+                    addr_index, env->pmp_entry_count);
+        helper_raise_illegal_instruction(env);
     }
+
+    return env->pmp_state.pmp[addr_index].addr_reg;
 }
 
 bool pmp_is_any_region_locked(CPUState *env)
@@ -580,7 +590,7 @@ bool pmp_is_any_region_locked(CPUState *env)
         return tlib_extpmp_is_any_region_locked();
     }
 
-    for(int i = 0; i < MAX_RISCV_PMPS; i++) {
+    for(int i = 0; i < env->pmp_entry_count; i++) {
         if(pmp_is_locked(env, i)) {
             return true;
         }
