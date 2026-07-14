@@ -456,7 +456,7 @@ void pmpcfg_csr_write(CPUState *env, uint32_t reg_index, target_ulong val)
 {
     int i;
     uint8_t cfg_val;
-    uint32_t base_offset = reg_index * sizeof(target_ulong);
+    uint32_t base_offset;
 
     if(unlikely(env->use_external_pmp)) {
         return tlib_extpmp_cfg_csr_write(reg_index, val);
@@ -474,8 +474,9 @@ void pmpcfg_csr_write(CPUState *env, uint32_t reg_index, target_ulong val)
         PMP_DEBUG("ignoring write - incorrect address");
         return;
     }
-    base_offset /= 2;
+    reg_index /= 2;
 #endif
+    base_offset = reg_index * sizeof(target_ulong);
 
     for(i = 0; i < sizeof(target_ulong); i++) {
         //  Bits 5 and 6 are WARL since Priviledged ISA 1.11
@@ -493,7 +494,7 @@ target_ulong pmpcfg_csr_read(CPUState *env, uint32_t reg_index)
     int i;
     target_ulong cfg_val = 0;
     uint8_t val = 0;
-    uint32_t base_offset = reg_index * sizeof(target_ulong);
+    uint32_t base_offset;
 
     if(unlikely(env->use_external_pmp)) {
         return tlib_extpmp_cfg_csr_read(reg_index);
@@ -502,8 +503,9 @@ target_ulong pmpcfg_csr_read(CPUState *env, uint32_t reg_index)
 #if defined(TARGET_RISCV64)
     //  for RV64 only even pmpcfg registers are used
     //  see a comment in pmpcfg_csr_write for details
-    base_offset /= 2;
+    reg_index /= 2;
 #endif
+    base_offset = reg_index * sizeof(target_ulong);
 
     for(i = 0; i < sizeof(target_ulong); i++) {
         val = pmp_read_cfg(env, base_offset + i);
