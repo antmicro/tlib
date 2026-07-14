@@ -151,29 +151,40 @@ static void pmp_write_cfg(CPUState *env, uint32_t pmp_index, uint8_t val)
 
 static void pmp_decode_napot(target_ulong addr, int napot_grain, target_ulong *start_addr, target_ulong *end_addr)
 {
-    /*
-       aaaa...aaa0   8-byte NAPOT range
-       aaaa...aa01   16-byte NAPOT range
-       aaaa...a011   32-byte NAPOT range
+    /* bits          meaning                       napot_grain
+       aaaa...aaa0   8-byte NAPOT range            0
+       aaaa...aa01   16-byte NAPOT range           1
+       aaaa...a011   32-byte NAPOT range           2
        ...
-       aa01...1111   2^XLEN-byte NAPOT range
-       a011...1111   2^(XLEN+1)-byte NAPOT range
-       0111...1111   2^(XLEN+2)-byte NAPOT range
-       1111...1111   Reserved
+       aaa0...1111   2^(XLEN-1)-byte NAPOT range   XLEN - 4
+       aa01...1111   2^XLEN-byte NAPOT range       XLEN - 3
+       a011...1111   2^(XLEN+1)-byte NAPOT range   XLEN - 2
+       0111...1111   2^(XLEN+2)-byte NAPOT range   XLEN - 1
+       1111...1111   2^(XLEN+3)-byte NAPOT range   XLEN
      */
-    if(addr == -1) {
-        *start_addr = 0u;
+    //  Avoid shifting UB, this will always cover the entire address space anyway
+    if(unlikely(napot_grain == TARGET_LONG_BITS)) {
+        PMP_DEBUG("Allowing ulong-sized napot");
+        *start_addr = 0;
         *end_addr = -1;
         return;
-    } else {
-        //  NAPOT range equals 2^(NAPOT_GRAIN + 2)
-        //  Calculating base and range using 64 bit wide variables, as using
-        //  `target_ulong` caused overflows on RV32 when `napot_grain = 32`
-        uint64_t range = ((uint64_t)2 << (napot_grain + 2)) - 1;
-        uint64_t base = (addr & ((uint64_t)-1 << (napot_grain + 1))) << 2;
-        *start_addr = (target_ulong)base;
-        *end_addr = (target_ulong)(base + range);
     }
+    target_ulong base = addr & ((target_ulong)-2 << napot_grain);
+    //  We don't implement memory beyond XLEN-bit (viz. 34-bit memory), so if the top two
+    //  address bits are set, this entry is referring to memory that doesn't exist
+    if(unlikely((base & ((target_ulong)3 << (TARGET_LONG_BITS - 2))) != 0)) {
+        PMP_DEBUG("Ignoring address %d (grain %d) for beyond XLEN-bit", addr, napot_grain);
+        //  Nothing will match this range
+        *start_addr = 1;
+        *end_addr = 0;
+        return;
+    }
+    base <<= 2;
+    //  Grains `XLEN - 3` and above will underflow here, which means this covers
+    //  the entire address space
+    target_ulong range = ((target_ulong)8 << napot_grain) - 1;
+    *start_addr = (target_ulong)base;
+    *end_addr = (target_ulong)(base + range);
 }
 
 /* Convert cfg/addr reg values here into simple 'sa' --> start address and 'ea'
@@ -216,7 +227,7 @@ static void pmp_update_rule(CPUState *env, uint32_t pmp_index)
 
         case PMP_AMATCH_NAPOT:
             /*  Since priv-1.11 PMP grain must be the same across all PMP regions */
-            napot = ctz64(~this_addr);
+            napot = ctz_tl(~this_addr);
             if(env->privilege_architecture >= RISCV_PRIV1_11) {
                 if(cpu->pmp_napot_grain > napot) {
                     tlib_log(LOG_LEVEL_ERROR, "Tried to set NAPOT region size smaller than the platform defined grain. This "
