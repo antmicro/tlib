@@ -218,6 +218,12 @@ static inline int ctz64(uint64_t val)
 #endif
 }
 
+#if TARGET_LONG_BITS == 64
+#define ctz_tl ctz64
+#elif TARGET_LONG_BITS == 32
+#define ctz_tl ctz32
+#endif
+
 static inline int ctpop64(uint64_t val)
 {
 #if __has_builtin(__builtin_popcountll)
