@@ -81,6 +81,9 @@ void tlib_try_interrupt_translation_block(void)
             case TB_INTERRUPT_EXCLUDE_LAST_INSTRUCTION:
                 interrupt_current_translation_block(cpu, EXCP_WATCHPOINT);
                 break;
+            case TB_INTERRUPT_SYNCHRONOUS_EXCEPTION:
+                interrupt_current_translation_block_from_current_instruction(cpu, cpu->tb_interrupt_exception_from_callback);
+                break;
             default:
                 tlib_abort("Unhandled translation block interrupt condition. Aborting!");
                 break;

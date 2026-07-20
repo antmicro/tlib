@@ -1147,7 +1147,7 @@ void configure_write_caching(uint64_t address, uint64_t lower_address_count, uin
     QTAILQ_INSERT_TAIL(&env->write_cache, cwd, entry);
 }
 
-void interrupt_current_translation_block(CPUState *env, int exception_type)
+static void interrupt_current_translation_block_internal(CPUState *env, int exception_type, bool restore_to_current_instruction)
 {
     target_ulong pc, cs_base;
     int cpu_flags;
@@ -1157,7 +1157,7 @@ void interrupt_current_translation_block(CPUState *env, int exception_type)
 
     tb = tb_find_pc(host_pc);
     if(tb != 0) {
-        if(exception_type == EXCP_WATCHPOINT) {
+        if(restore_to_current_instruction) {
             executed_instructions = cpu_restore_state_and_restore_instructions_count(cpu, tb, host_pc, false);
         } else {
             //  To prevent some unwanted side effects caused by executing the first part of the instruction twice
@@ -1188,6 +1188,16 @@ void interrupt_current_translation_block(CPUState *env, int exception_type)
 
     env->exception_index = exception_type;
     cpu_loop_exit_without_hook(env);
+}
+
+void interrupt_current_translation_block(CPUState *env, int exception_type)
+{
+    interrupt_current_translation_block_internal(env, exception_type, exception_type == EXCP_WATCHPOINT);
+}
+
+void interrupt_current_translation_block_from_current_instruction(CPUState *env, int exception_type)
+{
+    interrupt_current_translation_block_internal(env, exception_type, true);
 }
 
 /* Remove a specific breakpoint.  */

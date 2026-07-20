@@ -198,6 +198,7 @@ enum block_interrupt_cause {
     TB_INTERRUPT_NONE = 0,
     TB_INTERRUPT_INCLUDE_LAST_INSTRUCTION = 1,
     TB_INTERRUPT_EXCLUDE_LAST_INSTRUCTION = 2,
+    TB_INTERRUPT_SYNCHRONOUS_EXCEPTION = 3,
 };
 
 #define MAX_IO_ACCESS_REGIONS_COUNT 1024
@@ -229,6 +230,7 @@ enum block_interrupt_cause {
     volatile sig_atomic_t exit_request;                                        \
     int tb_restart_request;                                                    \
     int tb_interrupt_request_from_callback;                                    \
+    int tb_interrupt_exception_from_callback;                                  \
                                                                                \
     uint32_t io_access_regions_count;                                          \
     uint64_t io_access_regions[MAX_IO_ACCESS_REGIONS_COUNT];                   \
