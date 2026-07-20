@@ -1923,7 +1923,6 @@ static void do_interrupt_v7m(CPUState *env)
     uint32_t xpsr = xpsr_read(env);
     uint32_t lr;
     uint32_t addr;
-    int nr;
     int stack_status = 0;
     bool secure_target = env->secure;
     int acknowledged_exception = 0;
@@ -1970,12 +1969,6 @@ static void do_interrupt_v7m(CPUState *env)
             v7m_raise_synchronous_exception(env, v7m_exception_number_with_security(env, ARMV7M_EXCP_MEM, env->secure));
             return;
         case EXCP_BKPT:
-            nr = lduw_code(env->regs[15]) & 0xff;
-            if(nr == 0xab) {
-                env->regs[15] += 2;
-                env->regs[0] = tlib_do_semihosting();
-                return;
-            }
             /* Banked DEBUG, but it's not exactly true, see below */
             v7m_raise_synchronous_exception(env, v7m_exception_number_with_security(env, ARMV7M_EXCP_DEBUG, env->secure));
             return;
@@ -2273,19 +2266,6 @@ static void do_interrupt_normal(CPUState *env)
             }
             break;
         case EXCP_SWI:
-            /* Check for semihosting interrupt.  */
-            if(env->thumb) {
-                mask = lduw_code(env->regs[15] - 2) & 0xff;
-            } else {
-                mask = ldl_code(env->regs[15] - 4) & 0xffffff;
-            }
-            /* Only intercept calls from privileged modes, to provide some
-               semblance of security.  */
-            if(((mask == 0x123456 && !env->thumb) || (mask == 0xab && env->thumb)) &&
-               (env->uncached_cpsr & CPSR_M) != ARM_CPU_MODE_USR) {
-                env->regs[0] = tlib_do_semihosting();
-                return;
-            }
             new_mode = ARM_CPU_MODE_SVC;
             addr = 0x08;
             mask = CPSR_I;
@@ -2293,13 +2273,6 @@ static void do_interrupt_normal(CPUState *env)
             offset = 0;
             break;
         case EXCP_BKPT:
-            /* See if this is a semihosting syscall.  */
-            mask = lduw_code(env->regs[15]) & 0xff;
-            if(mask == 0xab && (env->uncached_cpsr & CPSR_M) != ARM_CPU_MODE_USR) {
-                env->regs[15] += 2;
-                env->regs[0] = tlib_do_semihosting();
-                return;
-            }
             env->cp15.c5_insn = 2;
             /* Go to prefetch abort.  */
             goto case_EXCP_PREFETCH_ABORT;
@@ -2370,9 +2343,19 @@ static void do_interrupt_normal(CPUState *env)
 }
 #endif
 
+void do_semihosting(CPUState *env)
+{
+    env->regs[0] = tlib_do_semihosting();
+}
+
 /* Handle a CPU exception.  */
 void do_interrupt(CPUState *env)
 {
+    if(env->exception_index == EXCP_SEMIHOST) {
+        do_semihosting(env);
+        return;
+    }
+
     if(env->interrupt_begin_callback_enabled) {
         tlib_on_interrupt_begin(env->exception_index);
     }

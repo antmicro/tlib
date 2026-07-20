@@ -9397,6 +9397,11 @@ static void disas_arm_insn(CPUState *env, DisasContext *s)
                 break;
             case 0xf:
                 /* swi */
+                /* Check for semihosting call and intercept it in privileged mode to provide some semblance of security */
+                if((insn & 0xffffff) == 0x123456 && !s->user) {
+                    gen_exception_insn(s, 0, EXCP_SEMIHOST);
+                    break;
+                }
                 gen_set_pc_im(s->base.pc);
                 s->base.is_jmp = DISAS_SWI;
                 LOCK_TB(s->base.tb);
@@ -16277,6 +16282,16 @@ static void disas_thumb_insn(CPUState *env, DisasContext *s)
 
                 case 0xe: /* bkpt */
                     ARCH(5);
+                    /* Check for semihosting call and intercept it in privileged mode to provide some semblance of security on non
+                     * Cortex-M */
+                    if((insn & 0xff) == 0xab
+#ifndef TARGET_PROTO_ARM_M
+                       && !s->user
+#endif
+                    ) {
+                        gen_exception_insn(s, 0, EXCP_SEMIHOST);
+                        break;
+                    }
                     gen_exception_insn(s, 2, EXCP_BKPT);
                     LOCK_TB(s->base.tb);
                     break;
@@ -16384,6 +16399,13 @@ static void disas_thumb_insn(CPUState *env, DisasContext *s)
 
             if(cond == 0xf) {
                 /* swi */
+#ifndef TARGET_PROTO_ARM_M
+                /* Check for semihosting call */
+                if((insn & 0xff) == 0xab && !s->user) {
+                    gen_exception_insn(s, 0, EXCP_SEMIHOST);
+                    break;
+                }
+#endif
                 gen_set_pc_im(s->base.pc);
                 s->base.is_jmp = DISAS_SWI;
                 LOCK_TB(s->base.tb);

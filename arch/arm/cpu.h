@@ -51,6 +51,7 @@
 #define EXCP_BKPT           7
 #define EXCP_KERNEL_TRAP    9 /* Jumped to kernel code page.  */
 #define EXCP_STREX          10
+#define EXCP_SEMIHOST       11
 #define EXCP_UNALIGNED      16 /* UNALIGNED usage fault */
 #define EXCP_NOCP           17 /* NOCP usage fault */
 #define EXCP_INVSTATE       18 /* INVSTATE usage fault */
