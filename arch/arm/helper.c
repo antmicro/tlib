@@ -2830,7 +2830,16 @@ static int get_phys_addr_mpu(CPUState *env, uint32_t address, int access_type, i
 
     if(n < 0) {  //  background fault
         int background_result;
-        if(arm_feature(env, ARM_FEATURE_PMSA)) {
+#ifdef TARGET_PROTO_ARM_M
+        if(is_user && unlikely(env->v7m.ccr[env->secure] & FIELD_MASK(V7M_CCR, USERSETMPEND)) &&
+           tlib_nvic_is_stir_address(address)) {
+            *prot = PAGE_READ | PAGE_WRITE;
+            background_result = !(*prot & (1 << access_type));
+            //  Unlike other background faults, this one isn't bigger than a page
+            *page_size = 0;
+        } else
+#endif
+            if(arm_feature(env, ARM_FEATURE_PMSA)) {
             if(is_user || !(env->cp15.c1_sys & (1 << 17 /* BR, Background Region */))) {
                 background_result = MPU_BACKGROUND_FAULT;
             } else {

@@ -48,6 +48,8 @@ DEFAULT_INT_HANDLER1(uint32_t tlib_has_enabled_trustzone, void)
 
 DEFAULT_INT_HANDLER1(uint32_t tlib_nvic_interrupt_targets_secure, int32_t number)
 
+DEFAULT_INT_HANDLER1(uint32_t tlib_nvic_is_stir_address, uint32_t address)
+
 #endif
 
 DEFAULT_INT_HANDLER1(uint32_t tlib_read_cp15_32, uint32_t instruction)
