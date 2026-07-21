@@ -39,6 +39,8 @@ void tlib_set_ccr(uint32_t value, bool secure);
 uint32_t tlib_get_xpsr(void);
 uint32_t tlib_get_fault_status(bool secure);
 void tlib_set_fault_status(uint32_t value, bool secure);
+uint32_t tlib_get_bus_fault_address(void);
+void tlib_raise_precise_bus_fault(uint32_t address);
 uint32_t tlib_get_memory_fault_address(bool secure);
 uint32_t tlib_get_secure_fault_status();
 void tlib_set_secure_fault_status(uint32_t value);

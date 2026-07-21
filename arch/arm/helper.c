@@ -1437,6 +1437,11 @@ static void do_interrupt_v7m(CPUState *env)
             tlib_assert(cpu->v7m.has_trustzone);
             tlib_nvic_set_pending_irq(ARMV7M_EXCP_SECURE);
             return;
+        case EXCP_BUS_FAULT:
+            /* Armv8-M ARM rule RGNVS: synchronous exceptions that cannot become
+             * active at their configured priority are escalated by the NVIC. */
+            tlib_nvic_set_pending_synchronous_fault(ARMV7M_EXCP_BUS);
+            return;
         case EXCP_IRQ:
             /* Continue the execution after the switch */
             break;

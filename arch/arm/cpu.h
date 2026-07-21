@@ -55,6 +55,7 @@
 #define EXCP_INVSTATE       18 /* INVSTATE usage fault */
 #define EXCP_SECURE         19 /* TrustZone Secure fault */
 #define EXCP_DIV_0          20 /* Integer divide by zero fault */
+#define EXCP_BUS_FAULT      21 /* Synchronous, precise data BusFault */
 
 #define ARMV7M_EXCP_RESET    1
 #define ARMV7M_EXCP_NMI      2
@@ -86,6 +87,11 @@
 #define MEM_FAULT_MUNSTKERR 1 << 3
 #define MEM_FAULT_DACCVIOL  1 << 1
 #define MEM_FAULT_IACCVIOL  1 << 0
+/* BusFault : bits 8:15 of CFSR */
+#define BUS_FAULT_OFFSET      8
+#define BUS_FAULT_BFARVALID   ((1 << 7) << BUS_FAULT_OFFSET)
+#define BUS_FAULT_PRECISERR   ((1 << 1) << BUS_FAULT_OFFSET)
+#define BUS_FAULT_STATUS_MASK (0xff << BUS_FAULT_OFFSET)
 /* Usage Fault : bits 16-31 of CFSR */
 #define USAGE_FAULT_OFFSET     16
 #define USAGE_FAULT_DIVBYZERO  (1 << 9) << USAGE_FAULT_OFFSET
@@ -345,6 +351,10 @@ typedef struct CPUState {
          * bank for this register. The rest of the bits are banked. */
         uint32_t control[M_REG_NUM_BANKS];
         uint32_t fault_status[M_REG_NUM_BANKS];
+        /* BFSR and BFAR are not banked between Security states. See
+         * rules IHGFM and ILRNV for their BFHFNMINS-dependent visibility. */
+        uint32_t bus_fault_status;     /* BFSR */
+        uint32_t bus_fault_address;    /* BFAR */
         uint32_t secure_fault_status;  /* SFSR */
         uint32_t secure_fault_address; /* SFAR. It can be shared with MMFAR, but it's more hassle, so let's keep it separate */
         uint32_t memory_fault_address[M_REG_NUM_BANKS];
@@ -677,6 +687,12 @@ static inline bool in_privileged_mode_with_security(CPUState *env, bool is_secur
 static inline bool in_privileged_mode(CPUState *env)
 {
     return in_privileged_mode_with_security(env, env->secure);
+}
+
+static inline bool is_requested_exception_priority_negative(CPUState *env, bool secure)
+{
+    /* ARM: IsReqExcPriNeg */
+    return env->v7m.exception == ARMV7M_EXCP_NMI || env->v7m.exception == ARMV7M_EXCP_HARD || env->v7m.faultmask[secure];
 }
 #endif
 

@@ -284,7 +284,7 @@ EXC_VOID_1(tlib_do_lazy_floating_point_state_preservation, bool, createContext)
 
 uint32_t tlib_get_fault_status(bool secure)
 {
-    return cpu->v7m.fault_status[secure];
+    return (cpu->v7m.fault_status[secure] & ~BUS_FAULT_STATUS_MASK) | cpu->v7m.bus_fault_status;
 }
 
 EXC_INT_1(uint32_t, tlib_get_fault_status, bool, secure)
@@ -305,10 +305,38 @@ EXC_INT_1(uint32_t, tlib_get_faultmask, bool, secure)
 
 void tlib_set_fault_status(uint32_t value, bool secure)
 {
-    cpu->v7m.fault_status[secure] = value;
+    cpu->v7m.fault_status[secure] = value & ~BUS_FAULT_STATUS_MASK;
+    cpu->v7m.bus_fault_status = value & BUS_FAULT_STATUS_MASK;
 }
 
 EXC_VOID_2(tlib_set_fault_status, uint32_t, value, bool, secure)
+
+uint32_t tlib_get_bus_fault_address()
+{
+    return cpu->v7m.bus_fault_address;
+}
+
+EXC_INT_0(uint32_t, tlib_get_bus_fault_address)
+
+void tlib_raise_precise_bus_fault(uint32_t address)
+{
+    /* Armv8-M ARM, E2.1.294 MemA_with_priv_security, and rules RDDJJ and
+     * RFLDT: a synchronous BusFault on a normal data access records BFAR,
+     * BFSR.BFARVALID, and BFSR.PRECISERR before exception handling. */
+    cpu->v7m.bus_fault_address = address;
+    cpu->v7m.bus_fault_status |= BUS_FAULT_BFARVALID | BUS_FAULT_PRECISERR;
+
+    /* CCR.BFHFNMIGN suppresses the exception if it can be ignored, but not the BFAR/BFSR updates. */
+    bool requested_priority_is_negative = is_requested_exception_priority_negative(cpu, cpu->secure);
+    if(requested_priority_is_negative && (cpu->v7m.ccr[M_REG_COMMON] & FIELD_MASK(V7M_CCR, BFHFNMIGN))) {
+        return;
+    }
+
+    cpu->tb_interrupt_exception_from_callback = EXCP_BUS_FAULT;
+    cpu->tb_interrupt_request_from_callback = TB_INTERRUPT_SYNCHRONOUS_EXCEPTION;
+}
+
+EXC_VOID_1(tlib_raise_precise_bus_fault, uint32_t, address)
 
 uint32_t tlib_get_memory_fault_address(bool secure)
 {
