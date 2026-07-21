@@ -15835,6 +15835,11 @@ static void disas_thumb_insn(CPUState *env, DisasContext *s)
                                 goto illegal_op;
                             }
 
+                            if(unlikely(s->base.guest_profile)) {
+                                generate_stack_announcement(
+                                    tmp, link ? STACK_FRAME_ADD : (rm == 14 ? STACK_FRAME_POP : STACK_FRAME_NO_CHANGE), true);
+                            }
+
                             tmp2 = tcg_const_i32(link);
                             gen_helper_v8m_blxns(cpu_env, tmp, tmp2);
                             tcg_temp_free_i32(tmp2);
