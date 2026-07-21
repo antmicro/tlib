@@ -89,6 +89,10 @@ target_ulong virt_to_phys(target_ulong virtual, uint32_t access_type, uint32_t n
             continue;
         }
         if(virt_to_phys_mmu(virtual, access_type, nofault, idx, &physical)) {
+            tlib_printf(LOG_LEVEL_WARNING,
+                        "Using incorrect MMU mode for translation of address 0x" TARGET_FMT_lx
+                        ", current MMU mode is %d, mapping is for MMU mode %d",
+                        virtual, mmu_idx, idx);
             return physical;
         }
     }
