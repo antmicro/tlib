@@ -25,90 +25,74 @@
 #include "atomic.h"
 #include "tlib-alloc.h"
 
-target_ulong virt_to_phys(target_ulong virtual, uint32_t access_type, uint32_t nofault)
+static bool virt_to_phys_mmu(target_ulong virtual, uint32_t access_type, bool nofault, uint16_t mmu_idx, target_ulong *physical)
 {
-    /* Access types :
-     *      0 : read
-     *      1 : write
-     *      2 : instr fetch */
-    int8_t found_idx = -1;
-    uint16_t mmu_idx = cpu_mmu_index(env);
+    target_ulong masked_virtual = virtual & TARGET_PAGE_MASK;
+    target_ulong page_index = (virtual >> TARGET_PAGE_BITS) & (CPU_TLB_SIZE - 1);
 
-    target_ulong masked_virtual;
-    target_ulong page_index;
-    target_ulong physical;
+    CPUTLBEntry *entry = &env->tlb_table[mmu_idx][page_index];
+    target_ulong *addr = &entry->addrs[access_type];
 
-    nofault = !!nofault;
-
-    masked_virtual = virtual & TARGET_PAGE_MASK;
-    page_index = (virtual >> TARGET_PAGE_BITS) & (CPU_TLB_SIZE - 1);
-
-    if((env->tlb_table[mmu_idx][page_index].addr_write & TARGET_PAGE_MASK) == masked_virtual) {
-        physical = env->tlb_table[mmu_idx][page_index].addr_write;
-        found_idx = mmu_idx;
-    } else if((env->tlb_table[mmu_idx][page_index].addr_read & TARGET_PAGE_MASK) == masked_virtual) {
-        physical = env->tlb_table[mmu_idx][page_index].addr_read;
-        found_idx = mmu_idx;
-    } else if((env->tlb_table[mmu_idx][page_index].addr_code & TARGET_PAGE_MASK) == masked_virtual) {
-        physical = env->tlb_table[mmu_idx][page_index].addr_code;
-        found_idx = mmu_idx;
-    } else {
-        //  Not mapped in current env mmu mode, check other modes
-        for(int idx = 0; idx < NB_MMU_MODES; idx++) {
-            if(idx == mmu_idx) {
-                //  Already checked
-                continue;
-            }
-            if((env->tlb_table[idx][page_index].addr_write & TARGET_PAGE_MASK) == masked_virtual) {
-                physical = env->tlb_table[idx][page_index].addr_write;
-                found_idx = idx;
-                break;
-            } else if((env->tlb_table[idx][page_index].addr_read & TARGET_PAGE_MASK) == masked_virtual) {
-                physical = env->tlb_table[idx][page_index].addr_read;
-                found_idx = idx;
-                break;
-            } else if((env->tlb_table[idx][page_index].addr_code & TARGET_PAGE_MASK) == masked_virtual) {
-                physical = env->tlb_table[idx][page_index].addr_code;
-                found_idx = idx;
-                break;
-            }
-        }
+    if(*addr != -1 && (*addr & TLB_ONE_SHOT)) {
+        //  TLB_ONE_SHOT pages should not be reused
+        //  as there might be protected memory regions in them.
+        //  A protected memory region does not have to fill the whole page;
+        //  there might also be many memory regions defined for a single page.
+        //  That's why we flush the page and force
+        //  calling tlb_fill to check memory region
+        //  restrictions on each access.
+        //  This code can only be called when the CPU is not running, so we can say we're from generated code
+        tlb_flush_page(env, *addr, true);
     }
 
-    if(found_idx == -1) {
-        //  Not mapped in any mode - referesh page table from h/w tables
-        if(tlb_fill(env, virtual & TARGET_PAGE_MASK, access_type, mmu_idx, NULL /* retaddr */, nofault, 1) != TRANSLATE_SUCCESS) {
-            return -1;
+    if((*addr & TARGET_PAGE_MASK) != masked_virtual) {
+        //  Refresh page table from hardware tables
+        if(tlb_fill(env, virtual, access_type, mmu_idx, NULL /* retaddr */, nofault, 1) != TRANSLATE_SUCCESS) {
+            return false;
         }
-        found_idx = mmu_idx;
-        target_ulong mapped_address;
-        switch(access_type) {
-            case 0:  //  DATA_LOAD
-                mapped_address = env->tlb_table[mmu_idx][page_index].addr_read;
-                break;
-            case 1:  //  DATA_STORE
-                mapped_address = env->tlb_table[mmu_idx][page_index].addr_write;
-                break;
-            case 2:  //  INST_FETCH
-                mapped_address = env->tlb_table[mmu_idx][page_index].addr_code;
-                break;
-            default:
-                mapped_address = ~masked_virtual;  //  Mapping should fail
-        }
-
-        if(likely((mapped_address & TARGET_PAGE_MASK) == masked_virtual)) {
-            physical = mapped_address;
-        } else {
-            return -1;
+        if(unlikely((*addr & TARGET_PAGE_MASK) != masked_virtual)) {
+            return false;
         }
     }
 
     /* The iotlb entry contains the physical/RAM page offset both for MMIO and normal RAM.
      * We use it for normal RAM too because Renode host memory blocks are discovered lazily,
      * making reverse host-pointer lookups unreliable. */
-    physical = masked_virtual + env->iotlb[found_idx][page_index];
+    *physical = virtual + (env->iotlb[mmu_idx][page_index] & TARGET_PAGE_MASK);
+    return true;
+}
 
-    return (physical & TARGET_PAGE_MASK) | (virtual & ~TARGET_PAGE_MASK);
+/*
+ * Translates a virtual address to a physical one, according to CPU memory mappings.
+ * The CPU must not be running when this function is called.
+ */
+target_ulong virt_to_phys(target_ulong virtual, uint32_t access_type, uint32_t nofault)
+{
+    target_ulong physical;
+    uint16_t mmu_idx = cpu_mmu_index(env);
+
+    nofault = !!nofault;
+    /* Access types :
+     *      0 : read
+     *      1 : write
+     *      2 : instr fetch */
+    if(access_type > 2) {
+        return -1;
+    }
+    if(virt_to_phys_mmu(virtual, access_type, nofault, mmu_idx, &physical)) {
+        return physical;
+    }
+    //  Not mapped in current env mmu mode, check other modes
+    for(uint16_t idx = 0; idx < NB_MMU_MODES; idx++) {
+        if(idx == mmu_idx) {
+            //  Already checked
+            continue;
+        }
+        if(virt_to_phys_mmu(virtual, access_type, nofault, idx, &physical)) {
+            return physical;
+        }
+    }
+    return -1;
 }
 
 int tb_invalidated_flag;

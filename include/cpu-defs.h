@@ -130,9 +130,14 @@ typedef struct CPUTLBEntry {
        bit 3                      : indicates that the entry is invalid
        bit 2..0                   : zero
      */
-    target_ulong addr_read;
-    target_ulong addr_write;
-    target_ulong addr_code;
+    union {
+        struct {
+            target_ulong addr_read;
+            target_ulong addr_write;
+            target_ulong addr_code;
+        };
+        target_ulong addrs[3];
+    };
     /* Addend to virtual address to get host address.  IO accesses
        use the corresponding iotlb value.  */
     uintptr_t addend;
