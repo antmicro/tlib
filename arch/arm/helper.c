@@ -2804,6 +2804,7 @@ static int get_phys_addr_mpu(CPUState *env, uint32_t address, int access_type, i
 
         /* Check if the region is enabled */
         if(address >= base && address <= base + mask) {
+            page_contains_mpu_region = true;
             /* Check subregions, only if region size is equal to or bigger than 256 bytes (region size = 2^size) */
             if(size >= 8) {
                 if(!page_with_address_is_fully_covered_by_consistent_mpu_subregions(env->cp15.c6_subregion_disable[n], base,
