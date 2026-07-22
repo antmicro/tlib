@@ -4323,10 +4323,15 @@ void HELPER(v8m_blxns)(CPUState *env, uint32_t addr, uint32_t link)
 
     tlib_printf(LOG_LEVEL_NOISY, "B%sXNS jump at 0x%x to 0x%x", link ? "L" : "", env->regs[15], addr);
 
+    if(!link && addr >= ARM_M_FNC_RETURN_MIN) {
+        //  FNC_RETURN or EXC_RETURN is in the register, continue without clearing the lowest bit to process it later
+        return;
+    }
+
     /* Only switch to Non-Secure if bit[0] of target addr is 0 */
     if((addr & 1) == 0) {
         if(link) {
-            v7m_push(env, env->regs[15]);
+            v7m_push(env, env->regs[15] | 1);
             /* According to docs "some processor state information" is pushed here
              * the ARM pseudocode specifies exactly:
              * """
@@ -4350,14 +4355,10 @@ void HELPER(v8m_blxns)(CPUState *env, uint32_t addr, uint32_t link)
             if(in_handler_mode(env)) {
                 env->v7m.exception = ARMV7M_EXCP_RESET;
             }
-        } else {
-            /* BXNS variant uses BranchReturn pseudoinstruction, which can have different behavior here.
-             * Otherwise will behave like a regular branch */
-            if(addr >= ARM_M_FNC_RETURN_MIN) {
-                /* TODO: BXNS can also be used with FNC_RETURN or EXCP_RETURN and works differently then */
-                cpu_abort(env, "FNC_RETURN or EXC_RETURN is yet unsupported in BXNS");
-            }
         }
+    } else if(link) {
+        /* Act like BLX */
+        env->regs[14] = env->regs[15] | 1;
     }
     /* As in BX/BLX we need to clear bit[0] of address */
     env->regs[15] = addr & ~1;
