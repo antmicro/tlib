@@ -102,7 +102,7 @@ typedef uint64_t target_ulong __attribute__((aligned(TARGET_LONG_ALIGNMENT)));
 #define DEFAULT_EXTERNAL_MMU_RANGE_COUNT 16
 
 /* ARM-M specific magic PC values, which can be used for exception/secure return */
-#define ARM_M_EXC_RETURN_MIN 0xffffff00
+#define ARM_M_EXC_RETURN_MIN 0xffffff80  //  Value is valid for Armv8-M and below, it can decrease with newer versions
 #define ARM_M_FNC_RETURN_MIN 0xfeffff00
 
 /* Only the bottom TB_JMP_PAGE_BITS of the jump cache hash bits vary for
