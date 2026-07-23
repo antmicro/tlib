@@ -396,6 +396,10 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
             target_ulong mask = MSTATUS_MIE | MSTATUS_MPIE | MSTATUS_FS | MSTATUS_MPRV | MSTATUS_MPP | MSTATUS_MXR | MSTATUS_VS;
             if(riscv_has_ext(env, RISCV_FEATURE_RVS)) {
                 mask |= MSTATUS_SIE | MSTATUS_SPIE | MSTATUS_SUM | MSTATUS_SPP;
+
+                if(env->privilege_architecture >= RISCV_PRIV1_10) {
+                    mask |= MSTATUS_TVM | MSTATUS_TW | MSTATUS_TSR;
+                }
             }
 
             if(env->privilege_architecture < RISCV_PRIV1_10) {

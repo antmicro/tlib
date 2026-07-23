@@ -3690,6 +3690,20 @@ static void gen_system(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2,
                 }
                 break;
             case 0x9: /* SFENCE.VMA */
+                /* SFENCE.VMA is privileged: U-mode must always trap */
+                if(env->priv < PRV_S) {
+                    generate_exception(dc, RISCV_EXCP_ILLEGAL_INST);
+                    break;
+                }
+
+                /* In S-mode, TVM=1 also traps (priv spec >= 1.10) */
+                if(env->privilege_architecture >= RISCV_PRIV1_10 &&
+                   env->priv == PRV_S &&
+                   get_field(env->mstatus, MSTATUS_TVM)) {
+                    generate_exception(dc, RISCV_EXCP_ILLEGAL_INST);
+                    break;
+                }
+
                 /* TODO: handle ASID specific fences */
                 gen_helper_tlb_flush(cpu_env);
                 break;
