@@ -185,6 +185,13 @@ void helper_raise_illegal_instruction(CPUState *env)
     do_raise_exception_err(env, RISCV_EXCP_ILLEGAL_INST, 0, 1);
 }
 
+static inline void validate_vector_state(CPUState *env)
+{
+    if(get_field(env->mstatus, MSTATUS_VS) == 0) {
+        helper_raise_illegal_instruction(env);
+    }
+}
+
 static inline uint64_t get_minstret_current(CPUState *env)
 {
     return cpu_riscv_read_instret(env) - env->minstret_snapshot + env->minstret_snapshot_offset;
@@ -715,17 +722,31 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
         case CSR_PMPADDR0 ... CSR_PMPADDR_LAST:
             pmpaddr_csr_write(env, csrno - CSR_PMPADDR0, val_to_write);
             break;
-        case CSR_VSTART:
-            env->vstart = val_to_write;
+        case CSR_VSTART: {
+            validate_vector_state(env);
+            target_ulong vstart_mask = (env->vlenb << 3) - 1;
+            env->vstart = val_to_write & vstart_mask;
+            env->mstatus = set_field(env->mstatus, MSTATUS_VS, 3);
             break;
+        }
         case CSR_VXSAT:
-            env->vxsat = val_to_write;
+            validate_vector_state(env);
+            env->vxsat = val_to_write & 0x1;
+            env->vcsr = (env->vcsr & ~0x1) | env->vxsat;
+            env->mstatus = set_field(env->mstatus, MSTATUS_VS, 3);
             break;
         case CSR_VXRM:
-            env->vxrm = val_to_write;
+            validate_vector_state(env);
+            env->vxrm = val_to_write & 0x3;
+            env->vcsr = (env->vcsr & ~0x6) | ((env->vxrm & 0x3) << 1);
+            env->mstatus = set_field(env->mstatus, MSTATUS_VS, 3);
             break;
         case CSR_VCSR:
-            env->vcsr = val_to_write;
+            validate_vector_state(env);
+            env->vcsr = val_to_write & 0x7;
+            env->vxsat = env->vcsr & 0x1;
+            env->vxrm = (env->vcsr >> 1) & 0x3;
+            env->mstatus = set_field(env->mstatus, MSTATUS_VS, 3);
             break;
         case CSR_MENVCFG:
             if(!riscv_has_ext(env, RISCV_FEATURE_RVU)) {
@@ -996,18 +1017,25 @@ static inline target_ulong csr_read_helper(CPUState *env, target_ulong csrno)
         case CSR_PMPADDR0 ... CSR_PMPADDR_LAST:
             return pmpaddr_csr_read(env, csrno - CSR_PMPADDR0);
         case CSR_VSTART:
+            validate_vector_state(env);
             return env->vstart;
         case CSR_VXSAT:
-            return env->vxsat;
+            validate_vector_state(env);
+            return env->vxsat & 0x1;
         case CSR_VXRM:
-            return env->vxrm;
+            validate_vector_state(env);
+            return env->vxrm & 0x3;
         case CSR_VCSR:
-            return env->vcsr;
+            validate_vector_state(env);
+            return (env->vxsat & 0x1) | ((env->vxrm & 0x3) << 1);
         case CSR_VL:
+            validate_vector_state(env);
             return env->vl;
         case CSR_VTYPE:
+            validate_vector_state(env);
             return env->vtype;
         case CSR_VLENB:
+            validate_vector_state(env);
             return env->vlenb;
         case CSR_SCOUNTOVF:
             if(!riscv_has_additional_ext(env, RISCV_FEATURE_SSCOFPMF)) {
