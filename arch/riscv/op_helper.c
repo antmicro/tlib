@@ -1044,7 +1044,7 @@ static inline target_ulong csr_read_helper(CPUState *env, target_ulong csrno)
             return env->vxrm & VXRM_MASK;
         case CSR_VCSR:
             validate_vector_state(env);
-            return (env->vxsat & VXSAT_MASK) | ((env->vxrm & VXRM_MASK) << VXRM_SHIFT);
+            return env->vcsr;
         case CSR_VL:
             validate_vector_state(env);
             return env->vl;

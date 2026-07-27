@@ -137,7 +137,7 @@ struct CPUState {
     target_ulong vstart;
     target_ulong vxsat;
     target_ulong vxrm;
-    target_ulong vcsr;
+    target_ulong vcsr; /* This field is a cached view of VXRM and VXSAT. Remember to update them in sync. */
     target_ulong vl;
     target_ulong vtype;
     target_ulong vlenb;

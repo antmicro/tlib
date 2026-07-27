@@ -133,6 +133,7 @@ static inline DATA_TYPE glue(clipto_u, BITS)(DATA_TYPE_DOUBLED val)
 {
     if(val > DATA_TYPE_MAX) {
         env->vxsat |= 1;
+        env->vcsr = (env->vcsr & ~VCSR_VXSAT) | env->vxsat;
         return DATA_TYPE_MAX;
     }
     return (DATA_TYPE)val;
@@ -142,9 +143,11 @@ static inline DATA_STYPE glue(clipto_i, BITS)(DATA_STYPE_DOUBLED val)
 {
     if(val < DATA_STYPE_MIN) {
         env->vxsat |= 1;
+        env->vcsr = (env->vcsr & ~VCSR_VXSAT) | env->vxsat;
         return DATA_STYPE_MIN;
     } else if(val > DATA_STYPE_MAX) {
         env->vxsat |= 1;
+        env->vcsr = (env->vcsr & ~VCSR_VXSAT) | env->vxsat;
         return DATA_STYPE_MAX;
     }
     return (DATA_STYPE)val;
@@ -1738,44 +1741,48 @@ void helper_vsm(CPUState *env, uint32_t vd, uint32_t rs1)
 
 #define SMAX(TYPE) (~(((TYPE)0) | (((TYPE)1) << ((sizeof(TYPE) << 3) - 1))))
 
-#define VOP_SADDU(A, B)       \
-    ({                        \
-        typeof(A) a = A;      \
-        typeof(a) b = B;      \
-        typeof(a) ab = a + b; \
-        bool sat = ab < a;    \
-        env->vxsat |= sat;    \
-        sat ? ~0 : ab;        \
+#define VOP_SADDU(A, B)                                     \
+    ({                                                      \
+        typeof(A) a = A;                                    \
+        typeof(a) b = B;                                    \
+        typeof(a) ab = a + b;                               \
+        bool sat = ab < a;                                  \
+        env->vxsat |= sat;                                  \
+        env->vcsr = (env->vcsr & ~VCSR_VXSAT) | env->vxsat; \
+        sat ? ~0 : ab;                                      \
     })
 
-#define VOP_SADD(A, B)                                   \
-    ({                                                   \
-        typeof(A) a = A;                                 \
-        typeof(a) b = B;                                 \
-        typeof(a) sat_value = SMAX(typeof(a)) + (a < 0); \
-        bool sat = (a < 0) != (b > sat_value - a);       \
-        env->vxsat |= sat;                               \
-        sat ? sat_value : a + b;                         \
+#define VOP_SADD(A, B)                                      \
+    ({                                                      \
+        typeof(A) a = A;                                    \
+        typeof(a) b = B;                                    \
+        typeof(a) sat_value = SMAX(typeof(a)) + (a < 0);    \
+        bool sat = (a < 0) != (b > sat_value - a);          \
+        env->vxsat |= sat;                                  \
+        env->vcsr = (env->vcsr & ~VCSR_VXSAT) | env->vxsat; \
+        sat ? sat_value : a + b;                            \
     })
 
-#define VOP_SSUBU(A, B)    \
-    ({                     \
-        typeof(A) a = A;   \
-        typeof(a) b = B;   \
-        bool sat = a < b;  \
-        env->vxsat |= sat; \
-        sat ? 0 : a - b;   \
+#define VOP_SSUBU(A, B)                                     \
+    ({                                                      \
+        typeof(A) a = A;                                    \
+        typeof(a) b = B;                                    \
+        bool sat = a < b;                                   \
+        env->vxsat |= sat;                                  \
+        env->vcsr = (env->vcsr & ~VCSR_VXSAT) | env->vxsat; \
+        sat ? 0 : a - b;                                    \
     })
 
-#define VOP_SSUB(A, B)                           \
-    ({                                           \
-        typeof(A) a = A;                         \
-        typeof(a) b = B;                         \
-        typeof(a) result = a - b;                \
-        a = SMAX(typeof(a)) + (a < 0);           \
-        bool sat = ((a ^ b) & (a ^ result)) < 0; \
-        env->vxsat |= sat;                       \
-        sat ? a : result;                        \
+#define VOP_SSUB(A, B)                                      \
+    ({                                                      \
+        typeof(A) a = A;                                    \
+        typeof(a) b = B;                                    \
+        typeof(a) result = a - b;                           \
+        a = SMAX(typeof(a)) + (a < 0);                      \
+        bool sat = ((a ^ b) & (a ^ result)) < 0;            \
+        env->vxsat |= sat;                                  \
+        env->vcsr = (env->vcsr & ~VCSR_VXSAT) | env->vxsat; \
+        sat ? a : result;                                   \
     })
 
 VOP_UNSIGNED_VVX(vadd_ivi, OP_ADD)
