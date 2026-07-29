@@ -960,19 +960,41 @@ static uint32_t v7m_pop(CPUState *env)
     return val;
 }
 
-static uint32_t v7m_pop_exception_frame(CPUState *env)
+static uint32_t v7m_pop_exception_frame(CPUState *env, bool is_user)
 {
     uint32_t val = 0;
+    tlib_assert(env->v7m.exception_phase == V7M_EXCEPTION_PHASE_UNSTACKING);
+
+    /* PopStack() abandons frame reads after the first fault, but continues
+     * advancing SP so the complete frame can be consumed on Lockup. */
     if(env->v7m.exception_phase_fault == 0) {
-        val = ldl_phys(env->regs[13]);
+        uint32_t phys_ptr = 0;
+        target_ulong page_size = 0;
+        int prot = 0;
+        int exception_index = env->exception_index;
+        int ret = get_phys_addr(env, env->regs[13], env->secure, ACCESS_DATA_LOAD, is_user, &phys_ptr, &prot, &page_size, false);
+        if(ret == TRANSLATE_SUCCESS) {
+            val = ldl_phys(phys_ptr);
+        } else if(env->exception_index == EXCP_SECURE) {
+            /* Stack() uses the destination Security state for unstacking.
+             * A Non-secure read of Secure stack memory is therefore an
+             * AUVIOL SecureFault, not a MemManage unstacking fault. */
+            env->v7m.exception_phase_fault = ARMV7M_EXCP_SECURE;
+        } else {
+            /* An MPU failure during PopStack() is a MemManage unstacking
+             * fault. get_phys_addr() has already recorded the address. */
+            env->v7m.fault_status[env->secure] |= MEM_FAULT_MUNSTKERR;
+            env->v7m.exception_phase_fault = v7m_exception_number_with_security(env, ARMV7M_EXCP_MEM, env->secure);
+        }
+        env->exception_index = exception_index;
     }
     env->regs[13] += 4;
     return val;
 }
 
-static void v7m_pop_core_register(CPUState *env, unsigned int reg)
+static void v7m_pop_core_register(CPUState *env, unsigned int reg, bool is_user)
 {
-    uint32_t value = v7m_pop_exception_frame(env);
+    uint32_t value = v7m_pop_exception_frame(env, is_user);
     if(env->v7m.exception_phase_fault == 0) {
         env->regs[reg] = value;
     }
@@ -1188,6 +1210,7 @@ void do_v7m_exception_exit(CPUState *env)
 
     /* Switch to the target stack */
     switch_v7m_sp(env, is_using_process_sp(env, (type & ARM_EXC_RETURN_MODE_MASK) == 0, env->secure));
+    bool unstack_is_user = (type & ARM_EXC_RETURN_MODE_MASK) && FIELD_EX32(env->v7m.control[env->secure], V7M_CONTROL, nPRIV);
 
     uint32_t frame_pointer = env->regs[13];
     /*
@@ -1213,8 +1236,9 @@ void do_v7m_exception_exit(CPUState *env)
         if(tz_v8m_should_pop_additional_registers(type)) {
             uint32_t integrity = INTEGRITY_SIGN;
             integrity |= (type & ARM_EXC_RETURN_NFPCA_MASK) >> ARM_EXC_RETURN_NFPCA;
-            uint32_t signature = v7m_pop_exception_frame(env);
-            if(signature != integrity) {
+            uint32_t signature = v7m_pop_exception_frame(env, unstack_is_user);
+            /* PopStack() validates the signature only after a successful read. */
+            if(env->v7m.exception_phase_fault == 0 && signature != integrity) {
                 tlib_printf(LOG_LEVEL_WARNING,
                             "Integrity signature mismatch on stack, expected 0x%" PRIx32 ", got 0x%" PRIx32 ", type 0x%" PRIx32
                             ". SecureFault!",
@@ -1235,30 +1259,30 @@ void do_v7m_exception_exit(CPUState *env)
                 env->v7m.exception_phase_fault = ARMV7M_EXCP_SECURE;
             }
             /* Reserved */
-            v7m_pop_exception_frame(env);
-            v7m_pop_core_register(env, 4);
-            v7m_pop_core_register(env, 5);
-            v7m_pop_core_register(env, 6);
-            v7m_pop_core_register(env, 7);
-            v7m_pop_core_register(env, 8);
-            v7m_pop_core_register(env, 9);
-            v7m_pop_core_register(env, 10);
-            v7m_pop_core_register(env, 11);
+            v7m_pop_exception_frame(env, unstack_is_user);
+            v7m_pop_core_register(env, 4, unstack_is_user);
+            v7m_pop_core_register(env, 5, unstack_is_user);
+            v7m_pop_core_register(env, 6, unstack_is_user);
+            v7m_pop_core_register(env, 7, unstack_is_user);
+            v7m_pop_core_register(env, 8, unstack_is_user);
+            v7m_pop_core_register(env, 9, unstack_is_user);
+            v7m_pop_core_register(env, 10, unstack_is_user);
+            v7m_pop_core_register(env, 11, unstack_is_user);
         }
     }
 
-    v7m_pop_core_register(env, 0);
-    v7m_pop_core_register(env, 1);
-    v7m_pop_core_register(env, 2);
-    v7m_pop_core_register(env, 3);
-    v7m_pop_core_register(env, 12);
-    v7m_pop_core_register(env, 14);
+    v7m_pop_core_register(env, 0, unstack_is_user);
+    v7m_pop_core_register(env, 1, unstack_is_user);
+    v7m_pop_core_register(env, 2, unstack_is_user);
+    v7m_pop_core_register(env, 3, unstack_is_user);
+    v7m_pop_core_register(env, 12, unstack_is_user);
+    v7m_pop_core_register(env, 14, unstack_is_user);
     /* Do not commit values read after an unstacking fault. */
-    uint32_t return_address = v7m_pop_exception_frame(env);
+    uint32_t return_address = v7m_pop_exception_frame(env, unstack_is_user);
     if(env->v7m.exception_phase_fault == 0) {
         env->regs[15] = return_address & ~1;
     }
-    uint32_t stacked_xpsr = v7m_pop_exception_frame(env);
+    uint32_t stacked_xpsr = v7m_pop_exception_frame(env, unstack_is_user);
     if(env->v7m.exception_phase_fault == 0) {
         xpsr = stacked_xpsr;
     }
@@ -1308,19 +1332,19 @@ void do_v7m_exception_exit(CPUState *env)
             } else {
                 fp_unstack_started = true;
                 for(int i = 0; i < 8; ++i) {
-                    env->vfp.regs[i] = v7m_pop_exception_frame(env);
-                    env->vfp.regs[i] |= ((uint64_t)v7m_pop_exception_frame(env)) << 32;
+                    env->vfp.regs[i] = v7m_pop_exception_frame(env, unstack_is_user);
+                    env->vfp.regs[i] |= ((uint64_t)v7m_pop_exception_frame(env, unstack_is_user)) << 32;
                 }
-                vfp_set_fpscr(env, v7m_pop_exception_frame(env));
-                env->v7m.vpr = v7m_pop_exception_frame(env);
+                vfp_set_fpscr(env, v7m_pop_exception_frame(env, unstack_is_user));
+                env->v7m.vpr = v7m_pop_exception_frame(env, unstack_is_user);
 
                 if(arm_feature(env, ARM_FEATURE_V8)) {
                     /* At this point, the internal state is Secure, so it's OK to just use env->secure here,
                      * instead of `type.S` bit*/
                     if(env->secure && (env->v7m.fpccr[M_REG_COMMON] & ARM_FPCCR_TS_MASK) > 0) {
                         for(int i = 8; i < 16; ++i) {
-                            env->vfp.regs[i] = v7m_pop_exception_frame(env);
-                            env->vfp.regs[i] |= ((uint64_t)v7m_pop_exception_frame(env)) << 32;
+                            env->vfp.regs[i] = v7m_pop_exception_frame(env, unstack_is_user);
+                            env->vfp.regs[i] |= ((uint64_t)v7m_pop_exception_frame(env, unstack_is_user)) << 32;
                         }
                     }
                 }
@@ -1331,7 +1355,7 @@ void do_v7m_exception_exit(CPUState *env)
     env->v7m.control[M_REG_COMMON] ^= (env->v7m.control[M_REG_COMMON] ^ ~type >> (ARM_EXC_RETURN_NFPCA - ARM_CONTROL_FPCA)) &
                                       ARM_CONTROL_FPCA_MASK;
     /* Undo stack alignment.  */
-    if(env->v7m.exception_phase_fault == 0 && (xpsr & 0x200)) {
+    if(xpsr & 0x200) {
         env->regs[13] |= 4;
     }
 
