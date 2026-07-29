@@ -1040,7 +1040,7 @@ static void switch_v7m_security_state(CPUState *env, bool secure)
 
 static inline bool tz_v8m_should_pop_additional_registers(uint32_t type)
 {
-    return (type & 1) == 0 && (type & (1 << 6)) > 0;
+    return (type & ARM_EXC_RETURN_S_MASK) && (!(type & ARM_EXC_RETURN_ES_MASK) || !(type & ARM_EXC_RETURN_DCRS_MASK));
 }
 
 void do_v7m_exception_exit(CPUState *env)
