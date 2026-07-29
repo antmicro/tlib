@@ -31,7 +31,9 @@ DEFAULT_INT_HANDLER1(int32_t tlib_nvic_get_pending_masked_irq, void)
 
 DEFAULT_VOID_HANDLER1(void tlib_nvic_set_pending_irq, int32_t number)
 
-DEFAULT_VOID_HANDLER1(void tlib_nvic_set_pending_synchronous_fault, int32_t number)
+DEFAULT_INT_HANDLER1(int32_t tlib_nvic_set_pending_synchronous_fault, int32_t number)
+
+DEFAULT_VOID_HANDLER1(void tlib_on_lockup_state_change, int32_t locked_up)
 
 DEFAULT_INT_HANDLER1(uint32_t tlib_has_enabled_trustzone, void)
 

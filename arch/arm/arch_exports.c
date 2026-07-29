@@ -338,6 +338,13 @@ void tlib_raise_precise_bus_fault(uint32_t address)
 
 EXC_VOID_1(tlib_raise_precise_bus_fault, uint32_t, address)
 
+uint32_t tlib_is_locked_up()
+{
+    return cpu->v7m.locked_up;
+}
+
+EXC_INT_0(uint32_t, tlib_is_locked_up)
+
 uint32_t tlib_get_memory_fault_address(bool secure)
 {
     return cpu->v7m.memory_fault_address[secure];

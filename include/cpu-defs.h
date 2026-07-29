@@ -95,6 +95,7 @@ typedef uint64_t target_ulong __attribute__((aligned(TARGET_LONG_ALIGNMENT)));
 #define EXCP_WATCHPOINT     0x10004
 #define EXCP_RETURN_REQUEST 0x10005
 #define MMU_EXTERNAL_FAULT  0x10006 /* cpu should exit to process the external mmu handler */
+#define EXCP_LOCKUP         0x10007 /* ARM M-profile Lockup state entered */
 
 #define TB_JMP_CACHE_BITS 12
 #define TB_JMP_CACHE_SIZE (1 << TB_JMP_CACHE_BITS)

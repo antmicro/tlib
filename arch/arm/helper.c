@@ -565,6 +565,7 @@ void cpu_reset(CPUState *env)
     uint32_t id = env->cp15.c0_cpuid;
     uint32_t number_of_mpu_regions = env->number_of_mpu_regions;
 #ifdef TARGET_PROTO_ARM_M
+    bool was_locked_up = env->v7m.locked_up;
     uint32_t number_of_idau_regions = env->number_of_idau_regions;
     uint32_t number_of_sau_regions = env->number_of_sau_regions;
 #endif
@@ -576,6 +577,10 @@ void cpu_reset(CPUState *env)
 #ifdef TARGET_PROTO_ARM_M
     env->number_of_idau_regions = number_of_idau_regions;
     env->number_of_sau_regions = number_of_sau_regions;
+    if(was_locked_up) {
+        /* Armv8-M ARM rule RXQSR: a Cold or Warm reset exits Lockup. */
+        tlib_on_lockup_state_change(false);
+    }
 #endif
     /* SVC mode with interrupts disabled.  */
     env->uncached_cpsr = ARM_CPU_MODE_SVC | CPSR_A | CPSR_F | CPSR_I;
@@ -1381,6 +1386,43 @@ static inline void fpccr_update(CPUState *env, uint32_t frameptr)
     /* Here we should update other FPCCR fields related to interrupt priorities */
 }
 
+void v7m_set_locked_up(CPUState *env, bool locked_up)
+{
+    if(env->v7m.locked_up == locked_up) {
+        return;
+    }
+
+    env->v7m.locked_up = locked_up;
+    tlib_on_lockup_state_change(locked_up);
+}
+
+static void v7m_enter_lockup(CPUState *env, bool clear_itstate)
+{
+    if(clear_itstate) {
+        env->condexec_bits = 0;
+        env->uncached_cpsr &= ~CPSR_IT;
+    }
+
+    /* Armv8-M ARM pseudocode operation Lockup and rule RMBTM. */
+    env->regs[15] = ARMV7M_LOCKUP_PC;
+    v7m_set_locked_up(env, true);
+    env->exception_index = EXCP_LOCKUP;
+}
+
+static void v7m_raise_synchronous_exception(CPUState *env, int exception)
+{
+    /* Armv8-M ARM rule RGNVS and pseudocode operations ExceptionDetails and
+     * CreateException: NVIC decides whether the exception is taken, escalated,
+     * or cannot escalate and instead causes Lockup. */
+    if(tlib_nvic_set_pending_synchronous_fault(exception) == V7M_SYNCHRONOUS_FAULT_PENDING) {
+        return;
+    }
+
+    /* Armv8-M ARM rules RXHMT and RMBTM, corresponding to pseudocode
+     * operation Lockup: preserve ITSTATE, set the sentinel PC, and stop. */
+    v7m_enter_lockup(env, false);
+}
+
 static void do_interrupt_v7m(CPUState *env)
 {
     uint32_t xpsr = xpsr_read(env);
@@ -1393,37 +1435,35 @@ static void do_interrupt_v7m(CPUState *env)
     /* For exceptions we just mark as pending on the NVIC, and let that
        handle it. We'll return to this function with exception_index set
        to EXCP_IRQ when exception actually gets processed. */
-    /* TODO: Need to escalate if the current priority is higher than the
-       one we're raising.  */
     switch(env->exception_index) {
         case EXCP_UDEF:
-            tlib_nvic_set_pending_irq(v7m_exception_number_with_security(env, ARMV7M_EXCP_USAGE, env->secure));
             env->v7m.fault_status[env->secure] |= USAGE_FAULT_UNDEFINSTR;
+            v7m_raise_synchronous_exception(env, v7m_exception_number_with_security(env, ARMV7M_EXCP_USAGE, env->secure));
             return;
         case EXCP_NOCP:
-            tlib_nvic_set_pending_irq(v7m_exception_number_with_security(env, ARMV7M_EXCP_USAGE, env->secure));
             env->v7m.fault_status[env->secure] |= USAGE_FAULT_NOCP;
+            v7m_raise_synchronous_exception(env, v7m_exception_number_with_security(env, ARMV7M_EXCP_USAGE, env->secure));
             return;
         case EXCP_INVSTATE:
-            tlib_nvic_set_pending_irq(v7m_exception_number_with_security(env, ARMV7M_EXCP_USAGE, env->secure));
             env->v7m.fault_status[env->secure] |= USAGE_FAULT_INVSTATE;
+            v7m_raise_synchronous_exception(env, v7m_exception_number_with_security(env, ARMV7M_EXCP_USAGE, env->secure));
             return;
         case EXCP_DIV_0:
-            tlib_nvic_set_pending_irq(v7m_exception_number_with_security(env, ARMV7M_EXCP_USAGE, env->secure));
             env->v7m.fault_status[env->secure] |= USAGE_FAULT_DIVBYZERO;
+            v7m_raise_synchronous_exception(env, v7m_exception_number_with_security(env, ARMV7M_EXCP_USAGE, env->secure));
             return;
         case EXCP_SWI:
-            tlib_nvic_set_pending_irq(v7m_exception_number_with_security(env, ARMV7M_EXCP_SVC, env->secure));
+            v7m_raise_synchronous_exception(env, v7m_exception_number_with_security(env, ARMV7M_EXCP_SVC, env->secure));
             return;
         case EXCP_PREFETCH_ABORT:
             /* Access violation */
             env->v7m.fault_status[env->secure] |= MEM_FAULT_IACCVIOL;
-            tlib_nvic_set_pending_irq(v7m_exception_number_with_security(env, ARMV7M_EXCP_MEM, env->secure));
+            v7m_raise_synchronous_exception(env, v7m_exception_number_with_security(env, ARMV7M_EXCP_MEM, env->secure));
             return;
         case EXCP_DATA_ABORT:
             /* ACK faulting address and set Data acces violation */
             env->v7m.fault_status[env->secure] |= MEM_FAULT_MMARVALID | MEM_FAULT_DACCVIOL;
-            tlib_nvic_set_pending_irq(v7m_exception_number_with_security(env, ARMV7M_EXCP_MEM, env->secure));
+            v7m_raise_synchronous_exception(env, v7m_exception_number_with_security(env, ARMV7M_EXCP_MEM, env->secure));
             return;
         case EXCP_BKPT:
             nr = lduw_code(env->regs[15]) & 0xff;
@@ -1433,18 +1473,16 @@ static void do_interrupt_v7m(CPUState *env)
                 return;
             }
             /* Banked DEBUG, but it's not exactly true, see below */
-            tlib_nvic_set_pending_irq(v7m_exception_number_with_security(env, ARMV7M_EXCP_DEBUG, env->secure));
+            v7m_raise_synchronous_exception(env, v7m_exception_number_with_security(env, ARMV7M_EXCP_DEBUG, env->secure));
             return;
         case EXCP_SECURE:
             /* Secure Fault address and status bits should be set by respective routines. This only raises the fault to be handled
              * in NVIC */
             tlib_assert(cpu->v7m.has_trustzone);
-            tlib_nvic_set_pending_irq(ARMV7M_EXCP_SECURE);
+            v7m_raise_synchronous_exception(env, ARMV7M_EXCP_SECURE);
             return;
         case EXCP_BUS_FAULT:
-            /* Armv8-M ARM rule RGNVS: synchronous exceptions that cannot become
-             * active at their configured priority are escalated by the NVIC. */
-            tlib_nvic_set_pending_synchronous_fault(ARMV7M_EXCP_BUS);
+            v7m_raise_synchronous_exception(env, ARMV7M_EXCP_BUS);
             return;
         case EXCP_IRQ:
             /* Continue the execution after the switch */

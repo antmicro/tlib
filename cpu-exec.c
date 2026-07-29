@@ -338,6 +338,15 @@ int cpu_exec(CPUState *env)
     uint8_t *tc_ptr;
     uintptr_t next_tb;
 
+#ifdef TARGET_PROTO_ARM_M
+    if(env->v7m.locked_up &&
+       (!(env->interrupt_request & CPU_INTERRUPT_HARD) || tlib_nvic_find_pending_irq() != ARMV7M_EXCP_NMI)) {
+        /* Armv8-M ARM rules RMBTM and RHTVD: fetch, execution, and ITSTATE
+         * advancement stop while the PE is in Lockup. */
+        return EXCP_LOCKUP;
+    }
+#endif
+
     if(!cpu_has_work(env)) {
         if(unlikely(env->cpu_wfi_state_change_hook_present)) {
             on_cpu_no_work(env);
@@ -367,6 +376,10 @@ int cpu_exec(CPUState *env)
                 } else {
                     do_interrupt(env);
                     if(env->exception_index != -1) {
+                        if(env->exception_index == EXCP_LOCKUP) {
+                            ret = EXCP_LOCKUP;
+                            break;
+                        }
                         if(env->exception_index == EXCP_WFI) {
                             env->exception_index = -1;
                             ret = 0;

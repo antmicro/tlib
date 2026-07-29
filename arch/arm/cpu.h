@@ -69,6 +69,7 @@
 #define ARMV7M_EXCP_PENDSV   14
 #define ARMV7M_EXCP_SYSTICK  15
 #define ARMV7M_EXCP_HARDIRQ0 16 /* Hardware IRQ0. Any exceptions above this one are also hard IRQs */
+#define ARMV7M_LOCKUP_PC     0xeffffffe
 
 /* Default value for LTPSIZE field in FPSCR. It indicates that tail predication is switched off */
 #define LTPSIZE_PREDICATION_DISABLED 4
@@ -377,6 +378,7 @@ typedef struct CPUState {
         uint32_t has_trustzone;
         uint32_t ltpsize;
         uint32_t vpr;
+        bool locked_up;
     } v7m;
 
     /* PMSAv8 MPUs */
@@ -1074,6 +1076,7 @@ static inline void cpu_pc_from_tb(CPUState *env, TranslationBlock *tb)
 
 void do_v7m_exception_exit(CPUState *env);
 void do_v7m_secure_return(CPUState *env);
+void v7m_set_locked_up(CPUState *env, bool locked_up);
 
 #ifdef TARGET_PROTO_ARM_M
 static inline bool automatic_sleep_after_interrupt(CPUState *env)

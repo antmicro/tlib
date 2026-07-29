@@ -16635,6 +16635,24 @@ void restore_state_to_opc(CPUState *env, TranslationBlock *tb, target_ulong *dat
 
 int process_interrupt(int interrupt_request, CPUState *env)
 {
+#ifdef TARGET_PROTO_ARM_M
+    if(env->v7m.locked_up) {
+        /* Armv8-M ARM rule RXQSR: exit from Lockup is only by:
+         * - A Cold reset (handled in cpu_reset),
+         * - A Warm reset (handled in cpu_reset),
+         * - Entry to Debug state (not modelled),
+         * - Preemption by an NMI exception (handled below).
+         * The Lockup PC is used as the return address (RSPPN). */
+        if((interrupt_request & CPU_INTERRUPT_HARD) && tlib_nvic_find_pending_irq() == ARMV7M_EXCP_NMI) {
+            v7m_set_locked_up(env, false);
+            env->exception_index = EXCP_IRQ;
+            do_interrupt(env);
+            return 1;
+        }
+        return 0;
+    }
+#endif
+
     if(tlib_is_in_debug_mode()) {
         return 0;
     }
