@@ -71,6 +71,13 @@
 #define ARMV7M_EXCP_HARDIRQ0 16 /* Hardware IRQ0. Any exceptions above this one are also hard IRQs */
 #define ARMV7M_LOCKUP_PC     0xeffffffe
 
+typedef enum {
+    V7M_EXCEPTION_PHASE_NONE,
+    V7M_EXCEPTION_PHASE_STACKING,
+    V7M_EXCEPTION_PHASE_VECTOR_READ,
+    V7M_EXCEPTION_PHASE_UNSTACKING,
+} V7MExceptionPhase;
+
 /* Default value for LTPSIZE field in FPSCR. It indicates that tail predication is switched off */
 #define LTPSIZE_PREDICATION_DISABLED 4
 
@@ -91,6 +98,8 @@
 /* BusFault : bits 8:15 of CFSR */
 #define BUS_FAULT_OFFSET      8
 #define BUS_FAULT_BFARVALID   ((1 << 7) << BUS_FAULT_OFFSET)
+#define BUS_FAULT_STKERR      ((1 << 4) << BUS_FAULT_OFFSET)
+#define BUS_FAULT_UNSTKERR    ((1 << 3) << BUS_FAULT_OFFSET)
 #define BUS_FAULT_PRECISERR   ((1 << 1) << BUS_FAULT_OFFSET)
 #define BUS_FAULT_STATUS_MASK (0xff << BUS_FAULT_OFFSET)
 /* Usage Fault : bits 16-31 of CFSR */
@@ -378,6 +387,8 @@ typedef struct CPUState {
         uint32_t has_trustzone;
         uint32_t ltpsize;
         uint32_t vpr;
+        V7MExceptionPhase exception_phase;
+        int32_t exception_phase_fault;
         bool locked_up;
     } v7m;
 
