@@ -1490,6 +1490,49 @@ static bool v7m_exception_targets_secure(CPUState *env, uint32_t *exception)
     return secure_target;
 }
 
+static int v7m_prepare_exception_taken(CPUState *env, uint32_t *lr, bool secure_target)
+{
+    int stack_status = 0;
+
+    if(env->v7m.has_trustzone) {
+        /* RSHNX: On taking an exception, excluding tail-chaining that requires a transition from Secure to Non-secure state, the
+         * PE hardware saves Additional state context registers. We don't do tail-chaining at all in our implementation. Push
+         * additional state context registers, when switching from Secure to Non-secure */
+        if(env->secure && !secure_target) {
+            tlib_printf(LOG_LEVEL_NOISY, "Pushing additional state context registers on stack");
+            stack_status |= v7m_push(env, env->regs[11]);
+            stack_status |= v7m_push(env, env->regs[10]);
+            stack_status |= v7m_push(env, env->regs[9]);
+            stack_status |= v7m_push(env, env->regs[8]);
+            stack_status |= v7m_push(env, env->regs[7]);
+            stack_status |= v7m_push(env, env->regs[6]);
+            stack_status |= v7m_push(env, env->regs[5]);
+            stack_status |= v7m_push(env, env->regs[4]);
+            /* Marked as reserved in docs */
+            stack_status |= v7m_push(env, 0xDEADBEEF);
+            /* Push integrity signature */
+            uint32_t integrity = INTEGRITY_SIGN;
+            /* Set SFTC bit */
+            integrity |= (*lr & ARM_EXC_RETURN_NFPCA_MASK) >> ARM_EXC_RETURN_NFPCA;
+            stack_status |= v7m_push(env, integrity);
+
+            /* On transition between security states, let's clear registers (RWBND) */
+            for(int i = 0; i < 12; ++i) {
+                env->regs[i] = 0;
+            }
+            env->regs[14] = 0;
+        }
+
+        *lr |= deposit32(*lr, ARM_EXC_RETURN_ES, 1, secure_target);
+    }
+
+    if(arm_feature(env, ARM_FEATURE_V8)) {
+        /* We're changing v8-M mode here after we know which security state we're targeting. On v8-M SPSEL is always saved. */
+        *lr |= FIELD_EX32(env->v7m.control[secure_target], V7M_CONTROL, SPSEL) << ARM_EXC_RETURN_SPSEL;
+    }
+    return stack_status;
+}
+
 static void do_interrupt_v7m(CPUState *env)
 {
     uint32_t xpsr = xpsr_read(env);
@@ -1618,12 +1661,6 @@ static void do_interrupt_v7m(CPUState *env)
         lr |= env->secure << ARM_EXC_RETURN_S;
 
         secure_target = v7m_exception_targets_secure(env, &env->v7m.exception);
-        lr |= deposit32(lr, ARM_EXC_RETURN_ES, 1, secure_target);
-    }
-
-    if(arm_feature(env, ARM_FEATURE_V8)) {
-        /* We're changing v8-M mode here after we know which security state we're targeting. On v8-M SPSEL is always saved. */
-        lr |= FIELD_EX32(env->v7m.control[secure_target], V7M_CONTROL, SPSEL) << ARM_EXC_RETURN_SPSEL;
     }
 
     env->condexec_bits = 0;
@@ -1695,35 +1732,8 @@ static void do_interrupt_v7m(CPUState *env)
     stack_status |= v7m_push(env, env->regs[1]);
     stack_status |= v7m_push(env, env->regs[0]);
 
+    stack_status |= v7m_prepare_exception_taken(env, &lr, secure_target);
     if(env->v7m.has_trustzone) {
-        /* RSHNX: On taking an exception, excluding tail-chaining that requires a transition from Secure to Non-secure state, the
-         * PE hardware saves Additional state context registers. We don't do tail-chaining at all in our implementation. Push
-         * additional state context registers, when switching from Secure to Non-secure */
-        if(cpu->secure && (lr & ARM_EXC_RETURN_ES_MASK) == 0) {
-            tlib_printf(LOG_LEVEL_NOISY, "Pushing additional state context registers on stack");
-            stack_status |= v7m_push(env, env->regs[11]);
-            stack_status |= v7m_push(env, env->regs[10]);
-            stack_status |= v7m_push(env, env->regs[9]);
-            stack_status |= v7m_push(env, env->regs[8]);
-            stack_status |= v7m_push(env, env->regs[7]);
-            stack_status |= v7m_push(env, env->regs[6]);
-            stack_status |= v7m_push(env, env->regs[5]);
-            stack_status |= v7m_push(env, env->regs[4]);
-            /* Marked as reserved in docs */
-            stack_status |= v7m_push(env, 0xDEADBEEF);
-            /* Push integrity signature */
-            uint32_t integrity = INTEGRITY_SIGN;
-            /* Set SFTC bit */
-            integrity |= (lr & ARM_EXC_RETURN_NFPCA_MASK) >> ARM_EXC_RETURN_NFPCA;
-            stack_status |= v7m_push(env, integrity);
-
-            /* On transition between security states, let's clear registers (RWBND) */
-            for(int i = 0; i < 12; ++i) {
-                env->regs[i] = 0;
-            }
-            env->regs[14] = 0;
-        }
-
         tlib_printf(LOG_LEVEL_NOISY, "Loading to LR, while entering exception with TrustZone, value 0x%" PRIx32, lr);
         switch_v7m_security_state(env, lr & ARM_EXC_RETURN_ES_MASK);
     }
