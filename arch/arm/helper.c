@@ -958,6 +958,11 @@ static uint32_t v7m_pop(CPUState *env)
     return val;
 }
 
+static void v7m_pop_core_register(CPUState *env, unsigned int reg)
+{
+    env->regs[reg] = v7m_pop(env);
+}
+
 static inline int fp_get_reservation_size(CPUState *env)
 {
     const int reg_size = sizeof(env->vfp.regs[0]);
@@ -1122,23 +1127,23 @@ void do_v7m_exception_exit(CPUState *env)
             }
             /* Reserved */
             v7m_pop(env);
-            env->regs[4] = v7m_pop(env);
-            env->regs[5] = v7m_pop(env);
-            env->regs[6] = v7m_pop(env);
-            env->regs[7] = v7m_pop(env);
-            env->regs[8] = v7m_pop(env);
-            env->regs[9] = v7m_pop(env);
-            env->regs[10] = v7m_pop(env);
-            env->regs[11] = v7m_pop(env);
+            v7m_pop_core_register(env, 4);
+            v7m_pop_core_register(env, 5);
+            v7m_pop_core_register(env, 6);
+            v7m_pop_core_register(env, 7);
+            v7m_pop_core_register(env, 8);
+            v7m_pop_core_register(env, 9);
+            v7m_pop_core_register(env, 10);
+            v7m_pop_core_register(env, 11);
         }
     }
 
-    env->regs[0] = v7m_pop(env);
-    env->regs[1] = v7m_pop(env);
-    env->regs[2] = v7m_pop(env);
-    env->regs[3] = v7m_pop(env);
-    env->regs[12] = v7m_pop(env);
-    env->regs[14] = v7m_pop(env);
+    v7m_pop_core_register(env, 0);
+    v7m_pop_core_register(env, 1);
+    v7m_pop_core_register(env, 2);
+    v7m_pop_core_register(env, 3);
+    v7m_pop_core_register(env, 12);
+    v7m_pop_core_register(env, 14);
     env->regs[15] = v7m_pop(env) & ~1;
     xpsr = v7m_pop(env);
     env->v7m.control[M_REG_COMMON] |= (xpsr & RETPSR_SFPA) ? ARM_CONTROL_SFPA_MASK : 0;
