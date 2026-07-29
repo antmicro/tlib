@@ -345,6 +345,13 @@ uint32_t tlib_is_locked_up()
 
 EXC_INT_0(uint32_t, tlib_is_locked_up)
 
+void tlib_enter_reset_lockup()
+{
+    v7m_enter_reset_lockup(cpu);
+}
+
+EXC_VOID_0(tlib_enter_reset_lockup)
+
 uint32_t tlib_get_memory_fault_address(bool secure)
 {
     return cpu->v7m.memory_fault_address[secure];

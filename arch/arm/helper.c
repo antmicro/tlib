@@ -1409,6 +1409,18 @@ static void v7m_enter_lockup(CPUState *env, bool clear_itstate)
     env->exception_index = EXCP_LOCKUP;
 }
 
+void v7m_enter_reset_lockup(CPUState *env)
+{
+    /* Armv8-M ARM rule RBHVG and pseudocode operation TakeReset: reset-vector
+     * BusFault Lockup is in HardFault active state, but IPSR remains zero.
+     * We choose zero for the UNKNOWN state. */
+    env->regs[13] = 0;
+    env->regs[14] = UINT32_MAX;
+    env->v7m.exception = 0;
+    env->thumb = false;
+    v7m_enter_lockup(env, true);
+}
+
 static void v7m_raise_synchronous_exception(CPUState *env, int exception)
 {
     /* Armv8-M ARM rule RGNVS and pseudocode operations ExceptionDetails and
