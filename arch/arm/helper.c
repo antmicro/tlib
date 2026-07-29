@@ -1517,7 +1517,7 @@ static int v7m_prepare_exception_taken(CPUState *env, uint32_t *lr, bool secure_
             stack_status |= v7m_push(env, integrity);
 
             /* On transition between security states, let's clear registers (RWBND) */
-            for(int i = 0; i < 12; ++i) {
+            for(int i = 0; i <= 12; ++i) {
                 env->regs[i] = 0;
             }
             env->regs[14] = 0;
