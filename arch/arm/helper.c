@@ -4932,6 +4932,9 @@ void HELPER(v8m_blxns)(CPUState *env, uint32_t addr, uint32_t link)
     /* UNDEF should be generated in Non-secure mode */
     tlib_assert(env->secure);
 
+    /* Because we synced the pc before executing this instruction we need to subtract instruction's length to get address of the
+     * instruction */
+    uint32_t insn_addr = env->regs[15] - 2;
     tlib_printf(LOG_LEVEL_NOISY, "B%sXNS jump at 0x%x to 0x%x", link ? "L" : "", env->regs[15], addr);
 
     if(!link && addr >= ARM_M_FNC_RETURN_MIN) {
@@ -4943,6 +4946,8 @@ void HELPER(v8m_blxns)(CPUState *env, uint32_t addr, uint32_t link)
 
     /* Only switch to Non-Secure if bit[0] of target addr is 0 */
     if((addr & 1) == 0) {
+        uint32_t sp_before = env->regs[13];  //  Used for announce_stack_pointer_change
+
         if(link) {
             /* According to docs "some processor state information" is pushed here
              * the ARM pseudocode specifies exactly:
@@ -4970,6 +4975,11 @@ void HELPER(v8m_blxns)(CPUState *env, uint32_t addr, uint32_t link)
         env->v7m.control[M_REG_COMMON] &= ~ARM_CONTROL_SFPA_MASK;
         /* Now we switch stacks and jump to non-secure mode */
         switch_v7m_security_state(env, false);
+
+        if(unlikely(env->guest_profiler_enabled)) {
+            helper_announce_stack_pointer_change(insn_addr, sp_before, env->regs[13]);
+        }
+
         if(link) {
             env->regs[14] = FNC_RETURN;
             /* If in handler mode, we should set exception number to invalid but non-zero value
@@ -5041,7 +5051,15 @@ void HELPER(v8m_sg)(CPUState *env)
 
     /* Clear bit[0] of LR to indicate we will return to Non-Secure mode, if we were previously in Non-Secure state */
     env->regs[14] &= ~1;
+
+    uint32_t sp_before = env->regs[13];  //  Used for announce_stack_pointer_change
+
     switch_v7m_security_state(env, true);
+
+    if(unlikely(env->guest_profiler_enabled)) {
+        helper_announce_stack_pointer_change(sg_pc, sp_before, env->regs[13]);
+    }
+
     env->v7m.control[M_REG_COMMON] &= ~ARM_CONTROL_SFPA_MASK;
     tlib_printf(LOG_LEVEL_NOISY, "Executed SG at 0x%" PRIx32, sg_pc);
 }
