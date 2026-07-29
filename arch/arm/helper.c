@@ -896,6 +896,31 @@ static inline void arm_announce_stack_change()
 }
 
 #ifdef TARGET_PROTO_ARM_M
+static int v7m_exception_number_with_security(CPUState *env, int exception, bool secure)
+{
+    if(!env->v7m.has_trustzone || exception >= ARMV7M_EXCP_HARDIRQ0) {
+        return exception;
+    }
+
+    switch(exception) {
+        case ARMV7M_EXCP_NMI:
+        case ARMV7M_EXCP_BUS:
+        case ARMV7M_EXCP_RESET:
+        case ARMV7M_EXCP_SECURE:
+            return exception;
+        case ARMV7M_EXCP_HARD:
+            /* HardFault is banked only when AIRCR.BFHFNMINS is one. */
+            if(tlib_nvic_interrupt_targets_secure(exception)) {
+                return exception;
+            }
+            break;
+        default:
+            break;
+    }
+
+    return secure ? BANKED_SECURE_EXCP(exception) : exception;
+}
+
 static int v7m_push(CPUState *env, uint32_t val)
 {
     uint32_t phys_ptr = 0;
@@ -1038,28 +1063,7 @@ void do_v7m_exception_exit(CPUState *env)
 
     if(env->v7m.exception != 0) {
         /* This ensures we properly complete banked secure exceptions */
-        bool need_secure_bit = false;
-        if(env->v7m.has_trustzone) {
-            if(env->v7m.exception < ARMV7M_EXCP_HARDIRQ0) {
-                switch(env->v7m.exception) {
-                    case ARMV7M_EXCP_NMI:
-                    case ARMV7M_EXCP_BUS:
-                    case ARMV7M_EXCP_RESET:
-                    case ARMV7M_EXCP_SECURE:
-                        break;
-                    case ARMV7M_EXCP_HARD:
-                        if(!tlib_nvic_interrupt_targets_secure(env->v7m.exception)) {
-                            goto banked_exception;
-                        }
-                        break;
-                    banked_exception:
-                    default:
-                        need_secure_bit = env->secure;
-                        break;
-                }
-            }
-        }
-        tlib_nvic_complete_irq(env->v7m.exception | (need_secure_bit ? BANKED_SECURE_EXCP_BIT : 0));
+        tlib_nvic_complete_irq(v7m_exception_number_with_security(env, env->v7m.exception, env->secure));
     }
 
     if(env->interrupt_end_callback_enabled) {
@@ -1393,33 +1397,33 @@ static void do_interrupt_v7m(CPUState *env)
        one we're raising.  */
     switch(env->exception_index) {
         case EXCP_UDEF:
-            tlib_nvic_set_pending_irq(env->secure ? BANKED_SECURE_EXCP(ARMV7M_EXCP_USAGE) : ARMV7M_EXCP_USAGE);
+            tlib_nvic_set_pending_irq(v7m_exception_number_with_security(env, ARMV7M_EXCP_USAGE, env->secure));
             env->v7m.fault_status[env->secure] |= USAGE_FAULT_UNDEFINSTR;
             return;
         case EXCP_NOCP:
-            tlib_nvic_set_pending_irq(env->secure ? BANKED_SECURE_EXCP(ARMV7M_EXCP_USAGE) : ARMV7M_EXCP_USAGE);
+            tlib_nvic_set_pending_irq(v7m_exception_number_with_security(env, ARMV7M_EXCP_USAGE, env->secure));
             env->v7m.fault_status[env->secure] |= USAGE_FAULT_NOCP;
             return;
         case EXCP_INVSTATE:
-            tlib_nvic_set_pending_irq(env->secure ? BANKED_SECURE_EXCP(ARMV7M_EXCP_USAGE) : ARMV7M_EXCP_USAGE);
+            tlib_nvic_set_pending_irq(v7m_exception_number_with_security(env, ARMV7M_EXCP_USAGE, env->secure));
             env->v7m.fault_status[env->secure] |= USAGE_FAULT_INVSTATE;
             return;
         case EXCP_DIV_0:
-            tlib_nvic_set_pending_irq(env->secure ? BANKED_SECURE_EXCP(ARMV7M_EXCP_USAGE) : ARMV7M_EXCP_USAGE);
+            tlib_nvic_set_pending_irq(v7m_exception_number_with_security(env, ARMV7M_EXCP_USAGE, env->secure));
             env->v7m.fault_status[env->secure] |= USAGE_FAULT_DIVBYZERO;
             return;
         case EXCP_SWI:
-            tlib_nvic_set_pending_irq(env->secure ? BANKED_SECURE_EXCP(ARMV7M_EXCP_SVC) : ARMV7M_EXCP_SVC);
+            tlib_nvic_set_pending_irq(v7m_exception_number_with_security(env, ARMV7M_EXCP_SVC, env->secure));
             return;
         case EXCP_PREFETCH_ABORT:
             /* Access violation */
             env->v7m.fault_status[env->secure] |= MEM_FAULT_IACCVIOL;
-            tlib_nvic_set_pending_irq(env->secure ? BANKED_SECURE_EXCP(ARMV7M_EXCP_MEM) : ARMV7M_EXCP_MEM);
+            tlib_nvic_set_pending_irq(v7m_exception_number_with_security(env, ARMV7M_EXCP_MEM, env->secure));
             return;
         case EXCP_DATA_ABORT:
             /* ACK faulting address and set Data acces violation */
             env->v7m.fault_status[env->secure] |= MEM_FAULT_MMARVALID | MEM_FAULT_DACCVIOL;
-            tlib_nvic_set_pending_irq(env->secure ? BANKED_SECURE_EXCP(ARMV7M_EXCP_MEM) : ARMV7M_EXCP_MEM);
+            tlib_nvic_set_pending_irq(v7m_exception_number_with_security(env, ARMV7M_EXCP_MEM, env->secure));
             return;
         case EXCP_BKPT:
             nr = lduw_code(env->regs[15]) & 0xff;
@@ -1429,7 +1433,7 @@ static void do_interrupt_v7m(CPUState *env)
                 return;
             }
             /* Banked DEBUG, but it's not exactly true, see below */
-            tlib_nvic_set_pending_irq(env->secure ? BANKED_SECURE_EXCP(ARMV7M_EXCP_DEBUG) : ARMV7M_EXCP_DEBUG);
+            tlib_nvic_set_pending_irq(v7m_exception_number_with_security(env, ARMV7M_EXCP_DEBUG, env->secure));
             return;
         case EXCP_SECURE:
             /* Secure Fault address and status bits should be set by respective routines. This only raises the fault to be handled
