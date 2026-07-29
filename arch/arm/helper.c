@@ -1748,6 +1748,13 @@ static int v7m_prepare_exception_taken(CPUState *env, uint32_t *lr, bool secure_
     return stack_status;
 }
 
+static void v7m_clear_active_fp_state_on_exception_entry(CPUState *env)
+{
+    /* ActivateException() clears both unbanked active FP state fields on
+     * every exception entry, including tail-chained entries. */
+    env->v7m.control[M_REG_COMMON] &= ~(ARM_CONTROL_FPCA_MASK | ARM_CONTROL_SFPA_MASK);
+}
+
 static void do_interrupt_v7m(CPUState *env)
 {
     uint32_t xpsr = xpsr_read(env);
@@ -1964,7 +1971,7 @@ static void do_interrupt_v7m(CPUState *env)
         switch_v7m_security_state(env, lr & ARM_EXC_RETURN_ES_MASK);
     }
     switch_v7m_sp(env, false);
-    env->v7m.control[env->secure] &= ~FIELD_MASK(V7M_CONTROL, SFPA);
+    v7m_clear_active_fp_state_on_exception_entry(env);
 
     env->uncached_cpsr &= ~CPSR_IT;
 
