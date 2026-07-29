@@ -389,6 +389,11 @@ typedef struct CPUState {
         uint32_t vpr;
         V7MExceptionPhase exception_phase;
         int32_t exception_phase_fault;
+        /* A fault generated while returning from an exception reuses the
+         * existing stack frame. The next exception entry consumes this saved
+         * EXC_RETURN as a tail-chain instead of pushing another frame. */
+        bool exception_return_tailchain;
+        uint32_t exception_return_type;
         bool locked_up;
     } v7m;
 

@@ -926,6 +926,8 @@ static int v7m_exception_number_with_security(CPUState *env, int exception, bool
     return secure ? BANKED_SECURE_EXCP(exception) : exception;
 }
 
+static void v7m_enter_lockup(CPUState *env, bool clear_itstate);
+
 static int v7m_push(CPUState *env, uint32_t val)
 {
     uint32_t phys_ptr = 0;
@@ -958,9 +960,22 @@ static uint32_t v7m_pop(CPUState *env)
     return val;
 }
 
+static uint32_t v7m_pop_exception_frame(CPUState *env)
+{
+    uint32_t val = 0;
+    if(env->v7m.exception_phase_fault == 0) {
+        val = ldl_phys(env->regs[13]);
+    }
+    env->regs[13] += 4;
+    return val;
+}
+
 static void v7m_pop_core_register(CPUState *env, unsigned int reg)
 {
-    env->regs[reg] = v7m_pop(env);
+    uint32_t value = v7m_pop_exception_frame(env);
+    if(env->v7m.exception_phase_fault == 0) {
+        env->regs[reg] = value;
+    }
 }
 
 static inline int fp_get_reservation_size(CPUState *env)
@@ -1048,56 +1063,115 @@ static inline bool tz_v8m_should_pop_additional_registers(uint32_t type)
     return (type & ARM_EXC_RETURN_S_MASK) && (!(type & ARM_EXC_RETURN_ES_MASK) || !(type & ARM_EXC_RETURN_DCRS_MASK));
 }
 
+static void v7m_consume_exception_stack_frame(CPUState *env, uint32_t type)
+{
+    bool to_secure = env->v7m.has_trustzone && (type & ARM_EXC_RETURN_S_MASK);
+    if(env->v7m.has_trustzone) {
+        switch_v7m_security_state(env, to_secure);
+    }
+    switch_v7m_sp(env, is_using_process_sp(env, (type & ARM_EXC_RETURN_MODE_MASK) == 0, env->secure));
+
+    uint32_t frame_size = tz_v8m_should_pop_additional_registers(type) ? 0x48 : 0x20;
+    if(~type & ARM_EXC_RETURN_NFPCA_MASK) {
+        frame_size += fp_get_reservation_size(env);
+    }
+    env->regs[13] += frame_size;
+    env->v7m.control[M_REG_COMMON] ^= (env->v7m.control[M_REG_COMMON] ^ (~type >> (ARM_EXC_RETURN_NFPCA - ARM_CONTROL_FPCA))) &
+                                      ARM_CONTROL_FPCA_MASK;
+}
+
+static void v7m_handle_early_exception_return_fault(CPUState *env, uint32_t type, int exception)
+{
+    if(tlib_nvic_set_pending_synchronous_fault(exception) != V7M_SYNCHRONOUS_FAULT_PENDING) {
+        /* HandleExceptionTransitions() consumes the unstacked frame only
+         * when an exception-return fault enters Lockup. The alignment flag is
+         * UNKNOWN in this case and is deterministically treated as zero. */
+        v7m_consume_exception_stack_frame(env, type);
+        env->v7m.exception = (type & ARM_EXC_RETURN_MODE_MASK) ? 0 : ARMV7M_EXCP_HARD;
+        v7m_enter_lockup(env, true);
+        arm_announce_stack_change();
+        return;
+    }
+
+    /* Rule RVJKL: the derived exception reuses the unconsumed frame. */
+    env->v7m.exception_return_tailchain = true;
+    env->v7m.exception_return_type = type;
+    env->exception_index = EXCP_IRQ;
+    cpu_loop_exit(env);
+}
+
 void do_v7m_exception_exit(CPUState *env)
 {
     uint32_t type;
-    uint32_t xpsr;
-
-    /* Restore FAULTMASK to 0 only if the interrupt that we are exiting is not NMI */
-    /* See ARMv7-M Architecture Reference Manual - B1.4.3 */
-    if(env->v7m.exception != 2) {
-        cpu->v7m.faultmask[env->secure] = 0;
-    }
+    uint32_t xpsr = 0;
+    uint32_t pre_unstack_regs[16];
+    uint64_t pre_unstack_vfp_regs[32];
+    uint32_t pre_unstack_xpsr;
+    uint32_t pre_unstack_control;
+    uint32_t pre_unstack_fpccr[M_REG_NUM_BANKS];
+    uint32_t pre_unstack_fpscr;
+    uint32_t pre_unstack_vpr;
+    bool fp_unstack_started = false;
 
     type = env->regs[15];
+    bool exception_was_secure = env->v7m.has_trustzone && (type & ARM_EXC_RETURN_ES_MASK);
+    int validation_fault = 0;
     if(env->v7m.has_trustzone) {
         /* RNCQN: If the PE was in Non-secure state when EXC_RETURN was loaded into the PC
          * and EXC_RETURN.ES is one, an INVER SecureFault is generated [...] */
-        if(!env->secure && (type & ARM_EXC_RETURN_ES_MASK) == 1) {
-            type &= ~0x1;
+        /* ValidateExceptionReturn() also rejects DCRS == 0 for a Non-secure
+         * exception. Both integrity failures generate INVER, and a bad ES is
+         * treated as zero for all subsequent transitions. */
+        if((!env->secure && exception_was_secure) || (!exception_was_secure && !(type & ARM_EXC_RETURN_DCRS_MASK))) {
+            type &= ~ARM_EXC_RETURN_ES_MASK;
+            exception_was_secure = false;
             env->v7m.secure_fault_status |= SECURE_FAULT_INVER;
-            env->exception_index = EXCP_SECURE;
-            cpu_loop_exit(env);
+            validation_fault = ARMV7M_EXCP_SECURE;
         }
+    }
+
+    /* Restore FAULTMASK to 0 only if the interrupt that we are exiting permits it. */
+    /* Armv8-M ARM rule RCDCR: without the Security Extension, exception return
+     * clears FAULTMASK except on return from NMI. With the Security Extension
+     * it clears the bank selected by ES only when RawExecutionPriority() is
+     * non-negative. At this point a negative raw priority means the current
+     * exception is NMI or HardFault (no configurable exception can preempt
+     * either), so both fixed-priority returns retain FAULTMASK. */
+    bool clears_faultmask = env->v7m.exception != ARMV7M_EXCP_NMI &&
+                            (!env->v7m.has_trustzone || env->v7m.exception != ARMV7M_EXCP_HARD);
+    if(clears_faultmask) {
+        env->v7m.faultmask[exception_was_secure] = 0;
     }
 
     if(env->v7m.exception != 0) {
         /* This ensures we properly complete banked secure exceptions */
-        tlib_nvic_complete_irq(v7m_exception_number_with_security(env, env->v7m.exception, env->secure));
+        int completed_exception = v7m_exception_number_with_security(env, env->v7m.exception, exception_was_secure);
+        tlib_nvic_complete_irq(completed_exception);
     }
 
     if(env->interrupt_end_callback_enabled) {
         tlib_on_interrupt_end(env->exception_index);
     }
 
-    bool secure_stack = env->v7m.has_trustzone && (type & ARM_EXC_RETURN_ES_MASK) > 0;
-    env->v7m.control[secure_stack] = FIELD_DP32(env->v7m.control[secure_stack], V7M_CONTROL, SPSEL, type >> ARM_EXC_RETURN_SPSEL);
+    env->v7m.control[exception_was_secure] =
+        FIELD_DP32(env->v7m.control[exception_was_secure], V7M_CONTROL, SPSEL, type >> ARM_EXC_RETURN_SPSEL);
 
-    if(env->v7m.has_trustzone) {
-        /* Location of return stack type (Secure/Non-secure) */
-        switch_v7m_security_state(env, type & ARM_EXC_RETURN_S_MASK);
+    if(validation_fault != 0) {
+        v7m_handle_early_exception_return_fault(env, type, validation_fault);
+        return;
     }
 
-    /* Switch to the target stack */
-    switch_v7m_sp(env, is_using_process_sp(env, (type & ARM_EXC_RETURN_MODE_MASK) == 0, env->secure));
-
-    if((env->v7m.control[M_REG_COMMON] & ARM_CONTROL_FPCA_MASK) && (fpccr_read(env, env->secure) & ARM_FPCCR_CLRONRET_MASK)) {
+    if((env->v7m.control[M_REG_COMMON] & ARM_CONTROL_FPCA_MASK) &&
+       (fpccr_read(env, exception_was_secure) & ARM_FPCCR_CLRONRET_MASK)) {
         if(fpccr_read(env, true) & ARM_FPCCR_LSPACT_MASK) {
             /* Secure LSPACT won't be set if TrustZone is disabled */
+            /* Rule RJMGQ: lazy state cannot be deactivated by CLRONRET.
+             * This SecureFault is generated after exception deactivation and
+             * therefore tail-chains using the existing frame (RVJKL). */
             tlib_assert(env->v7m.has_trustzone);
             env->v7m.secure_fault_status |= SECURE_FAULT_LSERR;
-            env->exception_index = EXCP_SECURE;
-            cpu_loop_exit(env);
+            v7m_handle_early_exception_return_fault(env, type, ARMV7M_EXCP_SECURE);
+            return;
         } else {
             for(int i = 0; i < 8; ++i) {
                 env->vfp.regs[i] = 0;
@@ -1107,26 +1181,61 @@ void do_v7m_exception_exit(CPUState *env)
         }
     }
 
+    if(env->v7m.has_trustzone) {
+        /* Location of return stack type (Secure/Non-secure) */
+        switch_v7m_security_state(env, type & ARM_EXC_RETURN_S_MASK);
+    }
+
+    /* Switch to the target stack */
+    switch_v7m_sp(env, is_using_process_sp(env, (type & ARM_EXC_RETURN_MODE_MASK) == 0, env->secure));
+
+    uint32_t frame_pointer = env->regs[13];
+    /*
+     * PopStack() only commits restored state after all frame reads and
+     * integrity checks succeed. Keep a checkpoint so that a fault which can
+     * tail-chain leaves the interrupted frame and the returning handler's
+     * register state intact. CLRONRET has already run, so any clearing it
+     * performed remains architecturally visible.
+     */
+    memcpy(pre_unstack_regs, env->regs, sizeof(pre_unstack_regs));
+    memcpy(pre_unstack_vfp_regs, env->vfp.regs, sizeof(pre_unstack_vfp_regs));
+    memcpy(pre_unstack_fpccr, env->v7m.fpccr, sizeof(pre_unstack_fpccr));
+    pre_unstack_xpsr = xpsr_read(env);
+    pre_unstack_control = env->v7m.control[M_REG_COMMON];
+    pre_unstack_fpscr = vfp_get_fpscr(env);
+    pre_unstack_vpr = env->v7m.vpr;
+    env->v7m.exception_phase = V7M_EXCEPTION_PHASE_UNSTACKING;
+    env->v7m.exception_phase_fault = 0;
+
     /* Pop registers.  */
     if(cpu->v7m.has_trustzone) {
         /* We need to pop additional state registers, if they were pushed before */
         if(tz_v8m_should_pop_additional_registers(type)) {
             uint32_t integrity = INTEGRITY_SIGN;
             integrity |= (type & ARM_EXC_RETURN_NFPCA_MASK) >> ARM_EXC_RETURN_NFPCA;
-            uint32_t signature = v7m_pop(env);
+            uint32_t signature = v7m_pop_exception_frame(env);
             if(signature != integrity) {
                 tlib_printf(LOG_LEVEL_WARNING,
                             "Integrity signature mismatch on stack, expected 0x%" PRIx32 ", got 0x%" PRIx32 ", type 0x%" PRIx32
                             ". SecureFault!",
                             integrity, signature, type);
                 /* On security integrity signature mismatch, report SecureFault */
+                /* Armv8-M ARM rules RNZCD and RTCJR: a failed integrity check
+                 * on exception return is a derived fault that must be handled
+                 * *after* the returning exception's active bit and FAULTMASK
+                 * have been cleared and after the stack pointer has been
+                 * advanced as if unstacking completed. Set
+                 * exception_phase_fault so that the remaining
+                 * v7m_pop_exception_frame() calls skip loads but still
+                 * advance SP, then fall through to the unstacking fault
+                 * handler which sets IPSR from EXC_RETURN.Mode and clears
+                 * ITSTATE on lockup. */
                 env->v7m.secure_fault_status |= SECURE_FAULT_INVIS;
                 env->v7m.secure_fault_address = env->regs[15];
-                env->exception_index = EXCP_SECURE;
-                cpu_loop_exit(env);
+                env->v7m.exception_phase_fault = ARMV7M_EXCP_SECURE;
             }
             /* Reserved */
-            v7m_pop(env);
+            v7m_pop_exception_frame(env);
             v7m_pop_core_register(env, 4);
             v7m_pop_core_register(env, 5);
             v7m_pop_core_register(env, 6);
@@ -1144,52 +1253,75 @@ void do_v7m_exception_exit(CPUState *env)
     v7m_pop_core_register(env, 3);
     v7m_pop_core_register(env, 12);
     v7m_pop_core_register(env, 14);
-    env->regs[15] = v7m_pop(env) & ~1;
-    xpsr = v7m_pop(env);
-    env->v7m.control[M_REG_COMMON] |= (xpsr & RETPSR_SFPA) ? ARM_CONTROL_SFPA_MASK : 0;
-    xpsr_write(env, xpsr, 0xfffffdff);
+    /* Do not commit values read after an unstacking fault. */
+    uint32_t return_address = v7m_pop_exception_frame(env);
+    if(env->v7m.exception_phase_fault == 0) {
+        env->regs[15] = return_address & ~1;
+    }
+    uint32_t stacked_xpsr = v7m_pop_exception_frame(env);
+    if(env->v7m.exception_phase_fault == 0) {
+        xpsr = stacked_xpsr;
+    }
+    if(env->v7m.exception_phase_fault == 0) {
+        uint32_t stacked_exception = xpsr & 0x1ff;
+        bool return_to_handler = (type & ARM_EXC_RETURN_MODE_MASK) == 0;
+        if(return_to_handler == (stacked_exception == 0)) {
+            /* PopStack() RETPSR integrity check: Handler mode requires a
+             * nonzero IPSR, while Thread mode requires IPSR == 0. A mismatch
+             * raises UsageFault.INVPC (rules RVJKL and RNZCD). */
+            env->v7m.fault_status[env->secure] |= USAGE_FAULT_INVPC;
+            env->v7m.exception_phase_fault = v7m_exception_number_with_security(env, ARMV7M_EXCP_USAGE, env->secure);
+        }
+    }
+    if(env->v7m.exception_phase_fault == 0) {
+        env->v7m.control[M_REG_COMMON] |= (xpsr & RETPSR_SFPA) ? ARM_CONTROL_SFPA_MASK : 0;
+        xpsr_write(env, xpsr, 0xfffffdff);
+    }
     /* Pop extended frame  */
     if(~type & ARM_EXC_RETURN_NFPCA_MASK) {
-        if(!env->secure && !!(env->v7m.fpccr[M_REG_S] & ARM_FPCCR_LSPACT_MASK)) {
+        uint32_t fp_frame_size = fp_get_reservation_size(env);
+
+        if(env->v7m.exception_phase_fault != 0) {
+            /* ConsumeExcStackFrame() still includes the complete FP frame if
+             * an earlier integrity or core-unstacking fault enters Lockup. */
+            env->regs[13] += fp_frame_size;
+        } else if(!env->secure && !!(env->v7m.fpccr[M_REG_S] & ARM_FPCCR_LSPACT_MASK)) {
             /* Rule RLMSY: The PE generates an LSERR SecureFault on exception return before unstacking the Floating-point context
              * or Additional floating-point context, when the following conditions are met: EXC_RETURN.FType is 0. Secure lazy
              * floating-point state preservation is active, that is, FPCCR_S.LSPACT is 1. The return is to Non-secure state. */
-            env->exception_index = EXCP_SECURE;
             env->v7m.secure_fault_status |= SECURE_FAULT_LSERR;
-            cpu_loop_exit(env);
+            env->v7m.exception_phase_fault = ARMV7M_EXCP_SECURE;
+            env->regs[13] += fp_frame_size;
         } else if(env->v7m.fpccr[env->secure] & ARM_FPCCR_LSPACT_MASK) {
             /* FP state is still valid, pop space from stack  */
             env->v7m.fpccr[env->secure] ^= ARM_FPCCR_LSPACT_MASK;
-            env->regs[13] += fp_get_reservation_size(env);
+            env->regs[13] += fp_frame_size;
         } else {
             if(~env->vfp.xregs[ARM_VFP_FPEXC] & ARM_VFP_FPEXC_FPUEN_MASK) {
-                /* FPU is disabled, revert SP and raise Usage Fault  */
-                env->regs[13] -= 0x20;
-                if(cpu->v7m.has_trustzone) {
-                    /* We need to adjust SP for additional state registers (8 + reserved + integrity), if they were pushed before
-                     */
-                    if(tz_v8m_should_pop_additional_registers(type)) {
-                        env->regs[13] -= 10 * sizeof(env->regs[0]);
-                    }
+                /* FPU is disabled, raise Usage Fault without consuming the frame  */
+                /* RRXJC: a failed permission check before FP unstacking
+                 * generates NOCP and leaves the frame available to the
+                 * derived tail-chained exception. */
+                env->v7m.fault_status[env->secure] |= USAGE_FAULT_NOCP;
+                env->v7m.exception_phase_fault = v7m_exception_number_with_security(env, ARMV7M_EXCP_USAGE, env->secure);
+                env->regs[13] += fp_frame_size;
+            } else {
+                fp_unstack_started = true;
+                for(int i = 0; i < 8; ++i) {
+                    env->vfp.regs[i] = v7m_pop_exception_frame(env);
+                    env->vfp.regs[i] |= ((uint64_t)v7m_pop_exception_frame(env)) << 32;
                 }
-                env->v7m.control[M_REG_COMMON] &= ~ARM_CONTROL_FPCA_MASK;
-                env->exception_index = EXCP_UDEF;
-                cpu_loop_exit(env);
-            }
-            for(int i = 0; i < 8; ++i) {
-                env->vfp.regs[i] = v7m_pop(env);
-                env->vfp.regs[i] |= ((uint64_t)v7m_pop(env)) << 32;
-            }
-            vfp_set_fpscr(env, v7m_pop(env));
-            env->v7m.vpr = v7m_pop(env);
+                vfp_set_fpscr(env, v7m_pop_exception_frame(env));
+                env->v7m.vpr = v7m_pop_exception_frame(env);
 
-            if(arm_feature(env, ARM_FEATURE_V8)) {
-                /* At this point, the internal state is Secure, so it's OK to just use env->secure here,
-                 * instead of `type.S` bit*/
-                if(env->secure && (env->v7m.fpccr[M_REG_COMMON] & ARM_FPCCR_TS_MASK) > 0) {
-                    for(int i = 8; i < 16; ++i) {
-                        env->vfp.regs[i] = v7m_pop(env);
-                        env->vfp.regs[i] |= ((uint64_t)v7m_pop(env)) << 32;
+                if(arm_feature(env, ARM_FEATURE_V8)) {
+                    /* At this point, the internal state is Secure, so it's OK to just use env->secure here,
+                     * instead of `type.S` bit*/
+                    if(env->secure && (env->v7m.fpccr[M_REG_COMMON] & ARM_FPCCR_TS_MASK) > 0) {
+                        for(int i = 8; i < 16; ++i) {
+                            env->vfp.regs[i] = v7m_pop_exception_frame(env);
+                            env->vfp.regs[i] |= ((uint64_t)v7m_pop_exception_frame(env)) << 32;
+                        }
                     }
                 }
             }
@@ -1199,8 +1331,49 @@ void do_v7m_exception_exit(CPUState *env)
     env->v7m.control[M_REG_COMMON] ^= (env->v7m.control[M_REG_COMMON] ^ ~type >> (ARM_EXC_RETURN_NFPCA - ARM_CONTROL_FPCA)) &
                                       ARM_CONTROL_FPCA_MASK;
     /* Undo stack alignment.  */
-    if(xpsr & 0x200) {
+    if(env->v7m.exception_phase_fault == 0 && (xpsr & 0x200)) {
         env->regs[13] |= 4;
+    }
+
+    int unstacking_fault = env->v7m.exception_phase_fault;
+    env->v7m.exception_phase = V7M_EXCEPTION_PHASE_NONE;
+    env->v7m.exception_phase_fault = 0;
+    if(unstacking_fault != 0) {
+        /* Armv8-M ARM rules RNZCD and RTCJR: the returning exception and
+         * FAULTMASK have already been cleared, and the stack pointer has been
+         * advanced as if unstacking completed. If the derived exception still
+         * cannot preempt, Lockup records the destination mode in IPSR. */
+        if(tlib_nvic_set_pending_synchronous_fault(unstacking_fault) != V7M_SYNCHRONOUS_FAULT_PENDING) {
+            env->v7m.exception = (type & ARM_EXC_RETURN_MODE_MASK) ? 0 : ARMV7M_EXCP_HARD;
+            v7m_enter_lockup(env, true);
+        } else {
+            /* PopStack() does not consume a frame when a non-Lockup
+             * exception-return fault is pended. HandleExceptionTransitions()
+             * tail-chains into the derived exception using that frame (rule
+             * RVJKL and pseudocode operation HandleExceptionTransitions). */
+            memcpy(env->regs, pre_unstack_regs, sizeof(pre_unstack_regs));
+            memcpy(env->vfp.regs, pre_unstack_vfp_regs, sizeof(pre_unstack_vfp_regs));
+            memcpy(env->v7m.fpccr, pre_unstack_fpccr, sizeof(pre_unstack_fpccr));
+            xpsr_write(env, pre_unstack_xpsr, 0xffffffff);
+            env->v7m.control[M_REG_COMMON] = pre_unstack_control;
+            vfp_set_fpscr(env, pre_unstack_fpscr);
+            env->v7m.vpr = pre_unstack_vpr;
+            if(fp_unstack_started) {
+                /* Rules RHNNW and RLMNG: when FP unstacking is abandoned for
+                 * a tail-chain, the would-be-restored FP state is zero with
+                 * the Security Extension and UNKNOWN otherwise. We choose zero
+                 * as UNKNOWN, too, for simplicity. */
+                int fp_reg_count = env->secure && (pre_unstack_fpccr[M_REG_COMMON] & ARM_FPCCR_TS_MASK) ? 16 : 8;
+                memset(env->vfp.regs, 0, fp_reg_count * sizeof(env->vfp.regs[0]));
+                vfp_set_fpscr(env, 0);
+                env->v7m.vpr = 0;
+            }
+            env->regs[13] = frame_pointer;
+            env->v7m.exception_return_tailchain = true;
+            env->v7m.exception_return_type = type;
+            env->exception_index = EXCP_IRQ;
+            cpu_loop_exit(env);
+        }
     }
 }
 
@@ -1559,6 +1732,9 @@ static void do_interrupt_v7m(CPUState *env)
     int nr;
     int stack_status = 0;
     bool secure_target = env->secure;
+    bool exception_return_tailchain = env->v7m.exception_return_tailchain;
+    uint32_t exception_return_type = env->v7m.exception_return_type;
+    env->v7m.exception_return_tailchain = false;
 
     /* For exceptions we just mark as pending on the NVIC, and let that
        handle it. We'll return to this function with exception_index set
@@ -1620,7 +1796,11 @@ static void do_interrupt_v7m(CPUState *env)
             return; /* Never happens.  Keep compiler happy.  */
     }
 
-    if(arm_feature(env, ARM_FEATURE_V8)) {
+    if(exception_return_tailchain) {
+        /* TailChain() reuses the EXC_RETURN of the frame which the failed
+         * return did not consume. */
+        lr = exception_return_type;
+    } else if(arm_feature(env, ARM_FEATURE_V8)) {
         /* [31:7] PREFIX and RES1.
          *
          * All SecureExtensions bits are set to their disabled state:
@@ -1646,12 +1826,12 @@ static void do_interrupt_v7m(CPUState *env)
      * 0 - handler mode
      * 1 - thread mode
      */
-    if(!in_handler_mode(env)) {
+    if(!exception_return_tailchain && !in_handler_mode(env)) {
         lr |= ARM_EXC_RETURN_MODE_MASK;
     }
 
     /* v7-M and v8-M share FP stack FP context active fields */
-    if(env->v7m.control[M_REG_COMMON] & ARM_CONTROL_FPCA_MASK) {
+    if(!exception_return_tailchain && (env->v7m.control[M_REG_COMMON] & ARM_CONTROL_FPCA_MASK)) {
         lr ^= ARM_EXC_RETURN_NFPCA_MASK;
     }
 
@@ -1676,81 +1856,85 @@ static void do_interrupt_v7m(CPUState *env)
          * - for banked IRQs, the security state the PE was in when the exception was taken. We cheat a little, and use
          * `BANKED_SECURE_EXCP` to reserve extra exception. Look at "EXCP_IRQ" for how this logic works
          */
-        lr |= env->secure << ARM_EXC_RETURN_S;
+        if(!exception_return_tailchain) {
+            lr |= env->secure << ARM_EXC_RETURN_S;
+        }
 
         secure_target = v7m_exception_targets_secure(env, &env->v7m.exception);
     }
 
     env->condexec_bits = 0;
 
-    /* Align stack pointer.  */
-    /* ??? Should do this if Configuration Control Register
-       STACKALIGN bit is set or extended frame is being pushed.  */
-    if(env->regs[13] & 4) {
-        env->regs[13] -= 4;
-        xpsr |= 0x200;
-    }
-    xpsr |= env->v7m.control[M_REG_COMMON] & ARM_CONTROL_SFPA_MASK ? RETPSR_SFPA : 0;
+    if(!exception_return_tailchain) {
+        /* Align stack pointer.  */
+        /* ??? Should do this if Configuration Control Register
+           STACKALIGN bit is set or extended frame is being pushed.  */
+        if(env->regs[13] & 4) {
+            env->regs[13] -= 4;
+            xpsr |= 0x200;
+        }
+        xpsr |= env->v7m.control[M_REG_COMMON] & ARM_CONTROL_SFPA_MASK ? RETPSR_SFPA : 0;
 
-    /* Push extended frame  */
-    if(env->v7m.control[M_REG_COMMON] & ARM_CONTROL_FPCA_MASK) {
-        env->v7m.control[M_REG_COMMON] &= ~ARM_CONTROL_FPCA_MASK;
-        env->v7m.control[M_REG_COMMON] &= ~ARM_CONTROL_SFPA_MASK;
-        if(fpccr_read(env, env->secure) & ARM_FPCCR_LSPEN_MASK) {
-            /* Set lazy FP state preservation  */
-            env->regs[13] -= fp_get_reservation_size(env);
-            fpccr_update(env, env->regs[13]);
-        } else {
-            if(~env->vfp.xregs[ARM_VFP_FPEXC] & ARM_VFP_FPEXC_FPUEN_MASK) {
-                /* FPU is disabled, revert SP and raise Usage Fault  */
-                if(xpsr & 0x200) {
-                    env->regs[13] |= 4;
+        /* Push extended frame  */
+        if(env->v7m.control[M_REG_COMMON] & ARM_CONTROL_FPCA_MASK) {
+            env->v7m.control[M_REG_COMMON] &= ~ARM_CONTROL_FPCA_MASK;
+            env->v7m.control[M_REG_COMMON] &= ~ARM_CONTROL_SFPA_MASK;
+            if(fpccr_read(env, env->secure) & ARM_FPCCR_LSPEN_MASK) {
+                /* Set lazy FP state preservation  */
+                env->regs[13] -= fp_get_reservation_size(env);
+                fpccr_update(env, env->regs[13]);
+            } else {
+                if(~env->vfp.xregs[ARM_VFP_FPEXC] & ARM_VFP_FPEXC_FPUEN_MASK) {
+                    /* FPU is disabled, revert SP and raise Usage Fault  */
+                    if(xpsr & 0x200) {
+                        env->regs[13] |= 4;
+                    }
+                    env->exception_index = EXCP_UDEF;
+                    cpu_loop_exit(env);
                 }
-                env->exception_index = EXCP_UDEF;
-                cpu_loop_exit(env);
-            }
 
-            bool push_callee_frame = (env->v7m.fpccr[M_REG_COMMON] & ARM_FPCCR_TS_MASK) > 0;
-            if(arm_feature(env, ARM_FEATURE_V8)) {
-                if(push_callee_frame) {
-                    for(int i = 15; i >= 8; --i) {
-                        v7m_push(env, env->vfp.regs[i] >> 32);
-                        v7m_push(env, env->vfp.regs[i]);
+                bool push_callee_frame = (env->v7m.fpccr[M_REG_COMMON] & ARM_FPCCR_TS_MASK) > 0;
+                if(arm_feature(env, ARM_FEATURE_V8)) {
+                    if(push_callee_frame) {
+                        for(int i = 15; i >= 8; --i) {
+                            v7m_push(env, env->vfp.regs[i] >> 32);
+                            v7m_push(env, env->vfp.regs[i]);
+                        }
                     }
                 }
+
+                if(arm_feature(env, ARM_FEATURE_MVE)) {
+                    v7m_push(env, env->v7m.vpr);
+                } else {
+                    /* Write UNKNOWN if MVE is not implemented */
+                    v7m_push(env, 0xBADCAFEE);
+                }
+
+                uint32_t fpscr = vfp_get_fpscr(env);
+                v7m_push(env, fpscr);
+
+                for(int i = 7; i >= 0; i--) {
+                    /* We need to swap low and high register parts, to pop them correctly on state restore.
+                     * The state can be restored on excp exit, or by specific load instructions */
+                    v7m_push(env, env->vfp.regs[i] >> 32);
+                    v7m_push(env, env->vfp.regs[i]);
+                }
+
+                invalidate_vfp_regs(env, push_callee_frame, push_callee_frame);
             }
-
-            if(arm_feature(env, ARM_FEATURE_MVE)) {
-                v7m_push(env, env->v7m.vpr);
-            } else {
-                /* Write UNKNOWN if MVE is not implemented */
-                v7m_push(env, 0xBADCAFEE);
-            }
-
-            uint32_t fpscr = vfp_get_fpscr(env);
-            v7m_push(env, fpscr);
-
-            for(int i = 7; i >= 0; i--) {
-                /* We need to swap low and high register parts, to pop them correctly on state restore.
-                 * The state can be restored on excp exit, or by specific load instructions */
-                v7m_push(env, env->vfp.regs[i] >> 32);
-                v7m_push(env, env->vfp.regs[i]);
-            }
-
-            invalidate_vfp_regs(env, push_callee_frame, push_callee_frame);
         }
+        /* Switch to the handler mode.  */
+        stack_status |= v7m_push(env, xpsr);
+        stack_status |= v7m_push(env, env->regs[15]);
+        stack_status |= v7m_push(env, env->regs[14]);
+        stack_status |= v7m_push(env, env->regs[12]);
+        stack_status |= v7m_push(env, env->regs[3]);
+        stack_status |= v7m_push(env, env->regs[2]);
+        stack_status |= v7m_push(env, env->regs[1]);
+        stack_status |= v7m_push(env, env->regs[0]);
     }
-    /* Switch to the handler mode.  */
-    stack_status |= v7m_push(env, xpsr);
-    stack_status |= v7m_push(env, env->regs[15]);
-    stack_status |= v7m_push(env, env->regs[14]);
-    stack_status |= v7m_push(env, env->regs[12]);
-    stack_status |= v7m_push(env, env->regs[3]);
-    stack_status |= v7m_push(env, env->regs[2]);
-    stack_status |= v7m_push(env, env->regs[1]);
-    stack_status |= v7m_push(env, env->regs[0]);
 
-    stack_status |= v7m_prepare_exception_taken(env, &lr, secure_target, false);
+    stack_status |= v7m_prepare_exception_taken(env, &lr, secure_target, exception_return_tailchain);
     if(env->v7m.has_trustzone) {
         tlib_printf(LOG_LEVEL_NOISY, "Loading to LR, while entering exception with TrustZone, value 0x%" PRIx32, lr);
         switch_v7m_security_state(env, lr & ARM_EXC_RETURN_ES_MASK);
