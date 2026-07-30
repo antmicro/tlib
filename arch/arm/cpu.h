@@ -76,6 +76,7 @@ typedef enum {
     V7M_EXCEPTION_PHASE_STACKING,
     V7M_EXCEPTION_PHASE_VECTOR_READ,
     V7M_EXCEPTION_PHASE_UNSTACKING,
+    V7M_EXCEPTION_PHASE_LAZY_FP,
 } V7MExceptionPhase;
 
 /* Default value for LTPSIZE field in FPSCR. It indicates that tail predication is switched off */
@@ -91,6 +92,7 @@ typedef enum {
 
 /* MemManage Fault : bits 0:7 of CFSR */
 #define MEM_FAULT_MMARVALID 1 << 7
+#define MEM_FAULT_MLSPERR   1 << 5
 #define MEM_FAULT_MSTKERR   1 << 4
 #define MEM_FAULT_MUNSTKERR 1 << 3
 #define MEM_FAULT_DACCVIOL  1 << 1
@@ -98,6 +100,7 @@ typedef enum {
 /* BusFault : bits 8:15 of CFSR */
 #define BUS_FAULT_OFFSET      8
 #define BUS_FAULT_BFARVALID   ((1 << 7) << BUS_FAULT_OFFSET)
+#define BUS_FAULT_LSPERR      ((1 << 5) << BUS_FAULT_OFFSET)
 #define BUS_FAULT_STKERR      ((1 << 4) << BUS_FAULT_OFFSET)
 #define BUS_FAULT_UNSTKERR    ((1 << 3) << BUS_FAULT_OFFSET)
 #define BUS_FAULT_PRECISERR   ((1 << 1) << BUS_FAULT_OFFSET)
@@ -767,6 +770,10 @@ static inline bool in_user_mode(CPUState *env)
 #define ARM_CONTROL_SFPA_MASK    (1 << ARM_CONTROL_SFPA)
 #define ARM_FPCCR_LSPACT_MASK    (1 << ARM_FPCCR_LSPACT)
 #define ARM_FPCCR_S_MASK         (1 << ARM_FPCCR_S)
+#define ARM_FPCCR_HFRDY_MASK     (1 << 4)
+#define ARM_FPCCR_BFRDY_MASK     (1 << 6)
+#define ARM_FPCCR_SFRDY_MASK     (1 << 7)
+#define ARM_FPCCR_MONRDY_MASK    (1 << 8)
 #define ARM_FPCCR_TS_MASK        (1 << ARM_FPCCR_TS)
 #define ARM_FPCCR_CLRONRETS_MASK (1 << ARM_FPCCR_CLRONRETS)
 #define ARM_FPCCR_CLRONRET_MASK  (1 << ARM_FPCCR_CLRONRET)
@@ -776,6 +783,8 @@ static inline bool in_user_mode(CPUState *env)
 #define ARM_FPCAR_ADDRESS_MASK   (0xfffffff8)
 #define ARM_VFP_FPEXC_FPUEN_MASK (1 << ARM_VFP_FPEXC_FPUEN)
 #define ARM_FPDSCR_VALUES_MASK   0x07c00000
+
+#define ARM_FPCCR_COMMON_READY_MASK (ARM_FPCCR_HFRDY_MASK | ARM_FPCCR_BFRDY_MASK | ARM_FPCCR_SFRDY_MASK | ARM_FPCCR_MONRDY_MASK)
 
 #define ARM_EXC_RETURN_ES_MASK    (1 << ARM_EXC_RETURN_ES)
 #define ARM_EXC_RETURN_SPSEL_MASK (1 << ARM_EXC_RETURN_SPSEL)
@@ -1135,6 +1144,12 @@ static inline uint32_t fpccr_read(CPUState *env, bool is_secure)
         read_mask ^= ARM_FPCCR_TS_MASK | ARM_FPCCR_S_MASK | ARM_FPCCR_LSPENS_MASK | ARM_FPCCR_CLRONRETS_MASK;
     }
     uint32_t fpccr = env->v7m.fpccr[is_secure] & read_mask;
+    if(!env->v7m.has_trustzone) {
+        /* With no Security Extension there is only one architectural FPCCR.
+         * The implementation still uses the NS array slot for banked fields
+         * and the S slot for fields which would be common. */
+        fpccr |= env->v7m.fpccr[M_REG_COMMON] & (ARM_FPCCR_HFRDY_MASK | ARM_FPCCR_BFRDY_MASK | ARM_FPCCR_MONRDY_MASK);
+    }
     /* LSPEN is not banked, and always readable */
     fpccr |= env->v7m.fpccr[M_REG_COMMON] & ARM_FPCCR_LSPEN_MASK;
     /* Same for CLRONRET */

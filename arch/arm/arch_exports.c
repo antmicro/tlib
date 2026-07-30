@@ -334,6 +334,11 @@ void tlib_raise_precise_bus_fault(uint32_t address)
             cpu->v7m.bus_fault_status |= BUS_FAULT_STKERR;
         } else if(cpu->v7m.exception_phase == V7M_EXCEPTION_PHASE_UNSTACKING) {
             cpu->v7m.bus_fault_status |= BUS_FAULT_UNSTKERR;
+        } else if(cpu->v7m.exception_phase == V7M_EXCEPTION_PHASE_LAZY_FP) {
+            /* PreserveFPState() uses AccType_LAZYFP. A failed bus access
+             * therefore records BFSR.LSPERR, without PRECISERR or BFARVALID
+             * (See also MemA_with_priv_security). */
+            cpu->v7m.bus_fault_status |= BUS_FAULT_LSPERR;
         }
         return;
     }

@@ -33,6 +33,10 @@ DEFAULT_VOID_HANDLER1(void tlib_nvic_set_pending_irq, int32_t number)
 
 DEFAULT_INT_HANDLER1(int32_t tlib_nvic_set_pending_synchronous_fault, int32_t number)
 
+DEFAULT_INT_HANDLER2(uint32_t tlib_nvic_get_fpccr_ready_bits, int32_t original_exception, int32_t secure)
+
+DEFAULT_INT_HANDLER2(int32_t tlib_nvic_set_pending_lazy_fp_fault, int32_t number, uint32_t fpccr)
+
 DEFAULT_VOID_HANDLER1(void tlib_on_lockup_state_change, int32_t locked_up)
 
 DEFAULT_INT_HANDLER1(uint32_t tlib_has_enabled_trustzone, void)

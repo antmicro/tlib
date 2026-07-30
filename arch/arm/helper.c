@@ -1478,6 +1478,8 @@ void ccr_write(CPUState *env, uint32_t value, bool is_secure)
 static inline bool lsp_store_helper(CPUState *env, uint32_t *address, uint32_t val, bool is_secure)
 {
     bool is_user = !!(env->v7m.fpccr[is_secure] & FIELD_MASK(V7M_FPCCR, USER));
+    uint32_t secure_fault_status = env->v7m.secure_fault_status;
+    int exception_index = env->exception_index;
 
     /* No address translation in ARM-M, so discard phys_ptr */
     uint32_t phys_ptr = 0;
@@ -1487,11 +1489,28 @@ static inline bool lsp_store_helper(CPUState *env, uint32_t *address, uint32_t v
     int ret = get_phys_addr(env, *address, is_secure, ACCESS_DATA_STORE, is_user, &phys_ptr, &prot, &page_size, false);
     if(ret == TRANSLATE_SUCCESS) {
         stl_phys(*address, val);
+        if(env->v7m.exception_phase_fault != 0) {
+            return false;
+        }
         *address += sizeof(val);
         return true;
-    } else {
-        return false;
     }
+
+    if(env->exception_index == EXCP_SECURE) {
+        /* A security attribution failure during an AccType_LAZYFP access is
+         * reported as SFSR.LSPERR, rather than as the ordinary AUVIOL/INV*
+         * syndrome produced by get_phys_addr() (PreserveFPState, ValidateAddress). */
+        env->v7m.secure_fault_status = secure_fault_status | SECURE_FAULT_LSPERR | SECURE_FAULT_SFARVALID;
+        env->v7m.secure_fault_address = *address;
+        env->v7m.exception_phase_fault = ARMV7M_EXCP_SECURE;
+    } else {
+        /* An MPU failure during lazy preservation reports MMFSR.MLSPERR.
+         * MMFARVALID is not set for this access type (ValidateAddress, CheckPermission). */
+        env->v7m.fault_status[is_secure] |= MEM_FAULT_MLSPERR;
+        env->v7m.exception_phase_fault = v7m_exception_number_with_security(env, ARMV7M_EXCP_MEM, is_secure);
+    }
+    env->exception_index = exception_index;
+    return false;
 }
 
 /* FPU Lazy State Preservation logic */
@@ -1503,46 +1522,77 @@ void fp_lsp_save_to_stack(CPUState *env)
     bool is_secure = !!(env->v7m.fpccr[M_REG_S] & ARM_FPCCR_S_MASK);
     /* Save FP state if FPCCR.LSPACT is set  */
     if(unlikely(need_fp_lazy_state_preservation(env))) {
-        /* Rule ITWPT: Arm recommends that when performing lazy Floating-point state preservation both the Secure and Non-secure
-         * FPCCR.LSPACT flags should be cleared. */
-        env->v7m.fpccr[M_REG_S] &= ~ARM_FPCCR_LSPACT_MASK;
-        env->v7m.fpccr[M_REG_NS] &= ~ARM_FPCCR_LSPACT_MASK;
         /* Bits[0:2] are RES0 (range inclusive) */
         uint32_t address = env->v7m.fpcar[is_secure] & ARM_FPCAR_ADDRESS_MASK;
         /* Remember, we operate with double-precision aliases here
          * so for D7, up to S14, S15 are preserved, and so on
          */
-        bool any_failed = false;
+        bool failed = false;
+        env->v7m.exception_phase = V7M_EXCEPTION_PHASE_LAZY_FP;
+        env->v7m.exception_phase_fault = 0;
         for(int i = 0; i < 8; ++i) {
-            any_failed |= !lsp_store_helper(env, &address, env->vfp.regs[i], is_secure);
-            any_failed |= !lsp_store_helper(env, &address, env->vfp.regs[i] >> 32, is_secure);
+            if(!lsp_store_helper(env, &address, env->vfp.regs[i], is_secure) ||
+               !lsp_store_helper(env, &address, env->vfp.regs[i] >> 32, is_secure)) {
+                failed = true;
+                break;
+            }
         }
-        uint32_t fpscr = vfp_get_fpscr(env);
-        any_failed |= !lsp_store_helper(env, &address, fpscr, is_secure);
+        if(!failed) {
+            uint32_t fpscr = vfp_get_fpscr(env);
+            failed = !lsp_store_helper(env, &address, fpscr, is_secure);
+        }
 
-        if(arm_feature(env, ARM_FEATURE_V8)) {
+        if(!failed && arm_feature(env, ARM_FEATURE_V8)) {
             if(arm_feature(env, ARM_FEATURE_MVE)) {
-                any_failed |= !lsp_store_helper(env, &address, env->v7m.vpr, is_secure);
+                failed = !lsp_store_helper(env, &address, env->v7m.vpr, is_secure);
             } else {
                 /* Write UNKNOWN if MVE is not implemented */
-                any_failed |= !lsp_store_helper(env, &address, 0xBADCAFEE, is_secure);
+                failed = !lsp_store_helper(env, &address, 0xBADCAFEE, is_secure);
             }
-            if(is_secure && (env->v7m.fpccr[M_REG_COMMON] & ARM_FPCCR_TS_MASK) > 0) {
+            if(!failed && is_secure && (env->v7m.fpccr[M_REG_COMMON] & ARM_FPCCR_TS_MASK) > 0) {
                 for(int i = 8; i < 16; ++i) {
-                    any_failed |= !lsp_store_helper(env, &address, env->vfp.regs[i], is_secure);
-                    any_failed |= !lsp_store_helper(env, &address, env->vfp.regs[i] >> 32, is_secure);
+                    if(!lsp_store_helper(env, &address, env->vfp.regs[i], is_secure) ||
+                       !lsp_store_helper(env, &address, env->vfp.regs[i] >> 32, is_secure)) {
+                        failed = true;
+                        break;
+                    }
                 }
             }
         }
 
-        if(any_failed) {
-            env->v7m.secure_fault_status |= SECURE_FAULT_LSPERR;
-            env->exception_index = EXCP_SECURE;
-            cpu_loop_exit(env);
+        int lazy_fp_fault = env->v7m.exception_phase_fault;
+        env->v7m.exception_phase = V7M_EXCEPTION_PHASE_NONE;
+        env->v7m.exception_phase_fault = 0;
+
+        if(failed) {
+            /* TakePreserveFPException() uses the readiness snapshot saved in
+             * FPCCR, rather than re-running ordinary synchronous escalation
+             * against the context which triggered preservation. */
+            uint32_t saved_fpccr = fpccr_read(env, is_secure) | (env->v7m.fpccr[M_REG_COMMON] & ARM_FPCCR_COMMON_READY_MASK);
+            int result = tlib_nvic_set_pending_lazy_fp_fault(lazy_fp_fault, saved_fpccr);
+            if(result == 2) {
+                /* Rule RRNKB and TakePreserveFPException(): HFRDY == 0
+                 * makes a fault which cannot preempt enter Lockup, without
+                 * setting HFSR.FORCED or changing pending/active state. */
+                v7m_enter_lockup(env, false);
+                cpu_loop_exit(env);
+            }
+            if(result == 1) {
+                /* The derived exception can preempt immediately. Preserve
+                 * LSPACT and the FP register contents, then terminate the
+                 * instruction as required by PreserveFPState(). */
+                env->exception_index = EXCP_IRQ;
+                cpu_loop_exit(env);
+            }
         }
 
         bool treat_secure = env->v7m.fpccr[M_REG_COMMON] & FIELD_MASK(V7M_FPCCR, TS);
         invalidate_vfp_regs(env, is_secure && treat_secure, is_secure && treat_secure);
+
+        /* Rule ITWPT: Arm recommends that when performing lazy Floating-point state preservation both the Secure and Non-secure
+         * FPCCR.LSPACT flags should be cleared. */
+        env->v7m.fpccr[M_REG_S] &= ~ARM_FPCCR_LSPACT_MASK;
+        env->v7m.fpccr[M_REG_NS] &= ~ARM_FPCCR_LSPACT_MASK;
     }
 }
 
@@ -1574,7 +1624,7 @@ void HELPER(fp_lsp)(CPUState *env)
     fp_lsp_create_context(env);
 }
 
-static inline void fpccr_update(CPUState *env, uint32_t frameptr)
+static inline void fpccr_update(CPUState *env, uint32_t frameptr, int original_exception)
 {
     bool is_secure = env->secure;
     /* Set address of the FP frame on the stack */
@@ -1590,7 +1640,19 @@ static inline void fpccr_update(CPUState *env, uint32_t frameptr)
     env->v7m.fpccr[is_secure] = FIELD_DP32(env->v7m.fpccr[is_secure], V7M_FPCCR, USER, in_user_mode(env));
     env->v7m.fpccr[is_secure] = FIELD_DP32(env->v7m.fpccr[is_secure], V7M_FPCCR, THREAD, !in_handler_mode(env));
 
-    /* Here we should update other FPCCR fields related to interrupt priorities */
+    /* UpdateFPCCR() snapshots whether every fault class could have preempted
+     * the context owning this FP state. The NVIC model acknowledges an exception
+     * before stacking, so the callback evaluates the priority with the
+     * acknowledged original exception temporarily hidden. */
+    uint32_t ready_ns = tlib_nvic_get_fpccr_ready_bits(original_exception, M_REG_NS);
+    uint32_t ready_s = tlib_nvic_get_fpccr_ready_bits(original_exception, M_REG_S);
+    uint32_t common_ready_mask = FIELD_MASK(V7M_FPCCR, HFRDY) | FIELD_MASK(V7M_FPCCR, BFRDY) | FIELD_MASK(V7M_FPCCR, SFRDY) |
+                                 FIELD_MASK(V7M_FPCCR, MONRDY);
+    uint32_t banked_ready_mask = FIELD_MASK(V7M_FPCCR, MMRDY) | FIELD_MASK(V7M_FPCCR, UFRDY);
+
+    env->v7m.fpccr[M_REG_COMMON] = (env->v7m.fpccr[M_REG_COMMON] & ~common_ready_mask) | (ready_s & common_ready_mask);
+    env->v7m.fpccr[M_REG_NS] = (env->v7m.fpccr[M_REG_NS] & ~banked_ready_mask) | (ready_ns & banked_ready_mask);
+    env->v7m.fpccr[M_REG_S] = (env->v7m.fpccr[M_REG_S] & ~banked_ready_mask) | (ready_s & banked_ready_mask);
 }
 
 void v7m_set_locked_up(CPUState *env, bool locked_up)
@@ -1768,6 +1830,7 @@ static void do_interrupt_v7m(CPUState *env)
     int nr;
     int stack_status = 0;
     bool secure_target = env->secure;
+    int acknowledged_exception = 0;
     bool exception_return_tailchain = env->v7m.exception_return_tailchain;
     uint32_t exception_return_type = env->v7m.exception_return_type;
     env->v7m.exception_return_tailchain = false;
@@ -1872,6 +1935,7 @@ static void do_interrupt_v7m(CPUState *env)
     }
 
     env->v7m.exception = tlib_nvic_acknowledge_irq();
+    acknowledged_exception = env->v7m.exception;
     if(env->v7m.exception == 0) {
         //  We were notified of an IRQ but there isn't one anymore - this can happen if the interrupt was triggered right
         //  before an instruction (eg. a write to BASEPRI) that makes us ignore the interrupt
@@ -1918,7 +1982,7 @@ static void do_interrupt_v7m(CPUState *env)
             if(fpccr_read(env, env->secure) & ARM_FPCCR_LSPEN_MASK) {
                 /* Set lazy FP state preservation  */
                 env->regs[13] -= fp_get_reservation_size(env);
-                fpccr_update(env, env->regs[13]);
+                fpccr_update(env, env->regs[13], acknowledged_exception);
             } else {
                 if(~env->vfp.xregs[ARM_VFP_FPEXC] & ARM_VFP_FPEXC_FPUEN_MASK) {
                     /* FPU is disabled, revert SP and raise Usage Fault  */
@@ -4838,7 +4902,7 @@ void HELPER(v8m_vlstm)(CPUState *env, uint32_t address)
     if((env->v7m.fpccr[M_REG_COMMON] & ARM_FPCCR_LSPEN_MASK) > 0) {
         /* If Lazy preservation is enabled, just update the FPCCR and FPCAR
          * Low three bits are RES0 */
-        fpccr_update(env, address);
+        fpccr_update(env, address, 0);
     } else {
         /* We store, in this order, the following FPU registers, at the address passed in register "rn":
          *  S[0]-S[15]
