@@ -934,19 +934,43 @@ static int v7m_push(CPUState *env, uint32_t val)
     target_ulong page_size = 0;
     int ret, prot = 0;
     uint32_t address = env->regs[13] - 4;
+
+    /* PushStack() allocates the complete frame even if a stacking access
+     * faults. Rule RQSSB permits abandoning the remaining memory accesses and
+     * we choose to abandon them while still advancing the architectural SP. */
+    env->regs[13] = address;
+    if(env->v7m.exception_phase_fault != 0) {
+        return 1;
+    }
+
+    int exception_index = env->exception_index;
     ret = get_phys_addr(env, address, env->secure, ACCESS_DATA_STORE, !in_privileged_mode(env), &phys_ptr, &prot, &page_size,
                         false);
     if(ret == TRANSLATE_SUCCESS) {
-        env->regs[13] = address;
         stl_phys(env->regs[13], val);
-    } else {
-        //  Stacking error - MSTKERR
-        env->cp15.c5_data = ret;
-        if(arm_feature(env, ARM_FEATURE_V6)) {
-            env->cp15.c5_data |= (1 << 11);
+        if(env->v7m.exception_phase_fault != 0) {
+            env->exception_index = exception_index;
+            return 1;
         }
-        env->v7m.memory_fault_address[env->secure] = address;
+    } else if(env->exception_index == EXCP_SECURE) {
+        /* ValidateAddress(AccType_STACK) preserves a Security attribution
+         * failure as an AUVIOL SecureFault. Do not overwrite it with the
+         * MemManage stacking syndrome merely because both failures are
+         * reported by get_phys_addr(). */
+        if(env->v7m.exception_phase_fault == 0) {
+            env->v7m.exception_phase_fault = ARMV7M_EXCP_SECURE;
+        }
+    } else {
+        /* An MPU failure during PushStack() is a MemManage stacking fault.
+         * get_phys_addr() has already recorded the fault address and access
+         * classification; add the stacking-specific syndrome here. */
         env->v7m.fault_status[env->secure] |= MEM_FAULT_MSTKERR;
+        if(env->v7m.exception_phase_fault == 0) {
+            env->v7m.exception_phase_fault = v7m_exception_number_with_security(env, ARMV7M_EXCP_MEM, env->secure);
+        }
+    }
+    env->exception_index = exception_index;
+    if(ret != TRANSLATE_SUCCESS) {
         return 1;
     }
     return 0;
@@ -1754,6 +1778,28 @@ static bool v7m_exception_targets_secure(CPUState *env, uint32_t *exception)
     return secure_target;
 }
 
+static void v7m_acknowledge_replacement_exception(CPUState *env, int *active_exception, bool *secure_target)
+{
+    env->v7m.exception = tlib_nvic_acknowledge_irq();
+    *active_exception = env->v7m.exception;
+    tlib_assert(env->v7m.exception != 0);
+    *secure_target = v7m_exception_targets_secure(env, &env->v7m.exception);
+}
+
+static V7MSynchronousFaultResult v7m_resolve_stacking_fault(CPUState *env, int stacking_fault, int acknowledged_exception,
+                                                            int *active_exception, bool *secure_target)
+{
+    V7MSynchronousFaultResult result = tlib_nvic_set_pending_stacking_fault(stacking_fault, acknowledged_exception);
+    if(result != V7M_SYNCHRONOUS_FAULT_REPLACED) {
+        return result;
+    }
+
+    /* DerivedLateArrival() replaces the original exception without
+     * allocating another stack frame. */
+    v7m_acknowledge_replacement_exception(env, active_exception, secure_target);
+    return result;
+}
+
 static int v7m_prepare_exception_taken(CPUState *env, uint32_t *lr, bool secure_target, bool do_tailchain)
 {
     int stack_status = 0;
@@ -1831,6 +1877,7 @@ static void do_interrupt_v7m(CPUState *env)
     int stack_status = 0;
     bool secure_target = env->secure;
     int acknowledged_exception = 0;
+    int active_exception = 0;
     bool exception_return_tailchain = env->v7m.exception_return_tailchain;
     uint32_t exception_return_type = env->v7m.exception_return_type;
     env->v7m.exception_return_tailchain = false;
@@ -1936,6 +1983,7 @@ static void do_interrupt_v7m(CPUState *env)
 
     env->v7m.exception = tlib_nvic_acknowledge_irq();
     acknowledged_exception = env->v7m.exception;
+    active_exception = acknowledged_exception;
     if(env->v7m.exception == 0) {
         //  We were notified of an IRQ but there isn't one anymore - this can happen if the interrupt was triggered right
         //  before an instruction (eg. a write to BASEPRI) that makes us ignore the interrupt
@@ -1964,6 +2012,8 @@ static void do_interrupt_v7m(CPUState *env)
     }
 
     env->condexec_bits = 0;
+    env->v7m.exception_phase = V7M_EXCEPTION_PHASE_STACKING;
+    env->v7m.exception_phase_fault = 0;
 
     if(!exception_return_tailchain) {
         /* Align stack pointer.  */
@@ -1989,6 +2039,8 @@ static void do_interrupt_v7m(CPUState *env)
                     if(xpsr & 0x200) {
                         env->regs[13] |= 4;
                     }
+                    env->v7m.exception_phase = V7M_EXCEPTION_PHASE_NONE;
+                    env->v7m.exception_phase_fault = 0;
                     env->exception_index = EXCP_UDEF;
                     cpu_loop_exit(env);
                 }
@@ -2034,10 +2086,53 @@ static void do_interrupt_v7m(CPUState *env)
         stack_status |= v7m_push(env, env->regs[0]);
     }
 
-    stack_status |= v7m_prepare_exception_taken(env, &lr, secure_target, exception_return_tailchain);
+    int stacking_fault = env->v7m.exception_phase_fault;
+    tlib_assert(!stack_status || stacking_fault != 0);
+    env->v7m.exception_phase_fault = 0;
+    bool ignore_followup_stacking_faults = false;
+    bool lockup_after_exception_taken = false;
+    bool exception_taken_tailchain = exception_return_tailchain;
+
+    if(stacking_fault != 0) {
+        /* PushStack() precedes ExceptionTaken(). Resolve its derived fault
+         * first, so Additional state is prepared for the exception that
+         * DerivedLateArrival() actually selects, not the original
+         * exception. Any later nonterminal stacking fault is ignored by the
+         * IgnoreFaults_STACK/ALL mode used for forward progress. */
+        V7MSynchronousFaultResult stacking_fault_result =
+            v7m_resolve_stacking_fault(env, stacking_fault, acknowledged_exception, &active_exception, &secure_target);
+        ignore_followup_stacking_faults = true;
+        exception_taken_tailchain = false;
+        if(stacking_fault_result == V7M_SYNCHRONOUS_FAULT_LOCKUP) {
+            /* Rules RVKTX and RGJJG: enter the original exception with
+             * faults ignored before entering Lockup at its priority. */
+            lockup_after_exception_taken = true;
+        }
+    }
+
+    int exception_taken_stack_status = v7m_prepare_exception_taken(env, &lr, secure_target, exception_taken_tailchain);
+    int exception_taken_stacking_fault = env->v7m.exception_phase_fault;
+    tlib_assert(!exception_taken_stack_status || exception_taken_stacking_fault != 0);
+    env->v7m.exception_phase_fault = 0;
+
+    if(exception_taken_stacking_fault != 0 && !ignore_followup_stacking_faults) {
+        /* A PushCalleeStack() failure occurs within ExceptionTaken(), so
+         * DerivedLateArrival() re-enters ExceptionTaken() as a tail-chain
+         * using the LR value already finalized for the original exception. */
+        V7MSynchronousFaultResult stacking_fault_result = v7m_resolve_stacking_fault(
+            env, exception_taken_stacking_fault, acknowledged_exception, &active_exception, &secure_target);
+        if(stacking_fault_result == V7M_SYNCHRONOUS_FAULT_LOCKUP) {
+            lockup_after_exception_taken = true;
+        }
+
+        v7m_prepare_exception_taken(env, &lr, secure_target, true);
+        env->v7m.exception_phase_fault = 0;
+    }
+
+    env->v7m.exception_phase = V7M_EXCEPTION_PHASE_NONE;
     if(env->v7m.has_trustzone) {
         tlib_printf(LOG_LEVEL_NOISY, "Loading to LR, while entering exception with TrustZone, value 0x%" PRIx32, lr);
-        switch_v7m_security_state(env, lr & ARM_EXC_RETURN_ES_MASK);
+        switch_v7m_security_state(env, secure_target);
     }
     switch_v7m_sp(env, false);
     v7m_clear_active_fp_state_on_exception_entry(env);
@@ -2047,13 +2142,46 @@ static void do_interrupt_v7m(CPUState *env)
     find_pending_irq_if_primask_unset(env);
 
     env->regs[14] = lr;
-    addr = ldl_phys(env->v7m.vecbase[env->secure] + env->v7m.exception * 4);
-    env->regs[15] = addr & 0xfffffffe;
-    env->thumb = addr & 1;
-    if(stack_status) {
-        do_v7m_exception_exit(env);
-        env->exception_index = EXCP_DATA_ABORT;
-        do_interrupt_v7m(env);
+    if(lockup_after_exception_taken) {
+        v7m_enter_lockup(env, true);
+        arm_announce_stack_change();
+        return;
+    }
+
+    while(true) {
+        env->v7m.exception_phase = V7M_EXCEPTION_PHASE_VECTOR_READ;
+        addr = ldl_phys(env->v7m.vecbase[env->secure] + env->v7m.exception * 4);
+        int vector_fault = env->v7m.exception_phase_fault;
+        env->v7m.exception_phase = V7M_EXCEPTION_PHASE_NONE;
+        env->v7m.exception_phase_fault = 0;
+
+        if(vector_fault == 0) {
+            env->regs[15] = addr & 0xfffffffe;
+            env->thumb = addr & 1;
+            break;
+        }
+
+        /* Rule RCTKP and DerivedLateArrival(): a vector bus error is a
+         * terminal VECTTBL HardFault. With the Security Extension, rule
+         * RZVWS makes that HardFault Secure regardless of the original
+         * exception target. */
+        V7MSynchronousFaultResult vector_fault_result =
+            tlib_nvic_set_pending_vector_fault(env->v7m.has_trustzone ? true : secure_target, active_exception);
+        if(vector_fault_result == V7M_SYNCHRONOUS_FAULT_LOCKUP) {
+            v7m_enter_lockup(env, true);
+            break;
+        }
+
+        tlib_assert(vector_fault_result == V7M_SYNCHRONOUS_FAULT_REPLACED);
+        v7m_acknowledge_replacement_exception(env, &active_exception, &secure_target);
+        if(env->v7m.has_trustzone) {
+            v7m_prepare_exception_taken(env, &lr, secure_target, true);
+            env->v7m.exception_phase_fault = 0;
+            switch_v7m_security_state(env, secure_target);
+        }
+        switch_v7m_sp(env, false);
+        v7m_clear_active_fp_state_on_exception_entry(env);
+        env->regs[14] = lr;
     }
 
     arm_announce_stack_change();
