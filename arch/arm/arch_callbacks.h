@@ -7,6 +7,7 @@ typedef enum {
     V7M_SYNCHRONOUS_FAULT_PENDING = 0,
     V7M_SYNCHRONOUS_FAULT_LOCKUP = 1,
     V7M_SYNCHRONOUS_FAULT_REPLACED = 2,
+    V7M_SYNCHRONOUS_FAULT_IGNORED = 3,
 } V7MSynchronousFaultResult;
 
 int32_t tlib_nvic_acknowledge_irq(void);
@@ -17,7 +18,7 @@ int32_t tlib_nvic_get_pending_masked_irq(void);
 void tlib_nvic_set_pending_irq(int32_t no);
 int32_t tlib_nvic_set_pending_synchronous_fault(int32_t no);
 int32_t tlib_nvic_set_pending_stacking_fault(int32_t no, int32_t original_exception);
-int32_t tlib_nvic_set_pending_vector_fault(int32_t secure, int32_t original_exception);
+int32_t tlib_nvic_set_pending_vector_fault(int32_t secure, int32_t original_exception, int32_t ignore_faults);
 uint32_t tlib_nvic_get_fpccr_ready_bits(int32_t original_exception, int32_t secure);
 int32_t tlib_nvic_set_pending_lazy_fp_fault(int32_t no, uint32_t fpccr);
 void tlib_on_lockup_state_change(int32_t locked_up);

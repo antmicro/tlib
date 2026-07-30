@@ -2142,14 +2142,12 @@ static void do_interrupt_v7m(CPUState *env)
     find_pending_irq_if_primask_unset(env);
 
     env->regs[14] = lr;
-    if(lockup_after_exception_taken) {
-        v7m_enter_lockup(env, true);
-        arm_announce_stack_change();
-        return;
-    }
 
     while(true) {
         env->v7m.exception_phase = V7M_EXCEPTION_PHASE_VECTOR_READ;
+        /* TODO: Vector[] uses MemA_with_priv_security(AccType_VECTABLE), so
+         * this access should eventually pass through SAU/IDAU validation as
+         * well. */
         addr = ldl_phys(env->v7m.vecbase[env->secure] + env->v7m.exception * 4);
         int vector_fault = env->v7m.exception_phase_fault;
         env->v7m.exception_phase = V7M_EXCEPTION_PHASE_NONE;
@@ -2158,15 +2156,26 @@ static void do_interrupt_v7m(CPUState *env)
         if(vector_fault == 0) {
             env->regs[15] = addr & 0xfffffffe;
             env->thumb = addr & 1;
+            if(lockup_after_exception_taken) {
+                v7m_enter_lockup(env, true);
+            }
             break;
         }
 
         /* Rule RCTKP and DerivedLateArrival(): a vector bus error is a
-         * terminal VECTTBL HardFault. With the Security Extension, rule
-         * RZVWS makes that HardFault Secure regardless of the original
-         * exception target. */
+         * terminal VECTTBL HardFault. Rule RDXYK targets it to the Security
+         * state of the exception whose vector was read. */
+        bool vector_fault_targets_secure = secure_target;
         V7MSynchronousFaultResult vector_fault_result =
-            tlib_nvic_set_pending_vector_fault(env->v7m.has_trustzone ? true : secure_target, active_exception);
+            tlib_nvic_set_pending_vector_fault(vector_fault_targets_secure, active_exception, lockup_after_exception_taken);
+        if(lockup_after_exception_taken) {
+            /* DerivedLateArrival() calls ExceptionTaken(IgnoreFaults_ALL)
+             * before Lockup, so the ignored vector error still records
+             * HFSR.VECTTBL without creating another derived exception. */
+            tlib_assert(vector_fault_result == V7M_SYNCHRONOUS_FAULT_IGNORED);
+            v7m_enter_lockup(env, true);
+            break;
+        }
         if(vector_fault_result == V7M_SYNCHRONOUS_FAULT_LOCKUP) {
             v7m_enter_lockup(env, true);
             break;

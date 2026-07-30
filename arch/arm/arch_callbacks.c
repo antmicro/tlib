@@ -35,7 +35,8 @@ DEFAULT_INT_HANDLER1(int32_t tlib_nvic_set_pending_synchronous_fault, int32_t nu
 
 DEFAULT_INT_HANDLER2(int32_t tlib_nvic_set_pending_stacking_fault, int32_t number, int32_t original_exception)
 
-DEFAULT_INT_HANDLER2(int32_t tlib_nvic_set_pending_vector_fault, int32_t secure, int32_t original_exception)
+DEFAULT_INT_HANDLER3(int32_t tlib_nvic_set_pending_vector_fault, int32_t secure, int32_t original_exception,
+                     int32_t ignore_faults)
 
 DEFAULT_INT_HANDLER2(uint32_t tlib_nvic_get_fpccr_ready_bits, int32_t original_exception, int32_t secure)
 
