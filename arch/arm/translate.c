@@ -16674,7 +16674,7 @@ int process_interrupt(int interrupt_request, CPUState *env)
     //  fix from https://bugs.launchpad.net/qemu/+bug/942659
     if((interrupt_request & CPU_INTERRUPT_HARD) &&
 #ifdef TARGET_PROTO_ARM_M
-       (env->regs[15] < ARM_M_FNC_RETURN_MIN) && !(env->v7m.primask[env->secure] & PRIMASK_EN))
+       (env->regs[15] < ARM_M_FNC_RETURN_MIN))
 #else
        !(env->uncached_cpsr & CPSR_I))
 #endif

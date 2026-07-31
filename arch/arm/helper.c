@@ -762,7 +762,7 @@ void cpsr_write(CPUState *env, uint32_t val, uint32_t mask)
     mask &= ~CACHED_CPSR_BITS;
     env->uncached_cpsr = (env->uncached_cpsr & ~mask) | (val & mask);
 
-    find_pending_irq_if_primask_unset(env);
+    refresh_pending_irq();
 }
 
 /* Sign/zero extend */
@@ -2139,7 +2139,7 @@ static void do_interrupt_v7m(CPUState *env)
 
     env->uncached_cpsr &= ~CPSR_IT;
 
-    find_pending_irq_if_primask_unset(env);
+    refresh_pending_irq();
 
     env->regs[14] = lr;
 
@@ -3837,8 +3837,8 @@ void HELPER(v7m_msr)(CPUState *env, uint32_t reg, uint32_t val)
                 env->v7m.primask[is_secure] |= PRIMASK_EN;
             } else {
                 env->v7m.primask[is_secure] &= ~PRIMASK_EN;
-                tlib_nvic_find_pending_irq();
             }
+            tlib_nvic_find_pending_irq();
             break;
         case NON_SECURE_REG(17):
         case 17: /* BASEPRI */
@@ -3864,6 +3864,7 @@ void HELPER(v7m_msr)(CPUState *env, uint32_t reg, uint32_t val)
                 return;
             }
             env->v7m.faultmask[is_secure] = val & 1;
+            tlib_nvic_find_pending_irq();
             break;
         case NON_SECURE_REG(20):
         case 20: /* CONTROL */

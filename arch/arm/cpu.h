@@ -1115,12 +1115,13 @@ static inline bool automatic_sleep_after_interrupt(CPUState *env)
 }
 #endif
 
-static inline void find_pending_irq_if_primask_unset(CPUState *env)
+static inline void refresh_pending_irq(void)
 {
 #ifdef TARGET_PROTO_ARM_M
-    if(!(env->v7m.primask[env->secure] & PRIMASK_EN)) {
-        tlib_nvic_find_pending_irq();
-    }
+    /* The NVIC owns the Armv8-M execution-priority calculation, including
+     * both banks of PRIMASK, BASEPRI, and FAULTMASK. Always let it refresh
+     * the external IRQ line after architectural state changes. */
+    tlib_nvic_find_pending_irq();
 #endif
 }
 

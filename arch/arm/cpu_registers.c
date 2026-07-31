@@ -185,13 +185,18 @@ void tlib_set_register_value_32_with_security(int reg_number, uint32_t value, bo
 #ifdef TARGET_PROTO_ARM_M
     else if(reg_number == FPCCR_32) {
         return fpccr_write(env, value, is_secure);
+    } else if(reg_number == BasePri_32) {
+        cpu->v7m.basepri[is_secure] = value & 0xff;
+        tlib_nvic_write_basepri(value & 0xff, is_secure);
+        return;
     } else if(reg_number == PRIMASK_32) {
-        cpu->v7m.primask[is_secure] &= !PRIMASK_EN;
         //  PRIMASK: b0: IRQ mask enabled/disabled, b1-b31: reserved.
-        if(value == 1) {
-            cpu->v7m.primask[is_secure] |= PRIMASK_EN;
-            tlib_nvic_find_pending_irq();
-        }
+        cpu->v7m.primask[is_secure] = value & PRIMASK_EN;
+        tlib_nvic_find_pending_irq();
+        return;
+    } else if(reg_number == FAULTMASK_32) {
+        cpu->v7m.faultmask[is_secure] = value & 1;
+        tlib_nvic_find_pending_irq();
         return;
     } else if(reg_number == FPSCR_32) {
         warn_about_fp_context("FPSCR");
