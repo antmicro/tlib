@@ -21,7 +21,7 @@
 #include "arch_callbacks.h"
 
 #ifdef TARGET_PROTO_ARM_M
-DEFAULT_VOID_HANDLER1(void tlib_nvic_complete_irq, int32_t number)
+DEFAULT_INT_HANDLER1(int32_t tlib_nvic_complete_irq, int32_t number)
 
 DEFAULT_VOID_HANDLER2(void tlib_nvic_write_basepri, int32_t number, uint32_t secure)
 

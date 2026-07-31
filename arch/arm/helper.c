@@ -1168,7 +1168,12 @@ void do_v7m_exception_exit(CPUState *env)
     if(env->v7m.exception != 0) {
         /* This ensures we properly complete banked secure exceptions */
         int completed_exception = v7m_exception_number_with_security(env, env->v7m.exception, exception_was_secure);
-        tlib_nvic_complete_irq(completed_exception);
+        if(!tlib_nvic_complete_irq(completed_exception) && validation_fault == 0) {
+            /* ValidateExceptionReturn(): returning from an exception which
+             * is not active in the state selected by ES raises INVPC. */
+            env->v7m.fault_status[env->secure] |= USAGE_FAULT_INVPC;
+            validation_fault = v7m_exception_number_with_security(env, ARMV7M_EXCP_USAGE, env->secure);
+        }
     }
 
     if(env->interrupt_end_callback_enabled) {
