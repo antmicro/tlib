@@ -3713,25 +3713,25 @@ uint32_t HELPER(v7m_mrs)(CPUState *env, uint32_t reg)
         case NON_SECURE_REG(8): /* MSP_NS */
             return env->v7m.other_ss_msp;
         case 9: /* PSP */
-            return get_psp(env);
+            return in_privileged_mode(env) ? get_psp(env) : 0;
         case NON_SECURE_REG(9): /* PSP_NS */
-            return env->v7m.other_ss_psp;
+            return in_privileged_mode(env) ? env->v7m.other_ss_psp : 0;
         case NON_SECURE_REG(10):
         case 10: /* MSPLIM - armv8-m specific */
-            return env->v7m.msplim[is_secure];
+            return in_privileged_mode(env) ? env->v7m.msplim[is_secure] : 0;
         case NON_SECURE_REG(11):
         case 11: /* PSPLIM - armv8-m specific */
-            return env->v7m.psplim[is_secure];
+            return in_privileged_mode(env) ? env->v7m.psplim[is_secure] : 0;
         case NON_SECURE_REG(16):
         case 16: /* PRIMASK */
-            return (env->v7m.primask[is_secure] & 1) != 0;
+            return in_privileged_mode(env) ? ((env->v7m.primask[is_secure] & 1) != 0) : 0;
         case NON_SECURE_REG(17):
         case 17: /* BASEPRI */
         case 18: /* BASEPRI_MAX */
-            return env->v7m.basepri[is_secure];
+            return in_privileged_mode(env) ? env->v7m.basepri[is_secure] : 0;
         case NON_SECURE_REG(19):
         case 19: /* FAULTMASK */
-            return env->v7m.faultmask[is_secure];
+            return in_privileged_mode(env) ? env->v7m.faultmask[is_secure] : 0;
         case NON_SECURE_REG(20):
         case 20: /* CONTROL */
             return env->v7m.control[is_secure] | (env->v7m.control[M_REG_COMMON] & ARM_CONTROL_FPCA_MASK) |
