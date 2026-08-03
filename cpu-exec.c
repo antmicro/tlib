@@ -451,6 +451,14 @@ int cpu_exec(CPUState *env)
                 }
 
                 tb = tb_find_fast(env);
+                if(unlikely(env->exception_index != -1)) {
+                    /* A bus error while reading instructions can raise a
+                     * synchronous exception during translation. Do not execute
+                     * or cache the block generated from the bus read's
+                     * placeholder return value. */
+                    tb_phys_invalidate(tb, -1);
+                    cpu_loop_exit_without_hook(env);
+                }
                 /* Note: we do it here to avoid a gcc bug on Mac OS X when
                    doing it in tb_find_slow */
                 if(tb_invalidated_flag) {
