@@ -107,6 +107,10 @@ enum {
     OPC_RISC_BINV = OPC_RISC_ARITH | (0x1 << 12) | (0x34 << 25),
     OPC_RISC_BEXT = OPC_RISC_ARITH | (0x5 << 12) | (0x24 << 25),
 
+    /* Zicond: */
+    OPC_RISC_CZERO_EQZ = OPC_RISC_ARITH | (0x5 << 12) | (0x07 << 25),
+    OPC_RISC_CZERO_NEZ = OPC_RISC_ARITH | (0x7 << 12) | (0x07 << 25),
+
     /* Zbkb: */
     OPC_RISC_PACK = OPC_RISC_ARITH | (0x4 << 12) | (0x4 << 25),
     OPC_RISC_PACKH = OPC_RISC_ARITH | (0x7 << 12) | (0x4 << 25),

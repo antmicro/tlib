@@ -202,6 +202,9 @@ static int ensure_additional_extension(DisasContext *dc, enum riscv_additional_f
         case RISCV_FEATURE_ZCMT:
             encoding = "cmt";
             break;
+        case RISCV_FEATURE_ZICOND:
+            encoding = "icond";
+            break;
         default:
             tlib_printf(LOG_LEVEL_ERROR, "Unexpected additional extension encoding: %d", ext);
             break;
@@ -1176,6 +1179,24 @@ static void gen_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
 #elif defined(TARGET_RISCV64)
             tcg_gen_umin_i64(source1, source1, source2);
 #endif
+            break;
+        case OPC_RISC_CZERO_EQZ:
+            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZICOND)) {
+                return;
+            }
+            zeroreg = tcg_const_tl(0);
+            /* rd = (rs2 == 0) ? 0 : rs1 */
+            tcg_gen_movcond_tl(TCG_COND_EQ, source1, source2, zeroreg, zeroreg, source1);
+            tcg_temp_free(zeroreg);
+            break;
+        case OPC_RISC_CZERO_NEZ:
+            if(!ensure_additional_extension(dc, RISCV_FEATURE_ZICOND)) {
+                return;
+            }
+            zeroreg = tcg_const_tl(0);
+            /* rd = (rs2 != 0) ? 0 : rs1 */
+            tcg_gen_movcond_tl(TCG_COND_NE, source1, source2, zeroreg, zeroreg, source1);
+            tcg_temp_free(zeroreg);
             break;
         case OPC_RISC_PACK:
 #if defined(TARGET_RISCV32)
