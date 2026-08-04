@@ -1408,12 +1408,12 @@ void do_v7m_secure_return(CPUState *env)
     switch_v7m_security_state(env, true);
     /* Only Thumb mode is supported for this architecture */
     env->thumb = true;
+    env->regs[15] = v7m_pop(env) & ~1;
 
     partialRETPSR = v7m_pop(env);
     env->v7m.control[M_REG_COMMON] |=
         deposit32(env->v7m.control[M_REG_COMMON], ARM_CONTROL_SFPA, 1, partialRETPSR & RETPSR_SFPA ? 1 : 0);
     env->v7m.exception = partialRETPSR & ~RETPSR_SFPA;
-    env->regs[15] = v7m_pop(env) & ~1;
 
     tlib_printf(LOG_LEVEL_NOISY, "Secure return to 0x%08" PRIx32 ", xpsr: 0x%08" PRIx32, env->regs[15], xpsr_read(env));
 }
@@ -4639,7 +4639,6 @@ void HELPER(v8m_blxns)(CPUState *env, uint32_t addr, uint32_t link)
     /* Only switch to Non-Secure if bit[0] of target addr is 0 */
     if((addr & 1) == 0) {
         if(link) {
-            v7m_push(env, env->regs[15] | 1);
             /* According to docs "some processor state information" is pushed here
              * the ARM pseudocode specifies exactly:
              * """
@@ -4651,6 +4650,9 @@ void HELPER(v8m_blxns)(CPUState *env, uint32_t addr, uint32_t link)
             uint32_t partialRETPSR = env->v7m.exception;
             partialRETPSR |= extract32(env->v7m.control[M_REG_COMMON], ARM_CONTROL_SFPA, 1) > 0 ? RETPSR_SFPA : 0;
             v7m_push(env, partialRETPSR);
+            /* Push the return address last so it is at offset 0 of the
+             * function return stack frame, below RETPSR at offset 4. */
+            v7m_push(env, env->regs[15] | 1);
         }
 
         env->v7m.control[M_REG_COMMON] &= ~ARM_CONTROL_SFPA_MASK;
