@@ -10829,8 +10829,6 @@ static int trans_vlstm_vlldm(DisasContext *s, arg_vlstm_vlldm *a)
         return TRANS_STATUS_SUCCESS;
     }
 
-    /* Sync PC to restore instruction count if an exception is raised at runtime in the helper */
-    gen_sync_pc(s);
     TCGv_i32 rn = load_reg(s, a->rn);
     if(a->is_vlldm) {
         gen_helper_v8m_vlldm(cpu_env, rn);

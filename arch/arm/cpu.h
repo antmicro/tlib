@@ -584,6 +584,17 @@ void vfp_trigger_exception();
 bool need_fp_lazy_state_preservation(CPUState *env);
 bool need_fp_context(CPUState *env);
 
+enum arm_m_memory_access_type {
+    ARM_M_AT_NORMAL,
+    ARM_M_AT_MVE,
+    ARM_M_AT_ORDERED,
+    ARM_M_AT_STACK,
+    ARM_M_AT_LAZYFP,
+    ARM_M_AT_IFETCH,
+    ARM_M_AT_DBG,
+    ARM_M_AT_VECTABLE,
+};
+
 //  More secure options intentionally have greater numbers so take care when modifying this enum.
 //  Make sure any security attribution comparisons, e.g. in the functions below, are still correct.
 enum security_attribution {
