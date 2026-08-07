@@ -3457,7 +3457,6 @@ static inline bool pmsav8_check_security_attribution(CPUState *env, uint32_t add
     }
 
     if(fault_status != 0 && !suppress_faults) {
-        fault_status |= SECURE_FAULT_SFARVALID;
         tlib_printf(LOG_LEVEL_WARNING,
                     "[PC=0x%" PRIx32 "] SecureFault while accessing address in %s state: 0x%" PRIx32
                     ", access type: %s, fault status: 0x%" PRIx32,
@@ -3578,7 +3577,6 @@ inline int get_phys_addr(CPUState *env, uint32_t address, bool is_secure, int ac
                             "] SecureFault (INVEP): Non-secure code attempted to enter Secure state at address 0x%" PRIx32
                             " which does not contain an SG instruction",
                             env->regs[15], address);
-                env->v7m.secure_fault_address = address;
                 env->v7m.secure_fault_status |= SECURE_FAULT_INVEP;
                 env->exception_index = EXCP_SECURE;
             }
@@ -4945,50 +4943,54 @@ void HELPER(v8m_blxns)(CPUState *env, uint32_t addr, uint32_t link)
 
 void HELPER(v8m_sg)(CPUState *env)
 {
-    /* Using PC is fine, since we just synced it in "translate"
-     * but we need to subtract, since we point at the next instruction */
-    const uint32_t sg_pc = env->regs[15] - 2;
-    if(env->secure) {
-        tlib_printf(LOG_LEVEL_WARNING,
-                    "SG instruction at address: 0x%" PRIx32 " is executed in Secure state, and will be treated as NOP", sg_pc);
-        return;
-    }
-
+    /* Because we synced PC before executing this helper we need to substract size of this instruction (which is 4 bytes) to get
+     * its address */
+    uint32_t sg_pc = env->regs[15] - 4;
     bool idau_valid, sau_valid;
     int idau_region, sau_region;
     enum security_attribution attribution;
     pmsav8_get_security_attribution(env, sg_pc, env->secure, ACCESS_INST_FETCH, /* access_width */ 1, &idau_valid, &idau_region,
                                     &sau_valid, &sau_region, &attribution, /* applies_to_whole_page: */ NULL);
 
-    if(attribution != SA_SECURE_NSC) {
-        tlib_printf(LOG_LEVEL_WARNING,
-                    "SG instruction at address: 0x%" PRIx32 " is not in Non-secure Callable region, and will be treated as NOP",
-                    sg_pc);
+    if(attribution == SA_NONSECURE) {
+        tlib_printf(LOG_LEVEL_DEBUG,
+                    "SG instruction at address: 0x%" PRIx32 " is in Non-secure region, and will be treated as NOP", sg_pc);
         return;
     }
 
-    uint32_t *sp_secure;
-    if(is_using_process_sp(env, false, true)) {
-        sp_secure = &env->v7m.other_ss_psp;
-    } else {
-        sp_secure = &env->v7m.other_ss_msp;
+    env->condexec_bits = 0;
+
+    if(env->secure) {
+        tlib_printf(LOG_LEVEL_DEBUG,
+                    "SG instruction at address: 0x%" PRIx32 " is executed in Secure state, and will be treated as NOP", sg_pc);
+        return;
     }
 
-    /* We're only checking if the read from this address is valid */
-    uint32_t phys_ptr = 0;
-    target_ulong page_size = 0;
-    int prot = 0;
-    if(get_phys_addr(env, *sp_secure, true, ACCESS_DATA_LOAD, !in_privileged_mode_with_security(env, true), &phys_ptr, &prot,
-                     &page_size, false) == TRANSLATE_FAIL) {
-        cpu_loop_exit(env);
-    }
+    /* Execute stack check if we're in thread mode */
+    if(arm_feature(env, ARM_FEATURE_V8_1M) && !in_handler_mode(env)) {
+        uint32_t *sp_secure;
+        if(is_using_process_sp(env, false, true)) {
+            sp_secure = &env->v7m.other_ss_psp;
+        } else {
+            sp_secure = &env->v7m.other_ss_msp;
+        }
 
-    if(env->v7m.ccr[M_REG_COMMON] & FIELD_MASK(V7M_CCR, TRD)) {
-        uint32_t sp_data = ldl_phys(phys_ptr);
-        if((sp_data >> 1) == (INTEGRITY_SIGN >> 1) || sp_secure == &env->v7m.other_ss_msp) {
-            env->v7m.secure_fault_status |= SECURE_FAULT_INVEP;
-            env->exception_index = EXCP_SECURE;
-            cpu_loop_exit(env);
+        /* We're only checking if the read from this address is valid */
+        uint32_t phys_ptr = 0;
+        target_ulong page_size = 0;
+        int prot = 0;
+        if(get_phys_addr(env, *sp_secure, true, ACCESS_DATA_LOAD, !in_privileged_mode_with_security(env, true), &phys_ptr, &prot,
+                         &page_size, false) == TRANSLATE_FAIL) {
+            cpu_loop_exit_restore(env, (uintptr_t)GETPC(), true);
+        }
+
+        if(env->v7m.ccr[M_REG_COMMON] & FIELD_MASK(V7M_CCR, TRD)) {
+            uint32_t sp_data = ldl_phys(phys_ptr);
+            if((sp_data >> 1) == (INTEGRITY_SIGN >> 1) || sp_secure == &env->v7m.other_ss_msp) {
+                env->v7m.secure_fault_status |= SECURE_FAULT_INVEP;
+                env->exception_index = EXCP_SECURE;
+                cpu_loop_exit_restore(env, (uintptr_t)GETPC(), true);
+            }
         }
     }
 
