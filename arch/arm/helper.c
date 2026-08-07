@@ -1285,7 +1285,6 @@ void do_v7m_exception_exit(CPUState *env)
                  * handler which sets IPSR from EXC_RETURN.Mode and clears
                  * ITSTATE on lockup. */
                 env->v7m.secure_fault_status |= SECURE_FAULT_INVIS;
-                env->v7m.secure_fault_address = env->regs[15];
                 env->v7m.exception_phase_fault = ARMV7M_EXCP_SECURE;
             }
             /* Reserved */
@@ -3451,7 +3450,7 @@ static inline bool pmsav8_check_security_attribution(CPUState *env, uint32_t add
 
     if(fault_status == 0 && attribution_is_secure(*attribution) && !is_secure) {
         if(access_type != ACCESS_INST_FETCH) {
-            fault_status = SECURE_FAULT_AUVIOL;
+            fault_status |= SECURE_FAULT_SFARVALID | SECURE_FAULT_AUVIOL;
         } else {
             *allowed_permissions = PAGE_EXEC;
         }
@@ -3463,8 +3462,9 @@ static inline bool pmsav8_check_security_attribution(CPUState *env, uint32_t add
                     "[PC=0x%" PRIx32 "] SecureFault while accessing address in %s state: 0x%" PRIx32
                     ", access type: %s, fault status: 0x%" PRIx32,
                     env->regs[15], is_secure ? "secure" : "non-secure", address, ACCESS_TYPE_STRING(access_type), fault_status);
-
-        env->v7m.secure_fault_address = address;
+        if(access_type != ACCESS_INST_FETCH) {
+            env->v7m.secure_fault_address = address;
+        }
         env->v7m.secure_fault_status |= fault_status;
         env->exception_index = EXCP_SECURE;
     }
