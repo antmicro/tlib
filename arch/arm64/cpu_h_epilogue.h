@@ -119,13 +119,15 @@ enum PMSAv8_FAULT_TYPE {
 #define FLOAT_TO_INT_FUNC(from_type, to_type)                                                               \
     static inline to_type from_type##_to_##to_type##_scalbn(from_type a, int rmode, int scale STATUS_PARAM) \
     {                                                                                                       \
-        return from_type##_to_##to_type(a STATUS_VAR);                                                      \
+        from_type scaled = from_type##_scalbn(a, scale STATUS_VAR);                                         \
+        return from_type##_to_##to_type(scaled STATUS_VAR);                                                 \
     }
 
 #define INT_TO_FLOAT_FUNC(from_type, to_type)                                                    \
     static inline to_type from_type##_to_##to_type##_scalbn(from_type a, int scale STATUS_PARAM) \
     {                                                                                            \
-        return from_type##_to_##to_type(a STATUS_VAR);                                           \
+        to_type conv = from_type##_to_##to_type(a STATUS_VAR);                                   \
+        return to_type##_scalbn(conv, scale STATUS_VAR);                                         \
     }
 
 FLOAT_TO_INT_FUNC(float64, int64)
