@@ -3335,9 +3335,14 @@ uint64_t cpu_get_state_for_memory_transaction(CPUState *env, target_ulong addr, 
     union {
         uint64_t value;
         struct {
-            /* Must be in sync with CortexM.StateBits */
+            /* Must be in sync with CortexM.StateBits.
+               Semihosting bit is not set by tlib.
+               It is automatically added by Renode when
+               semihosting access is performed on behalf of the CPU.
+             */
 #if HOST_WORDS_BIGENDIAN
             uint64_t : 61;
+            /*  3 */ bool semihosting : 1;
             /*  2 */ bool bus_secure : 1;
             /*  1 */ bool secure : 1;
             /*  0 */ bool privileged : 1;
@@ -3345,6 +3350,7 @@ uint64_t cpu_get_state_for_memory_transaction(CPUState *env, target_ulong addr, 
             /*  0 */ bool privileged : 1;
             /*  1 */ bool secure : 1;
             /*  2 */ bool bus_secure : 1;
+            /*  3 */ bool semihosting : 1;
             uint64_t : 61;
 #endif
         } flags;
