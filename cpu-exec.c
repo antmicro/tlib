@@ -425,9 +425,13 @@ int cpu_exec(CPUState *env)
                     if(automatic_sleep_after_interrupt(env)) {
                         env->exit_request = true;
                     }
+                    /* Re-run interrupt arbitration after restoring the
+                     * preempted execution state. */
+                    continue;
                 } else if(env->regs[15] >= ARM_M_FNC_RETURN_MIN) {
                     do_v7m_secure_return(env);
                     next_tb = 0;
+                    continue;
                 }
 #endif
                 if(unlikely(env->mmu_fault)) {
