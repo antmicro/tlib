@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -3327,34 +3328,59 @@ static inline int pmsav8_check_access(CPUState *env, uint32_t address, bool secu
     return pmsav8_check_access_with_region(env, address, secure, access_type, is_user, prot, page_size, &region);
 }
 
+/* Must be in sync with CortexM.StateBits.
+Semihosting bit is not set by tlib.
+It is automatically added by Renode when
+semihosting access is performed on behalf of the CPU.
+*/
+union cpu_transaction_state {
+    uint64_t value;
+    struct {
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+        unsigned char padding[7];
+        unsigned char : 4;
+        /*  3 */ bool semihosting : 1;
+        /*  2 */ bool bus_secure : 1;
+        /*  1 */ bool secure : 1;
+        /*  0 */ bool privileged : 1;
+#else
+        /*  0 */ bool privileged : 1;
+        /*  1 */ bool secure : 1;
+        /*  2 */ bool bus_secure : 1;
+        /*  3 */ bool semihosting : 1;
+#endif
+    } flags;
+};
+
+//  Assert expected size of cpu_transaction_state structure.
+static_assert(sizeof(union cpu_transaction_state) == 8, "cpu_transaction_state should fit in uint64_t");
+
+//  Assert expected layout of cpu_transaction_state on the bit-level.
+#if defined(__GNUC__) && !defined(__clang__) && !defined(__INTEL_COMPILER) && !defined(__INTEL_LLVM_COMPILER)
+#define ATTR_FORCE_OPT __attribute__((optimize("O2")))
+#else
+#define ATTR_FORCE_OPT
+#endif
+
+extern void bad_bitfield_layout(void) __attribute__((error("unexpected bit-field layout")));
+
+static __attribute__((used)) ATTR_FORCE_OPT void check_bitfield_layout(void)
+{
+    union cpu_transaction_state u = { .value = 0 };
+
+    u.flags.bus_secure = true;
+
+    if(__builtin_constant_p(u.value) && u.value != 4) {
+        bad_bitfield_layout();
+    }
+}
+
 uint64_t cpu_get_state_for_memory_transaction(CPUState *env, target_ulong addr, int access_type)
 {
     bool idau_valid, sau_valid;
     int idau_region, sau_region;
     enum security_attribution attribution;
-    union {
-        uint64_t value;
-        struct {
-            /* Must be in sync with CortexM.StateBits.
-               Semihosting bit is not set by tlib.
-               It is automatically added by Renode when
-               semihosting access is performed on behalf of the CPU.
-             */
-#if HOST_WORDS_BIGENDIAN
-            uint64_t : 61;
-            /*  3 */ bool semihosting : 1;
-            /*  2 */ bool bus_secure : 1;
-            /*  1 */ bool secure : 1;
-            /*  0 */ bool privileged : 1;
-#else
-            /*  0 */ bool privileged : 1;
-            /*  1 */ bool secure : 1;
-            /*  2 */ bool bus_secure : 1;
-            /*  3 */ bool semihosting : 1;
-            uint64_t : 61;
-#endif
-        } flags;
-    } state = { .value = 0 };
+    union cpu_transaction_state state = { .value = 0 };
     pmsav8_get_security_attribution(env, addr, env->secure, access_type, /* access_width: */ 1, &idau_valid, &idau_region,
                                     &sau_valid, &sau_region, &attribution, /* applies_to_whole_page: */ NULL);
     state.flags.privileged = in_privileged_mode(env);
