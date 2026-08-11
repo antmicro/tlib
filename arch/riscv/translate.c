@@ -3662,7 +3662,10 @@ static void gen_fp_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs
             if(rm == 0x0) { /* FMV */
                 gen_helper_fmv_x_h(write_int_rd, cpu_env, cpu_fpr[rs1], rm_reg);
             } else if(rm == 0x1) {
-                gen_helper_fclass_h(write_int_rd, cpu_env, cpu_fpr[rs1]);
+                TCGv_i64 rs1_boxed = tcg_temp_local_new_i64();
+                gen_unbox_float(RISCV_HALF_PRECISION, env, rs1_boxed, cpu_fpr[rs1]);
+                gen_helper_fclass_h(write_int_rd, cpu_env, rs1_boxed);
+                tcg_temp_free_i64(rs1_boxed);
             } else {
                 kill_unknown(dc, RISCV_EXCP_ILLEGAL_INST);
             }
