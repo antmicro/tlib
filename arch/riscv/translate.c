@@ -6390,6 +6390,10 @@ static void decode_RV32_64C1(CPUState *env, DisasContext *dc)
                                 if(!ensure_additional_extension(dc, RISCV_FEATURE_ZCB)) {
                                     break;
                                 }
+                                /* C.MUL additionally requires M or Zmmul. */
+                                if(!ensure_extension(dc, RISCV_FEATURE_RVM)) {
+                                    break;
+                                }
                                 /* C.MUL -> mul rd', rd', rs2' */
                                 gen_arith(dc, OPC_RISC_MUL, rs1s, rs1s, rs2s);
                                 break;
@@ -6399,6 +6403,10 @@ static void decode_RV32_64C1(CPUState *env, DisasContext *dc)
                                 }
                                 /* C.ZEXT.B, C.SEXT.B, C.ZEXT.H, C.SEXT.H, C.ZEXT.W, C.NOT */
                                 uint8_t c_op = extract32(dc->opcode, 2, 3);
+                                if((c_op == 1 || c_op == 2 || c_op == 3) &&
+                                   !ensure_additional_extension(dc, RISCV_FEATURE_ZBB)) {
+                                    break;
+                                }
 
                                 switch(c_op) {
                                     case 0:
