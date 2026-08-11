@@ -4936,10 +4936,17 @@ void HELPER(v8m_blxns)(CPUState *env, uint32_t addr, uint32_t link)
              * RGVB: The IPSR is stacked in the partial RETPSR, and CONTROL.SFPA is stacked in bit [20] of the partial RETPSR. */
             uint32_t partialRETPSR = env->v7m.exception;
             partialRETPSR |= extract32(env->v7m.control[M_REG_COMMON], ARM_CONTROL_SFPA, 1) > 0 ? RETPSR_SFPA : 0;
-            v7m_push(env, partialRETPSR);
             /* Push the return address last so it is at offset 0 of the
              * function return stack frame, below RETPSR at offset 4. */
-            v7m_push(env, env->regs[15] | 1);
+            env->v7m.exception_phase = V7M_EXCEPTION_PHASE_STACKING;
+
+            if(v7m_store_helper(env, env->regs[13] - 4, partialRETPSR, ARM_M_AT_STACK, !in_privileged_mode(env), true) ||
+               v7m_store_helper(env, env->regs[13] - 8, env->regs[15] | 1, ARM_M_AT_STACK, !in_privileged_mode(env), true)) {
+                env->v7m.exception_phase = V7M_EXCEPTION_PHASE_NONE;
+                v7m_raise_synchronous_exception_and_exit(env, env->v7m.exception_phase_fault, GETPC());
+            }
+            env->v7m.exception_phase = V7M_EXCEPTION_PHASE_NONE;
+            env->regs[13] -= 8;
         }
 
         env->v7m.control[M_REG_COMMON] &= ~ARM_CONTROL_SFPA_MASK;
