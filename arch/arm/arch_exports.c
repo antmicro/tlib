@@ -273,10 +273,10 @@ EXC_INT_0(uint32_t, tlib_get_xpsr)
 
 void tlib_do_lazy_floating_point_state_preservation(bool createContext)
 {
+
+    fp_lsp_save_to_stack(env, NULL);
     if(createContext) {
-        helper_fp_lsp(env);
-    } else {
-        helper_fp_lsp_no_context(env);
+        fp_lsp_create_context(env);
     }
 }
 

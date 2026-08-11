@@ -794,7 +794,7 @@ int32_t HELPER(sdiv)(CPUState *env, int32_t num, int32_t den)
 #ifdef TARGET_PROTO_ARM_M
         if(env->v7m.ccr[env->secure] & FIELD_MASK(V7M_CCR, DIV_0_TRP)) {
             env->exception_index = EXCP_DIV_0;
-            cpu_loop_exit(env);
+            cpu_loop_exit_restore(env, (uintptr_t)GETPC(), true);
         }
 #endif
         return 0;
@@ -811,7 +811,7 @@ uint32_t HELPER(udiv)(CPUState *env, uint32_t num, uint32_t den)
 #ifdef TARGET_PROTO_ARM_M
         if(env->v7m.ccr[env->secure] & FIELD_MASK(V7M_CCR, DIV_0_TRP)) {
             env->exception_index = EXCP_DIV_0;
-            cpu_loop_exit(env);
+            cpu_loop_exit_restore(env, (uintptr_t)GETPC(), true);
         }
 #endif
         return 0;
@@ -1550,8 +1550,8 @@ static inline bool lsp_store_helper(CPUState *env, uint32_t *address, uint32_t v
     return success;
 }
 
-/* FPU Lazy State Preservation logic */
-void fp_lsp_save_to_stack(CPUState *env)
+/* FPU Lazy State Preservation logic. Set fault_pc to NULL when calling from outside of CPU thread */
+void fp_lsp_save_to_stack(CPUState *env, void *fault_pc)
 {
     const int regSize = sizeof(env->vfp.regs[0]);
     tlib_assert(regSize == 8);
@@ -1612,6 +1612,9 @@ void fp_lsp_save_to_stack(CPUState *env)
                  * makes a fault which cannot preempt enter Lockup, without
                  * setting HFSR.FORCED or changing pending/active state. */
                 v7m_enter_lockup(env, false);
+                if(fault_pc == NULL) {
+                    return;
+                }
                 cpu_loop_exit(env);
             }
             if(result == 1) {
@@ -1619,7 +1622,10 @@ void fp_lsp_save_to_stack(CPUState *env)
                  * LSPACT and the FP register contents, then terminate the
                  * instruction as required by PreserveFPState(). */
                 env->exception_index = EXCP_IRQ;
-                cpu_loop_exit(env);
+                if(fault_pc == NULL) {
+                    return;
+                }
+                cpu_loop_exit_restore(env, (uintptr_t)fault_pc, true);
             }
         }
 
@@ -1652,12 +1658,12 @@ void fp_lsp_create_context(CPUState *env)
 
 void HELPER(fp_lsp_no_context)(CPUState *env)
 {
-    fp_lsp_save_to_stack(env);
+    fp_lsp_save_to_stack(env, GETPC());
 }
 
 void HELPER(fp_lsp)(CPUState *env)
 {
-    fp_lsp_save_to_stack(env);
+    fp_lsp_save_to_stack(env, GETPC());
     fp_lsp_create_context(env);
 }
 
@@ -5057,7 +5063,7 @@ void HELPER(v8m_bx_update_pc)(CPUState *env, uint32_t pc)
             } else {
                 env->exception_index = EXCP_INVSTATE;
             }
-            cpu_loop_exit(env);
+            cpu_loop_exit_restore(env, (uintptr_t)GETPC(), true);
         }
         pc &= ~1;
     }

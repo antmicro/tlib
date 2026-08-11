@@ -1116,6 +1116,8 @@ static inline void cpu_pc_from_tb(CPUState *env, TranslationBlock *tb)
 #endif
 }
 
+void fp_lsp_save_to_stack(CPUState *env, void *fault_pc);
+void fp_lsp_create_context(CPUState *env);
 void do_v7m_exception_exit(CPUState *env);
 void do_v7m_secure_return(CPUState *env);
 void v7m_set_locked_up(CPUState *env, bool locked_up);
