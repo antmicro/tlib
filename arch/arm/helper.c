@@ -3465,6 +3465,15 @@ static inline bool pmsav8_check_security_attribution(CPUState *env, uint32_t add
 inline int get_phys_addr(CPUState *env, uint32_t address, bool is_secure, int access_type, bool is_user, uint32_t *phys_ptr,
                          int *prot, target_ulong *page_size, int no_page_fault)
 {
+#ifdef TARGET_PROTO_ARM_M
+    if(unlikely(access_type == ACCESS_INST_FETCH && !env->thumb && !no_page_fault)) {
+        /* Armv8-M ARM rule RSQLX: attempting to execute with EPSR.T clear
+         * generates an INVSTATE UsageFault before the memory access. */
+        env->exception_index = EXCP_INVSTATE;
+        return TRANSLATE_FAIL;
+    }
+#endif
+
     /* Fast Context Switch Extension.  */
     if(address < 0x02000000) {
         address += env->cp15.c13_fcse;

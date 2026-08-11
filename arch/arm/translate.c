@@ -16442,6 +16442,16 @@ int disas_insn(CPUState *env, DisasContext *dc)
     tcg_gen_insn_start(start_pc, pack_condexec(dc));
     uint64_t insn = 0;
 
+#ifdef TARGET_PROTO_ARM_M
+    if(unlikely(!dc->thumb)) {
+        /* Armv8-M ARM rule RSQLX: no instruction can execute with
+         * EPSR.T clear. */
+        gen_exception_insn(dc, 0, EXCP_INVSTATE);
+        LOCK_TB(dc->base.tb);
+        return 0;
+    }
+#endif
+
     if(unlikely(env->are_pre_opcode_execution_hooks_enabled || env->are_post_opcode_execution_hooks_enabled)) {
         if(dc->thumb) {
             insn = lduw_code(dc->base.pc);
