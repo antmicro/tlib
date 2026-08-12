@@ -80,18 +80,18 @@ void initialize_store_table(store_table_entry_t *store_table, uint8_t store_tabl
     tlib_assert(all_entries_unlocked);
 }
 
-/* Hashes `guest_address` and places the result in `hashed_address`. */
-static void gen_hash_address(CPUState *env, TCGv_hostptr hashed_address, TCGv_guestptr guest_address)
+/* Get the address to the table entry (`entry_address`) for the given `guest_address` */
+static void gen_get_table_entry(CPUState *env, TCGv_hostptr entry_address, TCGv_guestptr guest_address)
 {
-    tcg_gen_mov_tl(hashed_address, guest_address);
+    tcg_gen_mov_tl(entry_address, guest_address);
 
     //  Zero out upper bits of address, to make room for the address of the table.
     //  Zero out lower bits, both for alignment and to make room for the fine-grained lock.
-    tcg_gen_andi_i64(hashed_address, hashed_address, hst_guest_address_mask);
+    tcg_gen_andi_i64(entry_address, entry_address, hst_guest_address_mask);
 
     //  Replace the upper bits of address with start of table.
     uintptr_t store_table_address = (uintptr_t)env->store_table;
-    tcg_gen_ori_i64(hashed_address, hashed_address, store_table_address);
+    tcg_gen_ori_i64(entry_address, entry_address, store_table_address);
 }
 
 //  Abstract away what the actual core id comes from.
@@ -110,17 +110,17 @@ void gen_store_table_check(CPUState *env, TCGv result, TCGv_guestptr guest_addre
         return;
     }
 
-    TCGv_hostptr hashed_address = tcg_temp_new_hostptr();
-    gen_hash_address(env, hashed_address, guest_address);
+    TCGv_hostptr entry_address = tcg_temp_new_hostptr();
+    gen_get_table_entry(env, entry_address, guest_address);
 
     //  Load core id from store table, to see which core last accessed the address.
-    tcg_gen_ld32u_tl(result, hashed_address, offsetof(store_table_entry_t, last_accessed_by_core_id));
+    tcg_gen_ld32u_tl(result, entry_address, offsetof(store_table_entry_t, last_accessed_by_core_id));
 
     //  See if the current core is the one who last accessed the reserved address.
     //  returns 1 if condition succeeds, 0 otherwise.
     tcg_gen_setcondi_tl(TCG_COND_EQ, result, result, get_core_id(env));
 
-    tcg_temp_free_hostptr(hashed_address);
+    tcg_temp_free_hostptr(entry_address);
 }
 
 void gen_lock_not_owned_warning(TCGv_i64 holder_id, uint32_t current_core_id, TCGv_guestptr guest_address,
@@ -138,12 +138,12 @@ void gen_lock_not_owned_warning(TCGv_i64 holder_id, uint32_t current_core_id, TC
 void gen_ensure_entry_locked(CPUState *env, TCGv_guestptr guest_address, const char *function_name)
 {
 #ifdef DEBUG
-    TCGv_hostptr hashed_address = tcg_temp_local_new_hostptr();
-    gen_hash_address(env, hashed_address, guest_address);
+    TCGv_hostptr entry_address = tcg_temp_local_new_hostptr();
+    gen_get_table_entry(env, entry_address, guest_address);
 
     TCGv_i32 holder_id = tcg_temp_local_new_i32();
     //  Load lock from store table, to see which core holds it.
-    tcg_gen_ld32u_tl(holder_id, hashed_address, offsetof(store_table_entry_t, lock));
+    tcg_gen_ld32u_tl(holder_id, entry_address, offsetof(store_table_entry_t, lock));
 
     int done = gen_new_label();
     uint32_t current_core_id = get_core_id(env);
@@ -157,7 +157,7 @@ void gen_ensure_entry_locked(CPUState *env, TCGv_guestptr guest_address, const c
     gen_set_label(done);
 
     tcg_temp_free_i32(holder_id);
-    tcg_temp_free_hostptr(hashed_address);
+    tcg_temp_free_hostptr(entry_address);
 #endif
 }
 
@@ -174,19 +174,19 @@ void gen_store_table_set(CPUState *env, TCGv_guestptr guest_address)
     //  avoid deadlocks in managed callbacks; the reservation marker still has to
     //  be updated after the access so LR/SC observes the completed store.
 
-    TCGv_hostptr hashed_address = tcg_temp_local_new_hostptr();
-    gen_hash_address(env, hashed_address, guest_address);
+    TCGv_hostptr entry_address = tcg_temp_local_new_hostptr();
+    gen_get_table_entry(env, entry_address, guest_address);
 
     TCGv_i32 core_id = tcg_const_i32(get_core_id(env));
 
-    //  The hashed address now points to the table entry for the core id, so store it there.
+    //  The entry address now points to the table entry for the core id, so store it there.
     //  Note that the table entry update occurs atomically, with a single store.
-    tcg_gen_st32_tl(core_id, hashed_address, offsetof(store_table_entry_t, last_accessed_by_core_id));
+    tcg_gen_st32_tl(core_id, entry_address, offsetof(store_table_entry_t, last_accessed_by_core_id));
     //  Memory barrier to ensure that this store doesn't get reordered with a store
     //  that will release the lock.
     tcg_gen_mb(TCG_MO_ST_ST);
 
-    tcg_temp_free_hostptr(hashed_address);
+    tcg_temp_free_hostptr(entry_address);
     tcg_temp_free_i32(core_id);
 }
 
@@ -197,12 +197,12 @@ static void gen_store_table_lock_address(CPUState *env, TCGv_guestptr guest_addr
         return;
     }
 
-    TCGv_hostptr hashed_address = tcg_temp_local_new_hostptr();
-    gen_hash_address(env, hashed_address, guest_address);
+    TCGv_hostptr entry_address = tcg_temp_local_new_hostptr();
+    gen_get_table_entry(env, entry_address, guest_address);
 
     //  Add the offset of the lock field, since we want to access the lock and not the core id.
     TCGv_hostptr lock_address = tcg_temp_local_new_hostptr();
-    tcg_gen_addi_i64(lock_address, hashed_address, offsetof(store_table_entry_t, lock));
+    tcg_gen_addi_i64(lock_address, entry_address, offsetof(store_table_entry_t, lock));
 
     TCGv_i32 expected_lock = tcg_const_local_i32(HST_UNLOCKED);
 
@@ -255,7 +255,7 @@ static void gen_store_table_lock_address(CPUState *env, TCGv_guestptr guest_addr
     //  Update cpu's currently locked address.
     tcg_gen_st_tl(guest_address, cpu_env, locked_address_offset);
 
-    tcg_temp_free_hostptr(hashed_address);
+    tcg_temp_free_hostptr(entry_address);
     tcg_temp_free_hostptr(lock_address);
     tcg_temp_free_i32(expected_lock);
     tcg_temp_free_i32(new_lock);
@@ -274,12 +274,12 @@ static void gen_store_table_unlock_address(CPUState *env, TCGv_guestptr guest_ad
         return;
     }
 
-    TCGv_hostptr hashed_address = tcg_temp_new_hostptr();
-    gen_hash_address(env, hashed_address, guest_address);
+    TCGv_hostptr entry_address = tcg_temp_new_hostptr();
+    gen_get_table_entry(env, entry_address, guest_address);
 
     //  Add the offset of the lock field, since we want to access the lock and not the core id.
     TCGv_hostptr lock_address = tcg_temp_new_hostptr();
-    tcg_gen_addi_i64(lock_address, hashed_address, offsetof(store_table_entry_t, lock));
+    tcg_gen_addi_i64(lock_address, entry_address, offsetof(store_table_entry_t, lock));
 
     TCGv_i32 unlocked = tcg_const_i32(HST_UNLOCKED);
 
@@ -304,7 +304,7 @@ static void gen_store_table_unlock_address(CPUState *env, TCGv_guestptr guest_ad
     TCGv_guestptr null = tcg_const_tl(0);
     tcg_gen_st_tl(null, cpu_env, locked_address_offset);
 
-    tcg_temp_free_hostptr(hashed_address);
+    tcg_temp_free_hostptr(entry_address);
     tcg_temp_free_hostptr(lock_address);
     tcg_temp_free_i32(unlocked);
     tcg_temp_free_i32(current_core_id);
