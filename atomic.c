@@ -2,6 +2,7 @@
 
 #include "atomic.h"
 #include "cpu.h"
+#include "hash-table-store-test.h"
 #include "pthread.h"
 #include "tcg.h"
 
@@ -334,7 +335,7 @@ void unlock_dangling_locks(struct CPUState *env)
 
     //  For the "new" atomics.
     if(unlikely(env->locked_address != 0)) {
-        store_table_entry_t *entry = (store_table_entry_t *)address_hash(env, env->locked_address);
+        store_table_entry_t *entry = get_table_entry(env, env->locked_address);
         uint32_t coreId = get_core_id(env);
         env->locked_address = 0;
         //  Unlock, _if it was locked by this core_, otherwise leave untouched.
@@ -342,7 +343,7 @@ void unlock_dangling_locks(struct CPUState *env)
         atomic_compare_exchange_strong((_Atomic uint32_t *)&entry->lock, &coreId, HST_UNLOCKED);
     }
     if(unlikely(env->locked_address_high != 0)) {
-        store_table_entry_t *entry_high = (store_table_entry_t *)address_hash(env, env->locked_address_high);
+        store_table_entry_t *entry_high = get_table_entry(env, env->locked_address_high);
         uint32_t coreId = get_core_id(env);
         env->locked_address_high = 0;
         atomic_compare_exchange_strong((_Atomic uint32_t *)&entry_high->lock, &coreId, HST_UNLOCKED);

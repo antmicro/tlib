@@ -20,6 +20,7 @@
 #include <stdatomic.h>
 
 #include "cpu.h"
+#include "infrastructure.h"
 #include "tcg.h"
 #include "atomic.h"
 #include "tlib-alloc.h"

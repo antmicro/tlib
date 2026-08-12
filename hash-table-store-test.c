@@ -11,15 +11,18 @@
 static uint64_t hst_guest_address_mask = 0;
 static uint64_t hst_table_entries_count = 0;
 
+static_assert((sizeof(store_table_entry_t) & (sizeof(store_table_entry_t) - 1)) == 0, "HST entry size has to be a power of 2");
+
 static void calculate_hst_mask(const uint8_t store_table_bits)
 {
-    //  _bits means how many bits are used in the addresses, not how many bits
+    //  *_bits means how many bits are used in the addresses, not how many bits
     //  large the contents is. I.e. if an entry is 64 bits large it uses 3 bits.
     const uint64_t content_bits = sizeof(uintptr_t) * 8 - (uint64_t)store_table_bits;
 
     const uint64_t table_size_bytes = 1ULL << content_bits;
-    const uint64_t entry_size_bytes = sizeof(store_table_entry_t);
-    hst_table_entries_count = table_size_bytes / entry_size_bytes;
+
+    //  Table size must be a power of 2
+    tlib_assert((table_size_bytes & (table_size_bytes - 1)) == 0);
 
 #ifdef DEBUG
     uint64_t size_kib = table_size_bytes >> 10;
@@ -36,13 +39,17 @@ static void calculate_hst_mask(const uint8_t store_table_bits)
     }
 #endif
 
-    const uint64_t n_bits = (1ULL << store_table_bits) - 1;
-    const uint64_t table_mask = n_bits << content_bits;
-    const uint64_t interior_mask = ~table_mask;
+    //  `hst_guest_address_mask` will be ANDed with an arbitrary guest address,
+    //  and the outcome of that AND must be an offset to an entry in the store
+    //  table. `table_size_bytes` and `sizeof(store_table_entry_t)` are both
+    //  powers of 2, so simply subtracting 1 will result in a sequence of
+    //  `log2(n)` 1 bits
 
-    const uint64_t entry_mask = sizeof(store_table_entry_t) - 1;
-    const uint64_t alignment_mask = ~entry_mask;
-    hst_guest_address_mask = interior_mask & alignment_mask;
+    const uint64_t table_mask = table_size_bytes - 1;
+
+    const uint64_t entry_alignment_mask = ~(sizeof(store_table_entry_t) - 1);
+
+    hst_guest_address_mask = table_mask & entry_alignment_mask;
 }
 
 void initialize_store_table(store_table_entry_t *store_table, uint8_t store_table_bits, bool after_deserialization)
@@ -85,13 +92,21 @@ static void gen_get_table_entry(CPUState *env, TCGv_hostptr entry_address, TCGv_
 {
     tcg_gen_mov_tl(entry_address, guest_address);
 
-    //  Zero out upper bits of address, to make room for the address of the table.
-    //  Zero out lower bits, both for alignment and to make room for the fine-grained lock.
     tcg_gen_andi_i64(entry_address, entry_address, hst_guest_address_mask);
+    //  As explained above, `entry_address` is now an offset into an entry of the store table
 
-    //  Replace the upper bits of address with start of table.
+    //  The HST table allocation is perfectly aligned, so OR is equivalent to ADD,
+    //  since all the offset bits will be `0` on the table address
     uintptr_t store_table_address = (uintptr_t)env->store_table;
     tcg_gen_ori_i64(entry_address, entry_address, store_table_address);
+}
+
+store_table_entry_t *get_table_entry(CPUState *env, target_ulong guest_address)
+{
+    uintptr_t entry_address = guest_address;
+    entry_address &= hst_guest_address_mask;
+    entry_address |= (uintptr_t)env->store_table;
+    return (store_table_entry_t *)entry_address;
 }
 
 //  Abstract away what the actual core id comes from.
@@ -315,15 +330,6 @@ static void gen_store_table_unlock_address(CPUState *env, TCGv_guestptr guest_ad
 void gen_store_table_unlock(CPUState *env, TCGv_guestptr guest_address)
 {
     gen_store_table_unlock_address(env, guest_address, offsetof(CPUState, locked_address));
-}
-
-uintptr_t address_hash(CPUState *env, target_ulong guest_address)
-{
-    uintptr_t table_offset = (uintptr_t)env->store_table;
-    uintptr_t hashed_address = guest_address;
-    hashed_address &= hst_guest_address_mask;
-    hashed_address |= table_offset;
-    return hashed_address;
 }
 
 static void gen_store_table_lock_high(CPUState *env, TCGv_guestptr guest_address)

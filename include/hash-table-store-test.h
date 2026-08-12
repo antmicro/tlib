@@ -80,7 +80,7 @@ void gen_store_table_lock(CPUState *env, TCGv_guestptr guest_address);
 void gen_store_table_unlock(CPUState *env, TCGv_guestptr guest_address);
 
 /* Computes which hash table entry address corresponds to the given `guest_address`. */
-uintptr_t address_hash(CPUState *cpu_env, target_ulong guest_address);
+store_table_entry_t *get_table_entry(CPUState *cpu_env, target_ulong guest_address);
 
 /* Generates code to lock a 128 bit region (two hash table entries).
  * The arguments must adhere to:
