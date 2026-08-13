@@ -26,7 +26,7 @@ static inline void ensure_locked_by_me(struct CPUState *env)
         return;
     }
 
-    if(env->atomic_memory_state->locking_cpu_id != env->atomic_id) {
+    if(env->atomic_memory_state->locking_cpu_id != env->atomic_id && env->atomic_memory_state->locking_cpu_id != NO_CPU_ID) {
         tlib_abortf("Tried to release global memory lock by the cpu that does not own it!; locking CPU: %u, releasing CPU: %u",
                     env->atomic_memory_state->locking_cpu_id, env->atomic_id);
     }
