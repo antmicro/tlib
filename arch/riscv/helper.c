@@ -412,6 +412,10 @@ static void raise_mmu_exception(CPUState *env, target_ulong address, int access_
     } else {
         tlib_abortf("Unsupported mmu exception raised: %d", access_type);
     }
+#ifdef DEBUG
+    tlib_printf(LOG_LEVEL_NOISY, "MMU raises an exception with id: %d, target address: 0x%x, current PC: 0x%x", exception,
+                address, env->pc);
+#endif
     env->exception_index = exception;
 }
 
@@ -487,6 +491,9 @@ int cpu_handle_mmu_fault(CPUState *env, target_ulong address, int access_type, i
  */
 void do_interrupt(CPUState *env)
 {
+#ifdef DEBUG
+    tlib_printf(LOG_LEVEL_NOISY, "Handling interrupt, index 0x%x, nmi_pending 0x%x", env->exception_index, env->nmi_pending);
+#endif
     if(env->nmi_pending > NMI_NONE) {
         do_nmi(env);
         return;

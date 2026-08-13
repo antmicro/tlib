@@ -791,6 +791,7 @@ inline void csr_write_helper(CPUState *env, target_ulong val_to_write, target_ul
         case CSR_MSECCFG:
             //  Based on the SMEPMP documentation Version 1.0
             if(!riscv_has_additional_ext(env, RISCV_FEATURE_SMEPMP)) {
+                tlib_printf(LOG_LEVEL_ERROR, "CSR_MSECCFG can only be accessed when SMEPMP extension is enabled");
                 goto unhandled_csr_write;
             }
             if(env->priv != PRV_M) {
