@@ -89,6 +89,7 @@ static inline bool pmp_validate_configuration(CPUState *env, uint32_t pmp_index,
     bool exec = (*val & PMP_EXEC) == PMP_EXEC;
     bool locked = (*val & PMP_LOCK) == PMP_LOCK;
     bool shared = (!read && write);
+    bool is_locked_shared_data_region = locked && read && write && exec;
 
     //  If mseccfg.MML is not set, the combination of pmpcfg.RW=01 remains reserved for future standard use.
     if(!mml && env->privilege_architecture >= RISCV_PRIV1_11 && shared) {
@@ -98,7 +99,7 @@ static inline bool pmp_validate_configuration(CPUState *env, uint32_t pmp_index,
     /* Adding a rule with executable privileges that either is M-mode-only or a locked Shared-Region
      * is not possible and such pmpcfg writes are ignored, leaving pmpcfg unchanged.
      * This restriction can be lifted by setting mseccfg.RLB */
-    if(!rlb && (mml && locked && (exec || shared))) {
+    if(!rlb && (mml && locked && (exec || shared)) && !is_locked_shared_data_region) {
         return false;
     }
     return true;
