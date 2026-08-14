@@ -53,7 +53,7 @@ typedef int TCGv_i32;
 typedef int TCGv_i64;
 typedef struct CPUState CPUState;
 
-void initialize_store_table(store_table_entry_t *store_table, uint8_t store_table_bits, bool after_deserialization);
+void calculate_hst_mask(const CPUState *env);
 
 uint32_t get_core_id(CPUState *env);
 

@@ -9,15 +9,14 @@
 #include "debug.h"
 
 static uint64_t hst_guest_address_mask = 0;
-static uint64_t hst_table_entries_count = 0;
 
 static_assert((sizeof(store_table_entry_t) & (sizeof(store_table_entry_t) - 1)) == 0, "HST entry size has to be a power of 2");
 
-static void calculate_hst_mask(const uint8_t store_table_bits)
+void calculate_hst_mask(const CPUState *env)
 {
     //  *_bits means how many bits are used in the addresses, not how many bits
     //  large the contents is. I.e. if an entry is 64 bits large it uses 3 bits.
-    const uint64_t content_bits = sizeof(uintptr_t) * 8 - (uint64_t)store_table_bits;
+    const uint64_t content_bits = sizeof(uintptr_t) * 8 - (uint64_t)env->store_table_bits;
 
     const uint64_t table_size_bytes = 1ULL << content_bits;
 
@@ -29,13 +28,13 @@ static void calculate_hst_mask(const uint8_t store_table_bits)
     uint64_t size_mib = table_size_bytes >> 20;
     uint64_t size_gib = table_size_bytes >> 30;
     if(size_kib == 0) {
-        tlib_printf(LOG_LEVEL_DEBUG, "Store table is %u B (%u bits)", table_size_bytes, store_table_bits);
+        tlib_printf(LOG_LEVEL_DEBUG, "Store table is %u B (%u bits)", table_size_bytes, env->store_table_bits);
     } else if(size_mib == 0) {
-        tlib_printf(LOG_LEVEL_DEBUG, "Store table is %u KiB (%u bits)", size_kib, store_table_bits);
+        tlib_printf(LOG_LEVEL_DEBUG, "Store table is %u KiB (%u bits)", size_kib, env->store_table_bits);
     } else if(size_gib == 0) {
-        tlib_printf(LOG_LEVEL_DEBUG, "Store table is %u MiB (%u bits)", size_mib, store_table_bits);
+        tlib_printf(LOG_LEVEL_DEBUG, "Store table is %u MiB (%u bits)", size_mib, env->store_table_bits);
     } else {
-        tlib_printf(LOG_LEVEL_DEBUG, "Store table is %u GiB (%u bits)", size_gib, store_table_bits);
+        tlib_printf(LOG_LEVEL_DEBUG, "Store table is %u GiB (%u bits)", size_gib, env->store_table_bits);
     }
 #endif
 
@@ -50,41 +49,8 @@ static void calculate_hst_mask(const uint8_t store_table_bits)
     const uint64_t entry_alignment_mask = ~(sizeof(store_table_entry_t) - 1);
 
     hst_guest_address_mask = table_mask & entry_alignment_mask;
-}
 
-void initialize_store_table(store_table_entry_t *store_table, uint8_t store_table_bits, bool after_deserialization)
-{
-    calculate_hst_mask(store_table_bits);
-
-    tlib_printf(LOG_LEVEL_DEBUG, "%s: initializing with ptr 0x%016llx", __func__, store_table);
-    tlib_assert(hst_table_entries_count != 0);
-    bool all_entries_unlocked = true;
-    /* Initialize store table. */
-    for(uint64_t i = 0; i < hst_table_entries_count; i++) {
-        if(after_deserialization) {
-            /*
-             * Every entry must already be unlocked when deserializing, because
-             * we assume that when serializing the current instruction gets to
-             * finish executing, meaning it _should_ have been able to release
-             * its store table lock. If the lock was never released, something
-             * has gone wrong.
-             */
-            uint32_t locked_by_cpu_id = store_table[i].lock;
-            if(unlikely(locked_by_cpu_id != HST_UNLOCKED)) {
-                tlib_printf(LOG_LEVEL_WARNING,
-                            "%s: serialized store table entry at offset 0x%x contains dangling lock for cpu %u", __func__, i,
-                            locked_by_cpu_id);
-                all_entries_unlocked = false;
-            }
-        } else {
-            /*
-             * Initialize a new entry from scratch.
-             */
-            store_table[i].last_accessed_by_core_id = HST_NO_CORE;
-            store_table[i].lock = HST_UNLOCKED;
-        }
-    }
-    tlib_assert(all_entries_unlocked);
+    tlib_printf(LOG_LEVEL_DEBUG, "%s: store table is at 0x%016llx", __func__, env->store_table);
 }
 
 /* Get the address to the table entry (`entry_address`) for the given `guest_address` */
