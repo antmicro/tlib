@@ -51,6 +51,7 @@
 #define EXCP_BKPT           7
 #define EXCP_KERNEL_TRAP    9 /* Jumped to kernel code page.  */
 #define EXCP_STREX          10
+#define EXCP_UNALIGNED      16 /* UNALIGNED usage fault */
 #define EXCP_NOCP           17 /* NOCP usage fault */
 #define EXCP_INVSTATE       18 /* INVSTATE usage fault */
 #define EXCP_SECURE         19 /* TrustZone Secure fault */
@@ -659,6 +660,11 @@ enum arm_fp_precision {
 };
 
 #ifdef TARGET_PROTO_ARM_M
+static inline bool is_aligned(uint32_t value, uint32_t size)
+{
+    return (value & (size - 1)) == 0;
+}
+
 static inline bool in_handler_mode(CPUState *env)
 {
     return env->v7m.exception != 0;

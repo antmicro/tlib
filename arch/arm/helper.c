@@ -1910,6 +1910,10 @@ static void do_interrupt_v7m(CPUState *env)
        handle it. We'll return to this function with exception_index set
        to EXCP_IRQ when exception actually gets processed. */
     switch(env->exception_index) {
+        case EXCP_UNALIGNED:
+            env->v7m.fault_status[env->secure] |= USAGE_FAULT_UNALIGNED;
+            v7m_raise_synchronous_exception(env, v7m_exception_number_with_security(env, ARMV7M_EXCP_USAGE, env->secure));
+            return;
         case EXCP_UDEF:
             env->v7m.fault_status[env->secure] |= USAGE_FAULT_UNDEFINSTR;
             v7m_raise_synchronous_exception(env, v7m_exception_number_with_security(env, ARMV7M_EXCP_USAGE, env->secure));
@@ -5109,6 +5113,10 @@ void HELPER(v8m_vlstm)(CPUState *env, uint32_t address)
          * Low three bits are RES0 */
         fpccr_update(env, address, 0);
     } else {
+        if(!is_aligned(address, 8)) {
+            env->exception_index = EXCP_UNALIGNED;
+            cpu_loop_exit_restore(env, (uintptr_t)GETPC(), true);
+        }
         /* We store, in this order, the following FPU registers, at the address passed in register "rn":
          *  S[0]-S[15]
          *  FPSCR
@@ -5158,6 +5166,11 @@ void HELPER(v8m_vlldm)(CPUState *env, uint32_t address)
         /* The state is still active, doesn't need to be restored. So do nothing at all */
         env->v7m.fpccr[M_REG_S] &= ~ARM_FPCCR_LSPACT_MASK;
     } else {
+        if(!is_aligned(address, 8)) {
+            env->exception_index = EXCP_UNALIGNED;
+            cpu_loop_exit_restore(env, (uintptr_t)GETPC(), true);
+        }
+
         bool pop_callee_frame = (env->v7m.fpccr[M_REG_COMMON] & ARM_FPCCR_TS_MASK) > 0;
         uint32_t scratch = 0;
         for(int i = 0; i < 8; ++i) {
