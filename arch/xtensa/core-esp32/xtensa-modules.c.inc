@@ -7214,6 +7214,12 @@ static xtensa_arg_internal Iclass_xt_mul32_args[] = {
   { { OPERAND_art }, 'i' }
 };
 
+static xtensa_arg_internal Iclass_xt_iclass_salt_args[] = {
+  { { OPERAND_arr }, 'o' },
+  { { OPERAND_ars }, 'i' },
+  { { OPERAND_art }, 'i' }
+};
+
 static xtensa_arg_internal Iclass_xt_mul32h_args[] = {
   { { OPERAND_arr }, 'o' },
   { { OPERAND_ars }, 'i' },
@@ -9234,7 +9240,9 @@ static xtensa_iclass_internal iclasses[] = {
   { 1, Iclass_iclass_CLRB_EXPSTATE_args,
     1, Iclass_iclass_CLRB_EXPSTATE_stateArgs, 0, 0 },
   { 2, Iclass_iclass_WRMSK_EXPSTATE_args,
-    1, Iclass_iclass_WRMSK_EXPSTATE_stateArgs, 0, 0 }
+    1, Iclass_iclass_WRMSK_EXPSTATE_stateArgs, 0, 0 },
+  { 3, Iclass_xt_iclass_salt_args,
+    0, 0, 0, 0 }
 };
 
 enum xtensa_iclass_id {
@@ -9627,7 +9635,8 @@ enum xtensa_iclass_id {
   ICLASS_iclass_READ_IMPWIRE,
   ICLASS_iclass_SETB_EXPSTATE,
   ICLASS_iclass_CLRB_EXPSTATE,
-  ICLASS_iclass_WRMSK_EXPSTATE
+  ICLASS_iclass_WRMSK_EXPSTATE,
+  ICLASS_xt_iclass_salt
 };
 
 
@@ -12172,6 +12181,18 @@ Opcode_andb_Slot_inst_encode (xtensa_insnbuf slotbuf)
 }
 
 static void
+Opcode_salt_Slot_inst_encode (xtensa_insnbuf slotbuf)
+{
+  slotbuf[0] = 0x720000;
+}
+
+static void
+Opcode_saltu_Slot_inst_encode (xtensa_insnbuf slotbuf)
+{
+  slotbuf[0] = 0x620000;
+}
+
+static void
 Opcode_andbc_Slot_inst_encode (xtensa_insnbuf slotbuf)
 {
   slotbuf[0] = 0x120000;
@@ -14403,6 +14424,14 @@ static xtensa_opcode_encode_fn Opcode_andb_encode_fns[] = {
   Opcode_andb_Slot_inst_encode, 0, 0
 };
 
+static xtensa_opcode_encode_fn Opcode_salt_encode_fns[] = {
+  Opcode_salt_Slot_inst_encode, 0, 0
+};
+
+static xtensa_opcode_encode_fn Opcode_saltu_encode_fns[] = {
+  Opcode_saltu_Slot_inst_encode, 0, 0
+};
+
 static xtensa_opcode_encode_fn Opcode_andbc_encode_fns[] = {
   Opcode_andbc_Slot_inst_encode, 0, 0
 };
@@ -16306,7 +16335,13 @@ static xtensa_opcode_internal opcodes[] = {
     Opcode_clrb_expstate_encode_fns, 0, 0 },
   { "wrmsk_expstate", ICLASS_iclass_WRMSK_EXPSTATE,
     0,
-    Opcode_wrmsk_expstate_encode_fns, 0, 0 }
+    Opcode_wrmsk_expstate_encode_fns, 0, 0 },
+  { "salt", ICLASS_xt_iclass_salt,
+    0,
+    Opcode_salt_encode_fns, 0, 0 },
+  { "saltu", ICLASS_xt_iclass_salt,
+    0,
+    Opcode_saltu_encode_fns, 0, 0 }
 };
 
 enum xtensa_opcode_id {
@@ -16822,7 +16857,9 @@ enum xtensa_opcode_id {
   OPCODE_READ_IMPWIRE,
   OPCODE_SETB_EXPSTATE,
   OPCODE_CLRB_EXPSTATE,
-  OPCODE_WRMSK_EXPSTATE
+  OPCODE_WRMSK_EXPSTATE,
+  OPCODE_SALT,
+  OPCODE_SALTU
 };
 
 
@@ -17196,6 +17233,10 @@ Slot_inst_decode (const xtensa_insnbuf insn)
 	    return OPCODE_ORBC;
 	  if (Field_op2_Slot_inst_get (insn) == 4)
 	    return OPCODE_XORB;
+	  if (Field_op2_Slot_inst_get (insn) == 6)
+	    return OPCODE_SALTU;
+	  if (Field_op2_Slot_inst_get (insn) == 7)
+	    return OPCODE_SALT;
 	  if (Field_op2_Slot_inst_get (insn) == 8)
 	    return OPCODE_MULL;
 	  if (Field_op2_Slot_inst_get (insn) == 10)
