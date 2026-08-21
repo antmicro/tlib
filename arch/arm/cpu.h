@@ -153,6 +153,9 @@ typedef enum {
 //  Bit[0] - "SFTC" - is used to check if FPU was enabled when taking exception (corresponds to: ARM_EXC_RETURN_NFPCA)
 #define INTEGRITY_SIGN 0xFEFA125A
 
+#define DISAS_FLAGS_THUMB   1
+#define DISAS_FLAGS_AARCH32 0
+
 typedef struct DisasContext {
     DisasContextBase base;
     /* Nonzero if this instruction has been conditionally skipped.  */

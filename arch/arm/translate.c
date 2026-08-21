@@ -26,6 +26,7 @@
 #include <inttypes.h>
 
 #include "cpu.h"
+#include "exec-all.h"
 #include "system_registers.h"
 #include "tcg-mo.h"
 #include "ttable.h"
@@ -16584,7 +16585,7 @@ int gen_intermediate_code(CPUState *env, DisasContextBase *base)
     return 1;
 }
 
-uint32_t gen_intermediate_code_epilogue(CPUState *env, DisasContextBase *base)
+void gen_intermediate_code_epilogue(CPUState *env, DisasContextBase *base)
 {
     DisasContext *dc = (DisasContext *)base;
     /* At this stage dc.condjmp will only be set when the skipped
@@ -16631,8 +16632,14 @@ uint32_t gen_intermediate_code_epilogue(CPUState *env, DisasContextBase *base)
         gen_goto_tb(dc, 1, dc->base.pc);
         dc->condjmp = 0;
     }
+}
 
-    return dc->thumb;
+uint32_t get_disas_flags(CPUState *env)
+{
+    if(env->thumb) {
+        return DISAS_FLAGS_THUMB;
+    }
+    return DISAS_FLAGS_AARCH32;
 }
 
 void restore_state_to_opc(CPUState *env, TranslationBlock *tb, target_ulong *data)

@@ -20,6 +20,7 @@
 #include "cpu.h"
 
 #include "arm_ldst.h"
+#include "exec-all.h"
 #include "syndrome.h"
 #include "system_registers.h"
 #include "tb-helper.h"
@@ -14817,15 +14818,22 @@ int gen_intermediate_code(CPUState *env, DisasContextBase *base)
     return 1;
 }
 
-uint32_t gen_intermediate_code_epilogue(CPUState *env, DisasContextBase *base)
+void gen_intermediate_code_epilogue(CPUState *env, DisasContextBase *base)
 {
-    uint32_t flags = !env->aarch64 << 1;
     if(env->aarch64) {
         aarch64_tr_tb_stop(base, env);
     } else {
         arm_tr_tb_stop(base, env);
-        /* The Thumb flag is only valid in AArch32 state. */
-        flags |= env->thumb;
     }
-    return flags;
+}
+
+uint32_t get_disas_flags(CPUState *env)
+{
+    if(env->aarch64) {
+        return DISAS_FLAGS_AARCH64;
+    }
+    if(env->thumb) {
+        return DISAS_FLAGS_THUMB;
+    }
+    return DISAS_FLAGS_AARCH32;
 }

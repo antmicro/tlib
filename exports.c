@@ -903,16 +903,19 @@ void tlib_enable_guest_profiler(int value)
 }
 EXC_VOID_1(tlib_enable_guest_profiler, int32_t, value)
 
-uint32_t tlib_get_current_tb_disas_flags()
+//  This function can only be called safely from the CPU thread itself
+//  (including from C# callbacks), or when the CPU is not being executed
+
+uint32_t tlib_get_disas_flags()
 {
-    if(cpu->current_tb == NULL) {
-        return 0xFFFFFFFF;
+    if(cpu->current_tb != NULL) {
+        return cpu->current_tb->disas_flags;
     }
 
-    return cpu->current_tb->disas_flags;
+    return get_disas_flags(cpu);
 }
 
-EXC_INT_0(uint32_t, tlib_get_current_tb_disas_flags)
+EXC_INT_0(uint32_t, tlib_get_disas_flags)
 
 void tlib_set_page_io_accessed(uint64_t address)
 {

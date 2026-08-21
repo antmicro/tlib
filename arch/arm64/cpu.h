@@ -259,6 +259,10 @@ typedef struct {
     uint32_t map, init, supported;
 } ARMVQMap;
 
+#define DISAS_FLAGS_THUMB   3
+#define DISAS_FLAGS_AARCH32 2
+#define DISAS_FLAGS_AARCH64 0
+
 #define ARM_CPUID(env) (env->cp15.c0_cpuid)
 
 typedef struct ARMCoreConfig {

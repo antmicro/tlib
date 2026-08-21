@@ -6960,7 +6960,7 @@ int gen_intermediate_code(CPUState *env, DisasContextBase *base)
     return 1;
 }
 
-uint32_t gen_intermediate_code_epilogue(CPUState *env, DisasContextBase *base)
+void gen_intermediate_code_epilogue(CPUState *env, DisasContextBase *base)
 {
     DisasContext *dc = (DisasContext *)base;
     switch(dc->base.is_jmp) {
@@ -6975,7 +6975,6 @@ uint32_t gen_intermediate_code_epilogue(CPUState *env, DisasContextBase *base)
         case DISAS_BRANCH: /* ops using DISAS_BRANCH generate own exit seq */
             break;
     }
-    return 0;
 }
 
 void restore_state_to_opc(CPUState *env, TranslationBlock *tb, target_ulong *data)

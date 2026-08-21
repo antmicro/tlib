@@ -9751,7 +9751,7 @@ int gen_intermediate_code(CPUState *env, DisasContextBase *base)
     return 1;
 }
 
-uint32_t gen_intermediate_code_epilogue(CPUState *env, DisasContextBase *base)
+void gen_intermediate_code_epilogue(CPUState *env, DisasContextBase *base)
 {
     DisasContext *dc = (DisasContext *)base;
     if(dc->exception == POWERPC_EXCP_NONE) {
@@ -9760,7 +9760,6 @@ uint32_t gen_intermediate_code_epilogue(CPUState *env, DisasContextBase *base)
         /* Generate the return instruction */
         gen_exit_tb_no_chaining(dc->base.tb);
     }
-    return env->bfd_mach | dc->le_mode << 16;
 }
 
 void restore_state_to_opc(CPUState *env, TranslationBlock *tb, target_ulong *data)

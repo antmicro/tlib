@@ -1199,11 +1199,10 @@ int gen_intermediate_code(CPUState *env, DisasContextBase *base)
     return insn_len != 0;
 }
 
-uint32_t gen_intermediate_code_epilogue(CPUState *env, DisasContextBase *base)
+void gen_intermediate_code_epilogue(CPUState *env, DisasContextBase *base)
 {
     DisasContext *dc = (DisasContext *)base;
     xtensa_tr_tb_stop(dc, env);
-    return 0;
 }
 
 int gen_breakpoint(DisasContextBase *base, CPUBreakpoint *bp)

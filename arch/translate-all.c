@@ -23,6 +23,7 @@
 #include <inttypes.h>
 
 #include "cpu.h"
+#include "exec-all.h"
 #include "tcg-op.h"
 #include "debug.h"
 #include "exports.h"
@@ -168,6 +169,7 @@ static void cpu_gen_code_inner(CPUState *env, TranslationBlock *tb)
     tb->icount = 0;
     tb->was_cut = false;
     tb->size = 0;
+    tb->disas_flags = get_disas_flags(env);
     dc->tb = tb;
     dc->is_jmp = DISAS_NEXT;
     dc->pc = tb->pc;
@@ -231,7 +233,7 @@ static void cpu_gen_code_inner(CPUState *env, TranslationBlock *tb)
             break;
         }
     }
-    tb->disas_flags = gen_intermediate_code_epilogue(env, dc);
+    gen_intermediate_code_epilogue(env, dc);
     gen_block_footer(tb);
 
     tcg->disas_context = NULL;
@@ -572,4 +574,9 @@ void tlib_announce_stack_pointer_change(target_ulong address, target_ulong old_s
 #else
     tlib_abortf("This architecture does not support the profiler");
 #endif
+}
+
+__attribute__((weak)) uint32_t get_disas_flags(CPUState *env)
+{
+    return 0;
 }

@@ -26,6 +26,7 @@
 #include "cpu.h"
 #include "arch_callbacks.h"
 
+#include "exec-all.h"
 #include "tb-helper.h"
 
 #include "debug.h"
@@ -7790,17 +7791,25 @@ int gen_intermediate_code(CPUState *env, DisasContextBase *base)
     return 1;
 }
 
-uint32_t gen_intermediate_code_epilogue(CPUState *env, DisasContextBase *base)
+void gen_intermediate_code_epilogue(CPUState *env, DisasContextBase *base)
 {
     DisasContext *dc = (DisasContext *)base;
     gen_jmp_im(dc->base.pc - dc->cs_base);
     gen_eob(dc);
+}
+
+uint32_t get_disas_flags(CPUState *env)
+{
 #ifdef TARGET_X86_64
-    if(dc->code64) {
-        return 2;
+    if(env->hflags & HF_CS64_MASK) {
+        return DISAS_FLAGS_64BIT;
     }
 #endif
-    return !(dc->code32);
+    if(env->hflags & HF_CS32_MASK) {
+        return DISAS_FLAGS_32BIT;
+    }
+
+    return DISAS_FLAGS_16BIT;
 }
 
 void restore_state_to_opc(CPUState *env, TranslationBlock *tb, target_ulong *data)

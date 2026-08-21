@@ -74,7 +74,7 @@ void tlib_set_register_value(int reg_number, uint64_t val);
 
 void tlib_set_event_flag(int value);
 
-uint32_t tlib_get_current_tb_disas_flags(void);
+uint32_t tlib_get_disas_flags(void);
 
 uint32_t tlib_get_mmu_windows_count(void);
 

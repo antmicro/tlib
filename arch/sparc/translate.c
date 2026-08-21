@@ -2862,7 +2862,7 @@ int gen_intermediate_code(CPUState *env, DisasContextBase *base)
     return 1;
 }
 
-uint32_t gen_intermediate_code_epilogue(CPUState *env, DisasContextBase *base)
+void gen_intermediate_code_epilogue(CPUState *env, DisasContextBase *base)
 {
     DisasContext *dc = (DisasContext *)base;
     tcg_temp_free(cpu_addr);
@@ -2883,7 +2883,6 @@ uint32_t gen_intermediate_code_epilogue(CPUState *env, DisasContextBase *base)
             gen_exit_tb_no_chaining(dc->base.tb);
         }
     }
-    return 0;
 }
 
 void restore_state_to_opc(CPUState *env, TranslationBlock *tb, target_ulong *data)

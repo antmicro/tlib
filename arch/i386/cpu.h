@@ -586,6 +586,10 @@ enum {
     CC_OP_NB,
 };
 
+#define DISAS_FLAGS_16BIT 1
+#define DISAS_FLAGS_32BIT 0
+#define DISAS_FLAGS_64BIT 2
+
 typedef struct SegmentCache {
     uint32_t selector;
     target_ulong base;

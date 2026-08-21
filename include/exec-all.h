@@ -51,7 +51,7 @@ typedef struct TranslationBlock TranslationBlock;
 void do_interrupt(CPUState *env);
 int gen_breakpoint(DisasContextBase *base, CPUBreakpoint *bp);
 int gen_intermediate_code(CPUState *env, DisasContextBase *base);
-uint32_t gen_intermediate_code_epilogue(CPUState *env, DisasContextBase *base);
+void gen_intermediate_code_epilogue(CPUState *env, DisasContextBase *base);
 void gen_sync_pc(DisasContext *dc);
 void restore_state_to_opc(CPUState *env, struct TranslationBlock *tb, target_ulong *data);
 void setup_disas_context(DisasContextBase *dc, CPUState *env);
@@ -401,3 +401,5 @@ void generate_stack_announcement(TCGv pc, int type, bool clear_lsb);
 void tlib_announce_stack_change(target_ulong pc, int state);
 void tlib_announce_context_change(target_ulong context_id);
 void tlib_announce_stack_pointer_change(target_ulong address, target_ulong old_stack_pointer, target_ulong stack_pointer);
+
+__attribute__((weak)) uint32_t get_disas_flags(CPUState *env);
