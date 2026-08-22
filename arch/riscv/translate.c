@@ -870,6 +870,29 @@ static void gen_arith(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2)
 {
     TCGv source1, source2, cond1, cond2, zeroreg, resultopt1;
     target_ulong mask;
+    switch(opc) {
+        case OPC_RISC_MUL:
+        case OPC_RISC_MULH:
+        case OPC_RISC_MULHSU:
+        case OPC_RISC_MULHU:
+        case OPC_RISC_DIV:
+        case OPC_RISC_DIVU:
+        case OPC_RISC_REM:
+        case OPC_RISC_REMU:
+#if defined(TARGET_RISCV64)
+        case OPC_RISC_MULW:
+        case OPC_RISC_DIVW:
+        case OPC_RISC_DIVUW:
+        case OPC_RISC_REMW:
+        case OPC_RISC_REMUW:
+#endif
+            if(!ensure_extension(dc, RISCV_FEATURE_RVM)) {
+                return;
+            }
+            break;
+        default:
+            break;
+    }
     source1 = tcg_temp_local_new();
     source2 = tcg_temp_local_new();
     gen_get_gpr(source1, rs1);
