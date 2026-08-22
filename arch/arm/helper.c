@@ -1429,6 +1429,10 @@ void do_v7m_exception_exit(CPUState *env)
             cpu_loop_exit(env);
         }
     }
+
+    // ARMv7-M ARM B1.4.2: exception return sets the event register,
+    // so a subsequent WFE will fall through immediately.
+    env->sev_pending = 1;
 }
 
 void do_v7m_secure_return(CPUState *env)
@@ -1446,6 +1450,10 @@ void do_v7m_secure_return(CPUState *env)
     env->v7m.exception = partialRETPSR & ~RETPSR_SFPA;
 
     tlib_printf(LOG_LEVEL_NOISY, "Secure return to 0x%08" PRIx32 ", xpsr: 0x%08" PRIx32, env->regs[15], xpsr_read(env));
+
+    // ARMv7-M ARM B1.4.2: exception return sets the event register,
+    // so a subsequent WFE will fall through immediately.
+    env->sev_pending = 1;
 }
 
 bool need_fp_lazy_state_preservation(CPUState *env)
@@ -2193,6 +2201,9 @@ static void do_interrupt_v7m(CPUState *env)
         v7m_clear_active_fp_state_on_exception_entry(env);
         env->regs[14] = lr;
     }
+
+    // ARMv7-M ARM B1.4.2: exception entry sets the event register.
+    env->sev_pending = 1;
 
     arm_announce_stack_change();
 }
