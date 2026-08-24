@@ -272,12 +272,6 @@ static void gen_store_table_unlock_address(CPUState *env, TCGv_guestptr guest_ad
     //  while managed code blocks or pauses emulation.
     //  As a result, another core may acquire the lock, and we must not release it on its behalf.
     tcg_gen_atomic_compare_and_swap_host_intrinsic_i32(holder_id, current_core_id, lock_address, unlocked);
-#ifdef DEBUG
-    int done = gen_new_label();
-    tcg_gen_brcond_i32(TCG_COND_EQ, holder_id, current_core_id, done);
-    gen_lock_not_owned_warning(holder_id, current_core_id_val, guest_address, __func__);
-    gen_set_label(done);
-#endif
     //  Emit a barrier to ensure that the store is visible to other processors.
     tcg_gen_mb(TCG_MO_ST_ST);
 
