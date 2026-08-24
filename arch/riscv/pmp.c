@@ -238,8 +238,8 @@ static void pmp_update_rule(CPUState *env, uint32_t pmp_index)
             break;
     }
 
-    env->pmp_state.addr[pmp_index].sa = sa & cpu->pmp_addr_mask;
-    env->pmp_state.addr[pmp_index].ea = ea & cpu->pmp_addr_mask;
+    env->pmp_state.addr[pmp_index].sa = sa & ((cpu->pmp_addr_mask << 2) | 0x3);
+    env->pmp_state.addr[pmp_index].ea = ea & ((cpu->pmp_addr_mask << 2) | 0x3);
 
     for(i = 0; i < env->pmp_entry_count; i++) {
         const uint8_t a_field = pmp_get_a_field(env->pmp_state.pmp[i].cfg_reg);
@@ -254,7 +254,7 @@ static void pmp_update_rule(CPUState *env, uint32_t pmp_index)
 static int pmp_is_in_range(CPUState *env, int pmp_index, target_ulong addr)
 {
     int result = 0;
-    addr &= cpu->pmp_addr_mask;
+    addr &= ((cpu->pmp_addr_mask << 2) | 0x3);
 
     if((addr >= env->pmp_state.addr[pmp_index].sa) && (addr <= env->pmp_state.addr[pmp_index].ea)) {
         result = 1;
@@ -274,7 +274,7 @@ int pmp_find_overlapping(CPUState *env, target_ulong addr, target_ulong size, in
     int i;
     target_ulong pmp_sa;
     target_ulong pmp_ea;
-    addr &= cpu->pmp_addr_mask;
+    addr &= ((cpu->pmp_addr_mask << 2) | 0x3);
     uint8_t a_field;
 
     if(unlikely(env->use_external_pmp)) {
@@ -377,7 +377,7 @@ int pmp_get_access(CPUState *env, target_ulong addr, target_ulong size, int acce
     int ret = -1;
     target_ulong s = 0;
     target_ulong e = 0;
-    addr &= cpu->pmp_addr_mask;
+    addr &= ((cpu->pmp_addr_mask << 2) | 0x3);
 
     if(unlikely(env->use_external_pmp)) {
         return tlib_extpmp_get_access(addr, size, access_type);
@@ -560,6 +560,7 @@ void pmpaddr_csr_write(CPUState *env, uint32_t addr_index, target_ulong val)
         PMP_DEBUG("ignoring pmpaddr write - locked");
         return;
     }
+    //  No bit shift, since this is a raw write into the register
     env->pmp_state.pmp[addr_index].addr_reg = val & cpu->pmp_addr_mask;
     pmp_update_rule(env, addr_index);
 }

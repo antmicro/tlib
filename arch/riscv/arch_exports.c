@@ -489,8 +489,8 @@ EXC_VOID_1(tlib_set_pmp_entry_count, uint32_t, max_entry_count)
 void tlib_set_pmpaddr(uint32_t index, uint64_t start_address, uint64_t end_address)
 {
     if(index < cpu->pmp_entry_count) {
-        cpu->pmp_state.addr[index].sa = start_address & cpu->pmp_addr_mask;
-        cpu->pmp_state.addr[index].ea = end_address & cpu->pmp_addr_mask;
+        cpu->pmp_state.addr[index].sa = start_address & ((cpu->pmp_addr_mask << 2) | 0x3);
+        cpu->pmp_state.addr[index].ea = end_address & ((cpu->pmp_addr_mask << 2) | 0x3);
     } else {
         tlib_printf(LOG_LEVEL_ERROR, "Tried to set the address of PMP entry %u but the maximum index is %u, write ignored", index,
                     cpu->pmp_entry_count - 1);
