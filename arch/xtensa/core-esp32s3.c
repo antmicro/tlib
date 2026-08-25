@@ -36,5 +36,25 @@
 //  use the common implementation of ESP32
 #include "core-esp32/xtensa-modules.c.inc"
 
-XtensaConfig esp32s3
-    __attribute__((unused)) = { .name = "esp32s3", .isa_internal = &xtensa_modules, .clock_freq_khz = 140000, DEFAULT_SECTIONS };
+/*
+ * ESP32S3 has a single-precision FPU (XCHAL_HAVE_FP is 1 in
+ * core-esp32s3/core-isa.h, together with FP_DIV, FP_SQRT, FP_RECIP and
+ * FP_RSQRT). Without an .opcode_translators list, no floating point opcode
+ * table is attached to this configuration: opcode_ops[opc] stays NULL and
+ * every FP instruction fails with "unimplemented opcode 'lsi'".
+ *
+ * xtensa_fpu_opcodes is the right table rather than xtensa_fpu2000_opcodes:
+ * the lsip/ssip forms emitted by the compiler only exist in the former, and
+ * FPU2000 has neither divide nor square root, which this core advertises.
+ */
+XtensaConfig esp32s3 __attribute__((unused)) = {
+    .name = "esp32s3",
+    .isa_internal = &xtensa_modules,
+    .clock_freq_khz = 140000,
+    .opcode_translators =
+        (const XtensaOpcodeTranslators *[]) {
+                                             &xtensa_core_opcodes,
+                                             &xtensa_fpu_opcodes,
+                                             NULL, },
+    DEFAULT_SECTIONS
+};
