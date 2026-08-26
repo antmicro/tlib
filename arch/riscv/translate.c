@@ -1600,7 +1600,7 @@ static void gen_arith_bitmanip(DisasContext *dc, int rd, int rs1, target_long im
             if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBS)) {
                 return;
             }
-            tcg_gen_andi_tl(source1, source1, ~(1UL << (imm & BITMANIP_SHAMT_MASK)));
+            tcg_gen_andi_tl(source1, source1, ~((target_ulong)1 << (imm & BITMANIP_SHAMT_MASK)));
             break;
         case OPC_RISC_BEXTI:
             if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBS)) {
@@ -1613,13 +1613,13 @@ static void gen_arith_bitmanip(DisasContext *dc, int rd, int rs1, target_long im
             if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBS)) {
                 return;
             }
-            tcg_gen_xori_tl(source1, source1, 1UL << (imm & BITMANIP_SHAMT_MASK));
+            tcg_gen_xori_tl(source1, source1, (target_ulong)1 << (imm & BITMANIP_SHAMT_MASK));
             break;
         case OPC_RISC_BSETI:
             if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBS)) {
                 return;
             }
-            tcg_gen_ori_tl(source1, source1, 1UL << (imm & BITMANIP_SHAMT_MASK));
+            tcg_gen_ori_tl(source1, source1, (target_ulong)1 << (imm & BITMANIP_SHAMT_MASK));
             break;
         case OPC_RISC_ZIP:
             if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBKB)) {
@@ -1696,7 +1696,7 @@ static void gen_arith_bitmanip(DisasContext *dc, int rd, int rs1, target_long im
             if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBS)) {
                 return;
             }
-            tcg_gen_andi_tl(source1, source1, ~(1UL << (imm & BITMANIP_SHAMT_MASK)));
+            tcg_gen_andi_tl(source1, source1, ~((target_ulong)1 << (imm & BITMANIP_SHAMT_MASK)));
             break;
         case OPC_RISC_BEXTI:
             if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBS)) {
@@ -1709,13 +1709,13 @@ static void gen_arith_bitmanip(DisasContext *dc, int rd, int rs1, target_long im
             if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBS)) {
                 return;
             }
-            tcg_gen_xori_tl(source1, source1, 1UL << (imm & BITMANIP_SHAMT_MASK));
+            tcg_gen_xori_tl(source1, source1, (target_ulong)1 << (imm & BITMANIP_SHAMT_MASK));
             break;
         case OPC_RISC_BSETI:
             if(!ensure_additional_extension(dc, RISCV_FEATURE_ZBS)) {
                 return;
             }
-            tcg_gen_ori_tl(source1, source1, 1UL << (imm & BITMANIP_SHAMT_MASK));
+            tcg_gen_ori_tl(source1, source1, (target_ulong)1 << (imm & BITMANIP_SHAMT_MASK));
             break;
 #endif
         default:
