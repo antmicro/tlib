@@ -3733,9 +3733,6 @@ static void gen_system(DisasContext *dc, uint32_t opc, int rd, int rs1, int rs2,
                         gen_exit_tb_no_chaining(dc->base.tb);
                         dc->base.is_jmp = DISAS_BRANCH;
                         break;
-                    case 0x4: /* SFENCE.VM */
-                        gen_helper_tlb_flush(cpu_env);
-                        break;
                     case 0x5: /* WFI */
                         tcg_gen_movi_tl(cpu_pc, dc->npc);
                         gen_helper_wfi(cpu_env);
