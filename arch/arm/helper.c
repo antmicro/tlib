@@ -936,7 +936,11 @@ static inline int v7m_store_helper(CPUState *env, uint32_t address, uint32_t val
     target_ulong page_size = 0;
     int prot = 0;
     int exception_index = env->exception_index;
-    int secure_fault_status = env->v7m.secure_fault_status;
+
+    /* get_phys_addr() sets some flags and registers that shouldn't be set on certain memory accesses.
+     * Keep them to restore later. */
+    uint32_t secure_fault_status = env->v7m.secure_fault_status;
+    uint32_t memory_fault_address = env->v7m.memory_fault_address[is_secure];
 
     int ret = get_phys_addr(env, address, is_secure, ACCESS_DATA_STORE, is_user, &phys_ptr, &prot, &page_size, false);
     if(ret == TRANSLATE_SUCCESS) {
@@ -955,7 +959,10 @@ static inline int v7m_store_helper(CPUState *env, uint32_t address, uint32_t val
          * MemManage stacking syndrome merely because both failures are
          * reported by get_phys_addr(). */
         if(access_type == ARM_M_AT_LAZYFP) {
-            env->v7m.secure_fault_status = secure_fault_status | SECURE_FAULT_LSPERR | SECURE_FAULT_SFARVALID;
+            /* Lazy FP doesn't set AUVIOL bit, restore previous one */
+            env->v7m.secure_fault_status = (env->v7m.secure_fault_status & ~SECURE_FAULT_AUVIOL) |
+                                           (secure_fault_status & SECURE_FAULT_AUVIOL);
+            env->v7m.secure_fault_status |= SECURE_FAULT_LSPERR;
         }
 
         if(env->v7m.exception_phase_fault == 0) {
@@ -965,6 +972,12 @@ static inline int v7m_store_helper(CPUState *env, uint32_t address, uint32_t val
         /* An MPU failure during PushStack() is a MemManage stacking fault.
          * get_phys_addr() has already recorded the fault address and access
          * classification */
+
+        if(access_type == ARM_M_AT_STACK || access_type == ARM_M_AT_LAZYFP) {
+            /* Stack access and Lazy FP don't update MFAR. Restore previous one */
+            env->v7m.memory_fault_address[is_secure] = memory_fault_address;
+        }
+
         if(access_type == ARM_M_AT_STACK) {
             /* Add stacking-specific syndrome here */
             env->v7m.fault_status[env->secure] |= MEM_FAULT_MSTKERR;
@@ -991,6 +1004,11 @@ static inline int v7m_load_helper(CPUState *env, uint32_t address, uint32_t *val
     target_ulong page_size = 0;
     int prot = 0;
     int exception_index = env->exception_index;
+
+    /* get_phys_addr() sets some flags and registers that shouldn't be set on certain memory accesses.
+     * Keep them to restore later. */
+    uint32_t memory_fault_address = env->v7m.memory_fault_address[is_secure];
+
     int ret = get_phys_addr(env, address, is_secure, ACCESS_DATA_LOAD, is_user, &phys_ptr, &prot, &page_size, false);
     if(ret == TRANSLATE_SUCCESS) {
         *val = ldl_phys(phys_ptr);
@@ -1011,6 +1029,8 @@ static inline int v7m_load_helper(CPUState *env, uint32_t address, uint32_t *val
         /* An MPU failure during PopStack() is a MemManage unstacking
          * fault. get_phys_addr() has already recorded the address. */
         if(access_type == ARM_M_AT_STACK) {
+            /* Stack access doesn't update MFAR. Restore previous one */
+            env->v7m.memory_fault_address[is_secure] = memory_fault_address;
             env->v7m.fault_status[env->secure] |= MEM_FAULT_MUNSTKERR;
         } else if(access_type == ARM_M_AT_NORMAL || access_type == ARM_M_AT_MVE || access_type == ARM_M_AT_ORDERED) {
             env->v7m.fault_status[env->secure] |= MEM_FAULT_MMFARVALID | MEM_FAULT_DACCVIOL;
