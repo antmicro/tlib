@@ -585,6 +585,9 @@ void cpu_reset_v8_a64(CPUState *env)
     env->cp15.vpidr_el2 = env->arm_core_config.midr;
     env->cp15.c9_pmcr = env->arm_core_config.isar.reset_pmcr_el0;
 
+    //  Set PC to Reset Vector Base Address Register.
+    env->pc = env->cp15.rvbar;
+
     //  The default reset state for AArch64 is the highest available ELx (handler=true: use SP_ELx).
     pstate = aarch64_pstate_mode(arm_highest_el(env), true);
 
@@ -616,6 +619,7 @@ void cpu_reset_v8_a32(CPUState *env)
     cpsr |= CPSR_AIF | CPSR_Z;
     cpsr_write(env, cpsr, 0xFFFFFFFF, CPSRWriteRaw);
 
+    //  Set PC to Reset Vector Base Address Register.
     env->regs[15] = env->cp15.rvbar;
 
     /* v7 performance monitor control register: same implementor

@@ -176,3 +176,11 @@ void tlib_set_rndr_supported(uint32_t rndr)
 }
 
 EXC_VOID_1(tlib_set_rndr_supported, uint32_t, rndr)
+
+//  A getter isn't needed because this address can be checked using a read-only RVBAR/RVBAR_EL3 register.
+void tlib_set_reset_vector_base_address(uint64_t address)
+{
+    env->cp15.rvbar = address;
+}
+
+EXC_VOID_1(tlib_set_reset_vector_base_address, uint64_t, address)
