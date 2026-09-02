@@ -1916,7 +1916,7 @@ static void do_interrupt_v7m(CPUState *env)
             return;
         case EXCP_DATA_ABORT:
             /* ACK faulting address and set Data acces violation */
-            env->v7m.fault_status[env->secure] |= MEM_FAULT_MMARVALID | MEM_FAULT_DACCVIOL;
+            env->v7m.fault_status[env->secure] |= MEM_FAULT_MMFARVALID | MEM_FAULT_DACCVIOL;
             v7m_raise_synchronous_exception(env, v7m_exception_number_with_security(env, ARMV7M_EXCP_MEM, env->secure));
             return;
         case EXCP_BKPT:

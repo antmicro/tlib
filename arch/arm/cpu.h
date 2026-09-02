@@ -91,12 +91,12 @@ typedef enum {
 #define BANKED_SECURE_EXCP(x)  (x | BANKED_SECURE_EXCP_BIT)
 
 /* MemManage Fault : bits 0:7 of CFSR */
-#define MEM_FAULT_MMARVALID 1 << 7
-#define MEM_FAULT_MLSPERR   1 << 5
-#define MEM_FAULT_MSTKERR   1 << 4
-#define MEM_FAULT_MUNSTKERR 1 << 3
-#define MEM_FAULT_DACCVIOL  1 << 1
-#define MEM_FAULT_IACCVIOL  1 << 0
+#define MEM_FAULT_MMFARVALID 1 << 7
+#define MEM_FAULT_MLSPERR    1 << 5
+#define MEM_FAULT_MSTKERR    1 << 4
+#define MEM_FAULT_MUNSTKERR  1 << 3
+#define MEM_FAULT_DACCVIOL   1 << 1
+#define MEM_FAULT_IACCVIOL   1 << 0
 /* BusFault : bits 8:15 of CFSR */
 #define BUS_FAULT_OFFSET      8
 #define BUS_FAULT_BFARVALID   ((1 << 7) << BUS_FAULT_OFFSET)
