@@ -552,10 +552,11 @@ void cpu_init_v8(CPUState *env, uint32_t id)
 
 void cpu_reset_state(CPUState *env)
 {
-    //  Let's preserve arm_core_config, features and CPU ID.
+    //  Some fields must be preserved across reset.
     ARMCoreConfig config = env->arm_core_config;
     uint64_t features = env->features;
     uint32_t id = env->cp15.c0_cpuid;
+    uint64_t rvbar = env->cp15.rvbar;
 
     memset(env, 0, RESET_OFFSET);
 
@@ -565,6 +566,7 @@ void cpu_reset_state(CPUState *env)
     env->arm_core_config = config;
     env->features = features;
     env->cp15.c0_cpuid = id;
+    env->cp15.rvbar = rvbar;
 }
 
 void cpu_reset_v8_a64(CPUState *env)
