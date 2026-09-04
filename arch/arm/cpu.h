@@ -55,7 +55,7 @@
 #define EXCP_INVSTATE       18 /* INVSTATE usage fault */
 #define EXCP_SECURE         19 /* TrustZone Secure fault */
 #define EXCP_DIV_0          20 /* Integer divide by zero fault */
-#define EXCP_BUS_FAULT      21 /* Synchronous, precise data BusFault */
+#define EXCP_BUS_FAULT      21 /* Synchronous BusFault: precise data access or instruction fetch */
 
 #define ARMV7M_EXCP_RESET    1
 #define ARMV7M_EXCP_NMI      2
@@ -104,6 +104,7 @@ typedef enum {
 #define BUS_FAULT_STKERR      ((1 << 4) << BUS_FAULT_OFFSET)
 #define BUS_FAULT_UNSTKERR    ((1 << 3) << BUS_FAULT_OFFSET)
 #define BUS_FAULT_PRECISERR   ((1 << 1) << BUS_FAULT_OFFSET)
+#define BUS_FAULT_IBUSERR     ((1 << 0) << BUS_FAULT_OFFSET)
 #define BUS_FAULT_STATUS_MASK (0xff << BUS_FAULT_OFFSET)
 /* Usage Fault : bits 16-31 of CFSR */
 #define USAGE_FAULT_OFFSET     16

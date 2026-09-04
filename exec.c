@@ -1294,6 +1294,22 @@ void cpu_abort(CPUState *env, const char *fmt, ...)
     tlib_abort(s);
 }
 
+__attribute__((weak)) TLIB_NORETURN void arch_raise_code_fetch_abort_impl(CPUState *env, target_ulong addr, const char *reason)
+{
+    cpu_abort(env, "Trying to execute code %s at 0x" TARGET_FMT_lx "\n", reason, addr);
+    //  cpu_abort should never return
+    tlib_assert_not_reached();
+}
+
+/* Do not inline this into `get_page_addr_code` or call `arch_raise_code_fetch_abort_impl` directly from
+ * anywhere else. On PE/COFF a weak definition is emitted as an *undefined* weak external plus a
+ * fallback auxiliary symbol, which cannot satisfy a plain undefined reference coming from another object file.
+ * (patched in binutils 2.47, see https://github.com/gnutools/binutils-gdb/commit/2e2848327d8f8490f77af1a8aebf8aa3a2de588c). */
+TLIB_NORETURN void arch_raise_code_fetch_abort(CPUState *env, target_ulong addr, const char *reason)
+{
+    arch_raise_code_fetch_abort_impl(env, addr, reason);
+}
+
 static int compare_mmu_windows(const void *a, const void *b)
 {
     const ExtMmuRange *wa = (const ExtMmuRange *)a;

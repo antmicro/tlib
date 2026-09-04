@@ -44,6 +44,29 @@ uint32_t HELPER(neon_tbl)(uint32_t ireg, uint32_t def, uint32_t rn, uint32_t max
     return val;
 }
 
+#ifdef TARGET_PROTO_ARM_M
+void TLIB_NORETURN arch_raise_code_fetch_abort_impl(CPUState *env, target_ulong addr, const char *reason)
+{
+    /* Armv8-M ARM:
+     *   - RDDJJ Unless otherwise stated, BFAR is updated only for a synchronous BusFault on a data access.
+     *   (and the MemI pseudocode operation does not state otherwise)
+     *
+     * Unlike tlib_raise_precise_bus_fault(), neither the v7m.exception_phase check nor
+     * CCR.BFHFNMIGN applies here, as BFHFNMIGN only suppresses BusFaults from data accesses
+     * and we are now raising an instruction fetch BusFault.
+     *
+     * NVIC decides whether the BusFault is taken, escalated to HardFault, or causes Lockup. */
+
+    tlib_assert(env->v7m.exception_phase == V7M_EXCEPTION_PHASE_NONE);
+    tlib_assert(env->v7m.exception_phase_fault == 0);
+
+    tlib_printf(LOG_LEVEL_WARNING, "Trying to execute code %s at 0x" TARGET_FMT_lx ", raising a BusFault\n", reason, addr);
+    env->v7m.bus_fault_status |= BUS_FAULT_IBUSERR;
+    env->exception_index = EXCP_BUS_FAULT;
+    cpu_loop_exit_without_hook(env);
+}
+#endif
+
 void arch_raise_mmu_fault_exception(CPUState *env, int errcode, int access_type, target_ulong address, void *retaddr)
 {
     //  access_type == CODE ACCESS - do not fire block_end hooks!

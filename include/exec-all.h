@@ -91,6 +91,13 @@ int get_external_mmu_phys_addr(CPUState *env, uint64_t address, int access_type,
                                int no_page_fault, void *retaddr);
 /* Raises and external data/instruction fetch abort in an architecture specific way */
 void TLIB_NORETURN arch_raise_external_abort(CPUState *env, target_ulong address, int access_type, void *retaddr);
+/* Handles an instruction fetch from memory that isn't executable (neither RAM nor ROM, or disabled
+ * or locked). `reason` describes which of those cases applies. Always call this rather than
+ * `arch_raise_code_fetch_abort_impl`, see the comment on the `arch_raise_code_fetch_abort` definition in exec.c. */
+void TLIB_NORETURN arch_raise_code_fetch_abort(CPUState *env, target_ulong addr, const char *reason);
+/* Architecture specific handler for the `arch_raise_code_fetch_abort`, overridable by an architecture that can report the
+ * failed fetch to the guest. The default implementation aborts the emulation. */
+void TLIB_NORETURN arch_raise_code_fetch_abort_impl(CPUState *env, target_ulong addr, const char *reason);
 
 #define CODE_GEN_ALIGN 16 /* must be >= of the size of a icache line */
 
@@ -341,7 +348,11 @@ static inline tb_page_addr_t get_page_addr_code(CPUState *env1, target_ulong add
         if(tlib_is_memory_disabled(page_addr, TARGET_PAGE_SIZE)) {
             reason = "from disabled or locked memory";
         }
-        cpu_abort(env1, "Trying to execute code %s at 0x" TARGET_FMT_lx "\n", reason, addr);
+        if(map_when_needed) {
+            arch_raise_code_fetch_abort(env1, addr, reason);
+        } else {
+            return -1;
+        }
     }
 
     /* The iotlb entry contains the physical/RAM page offset both for MMIO and normal RAM,
