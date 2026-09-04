@@ -169,6 +169,7 @@ void tlib_set_gic_cpu_register_interface_version(uint32_t iface_version)
 
 EXC_VOID_1(tlib_set_gic_cpu_register_interface_version, uint32_t, iface_version)
 
+//  A getter isn't needed because RNDR support can be checked in bits 60-63 of `ID_AA64ISAR0_EL1`.
 void tlib_set_rndr_supported(uint32_t rndr)
 {
     env->arm_core_config.isar.id_aa64isar0 = FIELD_DP64(env->arm_core_config.isar.id_aa64isar0, ID_AA64ISAR0, RNDR, rndr);
