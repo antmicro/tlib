@@ -610,8 +610,6 @@ void cpu_reset_v8_a32(CPUState *env)
     env->cp15.vmpidr_el2 = env->arm_core_config.mpidr;
     env->cp15.vpidr_el2 = env->arm_core_config.midr;
 
-    env->cp15.rvbar = env->arm_core_config.rvbar_prop;
-
     uint32_t cpsr = arm_get_highest_cpu_mode(env);
     cpsr |= CPSR_AIF | CPSR_Z;
     cpsr_write(env, cpsr, 0xFFFFFFFF, CPSRWriteRaw);
