@@ -1203,7 +1203,7 @@ static void v7m_handle_early_exception_return_fault(CPUState *env, uint32_t type
     env->v7m.exception_return_tailchain = true;
     env->v7m.exception_return_type = type;
     env->exception_index = EXCP_IRQ;
-    cpu_loop_exit(env);
+    cpu_loop_exit_without_hook(env);
 }
 
 void do_v7m_exception_exit(CPUState *env)
@@ -1484,7 +1484,7 @@ void do_v7m_exception_exit(CPUState *env)
             env->v7m.exception_return_tailchain = true;
             env->v7m.exception_return_type = type;
             env->exception_index = EXCP_IRQ;
-            cpu_loop_exit(env);
+            cpu_loop_exit_without_hook(env);
         }
     }
 
