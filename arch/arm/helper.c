@@ -3290,13 +3290,10 @@ static inline void pmsav8_get_security_attribution(CPUState *env, uint32_t addre
         if(applies_to_whole_page != NULL) {
             *applies_to_whole_page = false;
         }
-    } else if(pmsav8_idau_try_get_region(env, address, idau_region, &idau_attribution, applies_to_whole_page)) {
-        //  Make sure last byte accessed belongs to the same region.
-        tlib_assert(access_end_address <= pmsav8_idau_sau_get_region_limit(env->idau.rlar[*idau_region]));
-
-        *idau_valid = true;
     } else {
-        return;
+        *idau_valid = pmsav8_idau_try_get_region(env, address, idau_region, &idau_attribution, applies_to_whole_page);
+        //  Make sure last byte accessed belongs to the same region.
+        tlib_assert(!*idau_valid || access_end_address <= pmsav8_idau_sau_get_region_limit(env->idau.rlar[*idau_region]));
     }
     //  More restrictive IDAU attribution overrides SAU attribution.
     *attribution = attribution_get_more_secure(idau_attribution, *attribution);
