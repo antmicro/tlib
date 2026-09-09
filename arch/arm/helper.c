@@ -1503,7 +1503,7 @@ void do_v7m_secure_return(CPUState *env)
     partialRETPSR = v7m_pop(env);
     env->v7m.control[M_REG_COMMON] |=
         deposit32(env->v7m.control[M_REG_COMMON], ARM_CONTROL_SFPA, 1, partialRETPSR & RETPSR_SFPA ? 1 : 0);
-    env->v7m.exception = partialRETPSR & ~RETPSR_SFPA;
+    env->v7m.exception = partialRETPSR & 0x1ff;
 
     env->event_register = 1;
 
