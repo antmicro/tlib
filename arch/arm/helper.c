@@ -2970,11 +2970,14 @@ static int get_phys_addr_mpu(CPUState *env, uint32_t address, int access_type, i
 static int cortexm_check_default_mapping_v8(uint32 address)
 {
     switch(address) {
-        case 0x00000000 ... 0x7FFFFFFF:
+        //  Code, SRAM, RAM
+        case 0x00000000 ... 0x3FFFFFFF:
+        case 0x60000000 ... 0x9FFFFFFF:
             return PAGE_READ | PAGE_WRITE | PAGE_EXEC;
             break;
-        //  Devices
-        case 0x80000000 ... 0xFFFFFFFF:
+        //  Peripheral, External device, System (XN)
+        case 0x40000000 ... 0x5FFFFFFF:
+        case 0xA0000000 ... 0xFFFFFFFF:
             return PAGE_READ | PAGE_WRITE;
             break;
         default:
