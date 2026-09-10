@@ -845,7 +845,7 @@ static inline void gen_bx_im(DisasContext *s, uint32_t addr, int stack_announcem
 }
 
 /* Set PC and Thumb state from var.  var is marked as dead.  */
-static inline void gen_bx(DisasContext *s, TCGv var, int stack_announcement_type)
+static inline void gen_bx(DisasContext *s, TCGv var, int stack_announcement_type, bool allow_exc_return)
 {
     if(unlikely(s->base.guest_profile)) {
         generate_stack_announcement(var, stack_announcement_type, true);
@@ -853,6 +853,9 @@ static inline void gen_bx(DisasContext *s, TCGv var, int stack_announcement_type
     s->base.is_jmp = DISAS_UPDATE;
 #ifdef TARGET_PROTO_ARM_M
     gen_helper_v8m_bx_update_pc(cpu_env, var);
+    if(allow_exc_return) {
+        store_cpu_field(tcg_const_i32(1), v7m.can_do_exception_return);
+    }
 #else
     tcg_gen_andi_i32(cpu_R[15], var, ~1);
     tcg_gen_andi_i32(var, var, 1);
@@ -867,7 +870,7 @@ static inline void store_reg_bx(CPUState *env, DisasContext *s, int reg, TCGv va
 {
     if(reg == 15 && ENABLE_ARCH_7) {
         /* Mostly arithmetic on the PC, so no stack changes can be detected */
-        gen_bx(s, var, STACK_FRAME_NO_CHANGE);
+        gen_bx(s, var, STACK_FRAME_NO_CHANGE, false);
     } else {
         store_reg(s, reg, var);
     }
@@ -880,7 +883,7 @@ static inline void store_reg_bx(CPUState *env, DisasContext *s, int reg, TCGv va
 static inline void store_reg_from_load(CPUState *env, DisasContext *s, int reg, TCGv var, int stack_announcement_type)
 {
     if(reg == 15 && ENABLE_ARCH_5) {
-        gen_bx(s, var, stack_announcement_type);
+        gen_bx(s, var, stack_announcement_type, true);
     } else {
         store_reg(s, reg, var);
     }
@@ -8335,7 +8338,7 @@ static void disas_arm_insn(CPUState *env, DisasContext *s)
                     ARCH(4T);
                     tmp = load_reg(s, rm);
                     /* Exit from subroutine if the target register is LR (r14)  */
-                    gen_bx(s, tmp, rm == 14 ? STACK_FRAME_POP : STACK_FRAME_NO_CHANGE);
+                    gen_bx(s, tmp, rm == 14 ? STACK_FRAME_POP : STACK_FRAME_NO_CHANGE, true);
                 } else if(op1 == 3) {
                     /* clz */
                     ARCH(5);
@@ -8353,7 +8356,7 @@ static void disas_arm_insn(CPUState *env, DisasContext *s)
                     /* Trivial implementation equivalent to bx.  */
                     tmp = load_reg(s, rm);
                     /* Same as bx */
-                    gen_bx(s, tmp, rm == 14 ? STACK_FRAME_POP : STACK_FRAME_NO_CHANGE);
+                    gen_bx(s, tmp, rm == 14 ? STACK_FRAME_POP : STACK_FRAME_NO_CHANGE, false);
                 } else {
                     goto illegal_op;
                 }
@@ -8370,7 +8373,7 @@ static void disas_arm_insn(CPUState *env, DisasContext *s)
                 tcg_gen_movi_i32(tmp2, s->base.pc);
                 store_reg(s, 14, tmp2);
                 /* Branch with link - new stack frame */
-                gen_bx(s, tmp, STACK_FRAME_ADD);
+                gen_bx(s, tmp, STACK_FRAME_ADD, false);
                 break;
             case 0x5: /* saturating add/subtract */
                 ARCH(5TE);
@@ -12627,7 +12630,7 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
             tcg_gen_movi_i32(tmp2, s->base.pc | 1);
             store_reg(s, 14, tmp2);
             /* Branch with link - new stack frame */
-            gen_bx(s, tmp, STACK_FRAME_ADD);
+            gen_bx(s, tmp, STACK_FRAME_ADD, false);
             return 0;
         }
         if(insn & (1 << 11)) {
@@ -12640,7 +12643,7 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
             tcg_gen_movi_i32(tmp2, s->base.pc | 1);
             store_reg(s, 14, tmp2);
             /* Branch with link - new stack frame */
-            gen_bx(s, tmp, STACK_FRAME_ADD);
+            gen_bx(s, tmp, STACK_FRAME_ADD, false);
             return 0;
         }
         if((s->base.pc & ~TARGET_PAGE_MASK) == 0) {
@@ -12956,7 +12959,7 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                             tmp = gen_ld32(addr, context_to_mmu_index(s));
                             if(i == 15) {
                                 /* pop - loading PC form stack */
-                                gen_bx(s, tmp, STACK_FRAME_POP);
+                                gen_bx(s, tmp, STACK_FRAME_POP, true);
                             } else if(i == rn) {
                                 loaded_var = tmp;
                                 loaded_base = 1;
@@ -15264,7 +15267,7 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                             case 4: /* bxj */
                                 /* Trivial implementation equivalent to bx.  */
                                 tmp = load_reg(s, rn);
-                                gen_bx(s, tmp, rn == 14 ? STACK_FRAME_POP : STACK_FRAME_NO_CHANGE);
+                                gen_bx(s, tmp, rn == 14 ? STACK_FRAME_POP : STACK_FRAME_NO_CHANGE, false);
                                 break;
                             case 5: /* Exception return.  */
                                 if(s->user) {
@@ -15619,7 +15622,7 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
                     /* Stack pop - loading PC form stack
                      * Local jump - SP is not used
                      */
-                    gen_bx(s, tmp, rn == 13 ? STACK_FRAME_POP : STACK_FRAME_NO_CHANGE);
+                    gen_bx(s, tmp, rn == 13 ? STACK_FRAME_POP : STACK_FRAME_NO_CHANGE, true);
                 } else {
                     store_reg(s, rs, tmp);
                 }
@@ -15848,7 +15851,8 @@ static void disas_thumb_insn(CPUState *env, DisasContext *s)
                         /* Check the link bit if set then add frame (blx),
                            else check if the target register is link then remove frame (bx)
                            else there was no stack change (custom jump) */
-                        gen_bx(s, tmp, insn & (1 << 7) ? STACK_FRAME_ADD : (rm == 14 ? STACK_FRAME_POP : STACK_FRAME_NO_CHANGE));
+                        gen_bx(s, tmp, insn & (1 << 7) ? STACK_FRAME_ADD : (rm == 14 ? STACK_FRAME_POP : STACK_FRAME_NO_CHANGE),
+                               !link);
                         break;
                 }
                 break;

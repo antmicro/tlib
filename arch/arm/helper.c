@@ -4953,6 +4953,8 @@ void HELPER(v8m_blxns)(CPUState *env, uint32_t addr, uint32_t link)
 
     if(!link && addr >= ARM_M_FNC_RETURN_MIN) {
         //  FNC_RETURN or EXC_RETURN is in the register, continue without clearing the lowest bit to process it later
+        env->v7m.can_do_exception_return = 1;
+        env->regs[15] = addr;
         return;
     }
 

@@ -403,6 +403,10 @@ typedef struct CPUState {
         bool exception_return_tailchain;
         uint32_t exception_return_type;
         bool locked_up;
+        //  Exception return can only happen from a special set of instructions,
+        //  described in RKPSS and RHPFG. This field specifies whether we just
+        //  executed such instruction
+        uint32_t can_do_exception_return;
     } v7m;
 
     /* PMSAv8 MPUs */
