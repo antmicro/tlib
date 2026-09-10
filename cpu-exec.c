@@ -109,6 +109,7 @@ void TLIB_NORETURN cpu_loop_exit_without_hook(CPUState *env)
 
 void TLIB_NORETURN cpu_loop_exit(CPUState *env)
 {
+    tlib_assert(env->current_tb != NULL);
     if(env->block_finished_hook_present) {
         TranslationBlock *tb = env->current_tb;
         target_ulong pc = CPU_PC(env);
