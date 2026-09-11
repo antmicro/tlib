@@ -379,7 +379,7 @@ int cpu_exec(CPUState *env)
 #ifdef TARGET_PROTO_ARM_M
                 if(unlikely(env->v7m.can_do_exception_return)) {
                     env->v7m.can_do_exception_return = 0;
-                    if(env->regs[15] >= ARM_M_EXC_RETURN_MIN) {
+                    if(in_handler_mode(env) && env->regs[15] >= ARM_M_EXC_RETURN_MIN) {
                         do_v7m_exception_exit(env);
                         next_tb = 0;
                         if(automatic_sleep_after_interrupt(env)) {
