@@ -298,6 +298,11 @@ void unmap_page(target_phys_addr_t address)
         pd->region_offset = pd->phys_offset;
         pd->phys_offset = IO_MEM_UNASSIGNED;
     }
+    if(pd->flags.was_executable_io_mem) {
+        /* The page was executable IO before memory got mapped over it. Make it executable again. */
+        pd->flags.executable_io_mem = true;
+        pd->flags.was_executable_io_mem = false;
+    }
     tlb_flush_page(cpu, address, /* from_generated: */ false);
 }
 
@@ -1843,9 +1848,12 @@ void cpu_register_physical_memory_log(target_phys_addr_t start_addr, ram_addr_t 
                 phys_offset += TARGET_PAGE_SIZE;
             }
         } else {
-            PhysPageDescFlags flags = {
-                .dirty = true,
-            };
+            PhysPageDescFlags flags = p ? p->flags : (PhysPageDescFlags) { 0 };
+            flags.dirty = true;
+            if(flags.executable_io_mem && phys_offset != IO_MEM_UNASSIGNED) {
+                flags.executable_io_mem = false;
+                flags.was_executable_io_mem = true;
+            }
             p = phys_page_alloc(addr >> TARGET_PAGE_BITS, flags);
             p->phys_offset = phys_offset;
             p->region_offset = region_offset;

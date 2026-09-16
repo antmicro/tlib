@@ -85,6 +85,9 @@ typedef struct __attribute__((__packed__)) {
     bool dirty : 1;
     bool executable_io_mem : 1;
     bool external_permissions : 1;
+    /* Set while memory is mapped over an executable IO page, so that the
+       `executable_io_mem` flag can be restored once the page is unmapped. */
+    bool was_executable_io_mem : 1;
 } PhysPageDescFlags;
 
 typedef struct PhysPageDesc {
