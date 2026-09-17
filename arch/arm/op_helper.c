@@ -44,6 +44,19 @@ uint32_t HELPER(neon_tbl)(uint32_t ireg, uint32_t def, uint32_t rn, uint32_t max
     return val;
 }
 
+/* Faults raised during instruction fetch happen while the block is being translated, i.e. before
+ * any instruction is executed. The fault consumes the step of the instruction being fetched, and
+ * we need to account for that in the instructions count to avoid executing the first instruction
+ * of the exception handler in the same step. */
+static void account_for_code_fetch_fault(CPUState *env)
+{
+    cpu_sync_instructions_count(env);
+    if(env->instructions_count_value < env->instructions_count_limit) {
+        env->instructions_count_value++;
+        env->instructions_count_total_value++;
+    }
+}
+
 #ifdef TARGET_PROTO_ARM_M
 void TLIB_NORETURN arch_raise_code_fetch_abort_impl(CPUState *env, target_ulong addr, const char *reason)
 {
@@ -63,12 +76,16 @@ void TLIB_NORETURN arch_raise_code_fetch_abort_impl(CPUState *env, target_ulong 
     tlib_printf(LOG_LEVEL_WARNING, "Trying to execute code %s at 0x" TARGET_FMT_lx ", raising a BusFault\n", reason, addr);
     env->v7m.bus_fault_status |= BUS_FAULT_IBUSERR;
     env->exception_index = EXCP_BUS_FAULT;
+    account_for_code_fetch_fault(env);
     cpu_loop_exit_without_hook(env);
 }
 #endif
 
 void arch_raise_mmu_fault_exception(CPUState *env, int errcode, int access_type, target_ulong address, void *retaddr)
 {
+    if(access_type == ACCESS_INST_FETCH) {
+        account_for_code_fetch_fault(env);
+    }
     //  access_type == CODE ACCESS - do not fire block_end hooks!
     cpu_loop_exit_restore(env, (uintptr_t)retaddr, access_type != ACCESS_INST_FETCH);
 }
