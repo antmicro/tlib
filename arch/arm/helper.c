@@ -1272,6 +1272,23 @@ void do_v7m_exception_exit(CPUState *env)
         return;
     }
 
+    /* When a pending exception can preempt the return
+     * target, the processor may optimize the exception return into a
+     * TailChain(). TailChain() performs no PopStack(), so the derived
+     * integrity checks that read the stacked frame do not occur.
+     *
+     * NOTE: RFKXX is not respected here. `tlib_nvic_find_pending_irq()`
+     * does not respect PRIMASK/BASEPRI/FAULTMASK.
+     */
+    int pending_exception = tlib_nvic_find_pending_irq();
+    if(pending_exception > 0) {
+        env->v7m.exception_return_tailchain = true;
+        env->v7m.exception_return_type = type;
+        env->exception_index = EXCP_IRQ;
+        cpu_loop_exit_without_hook(env);
+        return;
+    }
+
     if((env->v7m.control[M_REG_COMMON] & ARM_CONTROL_FPCA_MASK) &&
        (fpccr_read(env, exception_was_secure) & ARM_FPCCR_CLRONRET_MASK)) {
         if(fpccr_read(env, true) & ARM_FPCCR_LSPACT_MASK) {
