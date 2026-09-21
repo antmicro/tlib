@@ -1639,8 +1639,8 @@ void do_unaligned_access(target_ulong addr, int is_write, int is_user, void *ret
 
 void arch_raise_mmu_fault_exception(CPUState *env, int errcode, int access_type, target_ulong address, void *retaddr)
 {
-    cpu_restore_state(env, retaddr);
-    cpu_loop_exit(env);
+    //  access_type == CODE ACCESS - do not fire block_end hooks!
+    cpu_loop_exit_restore(env, (uintptr_t)retaddr, access_type != ACCESS_INST_FETCH);
 }
 
 /* try to fill the TLB and return an exception if error. If retaddr is
