@@ -7965,17 +7965,15 @@ static void gen_store_exclusive(DisasContext *s, int rd, int rt, int rt2, TCGv a
     gen_helper_release_global_memory_lock(cpu_env);
 }
 
-static void disas_arm_insn(CPUState *env, DisasContext *s)
+static void disas_arm_insn(CPUState *env, DisasContext *s, uint32_t insn)
 {
-    unsigned int cond, insn, val, op1, i, shift, rm, rs, rn, rd, sh;
+    unsigned int cond, val, op1, i, shift, rm, rs, rn, rd, sh;
     TCGv tmp;
     TCGv tmp2;
     TCGv tmp3;
     TCGv addr;
     TCGv_i64 tmp64;
     target_ulong current_pc = s->base.pc;
-
-    insn = ldl_code(s->base.pc);
 
     if(env->count_opcodes) {
         generate_opcode_count_increment(env, insn);
@@ -15666,9 +15664,9 @@ illegal_op:
     return 1;
 }
 
-static void disas_thumb_insn(CPUState *env, DisasContext *s)
+static void disas_thumb_insn(CPUState *env, DisasContext *s, uint16_t insn)
 {
-    uint32_t val, insn, op, rm, rn, rd, shift, cond;
+    uint32_t val, op, rm, rn, rd, shift, cond;
     int32_t offset;
     int i;
     TCGv tmp;
@@ -15684,8 +15682,6 @@ static void disas_thumb_insn(CPUState *env, DisasContext *s)
             s->condjmp = 1;
         }
     }
-
-    insn = lduw_code(s->base.pc);
 
     if(env->count_opcodes) {
         generate_opcode_count_increment(env, insn);
@@ -16495,7 +16491,8 @@ int disas_insn(CPUState *env, DisasContext *dc)
     }
 
     if(dc->thumb) {
-        disas_thumb_insn(env, dc);
+        uint16_t decoded_insn = lduw_code(dc->base.pc);
+        disas_thumb_insn(env, dc, decoded_insn);
         if(dc->condexec_mask) {
             dc->condexec_cond = (dc->condexec_cond & 0xe) | ((dc->condexec_mask >> 4) & 1);
             dc->condexec_mask = (dc->condexec_mask << 1) & 0x1f;
@@ -16504,7 +16501,8 @@ int disas_insn(CPUState *env, DisasContext *dc)
             }
         }
     } else {
-        disas_arm_insn(env, dc);
+        uint32_t decoded_insn = ldl_code(dc->base.pc);
+        disas_arm_insn(env, dc, decoded_insn);
     }
 
     if(unlikely(env->are_post_opcode_execution_hooks_enabled)) {
