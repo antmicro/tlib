@@ -12601,9 +12601,9 @@ static bool trans_vshlc(DisasContext *s, arg_vshlc *a)
 
 /* Translate a 32-bit thumb instruction.  Returns nonzero if the instruction
    is not legal.  */
-static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
+static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint32_t insn)
 {
-    uint32_t insn, imm, shift, offset;
+    uint32_t imm, shift, offset;
     uint32_t rd, rn, rm, rs;
     TCGv tmp;
     TCGv tmp2;
@@ -12620,11 +12620,11 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
     if(!arm_feature(env, ARM_FEATURE_THUMB2)) {
         /* Thumb-1 cores may need to treat bl and blx as a pair of
            16-bit instructions to get correct prefetch abort behavior.  */
-        insn = insn_hw1;
-        if((insn & (1 << 12)) == 0) {
+        uint16_t insn_hw1 = insn >> 16;
+        if((insn_hw1 & (1 << 12)) == 0) {
             ARCH(5);
             /* Second half of blx.  */
-            offset = ((insn & 0x7ff) << 1);
+            offset = ((insn_hw1 & 0x7ff) << 1);
             tmp = load_reg(s, 14);
             tcg_gen_addi_i32(tmp, tmp, offset);
             tcg_gen_andi_i32(tmp, tmp, 0xfffffffc);
@@ -12636,9 +12636,9 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
             gen_bx(s, tmp, STACK_FRAME_ADD, false);
             return 0;
         }
-        if(insn & (1 << 11)) {
+        if(insn_hw1 & (1 << 11)) {
             /* Second half of bl.  */
-            offset = ((insn & 0x7ff) << 1) | 1;
+            offset = ((insn_hw1 & 0x7ff) << 1) | 1;
             tmp = load_reg(s, 14);
             tcg_gen_addi_i32(tmp, tmp, offset);
 
@@ -12653,7 +12653,7 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
             /* Instruction spans a page boundary.  Implement it as two
                16-bit instructions in case the second half causes an
                prefetch abort.  */
-            offset = ((int32_t)insn << 21) >> 9;
+            offset = ((int32_t)insn_hw1 << 21) >> 9;
             tcg_gen_movi_i32(cpu_R[14], s->base.pc + 2 + offset);
             return 0;
         }
@@ -12661,9 +12661,7 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint16_t insn_hw1)
     }
 #endif
 
-    insn = lduw_code(s->base.pc);
     s->base.pc += 2;
-    insn |= (uint32_t)insn_hw1 << 16;
 
     if((insn & 0xf800e800) != 0xf000e800) {
         ARCH(6T2);
@@ -15664,7 +15662,7 @@ illegal_op:
     return 1;
 }
 
-static void disas_thumb_insn(CPUState *env, DisasContext *s, uint16_t insn)
+static void disas_thumb_insn(CPUState *env, DisasContext *s, uint16_t insn, uint16_t insn_hw2)
 {
     uint32_t val, op, rm, rn, rd, shift, cond;
     int32_t offset;
@@ -16426,7 +16424,7 @@ static void disas_thumb_insn(CPUState *env, DisasContext *s, uint16_t insn)
 
         case 14:
             if(insn & (1 << 11)) {
-                if(disas_thumb2_insn(env, s, insn)) {
+                if(disas_thumb2_insn(env, s, ((uint32_t)insn << 16) | insn_hw2)) {
                     goto undef32;
                 }
                 break;
@@ -16445,7 +16443,7 @@ static void disas_thumb_insn(CPUState *env, DisasContext *s, uint16_t insn)
             }
             break;
         case 15:
-            if(disas_thumb2_insn(env, s, insn)) {
+            if(disas_thumb2_insn(env, s, ((uint32_t)insn << 16) | insn_hw2)) {
                 goto undef32;
             }
             break;
@@ -16465,34 +16463,71 @@ undef:
 int disas_insn(CPUState *env, DisasContext *dc)
 {
     target_ulong start_pc = dc->base.pc;
-    tcg_gen_insn_start(start_pc, pack_condexec(dc));
-    uint64_t insn = 0;
+    uint32_t insn = 0;
+    uint16_t insn_hw2 = 0;
+    int fetch_err = 0;
+    target_ulong fault_address = start_pc;
 
 #ifdef TARGET_PROTO_ARM_M
     if(unlikely(!dc->thumb)) {
         /* Armv8-M ARM rule RSQLX: no instruction can execute with
          * EPSR.T clear. */
+        tcg_gen_insn_start(start_pc, pack_condexec(dc));
         gen_exception_insn(dc, 0, EXCP_INVSTATE);
         LOCK_TB(dc->base.tb);
         return 0;
     }
 #endif
 
-    if(unlikely(env->are_pre_opcode_execution_hooks_enabled || env->are_post_opcode_execution_hooks_enabled)) {
-        if(dc->thumb) {
-            insn = lduw_code(dc->base.pc);
-        } else {
-            insn = ldl_code(dc->base.pc);
+    /* Fetch the entire instruction before generating any code for it. If a fetch
+     * fails after earlier instructions have been translated into this block,
+     * they must execute before the fault is raised. */
+    if(dc->thumb) {
+        insn = lduw_err_code(start_pc, &fetch_err);
+        if(!fetch_err) {
+            /* Thumb prefixes 11101, 11110, and 11111 indicate a 32-bit
+             * instruction. Do not fetch past a 16-bit instruction. */
+            bool needs_second_halfword = (insn >> 11) >= 0b11101;
+#ifndef TARGET_PROTO_ARM_M
+            if(!arm_feature(env, ARM_FEATURE_THUMB2)) {
+                /* The Thumb-1 decoder handles second BL/BLX halfwords and a
+                 * first BL halfword at a page boundary without another fetch. */
+                needs_second_halfword = (insn & 0xf800) == 0xf000 && ((start_pc + 2) & ~TARGET_PAGE_MASK) != 0;
+            }
+#endif
+            if(needs_second_halfword) {
+                fault_address = start_pc + 2;
+                insn_hw2 = lduw_err_code(fault_address, &fetch_err);
+            }
         }
-
-        if(env->are_pre_opcode_execution_hooks_enabled) {
-            generate_pre_opcode_execution_hook(env, dc->base.pc, insn);
+    } else {
+        insn = ldl_err_code(start_pc, &fetch_err);
+    }
+    if(unlikely(fetch_err)) {
+        if(start_pc == dc->base.tb->pc) {
+            /* There is nothing to execute before the fault. Retry the failing
+             * fetch with fault reporting enabled to raise the exception. */
+            if(dc->thumb && fault_address != start_pc) {
+                insn_hw2 = lduw_code(fault_address);
+            } else if(dc->thumb) {
+                insn = lduw_code(fault_address);
+            } else {
+                insn = ldl_code(fault_address);
+            }
+        } else {
+            /* Execution will reach the faulting instruction in a new block. */
+            return -1;
         }
     }
 
+    tcg_gen_insn_start(start_pc, pack_condexec(dc));
+
+    if(unlikely(env->are_pre_opcode_execution_hooks_enabled)) {
+        generate_pre_opcode_execution_hook(env, start_pc, insn);
+    }
+
     if(dc->thumb) {
-        uint16_t decoded_insn = lduw_code(dc->base.pc);
-        disas_thumb_insn(env, dc, decoded_insn);
+        disas_thumb_insn(env, dc, insn, insn_hw2);
         if(dc->condexec_mask) {
             dc->condexec_cond = (dc->condexec_cond & 0xe) | ((dc->condexec_mask >> 4) & 1);
             dc->condexec_mask = (dc->condexec_mask << 1) & 0x1f;
@@ -16501,8 +16536,7 @@ int disas_insn(CPUState *env, DisasContext *dc)
             }
         }
     } else {
-        uint32_t decoded_insn = ldl_code(dc->base.pc);
-        disas_arm_insn(env, dc, decoded_insn);
+        disas_arm_insn(env, dc, insn);
     }
 
     if(unlikely(env->are_post_opcode_execution_hooks_enabled)) {
@@ -16595,7 +16629,15 @@ int gen_intermediate_code(CPUState *env, DisasContextBase *base)
     DisasContext *dc = (DisasContext *)base;
     bool was_in_it_block = dc->thumb && dc->condexec_mask;
 
-    base->tb->size += disas_insn(env, (DisasContext *)base);
+    int insn_size = disas_insn(env, (DisasContext *)base);
+    if(insn_size < 0) {
+        /* The faulting instruction was not translated. Execute the preceding
+         * instructions before looking up a block at the faulting PC. */
+        base->tb->icount--;
+        return 0;
+    }
+
+    base->tb->size += insn_size;
 
     if(dc->condjmp && !dc->base.is_jmp) {
         gen_set_label(dc->condlabel);
