@@ -247,10 +247,10 @@ else()
     set(PTREAD_OPT pthread)
 endif()
 
-# On x86_64 Linux, the memcpy function was modified in GNU libc v2.14.
-# It'd be impossible to run tlib without this wrapping with older libc.
+# It'd be impossible to run tlib without this wrapping with older GLIBC.
+# The `pthread_*` functions have been updated in GLIBC v2.34 while `log` and `pow` in GLIBC v2.29.
 if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL Linux AND ${HOST_ARCH} STREQUAL i386 AND ${HOST_WORD_SIZE} EQUAL 64)
-    set(WRAP_MEMCPY_OPT -Wl,--wrap=memcpy)
+    set(OLD_GLIBC_WRAPPERS -Wl,--wrap=pthread_mutexattr_destroy -Wl,--wrap=pthread_mutexattr_init -Wl,--wrap=pthread_mutexattr_setrobust -Wl,--wrap=log -Wl,--wrap=pow)
 endif()
 
 # -z flag does not work on Windows
@@ -259,7 +259,7 @@ if ((NOT (${CMAKE_HOST_SYSTEM_NAME} MATCHES "(Windows|CYGWIN)" )) AND ("${C_COMP
 endif()
 
 target_link_libraries (tlib
-    ${WRAP_MEMCPY_OPT}
+    ${OLD_GLIBC_WRAPPERS}
     -fPIC
     ${Z_OPTS}
 

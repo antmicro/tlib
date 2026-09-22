@@ -28,15 +28,49 @@
 
 void *global_retaddr = 0;
 
+// clang-format off
 #if defined(__linux__) && defined(__x86_64__)
+    // Wrappers downgrading GLIBC v2.34 functions.
 
-asm(".symver memcpy, memcpy@GLIBC_2.2.5");
+    #include <pthread.h>
 
-void *__wrap_memcpy(void *dest, const void *src, size_t n)
-{
-    return memcpy(dest, src, n);
-}
+    asm(".symver pthread_mutexattr_destroy, pthread_mutexattr_destroy@GLIBC_2.2.5");
+    int __wrap_pthread_mutexattr_destroy(pthread_mutexattr_t *attr)
+    {
+        return pthread_mutexattr_destroy(attr);
+    }
+
+    asm(".symver pthread_mutexattr_init, pthread_mutexattr_init@GLIBC_2.2.5");
+    int __wrap_pthread_mutexattr_init(pthread_mutexattr_t *attr)
+    {
+        return pthread_mutexattr_init(attr);
+    }
+
+    asm(".symver pthread_mutexattr_setrobust, pthread_mutexattr_setrobust@GLIBC_2.12");
+    int __wrap_pthread_mutexattr_setrobust(pthread_mutexattr_t *attr, int robustness)
+    {
+        return pthread_mutexattr_setrobust(attr, robustness);
+    }
+
+    // Wrappers downgrading GLIBC v2.29 functions.
+
+    #if defined(TARGET_I386)
+        #include <math.h>
+
+        asm(".symver pow, pow@GLIBC_2.2.5");
+        double __wrap_pow(double x, double y)
+        {
+            return pow(x, y);
+        }
+
+        asm(".symver log, log@GLIBC_2.2.5");
+        double __wrap_log(double x)
+        {
+            return log(x);
+        }
+    #endif
 #endif
+// clang-format on
 
 void *tlib_mallocz(size_t size)
 {
