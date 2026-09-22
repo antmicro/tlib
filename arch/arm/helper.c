@@ -4935,7 +4935,7 @@ void HELPER(v8m_blxns)(CPUState *env, uint32_t addr, uint32_t link)
     /* Because we synced the pc before executing this instruction we need to subtract instruction's length to get address of the
      * instruction */
     uint32_t insn_addr = env->regs[15] - 2;
-    tlib_printf(LOG_LEVEL_NOISY, "B%sXNS jump at 0x%x to 0x%x", link ? "L" : "", env->regs[15], addr);
+    tlib_printf(LOG_LEVEL_NOISY, "B%sXNS jump at 0x%x to 0x%x", link ? "L" : "", insn_addr, addr);
 
     if(!link && addr >= ARM_M_FNC_RETURN_MIN) {
         //  FNC_RETURN or EXC_RETURN is in the register, continue without clearing the lowest bit to process it later
