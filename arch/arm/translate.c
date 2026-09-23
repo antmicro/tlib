@@ -15662,7 +15662,7 @@ illegal_op:
     return 1;
 }
 
-static void disas_thumb_insn(CPUState *env, DisasContext *s, uint16_t insn, uint16_t insn_hw2)
+static void disas_thumb_insn(CPUState *env, DisasContext *s, uint32_t opcode)
 {
     uint32_t val, op, rm, rn, rd, shift, cond;
     int32_t offset;
@@ -15671,6 +15671,18 @@ static void disas_thumb_insn(CPUState *env, DisasContext *s, uint16_t insn, uint
     TCGv tmp2;
     TCGv addr;
     target_ulong current_pc = s->base.pc;
+
+    /* The opcode is the whole word as reported to the opcode counters
+     * and execution hooks, so a 32-bit Thumb-2 instruction is encoded
+     * as its first halfword in the upper 16 bits of `opcode`, and its
+     * second halfword in the lower ones, whereas a 16-bit instruction
+     * is reported as its encoding zero-extended to 32 bits. Split the
+     * correct halfwords for the first decoding step. */
+    uint16_t insn = opcode >> 16;
+    if(!insn) {
+        /* 16-bit opcode zero-extended to 32 bits. */
+        insn = opcode;
+    }
 
     if(s->condexec_mask) {
         cond = s->condexec_cond;
@@ -15682,7 +15694,7 @@ static void disas_thumb_insn(CPUState *env, DisasContext *s, uint16_t insn, uint
     }
 
     if(env->count_opcodes) {
-        generate_opcode_count_increment(env, insn);
+        generate_opcode_count_increment(env, opcode);
     }
 
     s->base.pc += 2;
@@ -16424,7 +16436,7 @@ static void disas_thumb_insn(CPUState *env, DisasContext *s, uint16_t insn, uint
 
         case 14:
             if(insn & (1 << 11)) {
-                if(disas_thumb2_insn(env, s, ((uint32_t)insn << 16) | insn_hw2)) {
+                if(disas_thumb2_insn(env, s, opcode)) {
                     goto undef32;
                 }
                 break;
@@ -16443,7 +16455,7 @@ static void disas_thumb_insn(CPUState *env, DisasContext *s, uint16_t insn, uint
             }
             break;
         case 15:
-            if(disas_thumb2_insn(env, s, ((uint32_t)insn << 16) | insn_hw2)) {
+            if(disas_thumb2_insn(env, s, opcode)) {
                 goto undef32;
             }
             break;
@@ -16508,6 +16520,10 @@ int disas_insn(CPUState *env, DisasContext *dc)
             /* There is nothing to execute before the fault. Retry the failing
              * fetch with fault reporting enabled to raise the exception. */
             if(dc->thumb && fault_address != start_pc) {
+                /* fault_address != start_pc means this is a 32-bit instruction,
+                 * as the fetches of the 16-bit halves happen sequentially and
+                 * fault_address records the last potentially failing fetch,
+                 * see above. */
                 insn_hw2 = lduw_code(fault_address);
             } else if(dc->thumb) {
                 insn = lduw_code(fault_address);
@@ -16520,14 +16536,23 @@ int disas_insn(CPUState *env, DisasContext *dc)
         }
     }
 
+    /* A 32-bit Thumb-2 instruction is encoded as its first halfword in the upper
+     * 16 bits of the instruction word and its second halfword in the lower ones.
+     * Report the whole opcode to the counters and execution hooks. */
+    uint32_t opcode = insn;
+    if(dc->thumb && fault_address != start_pc) {
+        opcode <<= 16;
+        opcode |= insn_hw2;
+    }
+
     tcg_gen_insn_start(start_pc, pack_condexec(dc));
 
     if(unlikely(env->are_pre_opcode_execution_hooks_enabled)) {
-        generate_pre_opcode_execution_hook(env, start_pc, insn);
+        generate_pre_opcode_execution_hook(env, start_pc, opcode);
     }
 
     if(dc->thumb) {
-        disas_thumb_insn(env, dc, insn, insn_hw2);
+        disas_thumb_insn(env, dc, opcode);
         if(dc->condexec_mask) {
             dc->condexec_cond = (dc->condexec_cond & 0xe) | ((dc->condexec_mask >> 4) & 1);
             dc->condexec_mask = (dc->condexec_mask << 1) & 0x1f;
@@ -16540,7 +16565,7 @@ int disas_insn(CPUState *env, DisasContext *dc)
     }
 
     if(unlikely(env->are_post_opcode_execution_hooks_enabled)) {
-        generate_post_opcode_execution_hook(env, start_pc, insn);
+        generate_post_opcode_execution_hook(env, start_pc, opcode);
     }
 
     return dc->base.pc - start_pc;
