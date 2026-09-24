@@ -38,7 +38,7 @@ static const char *feature_name[] = {
     "tsc",
     "msr",
     "pae",
-    "mce",
+   "mce",
     "cx8",
     "apic",
     NULL,
@@ -132,7 +132,7 @@ static const char *ext2_feature_name[] = {
     "3dnowext",
     "3dnow",
 };
-static const char *ext3_feature_name[] = {
+static const char *ext3_feature_name[ ] = {
     "lahf_lm" /* AMD LahfSahf */,
     "cmp_legacy",
     "svm",

@@ -458,7 +458,7 @@ typedef struct CPUState {
     uint32_t features;
 
     /* VFP coprocessor state.  */
-    struct {
+    struct{
         float64 regs[32];
 
         uint32_t xregs[16];
@@ -622,7 +622,7 @@ static inline enum security_attribution attribution_get_more_secure(enum securit
 
 static inline bool attribution_is_secure(enum security_attribution attrib)
 {
-    return attrib >= SA_SECURE_NSC;
+   return attrib >= SA_SECURE_NSC;
 }
 
 #define SAU_CTRL_ENABLE 0x01
