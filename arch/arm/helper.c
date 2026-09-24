@@ -2960,6 +2960,9 @@ static int get_phys_addr_mpu(CPUState *env, uint32_t address, int access_type, i
      * PAGE_EXEC  = 3 ; ACCESS_TYPE = 2
      */
     if(*prot & (1 << access_type)) {
+        if(page_contains_mpu_region) {
+            *page_size = 0;
+        }
         return TRANSLATE_SUCCESS;
     }
     return MPU_PERMISSION_FAULT;
