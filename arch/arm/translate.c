@@ -15662,7 +15662,7 @@ illegal_op:
     return 1;
 }
 
-static void disas_thumb_insn(CPUState *env, DisasContext *s, uint32_t opcode)
+static void disas_thumb_insn(CPUState *env, DisasContext *s, uint16_t insn, uint16_t insn_hw2, uint32_t opcode)
 {
     uint32_t val, op, rm, rn, rd, shift, cond;
     int32_t offset;
@@ -15671,18 +15671,6 @@ static void disas_thumb_insn(CPUState *env, DisasContext *s, uint32_t opcode)
     TCGv tmp2;
     TCGv addr;
     target_ulong current_pc = s->base.pc;
-
-    /* The opcode is the whole word as reported to the opcode counters
-     * and execution hooks, so a 32-bit Thumb-2 instruction is encoded
-     * as its first halfword in the upper 16 bits of `opcode`, and its
-     * second halfword in the lower ones, whereas a 16-bit instruction
-     * is reported as its encoding zero-extended to 32 bits. Split the
-     * correct halfwords for the first decoding step. */
-    uint16_t insn = opcode >> 16;
-    if(!insn) {
-        /* 16-bit opcode zero-extended to 32 bits. */
-        insn = opcode;
-    }
 
     if(s->condexec_mask) {
         cond = s->condexec_cond;
@@ -16436,7 +16424,7 @@ static void disas_thumb_insn(CPUState *env, DisasContext *s, uint32_t opcode)
 
         case 14:
             if(insn & (1 << 11)) {
-                if(disas_thumb2_insn(env, s, opcode)) {
+                if(disas_thumb2_insn(env, s, ((uint32_t)insn << 16) | insn_hw2)) {
                     goto undef32;
                 }
                 break;
@@ -16455,7 +16443,7 @@ static void disas_thumb_insn(CPUState *env, DisasContext *s, uint32_t opcode)
             }
             break;
         case 15:
-            if(disas_thumb2_insn(env, s, opcode)) {
+            if(disas_thumb2_insn(env, s, ((uint32_t)insn << 16) | insn_hw2)) {
                 goto undef32;
             }
             break;
@@ -16552,7 +16540,7 @@ int disas_insn(CPUState *env, DisasContext *dc)
     }
 
     if(dc->thumb) {
-        disas_thumb_insn(env, dc, opcode);
+        disas_thumb_insn(env, dc, insn, insn_hw2, opcode);
         if(dc->condexec_mask) {
             dc->condexec_cond = (dc->condexec_cond & 0xe) | ((dc->condexec_mask >> 4) & 1);
             dc->condexec_mask = (dc->condexec_mask << 1) & 0x1f;
