@@ -4,11 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <stdint.h>
 #include "bit_helper.h"
 #include "cpu.h"
 #include "cpu_names.h"
 #include "global_helper.h"
 #include "system_registers.h"
+#include "system_registers_common.h"
 #include "ttable.h"
 
 /* This file is named 'system_registers.h' but it also contains definitions of the system instructions.
@@ -343,6 +345,15 @@ static inline uint32_t encode_aarch64_generic_timer_register(CPUState *env, cons
 }
 
 // clang-format off
+#define CNTKCTL_EL1_KEY   ENCODE_AA64_CP_REG(3, 0, 14, 1, 0, 1)
+#define CNTKCTL_EL0PCTEN  (UINT64_C(1) << 0)
+#define CNTKCTL_EL0VCTEN  (UINT64_C(1) << 1)
+#define CNTKCTL_EVNTEN    (UINT64_C(1) << 2)
+#define CNTKCTL_EVNTDIR   (UINT64_C(1) << 3)
+#define CNTKCTL_EVNTI     (UINT64_C(0xf) << 4)
+#define CNTKCTL_EL0VTEN   (UINT64_C(1) << 8)
+#define CNTKCTL_EL0PTEN   (UINT64_C(1) << 9)
+
 READ_FUNCTION(64, mpidr_el1, mpidr_el1_register(env))
 
 RW_FUNCTIONS(64, fpcr, vfp_get_fpcr(env), vfp_set_fpcr(env, value))
@@ -351,6 +362,24 @@ RW_FUNCTIONS(64, fpsr, vfp_get_fpsr(env), vfp_set_fpsr(env, value))
 RW_FUNCTIONS(64, generic_timer_aarch64,
              tlib_read_system_register_generic_timer_64(encode_aarch64_generic_timer_register(env, info)),
              tlib_write_system_register_generic_timer_64(encode_aarch64_generic_timer_register(env, info), value))
+
+void write_generic_timer_cntkctl_aarch64(CPUState *env, const ARMCPRegInfo *info, uint64_t value)
+{
+    env->cntkctl = value;
+    write_generic_timer_aarch64(env, info, value);
+}
+
+#define generic_timer_access(FIELD)                 \
+                ((env->cntkctl & (FIELD)) == 0      \
+                    && arm_current_el(env) == 0) ?  \
+                    (CP_ACCESS_TRAP | CP_ACCESS_EL1)\
+                  : CP_ACCESS_OK
+
+ACCESS_FUNCTION(EL0PTEN_generic_timer_aarch64, generic_timer_access(CNTKCTL_EL0PTEN))
+ACCESS_FUNCTION(EL0VTEN_generic_timer_aarch64, generic_timer_access(CNTKCTL_EL0VTEN))
+ACCESS_FUNCTION(EL0PCTEN_generic_timer_aarch64, generic_timer_access(CNTKCTL_EL0PCTEN))
+ACCESS_FUNCTION(EL0VCTEN_generic_timer_aarch64, generic_timer_access(CNTKCTL_EL0VCTEN))
+ACCESS_FUNCTION(EL0PTEN_EL0PCTEN_generic_timer_aarch64, generic_timer_access(CNTKCTL_EL0PTEN | CNTKCTL_EL0PCTEN))
 
 RW_FUNCTIONS(64, generic_timer_aarch32_32, tlib_read_system_register_generic_timer_32(encode_as_aarch32_32bit_register(info)),
              tlib_write_system_register_generic_timer_32(encode_as_aarch32_32bit_register(info), value))
@@ -1238,7 +1267,7 @@ ARMCPRegInfo aarch64_registers[] = {
     ARM64_CP_REG_DEFINE(CLIDR_EL1,               3,   1,   0,   0,   1,  1, RO, READFN(clidr_el1))
     // TODO: Implement trap on access to CNT* registers
     // The configuration of traping depends on flags from CNTHCTL_EL2 and CNTKCTL_EL1 registers
-    ARM64_CP_REG_DEFINE(CNTFRQ_EL0,              3,   3,  14,   0,   0,  0, RW | GTIMER, RW_FNS(generic_timer_aarch64))
+    ARM64_CP_REG_DEFINE(CNTFRQ_EL0,              3,   3,  14,   0,   0,  0, RW | GTIMER, RW_FNS(generic_timer_aarch64), ACCESSFN(EL0PTEN_EL0PCTEN_generic_timer_aarch64))
     ARM64_CP_REG_DEFINE(CNTHCTL_EL2,             3,   4,  14,   1,   0,  2, RW | GTIMER, RW_FNS(generic_timer_aarch64))
     ARM64_CP_REG_DEFINE(CNTHP_CTL_EL2,           3,   4,  14,   2,   1,  2, RW | GTIMER, RW_FNS(generic_timer_aarch64))
     ARM64_CP_REG_DEFINE(CNTHP_CVAL_EL2,          3,   4,  14,   2,   2,  2, RW | GTIMER, RW_FNS(generic_timer_aarch64))
@@ -1252,28 +1281,28 @@ ARMCPRegInfo aarch64_registers[] = {
     ARM64_CP_REG_DEFINE(CNTHVS_CTL_EL2,          3,   4,  14,   4,   1,  2, RW | GTIMER, RW_FNS(generic_timer_aarch64))
     ARM64_CP_REG_DEFINE(CNTHVS_CVAL_EL2,         3,   4,  14,   4,   2,  2, RW | GTIMER, RW_FNS(generic_timer_aarch64))
     ARM64_CP_REG_DEFINE(CNTHVS_TVAL_EL2,         3,   4,  14,   4,   0,  2, RW | GTIMER, RW_FNS(generic_timer_aarch64))
-    ARM64_CP_REG_DEFINE(CNTKCTL_EL1,             3,   0,  14,   1,   0,  1, RW | GTIMER, RW_FNS(generic_timer_aarch64))
+    ARM64_CP_REG_DEFINE(CNTKCTL_EL1,             3,   0,  14,   1,   0,  1, RW | GTIMER, READFN(generic_timer_aarch64), WRITEFN(generic_timer_cntkctl_aarch64))
     ARM64_CP_REG_DEFINE(CNTKCTL_EL12,            3,   5,  14,   1,   0,  2, RW | GTIMER, RW_FNS(generic_timer_aarch64))
-    ARM64_CP_REG_DEFINE(CNTP_CTL_EL0,            3,   3,  14,   2,   1,  0, RW | GTIMER, RW_FNS(generic_timer_aarch64))
+    ARM64_CP_REG_DEFINE(CNTP_CTL_EL0,            3,   3,  14,   2,   1,  0, RW | GTIMER, RW_FNS(generic_timer_aarch64), ACCESSFN(EL0PTEN_generic_timer_aarch64))
     ARM64_CP_REG_DEFINE(CNTP_CTL_EL02,           3,   5,  14,   2,   1,  0, RW | GTIMER, RW_FNS(generic_timer_aarch64))
-    ARM64_CP_REG_DEFINE(CNTP_CVAL_EL0,           3,   3,  14,   2,   2,  0, RW | GTIMER, RW_FNS(generic_timer_aarch64))
+    ARM64_CP_REG_DEFINE(CNTP_CVAL_EL0,           3,   3,  14,   2,   2,  0, RW | GTIMER, RW_FNS(generic_timer_aarch64), ACCESSFN(EL0PTEN_generic_timer_aarch64))
     ARM64_CP_REG_DEFINE(CNTP_CVAL_EL02,          3,   5,  14,   2,   2,  0, RW | GTIMER, RW_FNS(generic_timer_aarch64))
-    ARM64_CP_REG_DEFINE(CNTP_TVAL_EL0,           3,   3,  14,   2,   0,  0, RW | GTIMER, RW_FNS(generic_timer_aarch64))
+    ARM64_CP_REG_DEFINE(CNTP_TVAL_EL0,           3,   3,  14,   2,   0,  0, RW | GTIMER, RW_FNS(generic_timer_aarch64), ACCESSFN(EL0PTEN_generic_timer_aarch64))
     ARM64_CP_REG_DEFINE(CNTP_TVAL_EL02,          3,   5,  14,   2,   0,  0, RW | GTIMER, RW_FNS(generic_timer_aarch64))
-    ARM64_CP_REG_DEFINE(CNTPCT_EL0,              3,   3,  14,   0,   1,  0, RO | GTIMER, READFN(generic_timer_aarch64))
-    ARM64_CP_REG_DEFINE(CNTPCTSS_EL0,            3,   3,  14,   0,   5,  0, RO | GTIMER, READFN(generic_timer_aarch64))
+    ARM64_CP_REG_DEFINE(CNTPCT_EL0,              3,   3,  14,   0,   1,  0, RO | GTIMER, READFN(generic_timer_aarch64), ACCESSFN(EL0PCTEN_generic_timer_aarch64))
+    ARM64_CP_REG_DEFINE(CNTPCTSS_EL0,            3,   3,  14,   0,   5,  0, RO | GTIMER, READFN(generic_timer_aarch64), ACCESSFN(EL0PCTEN_generic_timer_aarch64))
     ARM64_CP_REG_DEFINE(CNTPOFF_EL2,             3,   4,  14,   0,   6,  2, RW | GTIMER, RW_FNS(generic_timer_aarch64))
     ARM64_CP_REG_DEFINE(CNTPS_CTL_EL1,           3,   7,  14,   2,   1,  1, RW | GTIMER, RW_FNS(generic_timer_aarch64))
     ARM64_CP_REG_DEFINE(CNTPS_CVAL_EL1,          3,   7,  14,   2,   2,  1, RW | GTIMER, RW_FNS(generic_timer_aarch64))
     ARM64_CP_REG_DEFINE(CNTPS_TVAL_EL1,          3,   7,  14,   2,   0,  1, RW | GTIMER, RW_FNS(generic_timer_aarch64))
-    ARM64_CP_REG_DEFINE(CNTV_CTL_EL0,            3,   3,  14,   3,   1,  0, RW | GTIMER, RW_FNS(generic_timer_aarch64))
+    ARM64_CP_REG_DEFINE(CNTV_CTL_EL0,            3,   3,  14,   3,   1,  0, RW | GTIMER, RW_FNS(generic_timer_aarch64), ACCESSFN(EL0VTEN_generic_timer_aarch64))
     ARM64_CP_REG_DEFINE(CNTV_CTL_EL02,           3,   5,  14,   3,   1,  0, RW | GTIMER, RW_FNS(generic_timer_aarch64))
-    ARM64_CP_REG_DEFINE(CNTV_CVAL_EL0,           3,   3,  14,   3,   2,  0, RW | GTIMER, RW_FNS(generic_timer_aarch64))
+    ARM64_CP_REG_DEFINE(CNTV_CVAL_EL0,           3,   3,  14,   3,   2,  0, RW | GTIMER, RW_FNS(generic_timer_aarch64), ACCESSFN(EL0VTEN_generic_timer_aarch64))
     ARM64_CP_REG_DEFINE(CNTV_CVAL_EL02,          3,   5,  14,   3,   2,  0, RW | GTIMER, RW_FNS(generic_timer_aarch64))
-    ARM64_CP_REG_DEFINE(CNTV_TVAL_EL0,           3,   3,  14,   3,   0,  0, RW | GTIMER, RW_FNS(generic_timer_aarch64))
+    ARM64_CP_REG_DEFINE(CNTV_TVAL_EL0,           3,   3,  14,   3,   0,  0, RW | GTIMER, RW_FNS(generic_timer_aarch64), ACCESSFN(EL0VTEN_generic_timer_aarch64))
     ARM64_CP_REG_DEFINE(CNTV_TVAL_EL02,          3,   5,  14,   3,   0,  0, RW | GTIMER, RW_FNS(generic_timer_aarch64))
-    ARM64_CP_REG_DEFINE(CNTVCT_EL0,              3,   3,  14,   0,   2,  0, RO | GTIMER, READFN(generic_timer_aarch64))
-    ARM64_CP_REG_DEFINE(CNTVCTSS_EL0,            3,   3,  14,   0,   6,  0, RO | GTIMER, READFN(generic_timer_aarch64))
+    ARM64_CP_REG_DEFINE(CNTVCT_EL0,              3,   3,  14,   0,   2,  0, RO | GTIMER, READFN(generic_timer_aarch64), ACCESSFN(EL0VCTEN_generic_timer_aarch64))
+    ARM64_CP_REG_DEFINE(CNTVCTSS_EL0,            3,   3,  14,   0,   6,  0, RO | GTIMER, READFN(generic_timer_aarch64), ACCESSFN(EL0VCTEN_generic_timer_aarch64))
     ARM64_CP_REG_DEFINE(CNTVOFF_EL2,             3,   4,  14,   0,   3,  2, RW | GTIMER, RW_FNS(generic_timer_aarch64))
     ARM64_CP_REG_DEFINE(CONTEXTIDR_EL1,          3,   0,  13,   0,   1,  1, RW | ARM_CP_TLB_FLUSH, RW_FNS(contextidr_el1))
     ARM64_CP_REG_DEFINE(CONTEXTIDR_EL12,         3,   5,  13,   0,   1,  2, RW | ARM_CP_TLB_FLUSH, FIELD(cp15.contextidr_el[1]))

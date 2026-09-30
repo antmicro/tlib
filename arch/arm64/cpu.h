@@ -948,6 +948,8 @@ typedef struct CPUState {
         uint32_t ctrl;
     } sau;
 
+    uint64_t cntkctl;
+
     ARMCoreConfig arm_core_config;
 
     //  All the above fields will be reset along with the 'CPU_COMMON' fields up to 'jmp_env'.

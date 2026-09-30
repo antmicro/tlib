@@ -720,6 +720,9 @@ fail:
         case 0:
             target_el = exception_target_el(env);
             break;
+        case 1:
+            tlib_assert(arm_current_el(env) < 2);
+            break;
         case 2:
             tlib_assert(arm_current_el(env) != 3);
             tlib_assert(arm_is_el2_enabled(env));
@@ -728,7 +731,6 @@ fail:
             tlib_assert(arm_feature(env, ARM_FEATURE_EL3));
             break;
         default:
-            /* No "direct" traps to EL1 */
             g_assert_not_reached();
     }
 
