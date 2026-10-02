@@ -21,6 +21,7 @@
 #include "def-helper.h"
 #include "cpu-common.h"
 #include "arch_callbacks.h"
+#include "exports.h"
 
 //  This is used as a part of MISA register, indicating the architecture width.
 #if defined(TARGET_RISCV32)
@@ -732,16 +733,24 @@ void HELPER(handle_pre_stack_access_hook)(uint64_t address, uint32_t width, uint
     tlib_handle_pre_stack_access_hook(address, width, is_write);
 }
 
-int process_bus_access_fault(CPUState *env, int access, uint64_t faulting_address)
+void tlib_raise_bus_fault(uint32_t address, int access_type)
 {
-    env->badaddr = faulting_address;
-    switch (access) {
+    switch(access_type) {
         case BUS_FAULT_STORE:
-            return RISCV_EXCP_STORE_AMO_ACCESS_FAULT;
+            cpu->tb_interrupt_exception_from_callback = RISCV_EXCP_STORE_AMO_ACCESS_FAULT;
+            break;
         case BUS_FAULT_LOAD:
-            return RISCV_EXCP_LOAD_ACCESS_FAULT;
+            cpu->tb_interrupt_exception_from_callback = RISCV_EXCP_LOAD_ACCESS_FAULT;
+            break;
         default:
             tlib_abort("Unexpected sysbus fault access type");
-            return -1;
+            return;
     }
+    cpu->badaddr = address;
+    cpu->tb_interrupt_request_from_callback = TB_INTERRUPT_SYNCHRONOUS_EXCEPTION;
+}
+
+uint64_t tlib_get_bus_fault_address()
+{
+    return env->tb_sysbus_access_fault_addr;
 }

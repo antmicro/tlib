@@ -90,15 +90,6 @@ void tlib_try_interrupt_translation_block(void)
         }
     }
 
-    #ifdef SUPPORTS_BUS_ACCESS_FAULTS
-    if(likely(cpu) && unlikely(cpu->tb_sysbus_access_fault)) {
-        int exception_id = process_bus_access_fault(cpu, cpu->tb_sysbus_access_fault, cpu->tb_sysbus_access_fault_addr);
-        cpu->tb_sysbus_access_fault = BUS_FAULT_NONE;
-        cpu->tb_sysbus_access_fault_addr = 0;
-        interrupt_current_translation_block(cpu, exception_id);
-    }
-    #endif
-
     //  Also do the C side of the exception unwinding process if it has beem requested
     if(unlikely(unwind_state.need_jump)) {
         unwind_state.need_jump = false;
@@ -414,14 +405,6 @@ void tlib_request_translation_block_interrupt(int shouldSubstractInstruction)
 }
 
 EXC_VOID_1(tlib_request_translation_block_interrupt, int, shouldSubstractInstruction)
-
-void tlib_raise_sysbus_access_fault(int access_type_store, uint64_t address)
-{
-    env->tb_sysbus_access_fault = access_type_store ? BUS_FAULT_STORE : BUS_FAULT_LOAD;
-    env->tb_sysbus_access_fault_addr = address;
-}
-
-EXC_VOID_2(tlib_raise_sysbus_access_fault, int, access_type_store, uint64_t, address)
 
 void tlib_set_return_request()
 {
@@ -1249,6 +1232,13 @@ void tlib_after_load(void *env)
 
 EXC_VOID_1(tlib_after_load, void *, env)
 
+__attribute__((weak)) void tlib_raise_bus_fault(uint32_t address, int access_type)
+{
+    tlib_abortf("This architecture does not implement the bus fault. Returning -1u as a bus fault address");
+}
+
+EXC_VOID_2(tlib_raise_bus_fault, uint32_t, address, bool, access_type_store)
+
 void tlib_enable_read_cache(uint64_t access_address, uint64_t not_cached_count, uint64_t cached_count)
 {
     configure_read_caching(access_address, not_cached_count, cached_count);
@@ -1262,6 +1252,14 @@ void tlib_enable_write_cache(uint64_t access_address, uint64_t not_cached_count,
 }
 
 EXC_VOID_3(tlib_enable_write_cache, uint64_t, access_address, uint64_t, not_cached_count, uint64_t, cached_count)
+
+__attribute__((weak)) uint64_t tlib_get_bus_fault_address()
+{
+    tlib_printf(LOG_LEVEL_WARNING, "This architecture does not implement the bus fault. Returning -1u as a bus fault address");
+    return -1u;
+}
+
+EXC_INT_0(uint32_t, tlib_get_bus_fault_address)
 
 uint64_t tlib_get_cpu_state_for_memory_transaction(CPUState *env, uint64_t addr, int access_type)
 {

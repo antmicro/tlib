@@ -551,6 +551,7 @@ uint32_t cpsr_read(CPUState *env);
 void cpsr_write(CPUState *env, uint32_t val, uint32_t mask);
 
 #ifdef TARGET_PROTO_ARM_M
+#define SUPPORTS_BUS_ACCESS_FAULTS
 /* Return the current xPSR value.  */
 static inline uint32_t xpsr_read(CPUState *env)
 {

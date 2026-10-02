@@ -244,7 +244,6 @@ enum bus_fault_access_mode {
     int tb_restart_request;                                                    \
     int tb_interrupt_request_from_callback;                                    \
     int tb_interrupt_exception_from_callback;                                  \
-    int tb_sysbus_access_fault;                                                \
     uint64_t tb_sysbus_access_fault_addr;                                      \
                                                                                \
     uint32_t io_access_regions_count;                                          \

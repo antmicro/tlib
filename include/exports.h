@@ -119,6 +119,10 @@ uint64_t tlib_get_register_value_64(int reg_number);
 void tlib_set_register_value_64(int reg_number, uint64_t value);
 #endif
 
+void tlib_raise_bus_fault(uint32_t address, int access_type);
+
+uint64_t tlib_get_bus_fault_address(void);
+
 void tlib_before_save(void *env);
 
 void tlib_after_load(void *env);
