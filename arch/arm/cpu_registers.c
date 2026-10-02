@@ -70,6 +70,12 @@ uint32_t *get_reg_pointer_32(int reg)
 }
 
 #if defined(TARGET_ARM32) && defined(TARGET_PROTO_ARM_M)
+
+static bool is_trustzone_sp(int reg_number)
+{
+    return reg_number >= MSPS_32 && reg_number <= PSPNS_32;
+}
+
 static uint32_t *sp_resolver(int reg)
 {
     bool in_secure_state = cpu->secure;
@@ -186,6 +192,12 @@ uint32_t tlib_get_register_value_32_with_security(int reg_number, bool is_secure
     } else if(reg_number == FPSCR_32) {
         return vfp_get_fpscr(cpu);
     }
+
+    if(is_trustzone_sp(reg_number) && !cpu->v7m.has_trustzone) {
+        tlib_printf(LOG_LEVEL_ERROR, "Tried to read from TrustZone SP register (reg_number: %d) in CPU without TrustZone enabled",
+                    reg_number);
+        return 0;
+    }
 #endif
 
     uint32_t *ptr = get_reg_pointer_32_with_security(reg_number, is_secure);
@@ -255,6 +267,12 @@ void tlib_set_register_value_32_with_security(int reg_number, uint32_t value, bo
         warn_about_fp_context("VPR");
     } else if(S_0_32 <= reg_number && reg_number <= S_31_32) {
         warn_about_fp_lsp("S", reg_number - S_0_32);
+    }
+
+    if(is_trustzone_sp(reg_number) && !cpu->v7m.has_trustzone) {
+        tlib_printf(LOG_LEVEL_ERROR, "Tried to write to TrustZone SP register (reg_number: %d) in CPU without TrustZone enabled",
+                    reg_number);
+        return;
     }
 #endif
 
