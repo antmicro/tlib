@@ -12997,7 +12997,7 @@ static int disas_thumb2_insn(CPUState *env, DisasContext *s, uint32_t insn)
             op = (insn >> 21) & 0xf;
             shiftop = (insn >> 4) & 3;
             shift = ((insn >> 6) & 3) | ((insn >> 10) & 0x1c);
-            conds = (insn & (1 << 20)) != 0;
+            conds = (insn >> 20) & 1;
             logic_cc = (conds && thumb2_logic_op(op));
 
             if(op == 2) {
