@@ -2894,7 +2894,7 @@ static int get_phys_addr_mpu(CPUState *env, uint32_t address, int access_type, i
             } else {
                 background_result = pmsav7_check_default_mapping(address, prot, access_type);
             }
-        } else if(!is_user) {
+        } else if(!is_user && MPU_PRIVDEFENA(env->cp15.c1_sys)) {
             background_result = cortexm_check_default_mapping(address, prot, access_type);
         } else {
             background_result = TRANSLATE_FAIL;

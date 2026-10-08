@@ -413,6 +413,13 @@ uint32_t tlib_is_mpu_enabled()
 
 EXC_INT_0(uint32_t, tlib_is_mpu_enabled)
 
+uint32_t tlib_is_privdefena_enabled()
+{
+    return MPU_PRIVDEFENA(cpu->cp15.c1_sys);
+}
+
+EXC_INT_0(uint32_t, tlib_is_privdefena_enabled)
+
 void tlib_enable_mpu(int32_t enabled)
 {
     if(!!enabled != (cpu->cp15.c1_sys & 1)) {
@@ -422,6 +429,17 @@ void tlib_enable_mpu(int32_t enabled)
 }
 
 EXC_VOID_1(tlib_enable_mpu, int32_t, enabled)
+
+void tlib_set_privdefena(int32_t enabled)
+{
+    bool setting_changed = !!enabled != MPU_PRIVDEFENA(cpu->cp15.c1_sys);
+    if(setting_changed) {
+        cpu->cp15.c1_sys ^= MPU_PRIVDEFENA_MASK;
+        tlb_flush(cpu, 1, false);
+    }
+}
+
+EXC_VOID_1(tlib_set_privdefena, int32_t, enabled)
 
 void tlib_set_mpu_region_number(uint32_t value)
 {
