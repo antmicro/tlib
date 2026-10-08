@@ -389,6 +389,20 @@ static void cpu_reset_model_id(CPUState *env, uint32_t id)
             set_feature(env, ARM_FEATURE_THUMB_DIV);
             set_feature(env, ARM_FEATURE_THUMB2);
             break;
+        case ARM_CPUID_CORTEXM0PLUS:
+            //  TODO: Those should not be present on M0+ processors,
+            //        but some of our samples break without them.
+            set_feature(env, ARM_FEATURE_V7);
+            set_feature(env, ARM_FEATURE_THUMB_DIV);
+
+            set_feature(env, ARM_FEATURE_V6);
+            set_feature(env, ARM_FEATURE_V5);
+            set_feature(env, ARM_FEATURE_V4T);
+
+            set_feature(env, ARM_FEATURE_MPU);
+
+            set_feature(env, ARM_FEATURE_THUMB2);
+            break;
         case ARM_CPUID_CORTEXM0:
             //  TODO: Those should not be present on M0 processors,
             //        but some of our samples break without them.
@@ -662,9 +676,8 @@ static const struct arm_cpu_t arm_cpu_names[] = {
     { ARM_CPUID_ARM1176JZF_S,   "arm1176jzf-s"   },
     { ARM_CPUID_ARM11MPCORE,    "arm11mpcore"    },
 
-    //  TODO: M0+ shouldn't be the same as M3. It doesn't support hardware division.
     { ARM_CPUID_CORTEXM0,       "cortex-m0"      },
-    { ARM_CPUID_CORTEXM3,       "cortex-m0+"     },
+    { ARM_CPUID_CORTEXM0PLUS,   "cortex-m0+"     },
     { ARM_CPUID_CORTEXM3,       "cortex-m1"      },
     { ARM_CPUID_CORTEXM23,      "cortex-m23"     },
     { ARM_CPUID_CORTEXM3,       "cortex-m3"      },
