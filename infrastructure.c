@@ -20,7 +20,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
-#ifndef _WIN32  //  This header is not available on MinGW
+#ifdef __GLIBC__
 #include <execinfo.h>
 #endif
 #include "callbacks.h"
@@ -103,7 +103,7 @@ void tlib_abortf(char *fmt, ...)
     va_list ap;
     va_start(ap, fmt);
     vsnprintf(result, 1024, fmt, ap);
-#if DEBUG && !defined(_WIN32)
+#if DEBUG && defined(__GLIBC__)
 #define TRACE_MAX_SIZE 20
     void *array[TRACE_MAX_SIZE];
     char **strings;
