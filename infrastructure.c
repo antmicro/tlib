@@ -29,7 +29,7 @@
 void *global_retaddr = 0;
 
 // clang-format off
-#if defined(__linux__) && defined(__x86_64__)
+#if defined(__linux__) && defined(__x86_64__) && defined(__GLIBC__)
     // Wrappers downgrading GLIBC v2.34 functions.
 
     #include <pthread.h>

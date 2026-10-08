@@ -249,7 +249,10 @@ endif()
 
 # It'd be impossible to run tlib without this wrapping with older GLIBC.
 # The `pthread_*` functions have been updated in GLIBC v2.34 while `log` and `pow` in GLIBC v2.29.
-if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL Linux AND ${HOST_ARCH} STREQUAL i386 AND ${HOST_WORD_SIZE} EQUAL 64)
+include(CheckSymbolExists)
+check_symbol_exists(__GLIBC__ "features.h" HAVE_GLIBC)
+
+if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL Linux AND ${HOST_ARCH} STREQUAL i386 AND ${HOST_WORD_SIZE} EQUAL 64 AND HAVE_GLIBC)
     set(OLD_GLIBC_WRAPPERS -Wl,--wrap=pthread_mutexattr_destroy -Wl,--wrap=pthread_mutexattr_init -Wl,--wrap=pthread_mutexattr_setrobust -Wl,--wrap=log -Wl,--wrap=pow)
 endif()
 
