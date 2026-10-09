@@ -58,7 +58,6 @@ void handle_interrupt(CPUState *env, int mask);
 void tlib_raise_interrupt(uint32_t exception)
 {
     tlib_set_mip_bit(exception, 1);
-    env->exception_index = exception;
     if(cpu->custom_interrupts & (1UL << exception)) {
         cpu_interrupt(cpu, RISCV_CPU_INTERRUPT_CUSTOM);
     } else {
