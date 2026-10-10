@@ -1426,7 +1426,7 @@ static void gen_cntlzd(DisasContext *s)
 /***                             Integer rotate                            ***/
 
 /* rlwimi & rlwimi. */
-static void gen_rlwimi(DisasContext *s)
+static void gen_rlwimi_internal(DisasContext *s, bool updateRc)
 {
     uint32_t mb, me, sh;
 
@@ -1460,13 +1460,18 @@ static void gen_rlwimi(DisasContext *s)
         tcg_temp_free(t0);
         tcg_temp_free(t1);
     }
-    if(unlikely(Rc(s->opcode) != 0)) {
+    if(updateRc && unlikely(Rc(s->opcode) != 0)) {
         gen_set_Rc0(s, cpu_gpr[rA(s->opcode)]);
     }
 }
 
+static void gen_rlwimi(DisasContext *s)
+{
+    gen_rlwimi_internal(s, true);
+}
+
 /* rlwinm & rlwinm. */
-static void gen_rlwinm(DisasContext *s)
+static void gen_rlwinm_internal(DisasContext *s, bool updateRc)
 {
     uint32_t mb, me, sh;
 
@@ -1508,9 +1513,14 @@ static void gen_rlwinm(DisasContext *s)
         tcg_gen_andi_tl(cpu_gpr[rA(s->opcode)], t0, MASK(mb, me));
         tcg_temp_free(t0);
     }
-    if(unlikely(Rc(s->opcode) != 0)) {
+    if(updateRc && unlikely(Rc(s->opcode) != 0)) {
         gen_set_Rc0(s, cpu_gpr[rA(s->opcode)]);
     }
+}
+
+static void gen_rlwinm(DisasContext *s)
+{
+    gen_rlwinm_internal(s, true);
 }
 
 /* rlwnm & rlwnm. */
