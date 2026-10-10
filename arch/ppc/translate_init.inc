@@ -828,6 +828,20 @@ static void spr_write_e200z6_l1csr0 (void *opaque, int sprn, int gprn)
     tcg_temp_free(t0);
 }
 
+static void spr_write_e200z4d_l1csr1 (void *opaque, int sprn, int gprn)
+{
+    TCGv t0 = tcg_temp_new();
+
+    /* The e200z4d has an instruction cache controlled by L1CSR1.  Complete
+     * the modelled ICINV and ICLFC commands synchronously, and do not let
+     * software manufacture the hardware-only ICUL/ICLO/ICABT status bits.
+     * Retain controls such as ICE and the way-disable fields.
+     */
+    tcg_gen_andi_tl(t0, cpu_gpr[gprn], ~(0x00000100 | 0x00000400 | 0x00000200 | 0x00000004 | 0x00000002));
+    gen_store_spr(sprn, t0);
+    tcg_temp_free(t0);
+}
+
 static void spr_write_booke206_mmucsr0 (void *opaque, int sprn, int gprn)
 {
     TCGv_i32 t0 = tcg_const_i32(sprn);
@@ -2664,6 +2678,59 @@ static void init_proc_G2LE (CPUState *env)
                               POWERPC_FLAG_UBLE | POWERPC_FLAG_DE |           \
                               POWERPC_FLAG_BUS_CLK)
 #define check_pow_e200      check_pow_hid0
+
+#define POWERPC_INSNS_e200z4d  POWERPC_INSNS_e200
+#define POWERPC_INSNS2_e200z4d POWERPC_INSNS2_e200
+#define POWERPC_MSRM_e200z4d   POWERPC_MSRM_e200
+#define POWERPC_MMU_e200z4d    POWERPC_MMU_e200
+#define POWERPC_EXCP_e200z4d   POWERPC_EXCP_e200
+#define POWERPC_INPUT_e200z4d  POWERPC_INPUT_e200
+#define POWERPC_BFDM_e200z4d   POWERPC_BFDM_e200
+#define POWERPC_FLAG_e200z4d   POWERPC_FLAG_e200
+#define check_pow_e200z4d      check_pow_e200
+
+__attribute__ ((unused))
+static void init_proc_e200z4d (CPUState *env)
+{
+    uint32_t tlbncfg[2];
+
+    gen_tbl(env);
+    gen_spr_BookE(env, 0x000000070000FFFFULL);
+    spr_register(env, SPR_BOOKE_SPEFSCR, "SPEFSCR", &spr_read_spefscr, &spr_write_spefscr, &spr_read_spefscr, &spr_write_spefscr,
+                 0x00000000);
+    /* PXD20/e200z4d: a null TLB0 plus a 16-entry, fully associative TLB1
+     * supporting 4 KiB..256 MiB variable pages and IPROT.
+     */
+    env->nb_pids = 1;
+    env->nb_ways = 2;
+    env->id_tlbs = 0;
+    tlbncfg[0] = 0;
+    tlbncfg[1] = gen_tlbncfg(16, 1, 9, TLBnCFG_AVAIL | TLBnCFG_IPROT, 16);
+    gen_spr_BookE206(env, 0x0000005F, tlbncfg);
+    spr_register(env, SPR_HID0, "HID0", SPR_NOACCESS, SPR_NOACCESS, &spr_read_generic, &spr_write_generic, 0x00000000);
+    spr_register(env, SPR_HID1, "HID1", SPR_NOACCESS, SPR_NOACCESS, &spr_read_generic, &spr_write_generic, 0x00000000);
+    spr_register(env, SPR_Exxx_ALTCTXCR, "ALTCTXCR", SPR_NOACCESS, SPR_NOACCESS, &spr_read_generic, &spr_write_generic,
+                 0x00000000);
+    spr_register(env, SPR_Exxx_BUCSR, "BUCSR", SPR_NOACCESS, SPR_NOACCESS, &spr_read_generic, &spr_write_generic, 0x00000000);
+    spr_register(env, SPR_Exxx_CTXCR, "CTXCR", SPR_NOACCESS, SPR_NOACCESS, &spr_read_generic, &spr_write_generic, 0x00000000);
+    spr_register(env, SPR_Exxx_DBCNT, "DBCNT", SPR_NOACCESS, SPR_NOACCESS, &spr_read_generic, &spr_write_generic, 0x00000000);
+    spr_register(env, SPR_Exxx_DBCR3, "DBCR3", SPR_NOACCESS, SPR_NOACCESS, &spr_read_generic, &spr_write_generic, 0x00000000);
+    spr_register(env, SPR_Exxx_L1CSR1, "L1CSR1", SPR_NOACCESS, SPR_NOACCESS, &spr_read_generic, &spr_write_e200z4d_l1csr1,
+                 0x00000000);
+    spr_register(env, SPR_BOOKE_IAC3, "IAC3", SPR_NOACCESS, SPR_NOACCESS, &spr_read_generic, &spr_write_generic, 0x00000000);
+    spr_register(env, SPR_BOOKE_IAC4, "IAC4", SPR_NOACCESS, SPR_NOACCESS, &spr_read_generic, &spr_write_generic, 0x00000000);
+    spr_register(env, SPR_MMUCSR0, "MMUCSR0", SPR_NOACCESS, SPR_NOACCESS, &spr_read_generic, &spr_write_generic, 0x00000000);
+    spr_register(env, SPR_BOOKE_DSRR0, "DSRR0", SPR_NOACCESS, SPR_NOACCESS, &spr_read_generic, &spr_write_generic, 0x00000000);
+    spr_register(env, SPR_BOOKE_DSRR1, "DSRR1", SPR_NOACCESS, SPR_NOACCESS, &spr_read_generic, &spr_write_generic, 0x00000000);
+    env->nb_tlb = booke206_tlb_size(env, 0) + booke206_tlb_size(env, 1);
+    env->tlb_type = TLB_MAS;
+    init_excp_e200(env);
+    /* Cache-maintenance helpers operate at the architectural 32-byte line
+     * size; this does not add an e200z6-style data cache.
+     */
+    env->dcache_line_size = 32;
+    env->icache_line_size = 32;
+}
 
 __attribute__ ((unused))
 static void init_proc_e200 (CPUState *env)
@@ -4635,6 +4702,7 @@ enum {
     /* e200 family */
     /* e200 cores */
 #define CPU_POWERPC_e200         CPU_POWERPC_e200z6
+    CPU_POWERPC_e200z4d = 0x81570000,
     CPU_POWERPC_e200z5 = 0x81000000,
     CPU_POWERPC_e200z6 = 0x81120000,
     /* MPC55xx microcontrollers */
@@ -5276,6 +5344,8 @@ static const ppc_def_t ppc_defs[] = {
     /* Generic PowerPC e200 core                                             */
     POWERPC_DEF("e200",          CPU_POWERPC_e200,                   e200),
     /* Generic MPC55xx core                                                  */
+    /* PowerPC e200z4d core                                                  */
+    POWERPC_DEF("e200z4d",       CPU_POWERPC_e200z4d,                e200z4d),
     /* PowerPC e200z5 core                                                   */
     POWERPC_DEF("e200z5",        CPU_POWERPC_e200z5,                 e200),
     /* PowerPC e200z6 core                                                   */
