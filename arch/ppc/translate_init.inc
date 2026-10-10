@@ -814,6 +814,20 @@ static void spr_write_e500_l1csr0 (void *opaque, int sprn, int gprn)
     tcg_temp_free(t0);
 }
 
+static void spr_write_e200z6_l1csr0 (void *opaque, int sprn, int gprn)
+{
+    TCGv t0 = tcg_temp_new();
+
+    /* The e200z6 has one unified cache controlled by L1CSR0.  Complete the
+     * modelled CINV and CLFC commands synchronously, and do not let software
+     * manufacture the hardware-only CUL/CLO/CABT status bits.  Other control
+     * fields, including CE and the way-disable fields, retain their values.
+     */
+    tcg_gen_andi_tl(t0, cpu_gpr[gprn], ~(0x00000100 | 0x00000400 | 0x00000200 | 0x00000004 | 0x00000002));
+    gen_store_spr(sprn, t0);
+    tcg_temp_free(t0);
+}
+
 static void spr_write_booke206_mmucsr0 (void *opaque, int sprn, int gprn)
 {
     TCGv_i32 t0 = tcg_const_i32(sprn);
@@ -2639,9 +2653,8 @@ static void init_proc_G2LE (CPUState *env)
                               PPC_WRTEE | PPC_RFDI |                          \
                               PPC_CACHE | PPC_CACHE_LOCK | PPC_CACHE_ICBI |   \
                               PPC_CACHE_DCBZ | PPC_CACHE_DCBA |               \
-                              PPC_MEM_TLBSYNC | PPC_TLBIVAX |                 \
-                              PPC_BOOKE)
-#define POWERPC_INSNS2_e200 (PPC_NONE)
+                              PPC_MEM_TLBSYNC | PPC_TLBIVAX)
+#define POWERPC_INSNS2_e200 (PPC2_BOOKE206)
 #define POWERPC_MSRM_e200   (0x000000000606FF30ULL)
 #define POWERPC_MMU_e200    (POWERPC_MMU_BOOKE206)
 #define POWERPC_EXCP_e200   (POWERPC_EXCP_BOOKE)
@@ -2655,14 +2668,24 @@ static void init_proc_G2LE (CPUState *env)
 __attribute__ ((unused))
 static void init_proc_e200 (CPUState *env)
 {
+    uint32_t tlbncfg[2];
+
     /* Time base */
     gen_tbl(env);
     gen_spr_BookE(env, 0x000000070000FFFFULL);
     /* XXX : not implemented */
     spr_register(env, SPR_BOOKE_SPEFSCR, "SPEFSCR", &spr_read_spefscr, &spr_write_spefscr, &spr_read_spefscr, &spr_write_spefscr,
                  0x00000000);
-    /* Memory management */
-    gen_spr_BookE206(env, 0x0000005F, NULL);
+    /* Memory management: e200z6 implements a null TLB0 plus a 32-entry,
+     * fully associative BookE TLB1 with 4 KiB..256 MiB variable pages and
+     * IPROT support.
+     */
+    env->nb_pids = 1;
+    env->nb_ways = 2;
+    env->id_tlbs = 0;
+    tlbncfg[0] = 0;
+    tlbncfg[1] = gen_tlbncfg(32, 1, 9, TLBnCFG_AVAIL | TLBnCFG_IPROT, 32);
+    gen_spr_BookE206(env, 0x0000005F, tlbncfg);
     /* XXX : not implemented */
     spr_register(env, SPR_HID0, "HID0", SPR_NOACCESS, SPR_NOACCESS, &spr_read_generic, &spr_write_generic, 0x00000000);
     /* XXX : not implemented */
@@ -2680,16 +2703,10 @@ static void init_proc_e200 (CPUState *env)
     spr_register(env, SPR_Exxx_DBCR3, "DBCR3", SPR_NOACCESS, SPR_NOACCESS, &spr_read_generic, &spr_write_generic, 0x00000000);
     /* XXX : not implemented */
     spr_register(env, SPR_Exxx_L1CFG0, "L1CFG0", SPR_NOACCESS, SPR_NOACCESS, &spr_read_generic, &spr_write_generic, 0x00000000);
-    /* XXX : not implemented */
-    spr_register(env, SPR_Exxx_L1CSR0, "L1CSR0", SPR_NOACCESS, SPR_NOACCESS, &spr_read_generic, &spr_write_generic, 0x00000000);
+    spr_register(env, SPR_Exxx_L1CSR0, "L1CSR0", SPR_NOACCESS, SPR_NOACCESS, &spr_read_generic, &spr_write_e200z6_l1csr0,
+                 0x00000000);
     /* XXX : not implemented */
     spr_register(env, SPR_Exxx_L1FINV0, "L1FINV0", SPR_NOACCESS, SPR_NOACCESS, &spr_read_generic, &spr_write_generic, 0x00000000);
-    /* XXX : not implemented */
-    spr_register(env, SPR_BOOKE_TLB0CFG, "TLB0CFG", SPR_NOACCESS, SPR_NOACCESS, &spr_read_generic, &spr_write_generic,
-                 0x00000000);
-    /* XXX : not implemented */
-    spr_register(env, SPR_BOOKE_TLB1CFG, "TLB1CFG", SPR_NOACCESS, SPR_NOACCESS, &spr_read_generic, &spr_write_generic,
-                 0x00000000);
     /* XXX : not implemented */
     spr_register(env, SPR_BOOKE_IAC3, "IAC3", SPR_NOACCESS, SPR_NOACCESS, &spr_read_generic, &spr_write_generic, 0x00000000);
     /* XXX : not implemented */
@@ -2698,10 +2715,8 @@ static void init_proc_e200 (CPUState *env)
     spr_register(env, SPR_MMUCSR0, "MMUCSR0", SPR_NOACCESS, SPR_NOACCESS, &spr_read_generic, &spr_write_generic, 0x00000000); /* TOFIX */
     spr_register(env, SPR_BOOKE_DSRR0, "DSRR0", SPR_NOACCESS, SPR_NOACCESS, &spr_read_generic, &spr_write_generic, 0x00000000);
     spr_register(env, SPR_BOOKE_DSRR1, "DSRR1", SPR_NOACCESS, SPR_NOACCESS, &spr_read_generic, &spr_write_generic, 0x00000000);
-    env->nb_tlb = 64;
-    env->nb_ways = 1;
-    env->id_tlbs = 0;
-    env->tlb_type = TLB_EMB;
+    env->nb_tlb = booke206_tlb_size(env, 0) + booke206_tlb_size(env, 1);
+    env->tlb_type = TLB_MAS;
     init_excp_e200(env);
     env->dcache_line_size = 32;
     env->icache_line_size = 32;
