@@ -3551,8 +3551,10 @@ static void gen_tdi(DisasContext *s)
 /* mcrxr */
 static void gen_mcrxr(DisasContext *s)
 {
+    /* CR[crfD] <- XER[SO,OV,CA,0]: SO is the field's MSB (bit 3), CA bit 1. */
     tcg_gen_trunc_tl_i32(cpu_crf[crfD(s->opcode)], cpu_xer);
-    tcg_gen_shri_i32(cpu_crf[crfD(s->opcode)], cpu_crf[crfD(s->opcode)], XER_CA);
+    tcg_gen_shri_i32(cpu_crf[crfD(s->opcode)], cpu_crf[crfD(s->opcode)], XER_CA - 1);
+    tcg_gen_andi_i32(cpu_crf[crfD(s->opcode)], cpu_crf[crfD(s->opcode)], 0xE);
     tcg_gen_andi_tl(cpu_xer, cpu_xer, ~(1 << XER_SO | 1 << XER_OV | 1 << XER_CA));
 }
 
