@@ -3248,12 +3248,13 @@ static inline void gen_goto_tb(DisasContext *s, int n, target_ulong dest)
         dest = (uint32_t)dest;
     }
 #endif
+    target_ulong aligned_dest = s->vle_enabled ? (dest & ~1) : (dest & ~3);
     if((tb->pc & TARGET_PAGE_MASK) == (dest & TARGET_PAGE_MASK)) {
         tcg_gen_goto_tb(n);
-        tcg_gen_movi_tl(cpu_nip, dest & ~3);
+        tcg_gen_movi_tl(cpu_nip, aligned_dest);
         gen_exit_tb(tb, n);
     } else {
-        tcg_gen_movi_tl(cpu_nip, dest & ~3);
+        tcg_gen_movi_tl(cpu_nip, aligned_dest);
         gen_exit_tb_no_chaining(tb);
     }
 }
