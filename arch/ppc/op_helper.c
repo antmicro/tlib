@@ -1775,17 +1775,17 @@ void helper_40x_rfci(void)
 
 void helper_rfci(void)
 {
-    do_rfi(env->spr[SPR_BOOKE_CSRR0], SPR_BOOKE_CSRR1, ~((target_ulong)0x3FFF0000), 0);
+    do_rfi(env->spr[SPR_BOOKE_CSRR0], env->spr[SPR_BOOKE_CSRR1], ~((target_ulong)0x3FFF0000), 0);
 }
 
 void helper_rfdi(void)
 {
-    do_rfi(env->spr[SPR_BOOKE_DSRR0], SPR_BOOKE_DSRR1, ~((target_ulong)0x3FFF0000), 0);
+    do_rfi(env->spr[SPR_BOOKE_DSRR0], env->spr[SPR_BOOKE_DSRR1], ~((target_ulong)0x3FFF0000), 0);
 }
 
 void helper_rfmci(void)
 {
-    do_rfi(env->spr[SPR_BOOKE_MCSRR0], SPR_BOOKE_MCSRR1, ~((target_ulong)0x3FFF0000), 0);
+    do_rfi(env->spr[SPR_BOOKE_MCSRR0], env->spr[SPR_BOOKE_MCSRR1], ~((target_ulong)0x3FFF0000), 0);
 }
 
 /* 440 specific */
