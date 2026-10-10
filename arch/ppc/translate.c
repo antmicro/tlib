@@ -240,6 +240,11 @@ static inline void gen_inval_exception(DisasContext *s, uint32_t error)
     gen_exception_err(s, POWERPC_EXCP_PROGRAM, POWERPC_EXCP_INVAL | error);
 }
 
+static inline void gen_priv_exception(DisasContext *s, uint32_t error)
+{
+    gen_exception_err(s, POWERPC_EXCP_PROGRAM, POWERPC_EXCP_PRIV | error);
+}
+
 /* Stop translation */
 static inline void gen_stop_exception(DisasContext *s)
 {
@@ -3453,7 +3458,7 @@ static void gen_rfi(DisasContext *s)
 {
     /* Restore CPU state */
     if(unlikely(!s->base.mem_idx)) {
-        gen_inval_exception(s, POWERPC_EXCP_PRIV_OPC);
+        gen_priv_exception(s, POWERPC_EXCP_PRIV_OPC);
         return;
     }
     gen_helper_rfi();
@@ -3589,7 +3594,7 @@ static void gen_mfcr(DisasContext *s)
 static void gen_mfmsr(DisasContext *s)
 {
     if(unlikely(!s->base.mem_idx)) {
-        gen_inval_exception(s, POWERPC_EXCP_PRIV_REG);
+        gen_priv_exception(s, POWERPC_EXCP_PRIV_REG);
         return;
     }
     tcg_gen_mov_tl(cpu_gpr[rD(s->opcode)], cpu_msr);
@@ -3620,7 +3625,7 @@ static inline void gen_op_mfspr(DisasContext *s)
              * this OS breaks the PowerPC virtualisation model,
              * allowing userland application to read the PVR
              */
-            gen_inval_exception(s, POWERPC_EXCP_PRIV_REG);
+            gen_priv_exception(s, POWERPC_EXCP_PRIV_REG);
         }
     } else {
         /* Not defined */
@@ -3699,7 +3704,7 @@ static void gen_mtmsrd(DisasContext *s)
 static void gen_mtmsr(DisasContext *s)
 {
     if(unlikely(!s->base.mem_idx)) {
-        gen_inval_exception(s, POWERPC_EXCP_PRIV_REG);
+        gen_priv_exception(s, POWERPC_EXCP_PRIV_REG);
         return;
     }
     if(s->opcode & 0x00010000) {
@@ -3747,7 +3752,7 @@ static void gen_mtspr(DisasContext *s)
             (*write_cb)(s, sprn, rS(s->opcode));
         } else {
             /* Privilege exception */
-            gen_inval_exception(s, POWERPC_EXCP_PRIV_REG);
+            gen_priv_exception(s, POWERPC_EXCP_PRIV_REG);
         }
     } else {
         /* Not defined */
@@ -4088,7 +4093,7 @@ static void gen_tlbie(DisasContext *s)
 static void gen_tlbsync(DisasContext *s)
 {
     if(unlikely(!s->base.mem_idx)) {
-        gen_inval_exception(s, POWERPC_EXCP_PRIV_OPC);
+        gen_priv_exception(s, POWERPC_EXCP_PRIV_OPC);
         return;
     }
     /* This has no effect: it should ensure that all previous
@@ -5483,7 +5488,7 @@ static void gen_rfci_40x(DisasContext *s)
 static void gen_rfci(DisasContext *s)
 {
     if(unlikely(!s->base.mem_idx)) {
-        gen_inval_exception(s, POWERPC_EXCP_PRIV_OPC);
+        gen_priv_exception(s, POWERPC_EXCP_PRIV_OPC);
         return;
     }
     /* Restore CPU state */
@@ -5497,7 +5502,7 @@ static void gen_rfci(DisasContext *s)
 static void gen_rfdi(DisasContext *s)
 {
     if(unlikely(!s->base.mem_idx)) {
-        gen_inval_exception(s, POWERPC_EXCP_PRIV_OPC);
+        gen_priv_exception(s, POWERPC_EXCP_PRIV_OPC);
         return;
     }
     /* Restore CPU state */
@@ -5509,7 +5514,7 @@ static void gen_rfdi(DisasContext *s)
 static void gen_rfmci(DisasContext *s)
 {
     if(unlikely(!s->base.mem_idx)) {
-        gen_inval_exception(s, POWERPC_EXCP_PRIV_OPC);
+        gen_priv_exception(s, POWERPC_EXCP_PRIV_OPC);
         return;
     }
     /* Restore CPU state */
@@ -5655,7 +5660,7 @@ static void gen_tlbwe_440(DisasContext *s)
 static void gen_tlbre_booke206(DisasContext *s)
 {
     if(unlikely(!s->base.mem_idx)) {
-        gen_inval_exception(s, POWERPC_EXCP_PRIV_OPC);
+        gen_priv_exception(s, POWERPC_EXCP_PRIV_OPC);
         return;
     }
 
@@ -5667,7 +5672,7 @@ static void gen_tlbsx_booke206(DisasContext *s)
 {
     TCGv t0;
     if(unlikely(!s->base.mem_idx)) {
-        gen_inval_exception(s, POWERPC_EXCP_PRIV_OPC);
+        gen_priv_exception(s, POWERPC_EXCP_PRIV_OPC);
         return;
     }
 
@@ -5686,7 +5691,7 @@ static void gen_tlbsx_booke206(DisasContext *s)
 static void gen_tlbwe_booke206(DisasContext *s)
 {
     if(unlikely(!s->base.mem_idx)) {
-        gen_inval_exception(s, POWERPC_EXCP_PRIV_OPC);
+        gen_priv_exception(s, POWERPC_EXCP_PRIV_OPC);
         return;
     }
     gen_helper_booke206_tlbwe();
@@ -5696,7 +5701,7 @@ static void gen_tlbivax_booke206(DisasContext *s)
 {
     TCGv t0;
     if(unlikely(!s->base.mem_idx)) {
-        gen_inval_exception(s, POWERPC_EXCP_PRIV_OPC);
+        gen_priv_exception(s, POWERPC_EXCP_PRIV_OPC);
         return;
     }
 
@@ -5711,7 +5716,7 @@ static void gen_wrtee(DisasContext *s)
 {
     TCGv t0;
     if(unlikely(!s->base.mem_idx)) {
-        gen_inval_exception(s, POWERPC_EXCP_PRIV_OPC);
+        gen_priv_exception(s, POWERPC_EXCP_PRIV_OPC);
         return;
     }
     t0 = tcg_temp_new();
@@ -5729,7 +5734,7 @@ static void gen_wrtee(DisasContext *s)
 static void gen_wrteei(DisasContext *s)
 {
     if(unlikely(!s->base.mem_idx)) {
-        gen_inval_exception(s, POWERPC_EXCP_PRIV_OPC);
+        gen_priv_exception(s, POWERPC_EXCP_PRIV_OPC);
         return;
     }
     if(s->opcode & 0x00008000) {
