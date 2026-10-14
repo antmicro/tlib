@@ -58,7 +58,7 @@ void HELPER(update_ccompare)(CPUState *env, uint32_t i)
     HELPER(update_ccount)(env);
     dcc = (uint64_t)(env->sregs[CCOMPARE + i] - env->sregs[CCOUNT] - 1) + 1;
     tlib_timer_mod(i, /*env->ccompare[i].timer,*/
-                   env->ccount_time + (dcc * 1000000) / env->config->clock_freq_khz);
+                   env->ccount_time + (dcc * 1000) / env->config->clock_freq_khz); /* Microseconds, like update_ccount(). */
     env->yield_needed = 1;
 }
 
