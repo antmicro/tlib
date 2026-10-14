@@ -470,7 +470,10 @@ static uint32_t test_exceptions_hpi(DisasContext *dc, const OpcodeArg arg[], con
 static void gen_load_store_alignment(DisasContext *dc, int shift, TCGv_i32 addr, bool no_hw_alignment)
 {
     if(!option_enabled(dc, XTENSA_OPTION_UNALIGNED_EXCEPTION)) {
-        tcg_gen_andi_i32(addr, addr, 0xFFFFFFFF << shift);
+        /* Cores with hardware unaligned access keep the address. */
+        if(!option_enabled(dc, XTENSA_OPTION_HW_ALIGNMENT) || no_hw_alignment) {
+            tcg_gen_andi_i32(addr, addr, 0xFFFFFFFF << shift);
+        }
     } else if(option_enabled(dc, XTENSA_OPTION_HW_ALIGNMENT) && no_hw_alignment) {
         int label = gen_new_label();
         TCGv_i32 tmp = tcg_temp_new_i32();
