@@ -408,7 +408,7 @@ EXC_VOID_1(tlib_set_secure_fault_status, uint32_t, value)
 
 uint32_t tlib_is_mpu_enabled()
 {
-    return cpu->cp15.c1_sys & 0x1;
+    return MPU_ENABLED(cpu->cp15.c1_sys);
 }
 
 EXC_INT_0(uint32_t, tlib_is_mpu_enabled)
@@ -422,8 +422,8 @@ EXC_INT_0(uint32_t, tlib_is_privdefena_enabled)
 
 void tlib_enable_mpu(int32_t enabled)
 {
-    if(!!enabled != (cpu->cp15.c1_sys & 1)) {
-        cpu->cp15.c1_sys ^= 1;
+    if(!!enabled != MPU_ENABLED(cpu->cp15.c1_sys)) {
+        cpu->cp15.c1_sys ^= MPU_ENABLE_MASK;
         tlb_flush(cpu, 1, false);
     }
 }
