@@ -465,6 +465,7 @@ static inline __int128_t roundoff_i128(__int128_t v, uint16_t d, uint8_t rm)
 
 void helper_vl_wr(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t nf)
 {
+    void *retaddr = GETPC();
     uint8_t *v = V(vd);
     uint8_t nfield = nf + 1;
     target_ulong src_addr = env->gpr[rs1];
@@ -474,12 +475,13 @@ void helper_vl_wr(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t nf)
     }
     for(int i = 0; i < elements; ++i) {
         env->vstart = i;
-        v[i] = ldub(src_addr + i);
+        v[i] = ldub_data_inner(src_addr + i, retaddr);
     }
 }
 
 void helper_vs_wr(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t nf)
 {
+    void *retaddr = GETPC();
     uint8_t *v = V(vd);
     uint8_t nfield = nf + 1;
     target_ulong src_addr = env->gpr[rs1];
@@ -489,12 +491,13 @@ void helper_vs_wr(CPUState *env, uint32_t vd, uint32_t rs1, uint32_t nf)
     }
     for(int i = 0; i < elements; ++i) {
         env->vstart = i;
-        stb(src_addr + i, v[i]);
+        stb_data_inner(src_addr + i, v[i], retaddr);
     }
 }
 
 void helper_vlm(CPUState *env, uint32_t vd, uint32_t rs1)
 {
+    void *retaddr = GETPC();
     uint8_t *v = V(vd);
     target_ulong src_addr = env->gpr[rs1];
     uint32_t elements = ((env->vl + 7) / 8);
@@ -503,12 +506,13 @@ void helper_vlm(CPUState *env, uint32_t vd, uint32_t rs1)
     }
     for(int i = env->vstart; i < elements; ++i) {
         env->vstart = i;
-        v[i] = ldub(src_addr + i);
+        v[i] = ldub_data_inner(src_addr + i, retaddr);
     }
 }
 
 void helper_vsm(CPUState *env, uint32_t vd, uint32_t rs1)
 {
+    void *retaddr = GETPC();
     uint8_t *v = V(vd);
     target_ulong src_addr = env->gpr[rs1];
     uint32_t elements = ((env->vl + 7) / 8);
@@ -517,7 +521,7 @@ void helper_vsm(CPUState *env, uint32_t vd, uint32_t rs1)
     }
     for(int i = env->vstart; i < elements; ++i) {
         env->vstart = i;
-        stb(src_addr + i, v[i]);
+        stb_data_inner(src_addr + i, v[i], retaddr);
     }
 }
 
