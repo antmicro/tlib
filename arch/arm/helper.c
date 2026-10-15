@@ -3300,10 +3300,8 @@ static inline void pmsav8_get_security_attribution(CPUState *env, uint32_t addre
     *attribution = attribution_get_more_secure(idau_attribution, *attribution);
 }
 
-#define PMSA_ENABLED(ctrl)    ((ctrl & 0b001))
-#define PMSA_PRIVDEFENA(ctrl) ((ctrl & 0b100))
-#define PMSA_AP_PRIVONLY(ap)  ((ap & 0b01) == 0)
-#define PMSA_AP_READONLY(ap)  ((ap & 0b10) != 0)
+#define PMSA_AP_PRIVONLY(ap) ((ap & 0b01) == 0)
+#define PMSA_AP_READONLY(ap) ((ap & 0b10) != 0)
 
 //  Returns `TRANSLATE_SUCCESS` in case access is valid and `TRANSLATE_FAILURE` otherwise.
 //  MPU region matched is valid in both cases if different than `PMSA_MPU_REGION_INVALID`.
@@ -3314,7 +3312,7 @@ static inline int pmsav8_check_access_with_region(CPUState *env, uint32_t addres
     bool applies_to_whole_page = true;
     bool hit;
     bool multiple_regions = false;
-    bool mpu_enabled = PMSA_ENABLED(env->pmsav8[secure].ctrl);
+    bool mpu_enabled = MPU_ENABLED(env->pmsav8[secure].ctrl);
 
     *prot = 0;
     *resolved_region = PMSA_MPU_REGION_INVALID;
@@ -3355,7 +3353,7 @@ static inline int pmsav8_check_access_with_region(CPUState *env, uint32_t addres
          * - MPU disabled: for all accesses
          * - MPU enabled: for privileged accesses if default memory map is enabled (PRIVDEFENA)
          */
-        if(!mpu_enabled || (!is_user && PMSA_PRIVDEFENA(env->pmsav8[secure].ctrl))) {
+        if(!mpu_enabled || (!is_user && MPU_PRIVDEFENA(env->pmsav8[secure].ctrl))) {
             *prot = cortexm_check_default_mapping_v8(address);
         } else {
             goto do_fault;

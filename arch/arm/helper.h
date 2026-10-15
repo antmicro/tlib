@@ -1,5 +1,10 @@
 #include <stdint.h>
 
+#define MPU_ENABLE_MASK      0b001
+#define MPU_PRIVDEFENA_MASK  0b100
+#define MPU_ENABLED(ctrl)    ((!!(ctrl & MPU_ENABLE_MASK)))
+#define MPU_PRIVDEFENA(ctrl) ((!!(ctrl & MPU_PRIVDEFENA_MASK)))
+
 int get_phys_addr(CPUState *env, uint32_t address, bool is_secure, int access_type, bool is_user, uint32_t *phys_ptr, int *prot,
                   target_ulong *page_size, int no_page_fault);
 
