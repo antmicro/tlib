@@ -111,7 +111,7 @@ static int decode_instruction_length(uint16_t opcode_first_word)
 
 static inline uint64_t format_opcode(uint64_t opcode, int instruction_length)
 {
-    return opcode & (((typeof(opcode))1 << (8 * instruction_length)) - 1);
+    return instruction_length == sizeof(opcode) ? opcode : opcode & ((1ULL << (8 * instruction_length)) - 1);
 }
 
 static void log_disabled_extension_and_kill_unknown(DisasContext *dc, enum riscv_feature ext, const char *message)
@@ -6855,7 +6855,7 @@ static int disas_insn(CPUState *env, DisasContext *dc)
             }
 
             TCGv_i64 id = tcg_const_i64(ci->id);
-            TCGv_i64 opcode = tcg_const_i64(dc->opcode & ((1ULL << (8 * ci->length)) - 1));
+            TCGv_i64 opcode = tcg_const_i64(format_opcode(dc->opcode, ci->length));
             TCGv_i32 pc_modified = tcg_temp_new_i32();
 
             gen_sync_pc(dc);
