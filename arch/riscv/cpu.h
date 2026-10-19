@@ -5,6 +5,7 @@
 #include "softfloat.h"
 #include "softfloat-2.h"
 #include "host-utils.h"
+#include <stdint.h>
 
 #define SUPPORTS_GUEST_PROFILING
 #define SUPPORTS_HST_ATOMICS
@@ -532,7 +533,7 @@ static inline uint64_t get_float_mask(enum riscv_floating_point_precision float_
     }
 }
 
-static inline float64 get_float_default_nan(enum riscv_floating_point_precision float_precision)
+static inline uint64_t get_float_default_nan(enum riscv_floating_point_precision float_precision)
 {
     switch(float_precision) {
         case RISCV_DOUBLE_PRECISION:
@@ -564,17 +565,17 @@ static inline int64_t get_float_sign_mask(enum riscv_floating_point_precision fl
     }
 }
 
-static inline float64 unbox_float(enum riscv_floating_point_precision float_precision, CPUState *env, float64 value)
+static inline uint64_t unbox_float(enum riscv_floating_point_precision float_precision, CPUState *env, uint64_t value)
 {
     if(!is_unboxing_needed(float_precision, env)) {
         return value;
     }
 
-    bool is_box_valid = ((uint64_t)value | get_float_mask(float_precision)) == UINT64_MAX;
+    bool is_box_valid = (value | get_float_mask(float_precision)) == UINT64_MAX;
     return is_box_valid ? value : get_float_default_nan(float_precision);
 }
 
-static inline float64 box_float(enum riscv_floating_point_precision float_precision, float64 value)
+static inline uint64_t box_float(enum riscv_floating_point_precision float_precision, uint64_t value)
 {
     return value | ~get_float_mask(float_precision);
 }
