@@ -18,6 +18,7 @@
  */
 
 #include "cpu.h"
+#include "internals.h"
 #ifdef MASKED
 #define POSTFIX _m
 #else
@@ -33,253 +34,113 @@
 #define TEST_MASK(ei)
 #endif
 
-#define VFOP_VVX(NAME, HELPER)                                                                              \
-    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2, float64 imm)         \
-    {                                                                                                       \
-        const target_ulong eew = env->vsew;                                                                 \
-        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                                \
-        if(V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {                                                       \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
-        }                                                                                                   \
-        switch(eew) {                                                                                       \
-            case 16:                                                                                        \
-                imm = unbox_float(RISCV_HALF_PRECISION, env, imm);                                          \
-                break;                                                                                      \
-            case 32:                                                                                        \
-                imm = unbox_float(RISCV_SINGLE_PRECISION, env, imm);                                        \
-                break;                                                                                      \
-        }                                                                                                   \
-        for(int ei = env->vstart; ei < env->vl; ++ei) {                                                     \
-            TEST_MASK(ei)                                                                                   \
-            switch(eew) {                                                                                   \
-                case 16:                                                                                    \
-                    ((float16 *)V(vd))[ei] = glue(HELPER, _h)(env, ((float16 *)V(vs2))[ei], imm, env->frm); \
-                    break;                                                                                  \
-                case 32:                                                                                    \
-                    ((float32 *)V(vd))[ei] = glue(HELPER, _s)(env, ((float32 *)V(vs2))[ei], imm, env->frm); \
-                    break;                                                                                  \
-                case 64:                                                                                    \
-                    ((float64 *)V(vd))[ei] = glue(HELPER, _d)(env, ((float64 *)V(vs2))[ei], imm, env->frm); \
-                    break;                                                                                  \
-                default:                                                                                    \
-                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                              \
-                    break;                                                                                  \
-            }                                                                                               \
-        }                                                                                                   \
+#define VFOP_VVX(NAME, HELPER)                                                                                \
+    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2, uint64_t imm)          \
+    {                                                                                                         \
+        const target_ulong eew = env->vsew;                                                                   \
+        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                                  \
+        if(V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {                                                         \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                        \
+        }                                                                                                     \
+        switch(eew) {                                                                                         \
+            case 16:                                                                                          \
+                imm = unbox_float(RISCV_HALF_PRECISION, env, imm);                                            \
+                break;                                                                                        \
+            case 32:                                                                                          \
+                imm = unbox_float(RISCV_SINGLE_PRECISION, env, imm);                                          \
+                break;                                                                                        \
+        }                                                                                                     \
+        for(int ei = env->vstart; ei < env->vl; ++ei) {                                                       \
+            TEST_MASK(ei)                                                                                     \
+            switch(eew) {                                                                                     \
+                case 16:                                                                                      \
+                    ((uint16_t *)V(vd))[ei] = glue(HELPER, _h)(env, ((uint16_t *)V(vs2))[ei], imm, env->frm); \
+                    break;                                                                                    \
+                case 32:                                                                                      \
+                    ((uint32_t *)V(vd))[ei] = glue(HELPER, _s)(env, ((uint32_t *)V(vs2))[ei], imm, env->frm); \
+                    break;                                                                                    \
+                case 64:                                                                                      \
+                    ((uint64_t *)V(vd))[ei] = glue(HELPER, _d)(env, ((uint64_t *)V(vs2))[ei], imm, env->frm); \
+                    break;                                                                                    \
+                default:                                                                                      \
+                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                \
+                    break;                                                                                    \
+            }                                                                                                 \
+        }                                                                                                     \
     }
 
-#define VFOP_VVV(NAME, HELPER)                                                                                                  \
-    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2, uint32_t vs1)                            \
-    {                                                                                                                           \
-        const target_ulong eew = env->vsew;                                                                                     \
-        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                                                    \
-        if(V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                                                     \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                          \
-        }                                                                                                                       \
-        for(int ei = env->vstart; ei < env->vl; ++ei) {                                                                         \
-            TEST_MASK(ei)                                                                                                       \
-            switch(eew) {                                                                                                       \
-                case 16:                                                                                                        \
-                    ((float16 *)V(vd))[ei] = glue(HELPER, _h)(env, ((float16 *)V(vs2))[ei], ((float16 *)V(vs1))[ei], env->frm); \
-                    break;                                                                                                      \
-                case 32:                                                                                                        \
-                    ((float32 *)V(vd))[ei] = glue(HELPER, _s)(env, ((float32 *)V(vs2))[ei], ((float32 *)V(vs1))[ei], env->frm); \
-                    break;                                                                                                      \
-                case 64:                                                                                                        \
-                    ((float64 *)V(vd))[ei] = glue(HELPER, _d)(env, ((float64 *)V(vs2))[ei], ((float64 *)V(vs1))[ei], env->frm); \
-                    break;                                                                                                      \
-                default:                                                                                                        \
-                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                  \
-                    break;                                                                                                      \
-            }                                                                                                                   \
-        }                                                                                                                       \
+#define VFOP_VVV(NAME, HELPER)                                                                               \
+    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2, uint32_t vs1)         \
+    {                                                                                                        \
+        const target_ulong eew = env->vsew;                                                                  \
+        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                                 \
+        if(V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                                  \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                       \
+        }                                                                                                    \
+        for(int ei = env->vstart; ei < env->vl; ++ei) {                                                      \
+            TEST_MASK(ei)                                                                                    \
+            switch(eew) {                                                                                    \
+                case 16:                                                                                     \
+                    ((uint16_t *)V(vd))[ei] =                                                                \
+                        glue(HELPER, _h)(env, ((uint16_t *)V(vs2))[ei], ((uint16_t *)V(vs1))[ei], env->frm); \
+                    break;                                                                                   \
+                case 32:                                                                                     \
+                    ((uint32_t *)V(vd))[ei] =                                                                \
+                        glue(HELPER, _s)(env, ((uint32_t *)V(vs2))[ei], ((uint32_t *)V(vs1))[ei], env->frm); \
+                    break;                                                                                   \
+                case 64:                                                                                     \
+                    ((uint64_t *)V(vd))[ei] =                                                                \
+                        glue(HELPER, _d)(env, ((uint64_t *)V(vs2))[ei], ((uint64_t *)V(vs1))[ei], env->frm); \
+                    break;                                                                                   \
+                default:                                                                                     \
+                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                               \
+                    break;                                                                                   \
+            }                                                                                                \
+        }                                                                                                    \
     }
 
-#define VFOP_WVX(NAME, HELPER)                                                                                         \
-    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2, float64 imm)                    \
-    {                                                                                                                  \
-        const target_ulong eew = env->vsew;                                                                            \
-        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);                                      \
-        if(V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                                                    \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                 \
-        }                                                                                                              \
-        switch(eew) {                                                                                                  \
-            case 32:                                                                                                   \
-                imm = helper_fcvt_d_s(env, unbox_float(RISCV_SINGLE_PRECISION, env, imm), env->frm);                   \
-                break;                                                                                                 \
-        }                                                                                                              \
-        for(int ei = env->vstart; ei < env->vl; ++ei) {                                                                \
-            TEST_MASK(ei)                                                                                              \
-            switch(eew) {                                                                                              \
-                case 32:                                                                                               \
-                    ((float64 *)V(vd))[ei] =                                                                           \
-                        glue(HELPER, _d)(env, helper_fcvt_d_s(env, ((float32 *)V(vs2))[ei], env->frm), imm, env->frm); \
-                    break;                                                                                             \
-                default:                                                                                               \
-                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                         \
-                    break;                                                                                             \
-            }                                                                                                          \
-        }                                                                                                              \
+#define VFOP_WVX(NAME, HELPER)                                                                                          \
+    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2, uint64_t imm)                    \
+    {                                                                                                                   \
+        const target_ulong eew = env->vsew;                                                                             \
+        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);                                       \
+        if(V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                                                     \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                  \
+        }                                                                                                               \
+        switch(eew) {                                                                                                   \
+            case 32:                                                                                                    \
+                imm = helper_fcvt_d_s(env, unbox_float(RISCV_SINGLE_PRECISION, env, imm), env->frm);                    \
+                break;                                                                                                  \
+        }                                                                                                               \
+        for(int ei = env->vstart; ei < env->vl; ++ei) {                                                                 \
+            TEST_MASK(ei)                                                                                               \
+            switch(eew) {                                                                                               \
+                case 32:                                                                                                \
+                    ((uint64_t *)V(vd))[ei] =                                                                           \
+                        glue(HELPER, _d)(env, helper_fcvt_d_s(env, ((uint32_t *)V(vs2))[ei], env->frm), imm, env->frm); \
+                    break;                                                                                              \
+                default:                                                                                                \
+                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                          \
+                    break;                                                                                              \
+            }                                                                                                           \
+        }                                                                                                               \
     }
 
-#define VFOP_WVV(NAME, HELPER)                                                                                              \
-    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2, uint32_t vs1)                        \
-    {                                                                                                                       \
-        const target_ulong eew = env->vsew;                                                                                 \
-        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);                                           \
-        if(V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                                   \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                      \
-        }                                                                                                                   \
-        for(int ei = env->vstart; ei < env->vl; ++ei) {                                                                     \
-            TEST_MASK(ei)                                                                                                   \
-            switch(eew) {                                                                                                   \
-                case 32:                                                                                                    \
-                    ((float64 *)V(vd))[ei] = glue(HELPER, _d)(env, helper_fcvt_d_s(env, ((float32 *)V(vs2))[ei], env->frm), \
-                                                              helper_fcvt_d_s(env, ((float32 *)V(vs1))[ei], env->frm),      \
-                                                              env->frm);                                                    \
-                    break;                                                                                                  \
-                default:                                                                                                    \
-                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                              \
-                    break;                                                                                                  \
-            }                                                                                                               \
-        }                                                                                                                   \
-    }
-
-#define VFOP_WWX(NAME, HELPER)                                                                              \
-    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2, float64 imm)         \
-    {                                                                                                       \
-        const target_ulong eew = env->vsew;                                                                 \
-        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);                           \
-        if(V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID_EEW(vs2, eew << 1)) {                           \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
-        }                                                                                                   \
-        switch(eew) {                                                                                       \
-            case 32:                                                                                        \
-                imm = helper_fcvt_d_s(env, unbox_float(RISCV_SINGLE_PRECISION, env, imm), env->frm);        \
-                break;                                                                                      \
-        }                                                                                                   \
-        for(int ei = env->vstart; ei < env->vl; ++ei) {                                                     \
-            TEST_MASK(ei)                                                                                   \
-            switch(eew) {                                                                                   \
-                case 32:                                                                                    \
-                    ((float64 *)V(vd))[ei] = glue(HELPER, _d)(env, ((float64 *)V(vs2))[ei], imm, env->frm); \
-                    break;                                                                                  \
-                default:                                                                                    \
-                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                              \
-                    break;                                                                                  \
-            }                                                                                               \
-        }                                                                                                   \
-    }
-
-#define VFOP_WWV(NAME, HELPER)                                                                                            \
-    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2, uint32_t vs1)                      \
-    {                                                                                                                     \
-        const target_ulong eew = env->vsew;                                                                               \
-        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);                                         \
-        if(V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID_EEW(vs2, eew << 1) || V_IDX_INVALID(vs1)) {                   \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                    \
-        }                                                                                                                 \
-        for(int ei = env->vstart; ei < env->vl; ++ei) {                                                                   \
-            TEST_MASK(ei)                                                                                                 \
-            switch(eew) {                                                                                                 \
-                case 32:                                                                                                  \
-                    ((float64 *)V(vd))[ei] = glue(HELPER, _d)(                                                            \
-                        env, ((float64 *)V(vs2))[ei], helper_fcvt_d_s(env, ((float32 *)V(vs1))[ei], env->frm), env->frm); \
-                    break;                                                                                                \
-                default:                                                                                                  \
-                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                            \
-                    break;                                                                                                \
-            }                                                                                                             \
-        }                                                                                                                 \
-    }
-
-#define VF3OP_VVX(NAME, HELPER)                                                                                \
-    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2, float64 imm)            \
-    {                                                                                                          \
-        const target_ulong eew = env->vsew;                                                                    \
-        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                                   \
-        if(V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {                                                          \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                         \
-        }                                                                                                      \
-        switch(eew) {                                                                                          \
-            case 16:                                                                                           \
-                imm = unbox_float(RISCV_HALF_PRECISION, env, imm);                                             \
-                break;                                                                                         \
-            case 32:                                                                                           \
-                imm = unbox_float(RISCV_SINGLE_PRECISION, env, imm);                                           \
-                break;                                                                                         \
-        }                                                                                                      \
-        for(int ei = env->vstart; ei < env->vl; ++ei) {                                                        \
-            TEST_MASK(ei)                                                                                      \
-            switch(eew) {                                                                                      \
-                case 16:                                                                                       \
-                    ((float16 *)V(vd))[ei] =                                                                   \
-                        glue(HELPER, _h)(env, ((float16 *)V(vd))[ei], ((float16 *)V(vs2))[ei], imm, env->frm); \
-                    break;                                                                                     \
-                case 32:                                                                                       \
-                    ((float32 *)V(vd))[ei] =                                                                   \
-                        glue(HELPER, _s)(env, ((float32 *)V(vd))[ei], ((float32 *)V(vs2))[ei], imm, env->frm); \
-                    break;                                                                                     \
-                case 64:                                                                                       \
-                    ((float64 *)V(vd))[ei] =                                                                   \
-                        glue(HELPER, _d)(env, ((float64 *)V(vd))[ei], ((float64 *)V(vs2))[ei], imm, env->frm); \
-                    break;                                                                                     \
-                default:                                                                                       \
-                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                 \
-                    break;                                                                                     \
-            }                                                                                                  \
-        }                                                                                                      \
-    }
-
-#define VF3OP_VVV(NAME, HELPER)                                                                                     \
-    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2, uint32_t vs1)                \
-    {                                                                                                               \
-        const target_ulong eew = env->vsew;                                                                         \
-        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                                        \
-        if(V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                                         \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                              \
-        }                                                                                                           \
-        for(int ei = env->vstart; ei < env->vl; ++ei) {                                                             \
-            TEST_MASK(ei)                                                                                           \
-            switch(eew) {                                                                                           \
-                case 16:                                                                                            \
-                    ((float16 *)V(vd))[ei] = glue(HELPER, _h)(env, ((float16 *)V(vd))[ei], ((float16 *)V(vs2))[ei], \
-                                                              ((float16 *)V(vs1))[ei], env->frm);                   \
-                    break;                                                                                          \
-                case 32:                                                                                            \
-                    ((float32 *)V(vd))[ei] = glue(HELPER, _s)(env, ((float32 *)V(vd))[ei], ((float32 *)V(vs2))[ei], \
-                                                              ((float32 *)V(vs1))[ei], env->frm);                   \
-                    break;                                                                                          \
-                case 64:                                                                                            \
-                    ((float64 *)V(vd))[ei] = glue(HELPER, _d)(env, ((float64 *)V(vd))[ei], ((float64 *)V(vs2))[ei], \
-                                                              ((float64 *)V(vs1))[ei], env->frm);                   \
-                    break;                                                                                          \
-                default:                                                                                            \
-                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
-                    break;                                                                                          \
-            }                                                                                                       \
-        }                                                                                                           \
-    }
-
-#define VF3OP_WVX(NAME, HELPER)                                                                                               \
-    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2, float64 imm)                           \
+#define VFOP_WVV(NAME, HELPER)                                                                                                \
+    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2, uint32_t vs1)                          \
     {                                                                                                                         \
         const target_ulong eew = env->vsew;                                                                                   \
         ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);                                             \
-        if(V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                                                           \
+        if(V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                                     \
             raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                        \
-        }                                                                                                                     \
-        switch(eew) {                                                                                                         \
-            case 32:                                                                                                          \
-                imm = helper_fcvt_d_s(env, unbox_float(RISCV_SINGLE_PRECISION, env, imm), env->frm);                          \
-                break;                                                                                                        \
         }                                                                                                                     \
         for(int ei = env->vstart; ei < env->vl; ++ei) {                                                                       \
             TEST_MASK(ei)                                                                                                     \
             switch(eew) {                                                                                                     \
                 case 32:                                                                                                      \
-                    ((float64 *)V(vd))[ei] = glue(HELPER, _d)(                                                                \
-                        env, ((float64 *)V(vd))[ei], helper_fcvt_d_s(env, ((float32 *)V(vs2))[ei], env->frm), imm, env->frm); \
+                    ((uint64_t *)V(vd))[ei] = glue(HELPER, _d)(env, helper_fcvt_d_s(env, ((uint32_t *)V(vs2))[ei], env->frm), \
+                                                               helper_fcvt_d_s(env, ((uint32_t *)V(vs1))[ei], env->frm),      \
+                                                               env->frm);                                                     \
                     break;                                                                                                    \
                 default:                                                                                                      \
                     raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                \
@@ -288,27 +149,170 @@
         }                                                                                                                     \
     }
 
-#define VF3OP_WVV(NAME, HELPER)                                                                                                \
-    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2, uint32_t vs1)                           \
-    {                                                                                                                          \
-        const target_ulong eew = env->vsew;                                                                                    \
-        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);                                              \
-        if(V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                                      \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                         \
-        }                                                                                                                      \
-        for(int ei = env->vstart; ei < env->vl; ++ei) {                                                                        \
-            TEST_MASK(ei)                                                                                                      \
-            switch(eew) {                                                                                                      \
-                case 32:                                                                                                       \
-                    ((float64 *)V(vd))[ei] =                                                                                   \
-                        glue(HELPER, _d)(env, ((float64 *)V(vd))[ei], helper_fcvt_d_s(env, ((float32 *)V(vs2))[ei], env->frm), \
-                                         helper_fcvt_d_s(env, ((float32 *)V(vs1))[ei], env->frm), env->frm);                   \
-                    break;                                                                                                     \
-                default:                                                                                                       \
-                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                 \
-                    break;                                                                                                     \
-            }                                                                                                                  \
-        }                                                                                                                      \
+#define VFOP_WWX(NAME, HELPER)                                                                                \
+    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2, uint64_t imm)          \
+    {                                                                                                         \
+        const target_ulong eew = env->vsew;                                                                   \
+        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);                             \
+        if(V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID_EEW(vs2, eew << 1)) {                             \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                        \
+        }                                                                                                     \
+        switch(eew) {                                                                                         \
+            case 32:                                                                                          \
+                imm = helper_fcvt_d_s(env, unbox_float(RISCV_SINGLE_PRECISION, env, imm), env->frm);          \
+                break;                                                                                        \
+        }                                                                                                     \
+        for(int ei = env->vstart; ei < env->vl; ++ei) {                                                       \
+            TEST_MASK(ei)                                                                                     \
+            switch(eew) {                                                                                     \
+                case 32:                                                                                      \
+                    ((uint64_t *)V(vd))[ei] = glue(HELPER, _d)(env, ((uint64_t *)V(vs2))[ei], imm, env->frm); \
+                    break;                                                                                    \
+                default:                                                                                      \
+                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                \
+                    break;                                                                                    \
+            }                                                                                                 \
+        }                                                                                                     \
+    }
+
+#define VFOP_WWV(NAME, HELPER)                                                                                              \
+    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2, uint32_t vs1)                        \
+    {                                                                                                                       \
+        const target_ulong eew = env->vsew;                                                                                 \
+        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);                                           \
+        if(V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID_EEW(vs2, eew << 1) || V_IDX_INVALID(vs1)) {                     \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                      \
+        }                                                                                                                   \
+        for(int ei = env->vstart; ei < env->vl; ++ei) {                                                                     \
+            TEST_MASK(ei)                                                                                                   \
+            switch(eew) {                                                                                                   \
+                case 32:                                                                                                    \
+                    ((uint64_t *)V(vd))[ei] = glue(HELPER, _d)(                                                             \
+                        env, ((uint64_t *)V(vs2))[ei], helper_fcvt_d_s(env, ((uint32_t *)V(vs1))[ei], env->frm), env->frm); \
+                    break;                                                                                                  \
+                default:                                                                                                    \
+                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                              \
+                    break;                                                                                                  \
+            }                                                                                                               \
+        }                                                                                                                   \
+    }
+
+#define VF3OP_VVX(NAME, HELPER)                                                                                  \
+    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2, uint64_t imm)             \
+    {                                                                                                            \
+        const target_ulong eew = env->vsew;                                                                      \
+        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                                     \
+        if(V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {                                                            \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                           \
+        }                                                                                                        \
+        switch(eew) {                                                                                            \
+            case 16:                                                                                             \
+                imm = unbox_float(RISCV_HALF_PRECISION, env, imm);                                               \
+                break;                                                                                           \
+            case 32:                                                                                             \
+                imm = unbox_float(RISCV_SINGLE_PRECISION, env, imm);                                             \
+                break;                                                                                           \
+        }                                                                                                        \
+        for(int ei = env->vstart; ei < env->vl; ++ei) {                                                          \
+            TEST_MASK(ei)                                                                                        \
+            switch(eew) {                                                                                        \
+                case 16:                                                                                         \
+                    ((uint16_t *)V(vd))[ei] =                                                                    \
+                        glue(HELPER, _h)(env, ((uint16_t *)V(vd))[ei], ((uint16_t *)V(vs2))[ei], imm, env->frm); \
+                    break;                                                                                       \
+                case 32:                                                                                         \
+                    ((uint32_t *)V(vd))[ei] =                                                                    \
+                        glue(HELPER, _s)(env, ((uint32_t *)V(vd))[ei], ((uint32_t *)V(vs2))[ei], imm, env->frm); \
+                    break;                                                                                       \
+                case 64:                                                                                         \
+                    ((uint64_t *)V(vd))[ei] =                                                                    \
+                        glue(HELPER, _d)(env, ((uint64_t *)V(vd))[ei], ((uint64_t *)V(vs2))[ei], imm, env->frm); \
+                    break;                                                                                       \
+                default:                                                                                         \
+                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                   \
+                    break;                                                                                       \
+            }                                                                                                    \
+        }                                                                                                        \
+    }
+
+#define VF3OP_VVV(NAME, HELPER)                                                                                        \
+    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2, uint32_t vs1)                   \
+    {                                                                                                                  \
+        const target_ulong eew = env->vsew;                                                                            \
+        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                                           \
+        if(V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                                            \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                 \
+        }                                                                                                              \
+        for(int ei = env->vstart; ei < env->vl; ++ei) {                                                                \
+            TEST_MASK(ei)                                                                                              \
+            switch(eew) {                                                                                              \
+                case 16:                                                                                               \
+                    ((uint16_t *)V(vd))[ei] = glue(HELPER, _h)(env, ((uint16_t *)V(vd))[ei], ((uint16_t *)V(vs2))[ei], \
+                                                               ((uint16_t *)V(vs1))[ei], env->frm);                    \
+                    break;                                                                                             \
+                case 32:                                                                                               \
+                    ((uint32_t *)V(vd))[ei] = glue(HELPER, _s)(env, ((uint32_t *)V(vd))[ei], ((uint32_t *)V(vs2))[ei], \
+                                                               ((uint32_t *)V(vs1))[ei], env->frm);                    \
+                    break;                                                                                             \
+                case 64:                                                                                               \
+                    ((uint64_t *)V(vd))[ei] = glue(HELPER, _d)(env, ((uint64_t *)V(vd))[ei], ((uint64_t *)V(vs2))[ei], \
+                                                               ((uint64_t *)V(vs1))[ei], env->frm);                    \
+                    break;                                                                                             \
+                default:                                                                                               \
+                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                         \
+                    break;                                                                                             \
+            }                                                                                                          \
+        }                                                                                                              \
+    }
+
+#define VF3OP_WVX(NAME, HELPER)                                                                                                 \
+    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2, uint64_t imm)                            \
+    {                                                                                                                           \
+        const target_ulong eew = env->vsew;                                                                                     \
+        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);                                               \
+        if(V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                                                             \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                          \
+        }                                                                                                                       \
+        switch(eew) {                                                                                                           \
+            case 32:                                                                                                            \
+                imm = helper_fcvt_d_s(env, unbox_float(RISCV_SINGLE_PRECISION, env, imm), env->frm);                            \
+                break;                                                                                                          \
+        }                                                                                                                       \
+        for(int ei = env->vstart; ei < env->vl; ++ei) {                                                                         \
+            TEST_MASK(ei)                                                                                                       \
+            switch(eew) {                                                                                                       \
+                case 32:                                                                                                        \
+                    ((uint64_t *)V(vd))[ei] = glue(HELPER, _d)(                                                                 \
+                        env, ((uint64_t *)V(vd))[ei], helper_fcvt_d_s(env, ((uint32_t *)V(vs2))[ei], env->frm), imm, env->frm); \
+                    break;                                                                                                      \
+                default:                                                                                                        \
+                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                  \
+                    break;                                                                                                      \
+            }                                                                                                                   \
+        }                                                                                                                       \
+    }
+
+#define VF3OP_WVV(NAME, HELPER)                                                                                                  \
+    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2, uint32_t vs1)                             \
+    {                                                                                                                            \
+        const target_ulong eew = env->vsew;                                                                                      \
+        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);                                                \
+        if(V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                                        \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                           \
+        }                                                                                                                        \
+        for(int ei = env->vstart; ei < env->vl; ++ei) {                                                                          \
+            TEST_MASK(ei)                                                                                                        \
+            switch(eew) {                                                                                                        \
+                case 32:                                                                                                         \
+                    ((uint64_t *)V(vd))[ei] =                                                                                    \
+                        glue(HELPER, _d)(env, ((uint64_t *)V(vd))[ei], helper_fcvt_d_s(env, ((uint32_t *)V(vs2))[ei], env->frm), \
+                                         helper_fcvt_d_s(env, ((uint32_t *)V(vs1))[ei], env->frm), env->frm);                    \
+                    break;                                                                                                       \
+                default:                                                                                                         \
+                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                   \
+                    break;                                                                                                       \
+            }                                                                                                                    \
+        }                                                                                                                        \
     }
 
 #define MS_VL_MASK ((env->vl - ei > 0x7) ? 0 : (0xff << (env->vl & 0x7)))
@@ -331,234 +335,234 @@
         value = 0;                                 \
     }
 
-#define VFMOP_VVX(NAME, HELPER)                                                                     \
-    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2, float64 imm) \
-    {                                                                                               \
-        const target_ulong eew = env->vsew;                                                         \
-        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                        \
-        if(V_IDX_INVALID(vs2)) {                                                                    \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                              \
-        }                                                                                           \
-        switch(eew) {                                                                               \
-            case 16:                                                                                \
-                imm = unbox_float(RISCV_HALF_PRECISION, env, imm);                                  \
-                break;                                                                              \
-            case 32:                                                                                \
-                imm = unbox_float(RISCV_SINGLE_PRECISION, env, imm);                                \
-                break;                                                                              \
-        }                                                                                           \
-        uint8_t mask = 0, value = 0;                                                                \
-        for(int ei = 0; ei < env->vl; ++ei) {                                                       \
-            VFMOP_LOOP_PREFIX();                                                                    \
-            if(MS_TEST_MASK()) {                                                                    \
-                switch(eew) {                                                                       \
-                    case 16:                                                                        \
-                        value |= glue(HELPER, _h)(env, ((float16 *)V(vs2))[ei], imm) << (ei & 0x7); \
-                        break;                                                                      \
-                    case 32:                                                                        \
-                        value |= glue(HELPER, _s)(env, ((float32 *)V(vs2))[ei], imm) << (ei & 0x7); \
-                        break;                                                                      \
-                    case 64:                                                                        \
-                        value |= glue(HELPER, _d)(env, ((float64 *)V(vs2))[ei], imm) << (ei & 0x7); \
-                        break;                                                                      \
-                    default:                                                                        \
-                        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                  \
-                        break;                                                                      \
-                }                                                                                   \
-            }                                                                                       \
-            VFMOP_LOOP_SUFFIX();                                                                    \
-        }                                                                                           \
+#define VFMOP_VVX(NAME, HELPER)                                                                      \
+    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2, uint64_t imm) \
+    {                                                                                                \
+        const target_ulong eew = env->vsew;                                                          \
+        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                         \
+        if(V_IDX_INVALID(vs2)) {                                                                     \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                               \
+        }                                                                                            \
+        switch(eew) {                                                                                \
+            case 16:                                                                                 \
+                imm = unbox_float(RISCV_HALF_PRECISION, env, imm);                                   \
+                break;                                                                               \
+            case 32:                                                                                 \
+                imm = unbox_float(RISCV_SINGLE_PRECISION, env, imm);                                 \
+                break;                                                                               \
+        }                                                                                            \
+        uint8_t mask = 0, value = 0;                                                                 \
+        for(int ei = 0; ei < env->vl; ++ei) {                                                        \
+            VFMOP_LOOP_PREFIX();                                                                     \
+            if(MS_TEST_MASK()) {                                                                     \
+                switch(eew) {                                                                        \
+                    case 16:                                                                         \
+                        value |= glue(HELPER, _h)(env, ((uint16_t *)V(vs2))[ei], imm) << (ei & 0x7); \
+                        break;                                                                       \
+                    case 32:                                                                         \
+                        value |= glue(HELPER, _s)(env, ((uint32_t *)V(vs2))[ei], imm) << (ei & 0x7); \
+                        break;                                                                       \
+                    case 64:                                                                         \
+                        value |= glue(HELPER, _d)(env, ((uint64_t *)V(vs2))[ei], imm) << (ei & 0x7); \
+                        break;                                                                       \
+                    default:                                                                         \
+                        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                   \
+                        break;                                                                       \
+                }                                                                                    \
+            }                                                                                        \
+            VFMOP_LOOP_SUFFIX();                                                                     \
+        }                                                                                            \
     }
 
-#define VFMOP_VVV(NAME, HELPER)                                                                                         \
-    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2, uint32_t vs1)                    \
-    {                                                                                                                   \
-        const target_ulong eew = env->vsew;                                                                             \
-        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                                            \
-        if(V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                                                                  \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                  \
-        }                                                                                                               \
-        uint8_t mask = 0, value = 0;                                                                                    \
-        for(int ei = 0; ei < env->vl; ++ei) {                                                                           \
-            VFMOP_LOOP_PREFIX();                                                                                        \
-            if(MS_TEST_MASK()) {                                                                                        \
-                switch(eew) {                                                                                           \
-                    case 16:                                                                                            \
-                        value |= glue(HELPER, _h)(env, ((float16 *)V(vs2))[ei], ((float16 *)V(vs1))[ei]) << (ei & 0x7); \
-                        break;                                                                                          \
-                    case 32:                                                                                            \
-                        value |= glue(HELPER, _s)(env, ((float32 *)V(vs2))[ei], ((float32 *)V(vs1))[ei]) << (ei & 0x7); \
-                        break;                                                                                          \
-                    case 64:                                                                                            \
-                        value |= glue(HELPER, _d)(env, ((float64 *)V(vs2))[ei], ((float64 *)V(vs1))[ei]) << (ei & 0x7); \
-                        break;                                                                                          \
-                    default:                                                                                            \
-                        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
-                        break;                                                                                          \
-                }                                                                                                       \
-            }                                                                                                           \
-            VFMOP_LOOP_SUFFIX();                                                                                        \
-        }                                                                                                               \
+#define VFMOP_VVV(NAME, HELPER)                                                                                           \
+    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2, uint32_t vs1)                      \
+    {                                                                                                                     \
+        const target_ulong eew = env->vsew;                                                                               \
+        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                                              \
+        if(V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1)) {                                                                    \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                                    \
+        }                                                                                                                 \
+        uint8_t mask = 0, value = 0;                                                                                      \
+        for(int ei = 0; ei < env->vl; ++ei) {                                                                             \
+            VFMOP_LOOP_PREFIX();                                                                                          \
+            if(MS_TEST_MASK()) {                                                                                          \
+                switch(eew) {                                                                                             \
+                    case 16:                                                                                              \
+                        value |= glue(HELPER, _h)(env, ((uint16_t *)V(vs2))[ei], ((uint16_t *)V(vs1))[ei]) << (ei & 0x7); \
+                        break;                                                                                            \
+                    case 32:                                                                                              \
+                        value |= glue(HELPER, _s)(env, ((uint32_t *)V(vs2))[ei], ((uint32_t *)V(vs1))[ei]) << (ei & 0x7); \
+                        break;                                                                                            \
+                    case 64:                                                                                              \
+                        value |= glue(HELPER, _d)(env, ((uint64_t *)V(vs2))[ei], ((uint64_t *)V(vs1))[ei]) << (ei & 0x7); \
+                        break;                                                                                            \
+                    default:                                                                                              \
+                        raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                        \
+                        break;                                                                                            \
+                }                                                                                                         \
+            }                                                                                                             \
+            VFMOP_LOOP_SUFFIX();                                                                                          \
+        }                                                                                                                 \
     }
 
-#define VFOP_VV(NAME, HELPER)                                                                \
-    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2)       \
-    {                                                                                        \
-        require_fp;                                                                          \
-        const target_ulong eew = env->vsew;                                                  \
-        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                 \
-        if(V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {                                        \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                       \
-        }                                                                                    \
-        for(int ei = env->vstart; ei < env->vl; ++ei) {                                      \
-            TEST_MASK(ei)                                                                    \
-            switch(eew) {                                                                    \
-                case 16:                                                                     \
-                    ((float16 *)V(vd))[ei] = glue(HELPER, _h)(env, ((float16 *)V(vs2))[ei]); \
-                    break;                                                                   \
-                case 32:                                                                     \
-                    ((float32 *)V(vd))[ei] = glue(HELPER, _s)(env, ((float32 *)V(vs2))[ei]); \
-                    break;                                                                   \
-                case 64:                                                                     \
-                    ((float64 *)V(vd))[ei] = glue(HELPER, _d)(env, ((float64 *)V(vs2))[ei]); \
-                    break;                                                                   \
-                default:                                                                     \
-                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);               \
-                    break;                                                                   \
-            }                                                                                \
-        }                                                                                    \
+#define VFOP_VV(NAME, HELPER)                                                                  \
+    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2)         \
+    {                                                                                          \
+        require_fp;                                                                            \
+        const target_ulong eew = env->vsew;                                                    \
+        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                   \
+        if(V_IDX_INVALID(vd) || V_IDX_INVALID(vs2)) {                                          \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                         \
+        }                                                                                      \
+        for(int ei = env->vstart; ei < env->vl; ++ei) {                                        \
+            TEST_MASK(ei)                                                                      \
+            switch(eew) {                                                                      \
+                case 16:                                                                       \
+                    ((uint16_t *)V(vd))[ei] = glue(HELPER, _h)(env, ((uint16_t *)V(vs2))[ei]); \
+                    break;                                                                     \
+                case 32:                                                                       \
+                    ((uint32_t *)V(vd))[ei] = glue(HELPER, _s)(env, ((uint32_t *)V(vs2))[ei]); \
+                    break;                                                                     \
+                case 64:                                                                       \
+                    ((uint64_t *)V(vd))[ei] = glue(HELPER, _d)(env, ((uint64_t *)V(vs2))[ei]); \
+                    break;                                                                     \
+                default:                                                                       \
+                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                 \
+                    break;                                                                     \
+            }                                                                                  \
+        }                                                                                      \
     }
 
-#define VFOP_WV_FF(NAME, HELPER)                                                             \
-    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2)       \
-    {                                                                                        \
-        const target_ulong eew = env->vsew;                                                  \
-        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);            \
-        if(V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                          \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                       \
-        }                                                                                    \
-        for(int ei = env->vstart; ei < env->vl; ++ei) {                                      \
-            TEST_MASK(ei)                                                                    \
-            switch(eew) {                                                                    \
-                case 32:                                                                     \
-                    ((float64 *)V(vd))[ei] = glue(HELPER, _d)(env, ((float32 *)V(vs2))[ei]); \
-                    break;                                                                   \
-                default:                                                                     \
-                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);               \
-                    break;                                                                   \
-            }                                                                                \
-        }                                                                                    \
+#define VFOP_WV_FF(NAME, HELPER)                                                               \
+    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2)         \
+    {                                                                                          \
+        const target_ulong eew = env->vsew;                                                    \
+        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);              \
+        if(V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                            \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                         \
+        }                                                                                      \
+        for(int ei = env->vstart; ei < env->vl; ++ei) {                                        \
+            TEST_MASK(ei)                                                                      \
+            switch(eew) {                                                                      \
+                case 32:                                                                       \
+                    ((uint64_t *)V(vd))[ei] = glue(HELPER, _d)(env, ((uint32_t *)V(vs2))[ei]); \
+                    break;                                                                     \
+                default:                                                                       \
+                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                 \
+                    break;                                                                     \
+            }                                                                                  \
+        }                                                                                      \
     }
 
-#define VFOP_WV_FX(NAME, HELPER)                                                              \
-    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2)        \
-    {                                                                                         \
-        const target_ulong eew = env->vsew;                                                   \
-        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);             \
-        if(V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                           \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                        \
-        }                                                                                     \
-        for(int ei = env->vstart; ei < env->vl; ++ei) {                                       \
-            TEST_MASK(ei)                                                                     \
-            switch(eew) {                                                                     \
-                case 16:                                                                      \
-                    ((float32 *)V(vd))[ei] = glue(HELPER, _s)(env, ((uint16_t *)V(vs2))[ei]); \
-                    break;                                                                    \
-                case 32:                                                                      \
-                    ((float64 *)V(vd))[ei] = glue(HELPER, _d)(env, ((uint32_t *)V(vs2))[ei]); \
-                    break;                                                                    \
-                default:                                                                      \
-                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                \
-                    break;                                                                    \
-            }                                                                                 \
-        }                                                                                     \
+#define VFOP_WV_FX(NAME, HELPER)                                                               \
+    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2)         \
+    {                                                                                          \
+        const target_ulong eew = env->vsew;                                                    \
+        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);              \
+        if(V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                            \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                         \
+        }                                                                                      \
+        for(int ei = env->vstart; ei < env->vl; ++ei) {                                        \
+            TEST_MASK(ei)                                                                      \
+            switch(eew) {                                                                      \
+                case 16:                                                                       \
+                    ((uint32_t *)V(vd))[ei] = glue(HELPER, _s)(env, ((uint16_t *)V(vs2))[ei]); \
+                    break;                                                                     \
+                case 32:                                                                       \
+                    ((uint64_t *)V(vd))[ei] = glue(HELPER, _d)(env, ((uint32_t *)V(vs2))[ei]); \
+                    break;                                                                     \
+                default:                                                                       \
+                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                 \
+                    break;                                                                     \
+            }                                                                                  \
+        }                                                                                      \
     }
 
-#define VFOP_WV_XF(NAME, HELPER)                                                              \
-    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2)        \
-    {                                                                                         \
-        const target_ulong eew = env->vsew;                                                   \
-        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                  \
-        if(V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                           \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                        \
-        }                                                                                     \
-        for(int ei = env->vstart; ei < env->vl; ++ei) {                                       \
-            TEST_MASK(ei)                                                                     \
-            switch(eew) {                                                                     \
-                case 32:                                                                      \
-                    ((uint64_t *)V(vd))[ei] = glue(HELPER, _d)(env, ((float32 *)V(vs2))[ei]); \
-                    break;                                                                    \
-                default:                                                                      \
-                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                \
-                    break;                                                                    \
-            }                                                                                 \
-        }                                                                                     \
+#define VFOP_WV_XF(NAME, HELPER)                                                               \
+    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2)         \
+    {                                                                                          \
+        const target_ulong eew = env->vsew;                                                    \
+        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                   \
+        if(V_IDX_INVALID_EEW(vd, eew << 1) || V_IDX_INVALID(vs2)) {                            \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                         \
+        }                                                                                      \
+        for(int ei = env->vstart; ei < env->vl; ++ei) {                                        \
+            TEST_MASK(ei)                                                                      \
+            switch(eew) {                                                                      \
+                case 32:                                                                       \
+                    ((uint64_t *)V(vd))[ei] = glue(HELPER, _d)(env, ((uint32_t *)V(vs2))[ei]); \
+                    break;                                                                     \
+                default:                                                                       \
+                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                 \
+                    break;                                                                     \
+            }                                                                                  \
+        }                                                                                      \
     }
 
-#define VFOP_VW_FF(NAME, HELPER)                                                             \
-    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2)       \
-    {                                                                                        \
-        const target_ulong eew = env->vsew;                                                  \
-        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);            \
-        if(V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1)) {                          \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                       \
-        }                                                                                    \
-        for(int ei = env->vstart; ei < env->vl; ++ei) {                                      \
-            TEST_MASK(ei)                                                                    \
-            switch(eew) {                                                                    \
-                case 32:                                                                     \
-                    ((float32 *)V(vd))[ei] = glue(HELPER, _s)(env, ((float64 *)V(vs2))[ei]); \
-                    break;                                                                   \
-                default:                                                                     \
-                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);               \
-                    break;                                                                   \
-            }                                                                                \
-        }                                                                                    \
+#define VFOP_VW_FF(NAME, HELPER)                                                               \
+    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2)         \
+    {                                                                                          \
+        const target_ulong eew = env->vsew;                                                    \
+        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);              \
+        if(V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1)) {                            \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                         \
+        }                                                                                      \
+        for(int ei = env->vstart; ei < env->vl; ++ei) {                                        \
+            TEST_MASK(ei)                                                                      \
+            switch(eew) {                                                                      \
+                case 32:                                                                       \
+                    ((uint32_t *)V(vd))[ei] = glue(HELPER, _s)(env, ((uint64_t *)V(vs2))[ei]); \
+                    break;                                                                     \
+                default:                                                                       \
+                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                 \
+                    break;                                                                     \
+            }                                                                                  \
+        }                                                                                      \
     }
 
-#define VFOP_VW_FX(NAME, HELPER)                                                              \
-    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2)        \
-    {                                                                                         \
-        const target_ulong eew = env->vsew;                                                   \
-        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                  \
-        if(V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1)) {                           \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                        \
-        }                                                                                     \
-        for(int ei = env->vstart; ei < env->vl; ++ei) {                                       \
-            TEST_MASK(ei)                                                                     \
-            switch(eew) {                                                                     \
-                case 32:                                                                      \
-                    ((float32 *)V(vd))[ei] = glue(HELPER, _s)(env, ((uint64_t *)V(vs2))[ei]); \
-                    break;                                                                    \
-                default:                                                                      \
-                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                \
-                    break;                                                                    \
-            }                                                                                 \
-        }                                                                                     \
+#define VFOP_VW_FX(NAME, HELPER)                                                               \
+    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2)         \
+    {                                                                                          \
+        const target_ulong eew = env->vsew;                                                    \
+        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                   \
+        if(V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1)) {                            \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                         \
+        }                                                                                      \
+        for(int ei = env->vstart; ei < env->vl; ++ei) {                                        \
+            TEST_MASK(ei)                                                                      \
+            switch(eew) {                                                                      \
+                case 32:                                                                       \
+                    ((uint32_t *)V(vd))[ei] = glue(HELPER, _s)(env, ((uint64_t *)V(vs2))[ei]); \
+                    break;                                                                     \
+                default:                                                                       \
+                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                 \
+                    break;                                                                     \
+            }                                                                                  \
+        }                                                                                      \
     }
 
-#define VFOP_VW_XF(NAME, HELPER)                                                              \
-    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2)        \
-    {                                                                                         \
-        const target_ulong eew = env->vsew;                                                   \
-        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);             \
-        if(V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1)) {                           \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                        \
-        }                                                                                     \
-        for(int ei = env->vstart; ei < env->vl; ++ei) {                                       \
-            TEST_MASK(ei)                                                                     \
-            switch(eew) {                                                                     \
-                case 16:                                                                      \
-                    ((uint16_t *)V(vd))[ei] = glue(HELPER, _s)(env, ((float32 *)V(vs2))[ei]); \
-                    break;                                                                    \
-                case 32:                                                                      \
-                    ((uint32_t *)V(vd))[ei] = glue(HELPER, _d)(env, ((float64 *)V(vs2))[ei]); \
-                    break;                                                                    \
-                default:                                                                      \
-                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                \
-                    break;                                                                    \
-            }                                                                                 \
-        }                                                                                     \
+#define VFOP_VW_XF(NAME, HELPER)                                                               \
+    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2)         \
+    {                                                                                          \
+        const target_ulong eew = env->vsew;                                                    \
+        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew << 1);              \
+        if(V_IDX_INVALID(vd) || V_IDX_INVALID_EEW(vs2, eew << 1)) {                            \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                         \
+        }                                                                                      \
+        for(int ei = env->vstart; ei < env->vl; ++ei) {                                        \
+            TEST_MASK(ei)                                                                      \
+            switch(eew) {                                                                      \
+                case 16:                                                                       \
+                    ((uint16_t *)V(vd))[ei] = glue(HELPER, _s)(env, ((uint32_t *)V(vs2))[ei]); \
+                    break;                                                                     \
+                case 32:                                                                       \
+                    ((uint32_t *)V(vd))[ei] = glue(HELPER, _d)(env, ((uint64_t *)V(vs2))[ei]); \
+                    break;                                                                     \
+                default:                                                                       \
+                    raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                 \
+                    break;                                                                     \
+            }                                                                                  \
+        }                                                                                      \
     }
 
 #define VFOP_RED_VVV(NAME, HELPER)                                                                   \
@@ -571,13 +575,13 @@
         if(V_IDX_INVALID(vs2) || env->vstart != 0) {                                                 \
             raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                               \
         }                                                                                            \
-        float64 acc;                                                                                 \
+        uint64_t acc;                                                                                \
         switch(eew) {                                                                                \
             case 32:                                                                                 \
-                acc = ((float32 *)V(vs1))[0];                                                        \
+                acc = ((uint32_t *)V(vs1))[0];                                                       \
                 break;                                                                               \
             case 64:                                                                                 \
-                acc = ((float64 *)V(vs1))[0];                                                        \
+                acc = ((uint64_t *)V(vs1))[0];                                                       \
                 break;                                                                               \
             default:                                                                                 \
                 raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                           \
@@ -587,60 +591,60 @@
             TEST_MASK(ei)                                                                            \
             switch(eew) {                                                                            \
                 case 32:                                                                             \
-                    acc = glue(HELPER, _s)(env, acc, ((float32 *)V(vs2))[ei]);                       \
+                    acc = glue(HELPER, _s)(env, acc, ((uint32_t *)V(vs2))[ei]);                      \
                     break;                                                                           \
                 case 64:                                                                             \
-                    acc = glue(HELPER, _d)(env, acc, ((float64 *)V(vs2))[ei]);                       \
+                    acc = glue(HELPER, _d)(env, acc, ((uint64_t *)V(vs2))[ei]);                      \
                     break;                                                                           \
             }                                                                                        \
         }                                                                                            \
         MAYBE_CANONICALIZE_NAN                                                                       \
         switch(eew) {                                                                                \
             case 32:                                                                                 \
-                ((float32 *)V(vd))[0] = acc;                                                         \
+                ((uint32_t *)V(vd))[0] = acc;                                                        \
                 break;                                                                               \
             case 64:                                                                                 \
-                ((float64 *)V(vd))[0] = acc;                                                         \
+                ((uint64_t *)V(vd))[0] = acc;                                                        \
                 break;                                                                               \
         }                                                                                            \
     }
 
-#define VFOP_RED_WVV(NAME, HELPER)                                                                             \
-    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2, uint32_t vs1)           \
-    {                                                                                                          \
-        const target_ulong eew = env->vsew;                                                                    \
-        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                                   \
-        if(env->vl == 0)                                                                                       \
-            return;                                                                                            \
-        if(V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1) || env->vstart != 0) {                \
-            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                         \
-        }                                                                                                      \
-        float64 acc;                                                                                           \
-        switch(eew) {                                                                                          \
-            case 32:                                                                                           \
-                acc = ((float64 *)V(vs1))[0];                                                                  \
-                break;                                                                                         \
-            default:                                                                                           \
-                raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                     \
-                break;                                                                                         \
-        }                                                                                                      \
-        for(int ei = env->vstart; ei < env->vl; ++ei) {                                                        \
-            TEST_MASK(ei)                                                                                      \
-            switch(eew) {                                                                                      \
-                case 32:                                                                                       \
-                    acc = glue(HELPER, _d)(env, acc, helper_fcvt_d_s(env, ((float32 *)V(vs2))[ei], env->frm)); \
-                    break;                                                                                     \
-            }                                                                                                  \
-        }                                                                                                      \
-        MAYBE_CANONICALIZE_NAN                                                                                 \
-        switch(eew) {                                                                                          \
-            case 32:                                                                                           \
-                ((float64 *)V(vd))[0] = acc;                                                                   \
-                break;                                                                                         \
-        }                                                                                                      \
+#define VFOP_RED_WVV(NAME, HELPER)                                                                              \
+    void glue(glue(helper_, NAME), POSTFIX)(CPUState * env, uint32_t vd, uint32_t vs2, uint32_t vs1)            \
+    {                                                                                                           \
+        const target_ulong eew = env->vsew;                                                                     \
+        ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);                                    \
+        if(env->vl == 0)                                                                                        \
+            return;                                                                                             \
+        if(V_IDX_INVALID(vd) || V_IDX_INVALID(vs2) || V_IDX_INVALID(vs1) || env->vstart != 0) {                 \
+            raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                          \
+        }                                                                                                       \
+        uint64_t acc;                                                                                           \
+        switch(eew) {                                                                                           \
+            case 32:                                                                                            \
+                acc = ((uint64_t *)V(vs1))[0];                                                                  \
+                break;                                                                                          \
+            default:                                                                                            \
+                raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);                                      \
+                break;                                                                                          \
+        }                                                                                                       \
+        for(int ei = env->vstart; ei < env->vl; ++ei) {                                                         \
+            TEST_MASK(ei)                                                                                       \
+            switch(eew) {                                                                                       \
+                case 32:                                                                                        \
+                    acc = glue(HELPER, _d)(env, acc, helper_fcvt_d_s(env, ((uint32_t *)V(vs2))[ei], env->frm)); \
+                    break;                                                                                      \
+            }                                                                                                   \
+        }                                                                                                       \
+        MAYBE_CANONICALIZE_NAN                                                                                  \
+        switch(eew) {                                                                                           \
+            case 32:                                                                                            \
+                ((uint64_t *)V(vd))[0] = acc;                                                                   \
+                break;                                                                                          \
+        }                                                                                                       \
     }
 
-void glue(helper_vfslide1up, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, float64 imm)
+void glue(helper_vfslide1up, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, uint64_t imm)
 {
     const target_ulong eew = env->vsew;
 
@@ -660,13 +664,13 @@ void glue(helper_vfslide1up, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, f
     ) {
         switch(eew) {
             case 16:
-                ((float16 *)V(vd))[0] = unbox_float(RISCV_HALF_PRECISION, env, imm);
+                ((uint16_t *)V(vd))[0] = unbox_float(RISCV_HALF_PRECISION, env, imm);
                 break;
             case 32:
-                ((float32 *)V(vd))[0] = unbox_float(RISCV_SINGLE_PRECISION, env, imm);
+                ((uint32_t *)V(vd))[0] = unbox_float(RISCV_SINGLE_PRECISION, env, imm);
                 break;
             case 64:
-                ((float64 *)V(vd))[0] = imm;
+                ((uint64_t *)V(vd))[0] = imm;
                 break;
             default:
                 raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
@@ -677,13 +681,13 @@ void glue(helper_vfslide1up, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, f
         TEST_MASK(ei)
         switch(eew) {
             case 16:
-                ((float16 *)V(vd))[ei] = ((float16 *)V(vs2))[ei - 1];
+                ((uint16_t *)V(vd))[ei] = ((uint16_t *)V(vs2))[ei - 1];
                 break;
             case 32:
-                ((float32 *)V(vd))[ei] = ((float32 *)V(vs2))[ei - 1];
+                ((uint32_t *)V(vd))[ei] = ((uint32_t *)V(vs2))[ei - 1];
                 break;
             case 64:
-                ((float64 *)V(vd))[ei] = ((float64 *)V(vs2))[ei - 1];
+                ((uint64_t *)V(vd))[ei] = ((uint64_t *)V(vs2))[ei - 1];
                 break;
             default:
                 raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
@@ -692,7 +696,7 @@ void glue(helper_vfslide1up, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, f
     }
 }
 
-void glue(helper_vfslide1down, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, float64 imm)
+void glue(helper_vfslide1down, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2, uint64_t imm)
 {
     const target_ulong eew = env->vsew;
     ensure_vector_float_embedded_extension_or_raise_exception(cpu, eew);
@@ -709,13 +713,13 @@ void glue(helper_vfslide1down, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2,
         TEST_MASK(ei)
         switch(eew) {
             case 16:
-                ((float16 *)V(vd))[ei] = ((float16 *)V(vs2))[ei + 1];
+                ((uint16_t *)V(vd))[ei] = ((uint16_t *)V(vs2))[ei + 1];
                 break;
             case 32:
-                ((float32 *)V(vd))[ei] = ((float32 *)V(vs2))[ei + 1];
+                ((uint32_t *)V(vd))[ei] = ((uint32_t *)V(vs2))[ei + 1];
                 break;
             case 64:
-                ((float64 *)V(vd))[ei] = ((float64 *)V(vs2))[ei + 1];
+                ((uint64_t *)V(vd))[ei] = ((uint64_t *)V(vs2))[ei + 1];
                 break;
             default:
                 raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
@@ -727,13 +731,13 @@ void glue(helper_vfslide1down, POSTFIX)(CPUState *env, uint32_t vd, int32_t vs2,
 #endif
         switch(eew) {
             case 16:
-                ((float16 *)V(vd))[src_max] = unbox_float(RISCV_HALF_PRECISION, env, imm);
+                ((uint16_t *)V(vd))[src_max] = unbox_float(RISCV_HALF_PRECISION, env, imm);
                 break;
             case 32:
-                ((float32 *)V(vd))[src_max] = unbox_float(RISCV_SINGLE_PRECISION, env, imm);
+                ((uint32_t *)V(vd))[src_max] = unbox_float(RISCV_SINGLE_PRECISION, env, imm);
                 break;
             case 64:
-                ((float64 *)V(vd))[src_max] = imm;
+                ((uint64_t *)V(vd))[src_max] = imm;
                 break;
             default:
                 raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST);
@@ -995,26 +999,26 @@ VFOP_RED_VVV(vfredmin_vs, helper_fmin)
 VFOP_RED_WVV(vfwredosum_vs, VFOP_FADD)
 
 #undef MAYBE_CANONICALIZE_NAN
-#define MAYBE_CANONICALIZE_NAN             \
-    switch(eew) {                          \
-        case 32:                           \
-            if(float32_is_any_nan(acc)) {  \
-                acc = float32_default_nan; \
-            }                              \
-            break;                         \
-        case 64:                           \
-            if(float64_is_any_nan(acc)) {  \
-                acc = float64_default_nan; \
-            }                              \
-            break;                         \
+#define MAYBE_CANONICALIZE_NAN         \
+    switch(eew) {                      \
+        case 32:                       \
+            if(isNaNF32UI(acc)) {      \
+                acc = defaultNaNF32UI; \
+            }                          \
+            break;                     \
+        case 64:                       \
+            if(isNaNF64UI(acc)) {      \
+                acc = defaultNaNF64UI; \
+            }                          \
+            break;                     \
     }
 
 VFOP_RED_VVV(vfredusum_vs, VFOP_FADD)
 #undef MAYBE_CANONICALIZE_NAN
 
-#define MAYBE_CANONICALIZE_NAN     \
-    if(float64_is_any_nan(acc)) {  \
-        acc = float64_default_nan; \
+#define MAYBE_CANONICALIZE_NAN \
+    if(isNaNF64UI(acc)) {      \
+        acc = defaultNaNF64UI; \
     }
 VFOP_RED_WVV(vfwredusum_vs, VFOP_FADD)
 #undef MAYBE_CANONICALIZE_NAN
