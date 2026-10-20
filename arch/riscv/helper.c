@@ -63,7 +63,6 @@ void cpu_reset(CPUState *env)
     env->clic_interrupt_vectored = 0;
     env->clic_interrupt_level = 0;
     env->clic_interrupt_priv = 0;
-    set_default_nan_mode(1, &env->fp_status);
     set_default_mstatus();
     env->custom_instructions_count = custom_instructions_count;
     memcpy(env->custom_instructions, custom_instructions,

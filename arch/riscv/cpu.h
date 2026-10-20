@@ -3,7 +3,6 @@
 #include "bit_helper.h"
 #include "cpu-defs.h"
 #include "softfloat.h"
-#include "softfloat-2.h"
 #include "specialize.h"
 #include "host-utils.h"
 #include <stdint.h>
@@ -173,8 +172,6 @@ struct CPUState {
     pmp_table_t pmp_state;
     target_ulong pmp_addr_mask;
     bool use_external_pmp;
-
-    float_status fp_status;
 
     uint64_t mcycle_snapshot_offset;
     uint64_t mcycle_snapshot;
