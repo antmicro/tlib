@@ -1277,11 +1277,13 @@ void do_v7m_exception_exit(CPUState *env)
      * TailChain(). TailChain() performs no PopStack(), so the derived
      * integrity checks that read the stacked frame do not occur.
      *
-     * NOTE: RFKXX is not respected here. `tlib_nvic_find_pending_irq()`
-     * does not respect PRIMASK/BASEPRI/FAULTMASK.
+     * `tlib_nvic_find_pending_irq()` returns the highest-priority pending
+     * exception even when PRIMASK, BASEPRI or FAULTMASK masks it, but it
+     * raises the CPU interrupt line only when that exception can preempt.
+     * A masked exception must stay pending, so the line decides.
      */
     int pending_exception = tlib_nvic_find_pending_irq();
-    if(pending_exception > 0) {
+    if(pending_exception > 0 && is_interrupt_pending(env, CPU_INTERRUPT_HARD)) {
         env->v7m.exception_return_tailchain = true;
         env->v7m.exception_return_type = type;
         env->exception_index = EXCP_IRQ;
