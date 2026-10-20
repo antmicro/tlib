@@ -104,27 +104,6 @@ typedef enum {
         raise_exception_and_sync_pc(env, RISCV_EXCP_ILLEGAL_INST); \
     }
 
-/* adapted from spike */
-#define isNaNF32UI(ui) (0xFF000000 < (uint32_t)((uint_fast32_t)ui << 1))
-#define signF32UI(a)   ((bool)((uint32_t)a >> 31))
-#define expF32UI(a)    ((int_fast16_t)(a >> 23) & 0xFF)
-#define fracF32UI(a)   (a & 0x007FFFFF)
-
-union ui32_f32 {
-    uint32_t ui;
-    uint32_t f;
-};
-
-#define isNaNF64UI(ui) (UINT64_C(0xFFE0000000000000) < (uint64_t)((uint_fast64_t)ui << 1))
-#define signF64UI(a)   ((bool)((uint64_t)a >> 63))
-#define expF64UI(a)    ((int_fast16_t)(a >> 52) & 0x7FF)
-#define fracF64UI(a)   (a & UINT64_C(0x000FFFFFFFFFFFFF))
-
-union ui64_f64 {
-    uint64_t ui;
-    uint64_t f;
-};
-
 unsigned int softfloat3_flags_to_riscv(unsigned int flags)
 {
     int rv_flags = 0;

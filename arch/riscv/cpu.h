@@ -4,6 +4,7 @@
 #include "cpu-defs.h"
 #include "softfloat.h"
 #include "softfloat-2.h"
+#include "specialize.h"
 #include "host-utils.h"
 #include <stdint.h>
 
