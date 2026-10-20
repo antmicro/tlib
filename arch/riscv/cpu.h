@@ -538,11 +538,11 @@ static inline uint64_t get_float_default_nan(enum riscv_floating_point_precision
 {
     switch(float_precision) {
         case RISCV_DOUBLE_PRECISION:
-            return float64_default_nan;
+            return defaultNaNF64UI;
         case RISCV_SINGLE_PRECISION:
-            return float32_default_nan;
+            return defaultNaNF32UI;
         case RISCV_HALF_PRECISION:
-            return float16_default_nan;
+            return defaultNaNF16UI;
         default:
             //  Should never happen.
             tlib_abortf("Unsupported floating point precision: %d. Can't provide a default NaN for it.", float_precision);
