@@ -22,7 +22,7 @@ void flush_dirty_addresses_list()
 
 void append_dirty_address(uint64_t address)
 {
-    if(address == dirty_addresses_list[current_dirty_addresses_list_index - 1]) {
+    if(current_dirty_addresses_list_index > 0 && address == dirty_addresses_list[current_dirty_addresses_list_index - 1]) {
         return;
     }
     if(current_dirty_addresses_list_index == MAX_DIRTY_ADDRESSES_LIST_COUNT) {
