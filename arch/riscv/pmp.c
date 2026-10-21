@@ -400,7 +400,8 @@ int pmp_get_access(CPUState *env, target_ulong addr, target_ulong size, int acce
         if(priv == PRV_M) {
             return (env->mseccfg & MSECCFG_MMWP) ? 0 : PMP_READ | PMP_WRITE | PMP_EXEC;
         } else {
-            return riscv_has_additional_ext(env, RISCV_FEATURE_SMEPMP) ? 0 : PMP_READ | PMP_WRITE | PMP_EXEC;
+            /* S/U-mode accesses fail if any PMP entry is implemented, even if all are OFF */
+            return env->pmp_entry_count > 0 ? 0 : PMP_READ | PMP_WRITE | PMP_EXEC;
         }
     }
 
