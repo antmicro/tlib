@@ -123,6 +123,18 @@ uint32_t *get_reg_pointer_32_with_security(int reg, bool is_secure)
             return &(cpu->regs[reg]);
         case CPSR_32:
             return &(cpu->uncached_cpsr);
+        case S_0_32 ... S_31_32: {
+            int tmp_reg = reg - S_0_32;
+            CPU_DoubleU *d_reg_ref = (CPU_DoubleU *)&(cpu->vfp.regs[tmp_reg >> 1]);  //  S0...S31 are contained within D0...D15
+            if(tmp_reg & 1) {  //  We are using relative register number to ensure parity is correct. ie. we want reg & 1 == 0 for
+                               //  s0, s2, s4 etc.  which is not the case when S_0_32 is odd.
+                return &(d_reg_ref->l.upper);
+            } else {
+                return &(d_reg_ref->l.lower);
+            }
+        }
+        case FPSCR_32:
+            return &(cpu->vfp.xregs[ARM_VFP_FPSCR]);
 #if defined(TARGET_ARM32) && defined(TARGET_PROTO_ARM_M)
         case Control_32:
             return &(cpu->v7m.control[is_secure]);
@@ -144,21 +156,8 @@ uint32_t *get_reg_pointer_32_with_security(int reg, bool is_secure)
             return &(cpu->v7m.primask[is_secure]);
         case FAULTMASK_32:
             return &(cpu->v7m.faultmask[is_secure]);
-        case FPSCR_32:
-            return &(cpu->vfp.xregs[ARM_VFP_FPSCR]);
         case VPR_32:
             return &(cpu->v7m.vpr);
-        case S_0_32 ... S_31_32: {
-            int tmp_reg = reg - S_0_32;
-            CPU_DoubleU *d_reg_ref = (CPU_DoubleU *)&(cpu->vfp.regs[tmp_reg >> 1]);  //  S0...S31 are contained within D0...D15
-            if(tmp_reg & 1) {  //  We are using relative register number to ensure parity is correct. ie. we want reg & 1 == 0 for
-                               //  s0, s2, s4 etc.  which is not the case when S_0_32 is odd.
-                return &(d_reg_ref->l.upper);
-            } else {
-                return &(d_reg_ref->l.lower);
-            }
-        }
-
         case MSPCURR_32:
             return pointer_msp(env);
         case PSPCURR_32:
@@ -321,7 +320,7 @@ void tlib_set_register_value_32(int reg_number, uint32_t value)
 EXC_VOID_2(tlib_set_register_value_32, int, reg_number, uint32_t, value)
 
 //  64 bit support for VFP (Floating-Point coprocessor)
-#if defined(TARGET_PROTO_ARM_M)
+#if defined(TARGET_ARM32)
 uint64_t *get_reg_pointer_64(int reg)
 {
     switch(reg) {
@@ -346,9 +345,11 @@ EXC_INT_1(uint64_t, tlib_get_register_value_64, int, reg_number)
 
 void tlib_set_register_value_64(int reg_number, uint64_t value)
 {
+#ifdef TARGET_PROTO_ARM_M
     if(D_0_64 <= reg_number && reg_number <= D_31_64) {
         warn_about_fp_lsp("D", reg_number - D_0_64);
     }
+#endif
 
     uint64_t *ptr = get_reg_pointer_64(reg_number);
     if(ptr == NULL) {
