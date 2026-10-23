@@ -1,3 +1,4 @@
+#include <string.h>
 /*
  * Xtensa ISA:
  * http://www.tensilica.com/products/literature-docs/documentation/xtensa-isa-databook.htm
@@ -469,7 +470,10 @@ static uint32_t test_exceptions_hpi(DisasContext *dc, const OpcodeArg arg[], con
 static void gen_load_store_alignment(DisasContext *dc, int shift, TCGv_i32 addr, bool no_hw_alignment)
 {
     if(!option_enabled(dc, XTENSA_OPTION_UNALIGNED_EXCEPTION)) {
-        tcg_gen_andi_i32(addr, addr, 0xFFFFFFFF << shift);
+        /* Cores with hardware unaligned access keep the address. */
+        if(!option_enabled(dc, XTENSA_OPTION_HW_ALIGNMENT) || no_hw_alignment) {
+            tcg_gen_andi_i32(addr, addr, 0xFFFFFFFF << shift);
+        }
     } else if(option_enabled(dc, XTENSA_OPTION_HW_ALIGNMENT) && no_hw_alignment) {
         int label = gen_new_label();
         TCGv_i32 tmp = tcg_temp_new_i32();
@@ -1978,6 +1982,44 @@ static void translate_rptlb1(DisasContext *dc, const OpcodeArg arg[], const uint
 {
     gen_helper_rptlb1(arg[0].out, cpu_env, arg[1].in);
 }
+
+
+/* ESP32 DFP accelerator user registers, looked up by name in the core's ISA. */
+static int xtensa_find_ur(const char *name)
+{
+    int i;
+    for(i = 0; i < 256; ++i) {
+        if(ur_name[i] && strcmp(ur_name[i], name) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+static void translate_rur_named(const OpcodeArg arg[], const char *name)
+{
+    int ur = xtensa_find_ur(name);
+    if(ur >= 0) {
+        tcg_gen_mov_i32(arg[0].out, cpu_UR[ur]);
+    } else {
+        tcg_gen_movi_i32(arg[0].out, 0);
+    }
+}
+
+static void translate_wur_named(const OpcodeArg arg[], const char *name)
+{
+    int ur = xtensa_find_ur(name);
+    if(ur >= 0) {
+        tcg_gen_mov_i32(cpu_UR[ur], arg[0].in);
+    }
+}
+
+static void translate_rur_f64r_lo(DisasContext *dc, const OpcodeArg arg[], const uint32_t par[]) { translate_rur_named(arg, "f64r_lo"); }
+static void translate_rur_f64r_hi(DisasContext *dc, const OpcodeArg arg[], const uint32_t par[]) { translate_rur_named(arg, "f64r_hi"); }
+static void translate_rur_f64s(DisasContext *dc, const OpcodeArg arg[], const uint32_t par[]) { translate_rur_named(arg, "f64s"); }
+static void translate_wur_f64r_lo(DisasContext *dc, const OpcodeArg arg[], const uint32_t par[]) { translate_wur_named(arg, "f64r_lo"); }
+static void translate_wur_f64r_hi(DisasContext *dc, const OpcodeArg arg[], const uint32_t par[]) { translate_wur_named(arg, "f64r_hi"); }
+static void translate_wur_f64s(DisasContext *dc, const OpcodeArg arg[], const uint32_t par[]) { translate_wur_named(arg, "f64s"); }
 
 static void translate_rur(DisasContext *dc, const OpcodeArg arg[], const uint32_t par[])
 {
@@ -4619,6 +4661,18 @@ gen_translate_xsr(acchi) gen_translate_xsr(ccompare) gen_translate_xsr(dbreaka) 
          .par = (const uint32_t[]) { EXPSTATE },
          },
         {
+         .name = "rur.f64r_hi",
+         .translate = translate_rur_f64r_hi,
+         },
+        {
+         .name = "rur.f64r_lo",
+         .translate = translate_rur_f64r_lo,
+         },
+        {
+         .name = "rur.f64s",
+         .translate = translate_rur_f64s,
+         },
+        {
          .name = "rur.threadptr",
          .translate = translate_rur,
          .par = (const uint32_t[]) { THREADPTR },
@@ -5637,6 +5691,18 @@ gen_translate_xsr(acchi) gen_translate_xsr(ccompare) gen_translate_xsr(dbreaka) 
          .name = "wur.expstate",
          .translate = translate_wur,
          .par = (const uint32_t[]) { EXPSTATE },
+         },
+        {
+         .name = "wur.f64r_hi",
+         .translate = translate_wur_f64r_hi,
+         },
+        {
+         .name = "wur.f64r_lo",
+         .translate = translate_wur_f64r_lo,
+         },
+        {
+         .name = "wur.f64s",
+         .translate = translate_wur_f64s,
          },
         {
          .name = "wur.threadptr",

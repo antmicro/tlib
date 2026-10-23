@@ -32,6 +32,34 @@ uint32_t *get_reg_pointer_32(int reg)
             return &(cpu->regs[reg - A_0_32]);
         case AR_0_32 ... AR_31_32:
             return &(cpu->phys_regs[reg - AR_0_32]);
+        /*  The other half of the 64 physical address registers and the
+            registers GDB's Xtensa targets read (loops, MAC16, booleans, FPU). */
+        case AR_32_32 ... AR_63_32:
+            return &(cpu->phys_regs[32 + reg - AR_32_32]);
+        case LBEG_32:
+            return &(cpu->sregs[LBEG]);
+        case LEND_32:
+            return &(cpu->sregs[LEND]);
+        case LCOUNT_32:
+            return &(cpu->sregs[LCOUNT]);
+        case BR_32:
+            return &(cpu->sregs[BR]);
+        case ACCLO_32:
+            return &(cpu->sregs[ACCLO]);
+        case ACCHI_32:
+            return &(cpu->sregs[ACCHI]);
+        case M_0_32 ... M_3_32:
+            return &(cpu->sregs[MR + reg - M_0_32]);
+        case CPENABLE_32:
+            return &(cpu->sregs[CPENABLE]);
+        case THREADPTR_32:
+            return &(cpu->uregs[THREADPTR]);
+        case FCR_32:
+            return &(cpu->uregs[FCR]);
+        case FSR_32:
+            return &(cpu->uregs[FSR]);
+        case F_0_32 ... F_15_32:
+            return (uint32_t *)&(cpu->fregs[reg - F_0_32].f32[FP_F32_LOW]);
         case PC_32:
             return &(cpu->pc);
         case SAR_32:
@@ -119,7 +147,7 @@ uint32_t get_masked_register_value_32(int reg_number, int offset, int width)
 uint32_t tlib_get_register_value_32(int reg_number)
 {
     //  Sync A --> AR to have the latest windowed register values.
-    if(reg_number >= AR_0_32 && reg_number <= AR_31_32) {
+    if((reg_number >= AR_0_32 && reg_number <= AR_31_32) || (reg_number >= AR_32_32 && reg_number <= AR_63_32)) {
         xtensa_sync_phys_from_window(cpu);
     }
 
@@ -177,12 +205,22 @@ void tlib_set_register_value_32(int reg_number, uint32_t value)
             return;
     }
 
+    /*  AR is the physical file; keep the live window (A0..A15) in step. */
+    bool is_ar = (reg_number >= AR_0_32 && reg_number <= AR_31_32) || (reg_number >= AR_32_32 && reg_number <= AR_63_32);
+    if(is_ar) {
+        xtensa_sync_phys_from_window(cpu);
+    }
+
     uint32_t *ptr = get_reg_pointer_32(reg_number);
     if(ptr == NULL) {
         tlib_abortf("Write to undefined CPU register number %d detected", reg_number);
     }
 
     *ptr = value;
+
+    if(is_ar) {
+        xtensa_sync_window_from_phys(cpu);
+    }
 }
 
 EXC_VOID_2(tlib_set_register_value_32, int, reg_number, uint32_t, value)
