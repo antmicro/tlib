@@ -240,6 +240,11 @@ static inline void gen_inval_exception(DisasContext *s, uint32_t error)
     gen_exception_err(s, POWERPC_EXCP_PROGRAM, POWERPC_EXCP_INVAL | error);
 }
 
+static inline void gen_priv_exception(DisasContext *s, uint32_t error)
+{
+    gen_exception_err(s, POWERPC_EXCP_PROGRAM, POWERPC_EXCP_PRIV | error);
+}
+
 /* Stop translation */
 static inline void gen_stop_exception(DisasContext *s)
 {
@@ -1421,7 +1426,7 @@ static void gen_cntlzd(DisasContext *s)
 /***                             Integer rotate                            ***/
 
 /* rlwimi & rlwimi. */
-static void gen_rlwimi(DisasContext *s)
+static void gen_rlwimi_internal(DisasContext *s, bool updateRc)
 {
     uint32_t mb, me, sh;
 
@@ -1455,13 +1460,18 @@ static void gen_rlwimi(DisasContext *s)
         tcg_temp_free(t0);
         tcg_temp_free(t1);
     }
-    if(unlikely(Rc(s->opcode) != 0)) {
+    if(updateRc && unlikely(Rc(s->opcode) != 0)) {
         gen_set_Rc0(s, cpu_gpr[rA(s->opcode)]);
     }
 }
 
+static void gen_rlwimi(DisasContext *s)
+{
+    gen_rlwimi_internal(s, true);
+}
+
 /* rlwinm & rlwinm. */
-static void gen_rlwinm(DisasContext *s)
+static void gen_rlwinm_internal(DisasContext *s, bool updateRc)
 {
     uint32_t mb, me, sh;
 
@@ -1503,9 +1513,14 @@ static void gen_rlwinm(DisasContext *s)
         tcg_gen_andi_tl(cpu_gpr[rA(s->opcode)], t0, MASK(mb, me));
         tcg_temp_free(t0);
     }
-    if(unlikely(Rc(s->opcode) != 0)) {
+    if(updateRc && unlikely(Rc(s->opcode) != 0)) {
         gen_set_Rc0(s, cpu_gpr[rA(s->opcode)]);
     }
+}
+
+static void gen_rlwinm(DisasContext *s)
+{
+    gen_rlwinm_internal(s, true);
 }
 
 /* rlwnm & rlwnm. */
@@ -3243,12 +3258,13 @@ static inline void gen_goto_tb(DisasContext *s, int n, target_ulong dest)
         dest = (uint32_t)dest;
     }
 #endif
+    target_ulong aligned_dest = s->vle_enabled ? (dest & ~1) : (dest & ~3);
     if((tb->pc & TARGET_PAGE_MASK) == (dest & TARGET_PAGE_MASK)) {
         tcg_gen_goto_tb(n);
-        tcg_gen_movi_tl(cpu_nip, dest & ~3);
+        tcg_gen_movi_tl(cpu_nip, aligned_dest);
         gen_exit_tb(tb, n);
     } else {
-        tcg_gen_movi_tl(cpu_nip, dest & ~3);
+        tcg_gen_movi_tl(cpu_nip, aligned_dest);
         gen_exit_tb_no_chaining(tb);
     }
 }
@@ -3453,7 +3469,7 @@ static void gen_rfi(DisasContext *s)
 {
     /* Restore CPU state */
     if(unlikely(!s->base.mem_idx)) {
-        gen_inval_exception(s, POWERPC_EXCP_PRIV_OPC);
+        gen_priv_exception(s, POWERPC_EXCP_PRIV_OPC);
         return;
     }
     gen_helper_rfi();
@@ -3546,8 +3562,10 @@ static void gen_tdi(DisasContext *s)
 /* mcrxr */
 static void gen_mcrxr(DisasContext *s)
 {
+    /* CR[crfD] <- XER[SO,OV,CA,0]: SO is the field's MSB (bit 3), CA bit 1. */
     tcg_gen_trunc_tl_i32(cpu_crf[crfD(s->opcode)], cpu_xer);
-    tcg_gen_shri_i32(cpu_crf[crfD(s->opcode)], cpu_crf[crfD(s->opcode)], XER_CA);
+    tcg_gen_shri_i32(cpu_crf[crfD(s->opcode)], cpu_crf[crfD(s->opcode)], XER_CA - 1);
+    tcg_gen_andi_i32(cpu_crf[crfD(s->opcode)], cpu_crf[crfD(s->opcode)], 0xE);
     tcg_gen_andi_tl(cpu_xer, cpu_xer, ~(1 << XER_SO | 1 << XER_OV | 1 << XER_CA));
 }
 
@@ -3589,7 +3607,7 @@ static void gen_mfcr(DisasContext *s)
 static void gen_mfmsr(DisasContext *s)
 {
     if(unlikely(!s->base.mem_idx)) {
-        gen_inval_exception(s, POWERPC_EXCP_PRIV_REG);
+        gen_priv_exception(s, POWERPC_EXCP_PRIV_REG);
         return;
     }
     tcg_gen_mov_tl(cpu_gpr[rD(s->opcode)], cpu_msr);
@@ -3620,7 +3638,7 @@ static inline void gen_op_mfspr(DisasContext *s)
              * this OS breaks the PowerPC virtualisation model,
              * allowing userland application to read the PVR
              */
-            gen_inval_exception(s, POWERPC_EXCP_PRIV_REG);
+            gen_priv_exception(s, POWERPC_EXCP_PRIV_REG);
         }
     } else {
         /* Not defined */
@@ -3699,7 +3717,7 @@ static void gen_mtmsrd(DisasContext *s)
 static void gen_mtmsr(DisasContext *s)
 {
     if(unlikely(!s->base.mem_idx)) {
-        gen_inval_exception(s, POWERPC_EXCP_PRIV_REG);
+        gen_priv_exception(s, POWERPC_EXCP_PRIV_REG);
         return;
     }
     if(s->opcode & 0x00010000) {
@@ -3747,7 +3765,7 @@ static void gen_mtspr(DisasContext *s)
             (*write_cb)(s, sprn, rS(s->opcode));
         } else {
             /* Privilege exception */
-            gen_inval_exception(s, POWERPC_EXCP_PRIV_REG);
+            gen_priv_exception(s, POWERPC_EXCP_PRIV_REG);
         }
     } else {
         /* Not defined */
@@ -4088,7 +4106,7 @@ static void gen_tlbie(DisasContext *s)
 static void gen_tlbsync(DisasContext *s)
 {
     if(unlikely(!s->base.mem_idx)) {
-        gen_inval_exception(s, POWERPC_EXCP_PRIV_OPC);
+        gen_priv_exception(s, POWERPC_EXCP_PRIV_OPC);
         return;
     }
     /* This has no effect: it should ensure that all previous
@@ -5483,7 +5501,7 @@ static void gen_rfci_40x(DisasContext *s)
 static void gen_rfci(DisasContext *s)
 {
     if(unlikely(!s->base.mem_idx)) {
-        gen_inval_exception(s, POWERPC_EXCP_PRIV_OPC);
+        gen_priv_exception(s, POWERPC_EXCP_PRIV_OPC);
         return;
     }
     /* Restore CPU state */
@@ -5497,7 +5515,7 @@ static void gen_rfci(DisasContext *s)
 static void gen_rfdi(DisasContext *s)
 {
     if(unlikely(!s->base.mem_idx)) {
-        gen_inval_exception(s, POWERPC_EXCP_PRIV_OPC);
+        gen_priv_exception(s, POWERPC_EXCP_PRIV_OPC);
         return;
     }
     /* Restore CPU state */
@@ -5509,7 +5527,7 @@ static void gen_rfdi(DisasContext *s)
 static void gen_rfmci(DisasContext *s)
 {
     if(unlikely(!s->base.mem_idx)) {
-        gen_inval_exception(s, POWERPC_EXCP_PRIV_OPC);
+        gen_priv_exception(s, POWERPC_EXCP_PRIV_OPC);
         return;
     }
     /* Restore CPU state */
@@ -5655,7 +5673,7 @@ static void gen_tlbwe_440(DisasContext *s)
 static void gen_tlbre_booke206(DisasContext *s)
 {
     if(unlikely(!s->base.mem_idx)) {
-        gen_inval_exception(s, POWERPC_EXCP_PRIV_OPC);
+        gen_priv_exception(s, POWERPC_EXCP_PRIV_OPC);
         return;
     }
 
@@ -5667,7 +5685,7 @@ static void gen_tlbsx_booke206(DisasContext *s)
 {
     TCGv t0;
     if(unlikely(!s->base.mem_idx)) {
-        gen_inval_exception(s, POWERPC_EXCP_PRIV_OPC);
+        gen_priv_exception(s, POWERPC_EXCP_PRIV_OPC);
         return;
     }
 
@@ -5686,7 +5704,7 @@ static void gen_tlbsx_booke206(DisasContext *s)
 static void gen_tlbwe_booke206(DisasContext *s)
 {
     if(unlikely(!s->base.mem_idx)) {
-        gen_inval_exception(s, POWERPC_EXCP_PRIV_OPC);
+        gen_priv_exception(s, POWERPC_EXCP_PRIV_OPC);
         return;
     }
     gen_helper_booke206_tlbwe();
@@ -5696,7 +5714,7 @@ static void gen_tlbivax_booke206(DisasContext *s)
 {
     TCGv t0;
     if(unlikely(!s->base.mem_idx)) {
-        gen_inval_exception(s, POWERPC_EXCP_PRIV_OPC);
+        gen_priv_exception(s, POWERPC_EXCP_PRIV_OPC);
         return;
     }
 
@@ -5711,7 +5729,7 @@ static void gen_wrtee(DisasContext *s)
 {
     TCGv t0;
     if(unlikely(!s->base.mem_idx)) {
-        gen_inval_exception(s, POWERPC_EXCP_PRIV_OPC);
+        gen_priv_exception(s, POWERPC_EXCP_PRIV_OPC);
         return;
     }
     t0 = tcg_temp_new();
@@ -5729,7 +5747,7 @@ static void gen_wrtee(DisasContext *s)
 static void gen_wrteei(DisasContext *s)
 {
     if(unlikely(!s->base.mem_idx)) {
-        gen_inval_exception(s, POWERPC_EXCP_PRIV_OPC);
+        gen_priv_exception(s, POWERPC_EXCP_PRIV_OPC);
         return;
     }
     if(s->opcode & 0x00008000) {
@@ -8708,11 +8726,225 @@ static inline uint32_t I16A_SI(uint32_t opcode)
 {
     return ((opcode >> 10) & (((1 << 5) - 1) << 11)) | (opcode & ((1 << 11) - 1));
 }
+
+static inline uint32_t I16L_UI(uint32_t opcode)
+{
+    return ((opcode >> 5) & (((1 << 5) - 1) << 11)) | (opcode & ((1 << 11) - 1));
+}
+
+static inline uint32_t LI20(uint32_t opcode)
+{
+    return (((opcode >> 11) & 0xF) << 16) | (((opcode >> 16) & 0x1F) << 11) | (opcode & ((1 << 11) - 1));
+}
 EXTRACT_HELPER(I16A_RA, 16, 5);
 
 EXTRACT_HELPER(D_RD, 21, 5);
 EXTRACT_HELPER(D_RA, 16, 5);
 EXTRACT_HELPER(D_SI, 0, 16);
+
+static inline uint32_t VLE16(uint32_t opcode)
+{
+    return opcode >> 16;
+}
+
+static inline uint32_t VLE_SE_RX(uint32_t opcode)
+{
+    uint32_t rx = VLE16(opcode) & 0xF;
+    return rx < 8 ? rx : rx + 16;
+}
+
+static inline uint32_t VLE_SE_RY(uint32_t opcode)
+{
+    uint32_t ry = (VLE16(opcode) >> 4) & 0xF;
+    return ry < 8 ? ry : ry + 16;
+}
+
+static inline uint32_t VLE_SE_ARX(uint32_t opcode)
+{
+    return (VLE16(opcode) & 0xF) + 8;
+}
+
+static inline uint32_t VLE_SE_ARY(uint32_t opcode)
+{
+    return ((VLE16(opcode) >> 4) & 0xF) + 8;
+}
+
+static inline void gen_vle_cmp_reg(TCGv a, TCGv b, int sign, int crf)
+{
+    gen_op_cmp(a, b, sign, crf);
+}
+
+static inline void gen_vle_cmph_reg(TCGv a, TCGv b, int sign, int crf)
+{
+    TCGv ta = tcg_temp_local_new();
+    TCGv tb = tcg_temp_local_new();
+    if(sign) {
+        tcg_gen_ext16s_tl(ta, a);
+        tcg_gen_ext16s_tl(tb, b);
+    } else {
+        tcg_gen_ext16u_tl(ta, a);
+        tcg_gen_ext16u_tl(tb, b);
+    }
+    gen_op_cmp(ta, tb, sign, crf);
+    tcg_temp_free(tb);
+    tcg_temp_free(ta);
+}
+
+static inline void gen_vle_srawi_to(TCGv dst, TCGv src, uint32_t sh)
+{
+    if(sh != 0) {
+        int l1 = gen_new_label();
+        int l2 = gen_new_label();
+        TCGv t0 = tcg_temp_local_new();
+        tcg_gen_ext32s_tl(t0, src);
+        tcg_gen_brcondi_tl(TCG_COND_GE, t0, 0, l1);
+        tcg_gen_andi_tl(t0, src, (1u << sh) - 1);
+        tcg_gen_brcondi_tl(TCG_COND_EQ, t0, 0, l1);
+        tcg_gen_ori_tl(cpu_xer, cpu_xer, 1 << XER_CA);
+        tcg_gen_br(l2);
+        gen_set_label(l1);
+        tcg_gen_andi_tl(cpu_xer, cpu_xer, ~(1 << XER_CA));
+        gen_set_label(l2);
+        tcg_gen_ext32s_tl(t0, src);
+        tcg_gen_sari_tl(dst, t0, sh);
+        tcg_temp_free(t0);
+    } else {
+        tcg_gen_mov_tl(dst, src);
+        tcg_gen_andi_tl(cpu_xer, cpu_xer, ~(1 << XER_CA));
+    }
+}
+
+/* RZ (SD4 load/store data register) is encoded in the same field as RY. */
+static inline uint32_t VLE_SE_RZ(uint32_t opcode)
+{
+    return VLE_SE_RY(opcode);
+}
+
+static inline int32_t vle_sign_extend(uint32_t value, int bits)
+{
+    uint32_t sign = 1u << (bits - 1);
+    return (int32_t)((value ^ sign) - sign);
+}
+
+static inline uint32_t VLE_SE_UI5(uint32_t opcode)
+{
+    return (VLE16(opcode) >> 4) & 0x1F;
+}
+
+static inline uint32_t VLE_SE_OIMM5(uint32_t opcode)
+{
+    return VLE_SE_UI5(opcode) + 1;
+}
+
+static inline uint32_t VLE_SE_UI7(uint32_t opcode)
+{
+    return (VLE16(opcode) >> 4) & 0x7F;
+}
+
+static inline uint32_t VLE_CR0_BIT(uint32_t bi)
+{
+    static const uint32_t cr0_bits[4] = { CRF_LT, CRF_GT, CRF_EQ, CRF_SO };
+    return cr0_bits[bi & 3];
+}
+
+static inline void gen_vle_ea_dform(DisasContext *s, TCGv ea)
+{
+    int ra = D_RA(s->opcode);
+    if(ra == 0) {
+        tcg_gen_movi_tl(ea, (int16_t)D_SI(s->opcode));
+    } else {
+        tcg_gen_addi_tl(ea, cpu_gpr[ra], (int16_t)D_SI(s->opcode));
+    }
+}
+
+static inline void gen_vle_ea_d8(DisasContext *s, TCGv ea, bool ra_or_zero)
+{
+    int ra = D_RA(s->opcode);
+    int32_t d8 = vle_sign_extend(s->opcode & 0xFF, 8);
+    if(ra_or_zero && ra == 0) {
+        tcg_gen_movi_tl(ea, d8);
+    } else {
+        tcg_gen_addi_tl(ea, cpu_gpr[ra], d8);
+    }
+}
+
+static inline void gen_vle_ea_se_scaled(DisasContext *s, TCGv ea, unsigned scale)
+{
+    uint32_t disp = ((VLE16(s->opcode) >> 8) & 0xF) << scale;
+    tcg_gen_addi_tl(ea, cpu_gpr[VLE_SE_RX(s->opcode)], disp);
+}
+
+static inline void gen_vle_load_dform(DisasContext *dc, void (*ldop)(DisasContext *, TCGv, TCGv), uint32_t rd)
+{
+    TCGv ea = tcg_temp_new();
+    gen_sync_pc(dc);
+    gen_set_access_type(dc, ACCESS_INT);
+    gen_vle_ea_dform(dc, ea);
+    ldop(dc, cpu_gpr[rd], ea);
+    tcg_temp_free(ea);
+}
+
+static inline void gen_vle_store_dform(DisasContext *dc, void (*stop)(DisasContext *, TCGv, TCGv), uint32_t rs)
+{
+    TCGv ea = tcg_temp_local_new();
+    gen_sync_pc(dc);
+    gen_set_access_type(dc, ACCESS_INT);
+    gen_vle_ea_dform(dc, ea);
+    stop(dc, cpu_gpr[rs], ea);
+    tcg_temp_free(ea);
+}
+
+static inline void gen_vle_load_update_d8(DisasContext *dc, void (*ldop)(DisasContext *, TCGv, TCGv))
+{
+    uint32_t rd = D_RD(dc->opcode);
+    uint32_t ra = D_RA(dc->opcode);
+    TCGv ea = tcg_temp_local_new();
+    gen_sync_pc(dc);
+    gen_set_access_type(dc, ACCESS_INT);
+    gen_vle_ea_d8(dc, ea, false);
+    ldop(dc, cpu_gpr[rd], ea);
+    tcg_gen_mov_tl(cpu_gpr[ra], ea);
+    tcg_temp_free(ea);
+}
+
+static inline void gen_vle_store_update_d8(DisasContext *dc, void (*stop)(DisasContext *, TCGv, TCGv))
+{
+    uint32_t rs = D_RD(dc->opcode);
+    uint32_t ra = D_RA(dc->opcode);
+    TCGv ea = tcg_temp_local_new();
+    gen_sync_pc(dc);
+    gen_set_access_type(dc, ACCESS_INT);
+    gen_vle_ea_d8(dc, ea, false);
+    stop(dc, cpu_gpr[rs], ea);
+    tcg_gen_mov_tl(cpu_gpr[ra], ea);
+    tcg_temp_free(ea);
+}
+
+static inline void gen_vle_load_se(DisasContext *dc, void (*ldop)(DisasContext *, TCGv, TCGv), unsigned scale)
+{
+    TCGv ea = tcg_temp_new();
+    gen_sync_pc(dc);
+    gen_set_access_type(dc, ACCESS_INT);
+    gen_vle_ea_se_scaled(dc, ea, scale);
+    ldop(dc, cpu_gpr[VLE_SE_RZ(dc->opcode)], ea);
+    tcg_temp_free(ea);
+}
+
+static inline void gen_vle_store_se(DisasContext *dc, void (*stop)(DisasContext *, TCGv, TCGv), unsigned scale)
+{
+    TCGv ea = tcg_temp_local_new();
+    gen_sync_pc(dc);
+    gen_set_access_type(dc, ACCESS_INT);
+    gen_vle_ea_se_scaled(dc, ea, scale);
+    stop(dc, cpu_gpr[VLE_SE_RZ(dc->opcode)], ea);
+    tcg_temp_free(ea);
+}
+
+static inline void gen_vle_branch_to(DisasContext *s, target_ulong target)
+{
+    s->exception = POWERPC_EXCP_BRANCH;
+    gen_goto_tb(s, 0, target);
+}
 
 EXTRACT_HELPER(SCI8_RD, 21, 5);
 EXTRACT_HELPER(SCI8_RA, 16, 5);
@@ -8745,428 +8977,647 @@ static target_long SCI8(uint32_t opcode)
 
 static void gen_se_add(DisasContext *dc)
 {
-    gen_op_arith_add(dc, cpu_gpr[RR_RX(dc->opcode)], cpu_gpr[RR_RY(dc->opcode)], cpu_gpr[RR_RX(dc->opcode)], 0, 0, 0);
+    /* se_add has no record form. gen_op_arith_add cannot be used: it tests
+     * Rc(dc->opcode), and for a 16-bit instruction the low halfword of
+     * dc->opcode holds the next instruction. */
+    uint32_t rx = VLE_SE_RX(dc->opcode);
+    tcg_gen_add_tl(cpu_gpr[rx], cpu_gpr[VLE_SE_RY(dc->opcode)], cpu_gpr[rx]);
 }
 
 static void gen_se_addi(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    uint32_t rx = VLE_SE_RX(dc->opcode);
+    tcg_gen_addi_tl(cpu_gpr[rx], cpu_gpr[rx], VLE_SE_OIMM5(dc->opcode));
 }
 
 static void gen_e_add16i(DisasContext *dc)
 {
-    tcg_gen_addi_tl(cpu_gpr[D_RD(dc->opcode)], cpu_gpr[D_RA(dc->opcode)], D_SI(dc->opcode));
+    tcg_gen_addi_tl(cpu_gpr[D_RD(dc->opcode)], cpu_gpr[D_RA(dc->opcode)], (int16_t)D_SI(dc->opcode));
 }
 
 static void gen_e_add2i(DisasContext *dc)
 {
-    tcg_gen_addi_tl(cpu_gpr[I16A_RA(dc->opcode)], cpu_gpr[I16A_RA(dc->opcode)], I16A_SI(dc->opcode));
-    gen_set_Rc0(dc, cpu_gpr[I16A_RA(dc->opcode)]);
+    uint32_t ra = I16A_RA(dc->opcode);
+    tcg_gen_addi_tl(cpu_gpr[ra], cpu_gpr[ra], (int16_t)I16A_SI(dc->opcode));
+    gen_set_Rc0(dc, cpu_gpr[ra]);
 }
 
 static void gen_e_add2is(DisasContext *dc)
 {
-    tcg_gen_addi_tl(cpu_gpr[I16A_RA(dc->opcode)], cpu_gpr[I16A_RA(dc->opcode)], I16A_SI(dc->opcode) << 16);
+    uint32_t ra = I16A_RA(dc->opcode);
+    uint32_t simm = (uint16_t)I16A_SI(dc->opcode);
+    tcg_gen_addi_tl(cpu_gpr[ra], cpu_gpr[ra], (target_long)(int32_t)(simm << 16));
 }
 
 static void gen_e_addic(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    TCGv t0 = tcg_temp_local_new();
+    TCGv imm = tcg_const_local_tl(SCI8(dc->opcode));
+    tcg_gen_andi_tl(cpu_xer, cpu_xer, ~(1 << XER_CA));
+    tcg_gen_add_tl(t0, cpu_gpr[SCI8_RA(dc->opcode)], imm);
+    gen_op_arith_compute_ca(dc, t0, cpu_gpr[SCI8_RA(dc->opcode)], 0);
+    tcg_gen_mov_tl(cpu_gpr[SCI8_RD(dc->opcode)], t0);
+    if(unlikely(SCI8_RC(dc->opcode))) {
+        gen_set_Rc0(dc, cpu_gpr[SCI8_RD(dc->opcode)]);
+    }
+    tcg_temp_free(imm);
+    tcg_temp_free(t0);
 }
 
 static void gen_se_and(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    uint32_t rx = VLE_SE_RX(dc->opcode);
+    tcg_gen_and_tl(cpu_gpr[rx], cpu_gpr[rx], cpu_gpr[VLE_SE_RY(dc->opcode)]);
+    if((VLE16(dc->opcode) >> 8) & 1) {
+        gen_set_Rc0(dc, cpu_gpr[rx]);
+    }
 }
 
 static void gen_se_andc(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    uint32_t rx = VLE_SE_RX(dc->opcode);
+    tcg_gen_andc_tl(cpu_gpr[rx], cpu_gpr[rx], cpu_gpr[VLE_SE_RY(dc->opcode)]);
 }
 
 static void gen_e_andi(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    /* Logical SCI8 instructions use A,S operand order: A is encoded in
+     * bits 16..20 and is the destination, while S is in bits 21..25. */
+    tcg_gen_andi_tl(cpu_gpr[SCI8_RA(dc->opcode)], cpu_gpr[SCI8_RD(dc->opcode)], SCI8(dc->opcode));
+    if(unlikely(SCI8_RC(dc->opcode))) {
+        gen_set_Rc0(dc, cpu_gpr[SCI8_RA(dc->opcode)]);
+    }
 }
 
 static void gen_se_andi(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    uint32_t rx = VLE_SE_RX(dc->opcode);
+    tcg_gen_andi_tl(cpu_gpr[rx], cpu_gpr[rx], VLE_SE_UI5(dc->opcode));
 }
 
 static void gen_e_and2i(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    tcg_gen_andi_tl(cpu_gpr[D_RD(dc->opcode)], cpu_gpr[D_RD(dc->opcode)], I16L_UI(dc->opcode));
+    gen_set_Rc0(dc, cpu_gpr[D_RD(dc->opcode)]);
 }
 
 static void gen_e_and2is(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    tcg_gen_andi_tl(cpu_gpr[D_RD(dc->opcode)], cpu_gpr[D_RD(dc->opcode)], (target_ulong)I16L_UI(dc->opcode) << 16);
+    gen_set_Rc0(dc, cpu_gpr[D_RD(dc->opcode)]);
 }
 
 static void gen_e_b(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    bool link = dc->opcode & 1;
+    int32_t disp = vle_sign_extend((dc->opcode >> 1) & 0xFFFFFF, 24) * 2;
+    if(link) {
+        gen_setlr(dc, dc->base.pc);
+    }
+    gen_vle_branch_to(dc, dc->base.pc - 4 + disp);
 }
 
 static void gen_se_b(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    uint32_t insn = VLE16(dc->opcode);
+    bool link = insn & 0x100;
+    if(insn & 0x200) {
+        ABORT_UNSUPPORTED_FEATURE;
+        return;
+    }
+    int32_t disp = vle_sign_extend(insn & 0xFF, 8) * 2;
+    if(link) {
+        gen_setlr(dc, dc->base.pc);
+    }
+    gen_vle_branch_to(dc, dc->base.pc - 2 + disp);
 }
 
 static void gen_e_bc(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    uint32_t ctr_form = (dc->opcode >> 21) & 0x1;
+    uint32_t branch_select = (dc->opcode >> 20) & 0x1;
+    uint32_t crf = (dc->opcode >> 18) & 0x3;
+    uint32_t bi = (dc->opcode >> 16) & 0x3;
+    uint32_t lk = dc->opcode & 0x1;
+    int32_t disp = vle_sign_extend((dc->opcode >> 1) & 0x7FFF, 15) * 2;
+    int l_not_taken = gen_new_label();
+    int l_do_branch = gen_new_label();
+
+    /* BI32 bits in CTR forms are treated as an invalid form (strict decoding).
+     * Some other emulators ignore them; no known code relies on either behaviour. */
+    if(ctr_form && (dc->opcode & 0x000F0000)) {
+        gen_inval_exception(dc, POWERPC_EXCP_INVAL_INVAL);
+        return;
+    }
+
+    dc->exception = POWERPC_EXCP_BRANCH;
+    if(lk) {
+        gen_setlr(dc, dc->base.pc);
+    }
+    if(!ctr_form) {
+        TCGv_i32 crbit = tcg_temp_new_i32();
+        tcg_gen_andi_i32(crbit, cpu_crf[crf], 1 << VLE_CR0_BIT(bi));
+        if(branch_select) {
+            tcg_gen_brcondi_i32(TCG_COND_EQ, crbit, 0, l_not_taken);
+        } else {
+            tcg_gen_brcondi_i32(TCG_COND_NE, crbit, 0, l_not_taken);
+        }
+        tcg_temp_free_i32(crbit);
+    } else {
+        TCGv ctr_after = tcg_temp_local_new();
+        tcg_gen_subi_tl(cpu_ctr, cpu_ctr, 1);
+#if defined(TARGET_PPC64)
+        if(!dc->sf_mode) {
+            tcg_gen_ext32u_tl(ctr_after, cpu_ctr);
+        } else
+#endif
+            tcg_gen_mov_tl(ctr_after, cpu_ctr);
+        if(branch_select) {
+            tcg_gen_brcondi_tl(TCG_COND_NE, ctr_after, 0, l_not_taken);
+        } else {
+            tcg_gen_brcondi_tl(TCG_COND_EQ, ctr_after, 0, l_not_taken);
+        }
+        tcg_temp_free(ctr_after);
+    }
+    tcg_gen_br(l_do_branch);
+    gen_set_label(l_not_taken);
+    gen_goto_tb(dc, 1, dc->base.pc);
+    gen_set_label(l_do_branch);
+    gen_goto_tb(dc, 0, dc->base.pc - 4 + disp);
 }
 
 static void gen_se_bc(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    uint32_t insn = VLE16(dc->opcode);
+    int32_t disp = vle_sign_extend(insn & 0xFF, 8) * 2;
+    uint32_t bo = (insn >> 10) & 1;
+    uint32_t bi = (insn >> 8) & 3;
+    int l_not_taken = gen_new_label();
+    TCGv_i32 crbit = tcg_temp_new_i32();
+    dc->exception = POWERPC_EXCP_BRANCH;
+
+    tcg_gen_andi_i32(crbit, cpu_crf[0], 1 << VLE_CR0_BIT(bi));
+    if(bo) {
+        tcg_gen_brcondi_i32(TCG_COND_EQ, crbit, 0, l_not_taken);
+    } else {
+        tcg_gen_brcondi_i32(TCG_COND_NE, crbit, 0, l_not_taken);
+    }
+    tcg_temp_free_i32(crbit);
+    gen_goto_tb(dc, 0, dc->base.pc - 2 + disp);
+    gen_set_label(l_not_taken);
+    gen_goto_tb(dc, 1, dc->base.pc);
 }
 
 static void gen_se_bclri(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    uint32_t rx = VLE_SE_RX(dc->opcode);
+    tcg_gen_andi_tl(cpu_gpr[rx], cpu_gpr[rx], ~((target_ulong)0x80000000u >> VLE_SE_UI5(dc->opcode)));
 }
 
 static void gen_se_bctr(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    uint32_t insn = VLE16(dc->opcode);
+    bool link = insn & 1;
+    TCGv target = tcg_temp_local_new();
+
+    dc->exception = POWERPC_EXCP_BRANCH;
+    tcg_gen_mov_tl(target, cpu_ctr);
+    if(link) {
+        gen_setlr(dc, dc->base.pc);
+    }
+#if defined(TARGET_PPC64)
+    if(!dc->sf_mode) {
+        tcg_gen_andi_tl(cpu_nip, target, (uint32_t)~1);
+    } else
+#endif
+        tcg_gen_andi_tl(cpu_nip, target, ~1);
+    tcg_temp_free(target);
+    gen_exit_tb_no_chaining(dc->base.tb);
 }
 
 static void gen_se_bgeni(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    tcg_gen_movi_tl(cpu_gpr[VLE_SE_RX(dc->opcode)], (target_ulong)0x80000000u >> VLE_SE_UI5(dc->opcode));
 }
 
 static void gen_se_blr(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    uint32_t insn = VLE16(dc->opcode);
+    bool link = insn & 1;
+    TCGv target = tcg_temp_local_new();
+
+    dc->exception = POWERPC_EXCP_BRANCH;
+    tcg_gen_mov_tl(target, cpu_lr);
+    if(link) {
+        gen_setlr(dc, dc->base.pc);
+    }
+#if defined(TARGET_PPC64)
+    if(!dc->sf_mode) {
+        tcg_gen_andi_tl(cpu_nip, target, (uint32_t)~1);
+    } else
+#endif
+        tcg_gen_andi_tl(cpu_nip, target, ~1);
+    tcg_temp_free(target);
+    gen_exit_tb_no_chaining(dc->base.tb);
 }
 
 static void gen_se_bmaski(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    uint32_t n = VLE_SE_UI5(dc->opcode);
+    tcg_gen_movi_tl(cpu_gpr[VLE_SE_RX(dc->opcode)], n == 0 ? (target_ulong)0xFFFFFFFFu : (((target_ulong)1 << n) - 1));
 }
 
 static void gen_se_bseti(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    uint32_t rx = VLE_SE_RX(dc->opcode);
+    tcg_gen_ori_tl(cpu_gpr[rx], cpu_gpr[rx], (target_ulong)0x80000000u >> VLE_SE_UI5(dc->opcode));
 }
 
 static void gen_se_btsti(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    TCGv t = tcg_temp_local_new();
+    tcg_gen_shri_tl(t, cpu_gpr[VLE_SE_RX(dc->opcode)], 31 - VLE_SE_UI5(dc->opcode));
+    tcg_gen_andi_tl(t, t, 1);
+    gen_set_Rc0(dc, t);
+    tcg_temp_free(t);
 }
 
 static void gen_se_cmp(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_cmp_reg(cpu_gpr[VLE_SE_RX(dc->opcode)], cpu_gpr[VLE_SE_RY(dc->opcode)], 1, 0);
 }
 
 static void gen_e_cmph(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_cmph_reg(cpu_gpr[rA(dc->opcode)], cpu_gpr[rB(dc->opcode)], 1, crfD(dc->opcode));
 }
 
 static void gen_se_cmph(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_cmph_reg(cpu_gpr[VLE_SE_RX(dc->opcode)], cpu_gpr[VLE_SE_RY(dc->opcode)], 1, 0);
 }
 
 static void gen_e_cmphl(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_cmph_reg(cpu_gpr[rA(dc->opcode)], cpu_gpr[rB(dc->opcode)], 0, crfD(dc->opcode));
 }
 
 static void gen_se_cmphl(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_cmph_reg(cpu_gpr[VLE_SE_RX(dc->opcode)], cpu_gpr[VLE_SE_RY(dc->opcode)], 0, 0);
 }
 
 static void gen_e_cmph16i(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    TCGv t = tcg_const_local_tl((int16_t)I16A_SI(dc->opcode));
+    gen_vle_cmph_reg(cpu_gpr[I16A_RA(dc->opcode)], t, 1, 0);
+    tcg_temp_free(t);
 }
 
 static void gen_e_cmp16i(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_op_cmpi(cpu_gpr[I16A_RA(dc->opcode)], (int16_t)I16A_SI(dc->opcode), 1, 0);
 }
 
 static void gen_e_cmphl16i(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    TCGv t = tcg_const_local_tl((uint16_t)I16A_SI(dc->opcode));
+    gen_vle_cmph_reg(cpu_gpr[I16A_RA(dc->opcode)], t, 0, 0);
+    tcg_temp_free(t);
 }
 
 static void gen_e_cmpl16i(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_op_cmpi(cpu_gpr[I16A_RA(dc->opcode)], (uint16_t)I16A_SI(dc->opcode), 0, 0);
 }
 
 static void gen_e_cmpi_or_cmpli(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    /* SCI8 compare: bits 6-8 select cmpi (000) / cmpli (001), bits 9-10 are crD32. */
+    uint32_t selector = (dc->opcode >> 23) & 0x7;
+    uint32_t crd = (dc->opcode >> 21) & 0x3;
+    gen_op_cmpi(cpu_gpr[SCI8_RA(dc->opcode)], SCI8(dc->opcode), selector == 0, crd);
 }
 
 static void gen_se_cmpi(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_op_cmpi(cpu_gpr[VLE_SE_RX(dc->opcode)], VLE_SE_UI5(dc->opcode), 1, 0);
 }
 
 static void gen_se_cmpl(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_cmp_reg(cpu_gpr[VLE_SE_RX(dc->opcode)], cpu_gpr[VLE_SE_RY(dc->opcode)], 0, 0);
 }
 
 static void gen_se_cmpli(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_op_cmpi(cpu_gpr[VLE_SE_RX(dc->opcode)], VLE_SE_OIMM5(dc->opcode), 0, 0);
 }
 
 static void gen_e_crand(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_crand(dc);
 }
 
 static void gen_e_crandc(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_crandc(dc);
 }
 
 static void gen_e_creqv(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_creqv(dc);
 }
 
 static void gen_e_crnand(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_crnand(dc);
 }
 
 static void gen_e_crnor(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_crnor(dc);
 }
 
 static void gen_e_cror(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_cror(dc);
 }
 
 static void gen_e_crorc(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_crorc(dc);
 }
 
 static void gen_e_crxor(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_crxor(dc);
 }
 
 static void gen_se_extsb(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    tcg_gen_ext8s_tl(cpu_gpr[VLE_SE_RX(dc->opcode)], cpu_gpr[VLE_SE_RX(dc->opcode)]);
 }
 
 static void gen_se_extsh(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    tcg_gen_ext16s_tl(cpu_gpr[VLE_SE_RX(dc->opcode)], cpu_gpr[VLE_SE_RX(dc->opcode)]);
 }
 
 static void gen_se_extzb(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    tcg_gen_andi_tl(cpu_gpr[VLE_SE_RX(dc->opcode)], cpu_gpr[VLE_SE_RX(dc->opcode)], 0xff);
 }
 
 static void gen_se_extzh(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    tcg_gen_andi_tl(cpu_gpr[VLE_SE_RX(dc->opcode)], cpu_gpr[VLE_SE_RX(dc->opcode)], 0xffff);
 }
+
+static inline void gen_vle_compact_program_exception(DisasContext *dc, uint32_t error);
 
 static void gen_se_illegal(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_compact_program_exception(dc, POWERPC_EXCP_INVAL | POWERPC_EXCP_INVAL_INVAL);
 }
 
 static void gen_se_isync(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_isync(dc);
 }
 
 static void gen_e_lbz(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_load_dform(dc, gen_qemu_ld8u, D_RD(dc->opcode));
 }
 
 static void gen_se_lbz(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_load_se(dc, gen_qemu_ld8u, 0);
 }
 
 static void gen_e_lbzu(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_load_update_d8(dc, gen_qemu_ld8u);
 }
 
 static void gen_e_lha(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_load_dform(dc, gen_qemu_ld16s, D_RD(dc->opcode));
 }
 
 static void gen_e_lhau(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_load_update_d8(dc, gen_qemu_ld16s);
 }
 
 static void gen_e_lhz(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_load_dform(dc, gen_qemu_ld16u, D_RD(dc->opcode));
 }
 
 static void gen_se_lhz(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_load_se(dc, gen_qemu_ld16u, 1);
 }
 
 static void gen_e_lhzu(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_load_update_d8(dc, gen_qemu_ld16u);
 }
 
 static void gen_e_li(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    tcg_gen_movi_tl(cpu_gpr[D_RD(dc->opcode)], vle_sign_extend(LI20(dc->opcode), 20));
 }
 
 static void gen_e_lis(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    tcg_gen_movi_tl(cpu_gpr[D_RD(dc->opcode)], (target_ulong)((uint32_t)I16L_UI(dc->opcode) << 16));
 }
 
 static void gen_se_li(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    tcg_gen_movi_tl(cpu_gpr[VLE_SE_RX(dc->opcode)], VLE_SE_UI7(dc->opcode));
 }
 
 static void gen_e_lmw(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    uint32_t rd = D_RD(dc->opcode);
+    TCGv base = tcg_temp_local_new();
+    TCGv ea = tcg_temp_local_new();
+
+    gen_sync_pc(dc);
+    gen_set_access_type(dc, ACCESS_INT);
+    gen_vle_ea_d8(dc, base, true);
+    gen_check_align(dc, base, 0x03);
+    for(uint32_t r = rd; r < 32; r++) {
+        if(r == rd) {
+            tcg_gen_mov_tl(ea, base);
+        } else {
+            tcg_gen_addi_tl(ea, base, (r - rd) * 4);
+        }
+        gen_qemu_ld32u(dc, cpu_gpr[r], ea);
+    }
+    tcg_temp_free(ea);
+    tcg_temp_free(base);
 }
 
 static void gen_e_lwz(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_load_dform(dc, gen_qemu_ld32u, D_RD(dc->opcode));
 }
 
 static void gen_se_lwz(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_load_se(dc, gen_qemu_ld32u, 2);
 }
 
 static void gen_e_lwzu(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_load_update_d8(dc, gen_qemu_ld32u);
 }
 
 static void gen_e_mcrf(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_mcrf(dc);
 }
 
 static void gen_se_mfar(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    tcg_gen_mov_tl(cpu_gpr[VLE_SE_RX(dc->opcode)], cpu_gpr[VLE_SE_ARY(dc->opcode)]);
 }
 
 static void gen_se_mfctr(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    tcg_gen_mov_tl(cpu_gpr[VLE_SE_RX(dc->opcode)], cpu_ctr);
 }
 
 static void gen_se_mflr(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    tcg_gen_mov_tl(cpu_gpr[VLE_SE_RX(dc->opcode)], cpu_lr);
 }
 
 static void gen_se_mr(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    tcg_gen_mov_tl(cpu_gpr[VLE_SE_RX(dc->opcode)], cpu_gpr[VLE_SE_RY(dc->opcode)]);
 }
 
 static void gen_se_mtar(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    tcg_gen_mov_tl(cpu_gpr[VLE_SE_ARX(dc->opcode)], cpu_gpr[VLE_SE_RY(dc->opcode)]);
 }
 
 static void gen_se_mtctr(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    tcg_gen_mov_tl(cpu_ctr, cpu_gpr[VLE_SE_RX(dc->opcode)]);
 }
 
 static void gen_se_mtlr(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    tcg_gen_mov_tl(cpu_lr, cpu_gpr[VLE_SE_RX(dc->opcode)]);
 }
 
 static void gen_e_mulli(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    tcg_gen_muli_tl(cpu_gpr[SCI8_RD(dc->opcode)], cpu_gpr[SCI8_RA(dc->opcode)], SCI8(dc->opcode));
 }
 
 static void gen_e_mull2i(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    uint32_t ra = I16A_RA(dc->opcode);
+    /* e_mull2i has no record form: CR is not modified. */
+    tcg_gen_muli_tl(cpu_gpr[ra], cpu_gpr[ra], (int16_t)I16A_SI(dc->opcode));
 }
 
 static void gen_se_mullw(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    uint32_t rx = VLE_SE_RX(dc->opcode);
+    tcg_gen_mul_tl(cpu_gpr[rx], cpu_gpr[rx], cpu_gpr[VLE_SE_RY(dc->opcode)]);
+    tcg_gen_ext32u_tl(cpu_gpr[rx], cpu_gpr[rx]);
 }
 
 static void gen_se_neg(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    tcg_gen_neg_tl(cpu_gpr[VLE_SE_RX(dc->opcode)], cpu_gpr[VLE_SE_RX(dc->opcode)]);
 }
 
 static void gen_se_not(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    tcg_gen_not_tl(cpu_gpr[VLE_SE_RX(dc->opcode)], cpu_gpr[VLE_SE_RX(dc->opcode)]);
 }
 
 static void gen_se_or(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    uint32_t rx = VLE_SE_RX(dc->opcode);
+    tcg_gen_or_tl(cpu_gpr[rx], cpu_gpr[rx], cpu_gpr[VLE_SE_RY(dc->opcode)]);
 }
 
 static void gen_e_or2i(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    tcg_gen_ori_tl(cpu_gpr[D_RD(dc->opcode)], cpu_gpr[D_RD(dc->opcode)], I16L_UI(dc->opcode));
 }
 
 static void gen_e_or2is(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    tcg_gen_ori_tl(cpu_gpr[D_RD(dc->opcode)], cpu_gpr[D_RD(dc->opcode)], (target_ulong)I16L_UI(dc->opcode) << 16);
 }
 
 static void gen_e_ori(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    tcg_gen_ori_tl(cpu_gpr[SCI8_RA(dc->opcode)], cpu_gpr[SCI8_RD(dc->opcode)], SCI8(dc->opcode));
+    if(unlikely(SCI8_RC(dc->opcode))) {
+        gen_set_Rc0(dc, cpu_gpr[SCI8_RA(dc->opcode)]);
+    }
+}
+
+static inline void gen_vle_compact_program_exception(DisasContext *dc, uint32_t error)
+{
+    TCGv_i32 t0, t1;
+
+    /* Classic program-exception entry stores env->nip - 4 for current-PC
+     * exceptions.  A 16-bit VLE instruction must therefore provide PC + 4
+     * to make SRR0/CSRR0/DSRR0 point at the compact offending opcode.
+     */
+    gen_update_nip(dc, dc->base.pc + 2);
+    t0 = tcg_const_i32(POWERPC_EXCP_PROGRAM);
+    t1 = tcg_const_i32(error);
+    gen_helper_raise_exception_err(t0, t1);
+    tcg_temp_free_i32(t0);
+    tcg_temp_free_i32(t1);
+    dc->exception = POWERPC_EXCP_PROGRAM;
+}
+
+static inline void gen_vle_compact_priv_exception(DisasContext *dc)
+{
+    gen_vle_compact_program_exception(dc, POWERPC_EXCP_PRIV | POWERPC_EXCP_PRIV_OPC);
 }
 
 static void gen_se_rfci(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    if(unlikely(!dc->base.mem_idx)) {
+        gen_vle_compact_priv_exception(dc);
+        return;
+    }
+    gen_rfci(dc);
 }
 
 static void gen_se_rfdi(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    if(unlikely(!dc->base.mem_idx)) {
+        gen_vle_compact_priv_exception(dc);
+        return;
+    }
+    gen_rfdi(dc);
 }
 
 static void gen_se_rfi(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    if(unlikely(!dc->base.mem_idx)) {
+        gen_vle_compact_priv_exception(dc);
+        return;
+    }
+    gen_rfi(dc);
 }
 
 static void gen_se_rfmci(DisasContext *dc)
@@ -9176,142 +9627,242 @@ static void gen_se_rfmci(DisasContext *dc)
 
 static void gen_e_rlw(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    TCGv_i32 sh = tcg_temp_new_i32();
+    TCGv_i32 value = tcg_temp_new_i32();
+    tcg_gen_trunc_tl_i32(sh, cpu_gpr[rB(dc->opcode)]);
+    tcg_gen_andi_i32(sh, sh, 0x1f);
+    tcg_gen_trunc_tl_i32(value, cpu_gpr[rS(dc->opcode)]);
+    tcg_gen_rotl_i32(value, value, sh);
+    tcg_gen_extu_i32_tl(cpu_gpr[rA(dc->opcode)], value);
+    tcg_temp_free_i32(value);
+    tcg_temp_free_i32(sh);
+    if(unlikely(dc->opcode & 1)) {
+        gen_set_Rc0(dc, cpu_gpr[rA(dc->opcode)]);
+    }
 }
 
 static void gen_e_rlwi(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    TCGv_i32 value = tcg_temp_new_i32();
+    tcg_gen_trunc_tl_i32(value, cpu_gpr[rS(dc->opcode)]);
+    tcg_gen_rotli_i32(value, value, rB(dc->opcode));
+    tcg_gen_extu_i32_tl(cpu_gpr[rA(dc->opcode)], value);
+    tcg_temp_free_i32(value);
+    if(unlikely(dc->opcode & 1)) {
+        gen_set_Rc0(dc, cpu_gpr[rA(dc->opcode)]);
+    }
 }
 
 static void gen_e_rlwimi(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    /* In the VLE encoding bit 0 selects e_rlwimi (0) or e_rlwinm (1). It is
+     * not the classic Rc bit, so neither VLE form updates CR0. */
+    gen_rlwimi_internal(dc, false);
 }
 
 static void gen_e_rlwinm(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_rlwinm_internal(dc, false);
 }
 
 static void gen_se_sc(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_exception_err(dc, POWERPC_SYSCALL, 0);
 }
 
 static void gen_e_slwi(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    TCGv t = tcg_temp_new();
+    tcg_gen_ext32u_tl(t, cpu_gpr[rS(dc->opcode)]);
+    tcg_gen_shli_tl(cpu_gpr[rA(dc->opcode)], t, rB(dc->opcode));
+    tcg_gen_ext32u_tl(cpu_gpr[rA(dc->opcode)], cpu_gpr[rA(dc->opcode)]);
+    tcg_temp_free(t);
+    if(unlikely(dc->opcode & 1)) {
+        gen_set_Rc0(dc, cpu_gpr[rA(dc->opcode)]);
+    }
 }
 
 static void gen_se_slw(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    uint32_t rx = VLE_SE_RX(dc->opcode);
+    TCGv sh = tcg_temp_new();
+    TCGv mask = tcg_temp_new();
+    TCGv val = tcg_temp_new();
+    tcg_gen_shli_tl(mask, cpu_gpr[VLE_SE_RY(dc->opcode)], 26);
+    tcg_gen_sari_tl(mask, mask, 31);
+    tcg_gen_andc_tl(val, cpu_gpr[rx], mask);
+    tcg_gen_andi_tl(sh, cpu_gpr[VLE_SE_RY(dc->opcode)], 31);
+    tcg_gen_shl_tl(cpu_gpr[rx], val, sh);
+    tcg_gen_ext32u_tl(cpu_gpr[rx], cpu_gpr[rx]);
+    tcg_temp_free(val);
+    tcg_temp_free(mask);
+    tcg_temp_free(sh);
 }
 
 static void gen_se_slwi(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    uint32_t rx = VLE_SE_RX(dc->opcode);
+    tcg_gen_shli_tl(cpu_gpr[rx], cpu_gpr[rx], VLE_SE_UI5(dc->opcode));
+    tcg_gen_ext32u_tl(cpu_gpr[rx], cpu_gpr[rx]);
 }
 
 static void gen_se_sraw(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    uint32_t rx = VLE_SE_RX(dc->opcode);
+    gen_helper_sraw(cpu_gpr[rx], cpu_gpr[rx], cpu_gpr[VLE_SE_RY(dc->opcode)]);
 }
 
 static void gen_se_srawi(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_srawi_to(cpu_gpr[VLE_SE_RX(dc->opcode)], cpu_gpr[VLE_SE_RX(dc->opcode)], VLE_SE_UI5(dc->opcode));
 }
 
 static void gen_e_srwi(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    TCGv t = tcg_temp_new();
+    tcg_gen_ext32u_tl(t, cpu_gpr[rS(dc->opcode)]);
+    tcg_gen_shri_tl(cpu_gpr[rA(dc->opcode)], t, rB(dc->opcode));
+    tcg_temp_free(t);
+    if(unlikely(dc->opcode & 1)) {
+        gen_set_Rc0(dc, cpu_gpr[rA(dc->opcode)]);
+    }
 }
 
 static void gen_se_srw(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    uint32_t rx = VLE_SE_RX(dc->opcode);
+    TCGv sh = tcg_temp_new();
+    TCGv mask = tcg_temp_new();
+    TCGv val = tcg_temp_new();
+    tcg_gen_shli_tl(mask, cpu_gpr[VLE_SE_RY(dc->opcode)], 26);
+    tcg_gen_sari_tl(mask, mask, 31);
+    tcg_gen_andc_tl(val, cpu_gpr[rx], mask);
+    tcg_gen_ext32u_tl(val, val);
+    tcg_gen_andi_tl(sh, cpu_gpr[VLE_SE_RY(dc->opcode)], 31);
+    tcg_gen_shr_tl(cpu_gpr[rx], val, sh);
+    tcg_temp_free(val);
+    tcg_temp_free(mask);
+    tcg_temp_free(sh);
 }
 
 static void gen_se_srwi(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    uint32_t rx = VLE_SE_RX(dc->opcode);
+    TCGv t = tcg_temp_new();
+    tcg_gen_ext32u_tl(t, cpu_gpr[rx]);
+    tcg_gen_shri_tl(cpu_gpr[rx], t, VLE_SE_UI5(dc->opcode));
+    tcg_temp_free(t);
 }
 
 static void gen_e_stb(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_store_dform(dc, gen_qemu_st8, D_RD(dc->opcode));
 }
 
 static void gen_se_stb(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_store_se(dc, gen_qemu_st8, 0);
 }
 
 static void gen_e_stbu(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_store_update_d8(dc, gen_qemu_st8);
 }
 
 static void gen_e_sth(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_store_dform(dc, gen_qemu_st16, D_RD(dc->opcode));
 }
 
 static void gen_se_sth(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_store_se(dc, gen_qemu_st16, 1);
 }
 
 static void gen_e_sthu(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_store_update_d8(dc, gen_qemu_st16);
 }
 
 static void gen_e_stmw(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    uint32_t rs = D_RD(dc->opcode);
+    TCGv base = tcg_temp_local_new();
+    TCGv ea = tcg_temp_local_new();
+
+    gen_sync_pc(dc);
+    gen_set_access_type(dc, ACCESS_INT);
+    gen_vle_ea_d8(dc, base, true);
+    gen_check_align(dc, base, 0x03);
+    for(uint32_t r = rs; r < 32; r++) {
+        if(r == rs) {
+            tcg_gen_mov_tl(ea, base);
+        } else {
+            tcg_gen_addi_tl(ea, base, (r - rs) * 4);
+        }
+        gen_qemu_st32(dc, cpu_gpr[r], ea);
+    }
+    tcg_temp_free(ea);
+    tcg_temp_free(base);
 }
 
 static void gen_e_stw(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_store_dform(dc, gen_qemu_st32, D_RD(dc->opcode));
 }
 
 static void gen_se_stw(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_store_se(dc, gen_qemu_st32, 2);
 }
 
 static void gen_e_stwu(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    gen_vle_store_update_d8(dc, gen_qemu_st32);
 }
 
 static void gen_se_sub(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    uint32_t rx = VLE_SE_RX(dc->opcode);
+    tcg_gen_sub_tl(cpu_gpr[rx], cpu_gpr[rx], cpu_gpr[VLE_SE_RY(dc->opcode)]);
 }
 
 static void gen_se_subf(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    uint32_t rx = VLE_SE_RX(dc->opcode);
+    tcg_gen_sub_tl(cpu_gpr[rx], cpu_gpr[VLE_SE_RY(dc->opcode)], cpu_gpr[rx]);
 }
 
 static void gen_e_subfic(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    TCGv t0 = tcg_temp_local_new();
+    TCGv imm = tcg_const_local_tl(SCI8(dc->opcode));
+    tcg_gen_andi_tl(cpu_xer, cpu_xer, ~(1 << XER_CA));
+    tcg_gen_sub_tl(t0, imm, cpu_gpr[SCI8_RA(dc->opcode)]);
+    gen_op_arith_compute_ca(dc, t0, imm, 1);
+    tcg_gen_mov_tl(cpu_gpr[SCI8_RD(dc->opcode)], t0);
+    if(unlikely(SCI8_RC(dc->opcode))) {
+        gen_set_Rc0(dc, cpu_gpr[SCI8_RD(dc->opcode)]);
+    }
+    tcg_temp_free(imm);
+    tcg_temp_free(t0);
 }
 
 static void gen_se_subi(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    uint32_t rx = VLE_SE_RX(dc->opcode);
+    tcg_gen_subi_tl(cpu_gpr[rx], cpu_gpr[rx], VLE_SE_OIMM5(dc->opcode));
+    if((VLE16(dc->opcode) >> 9) & 1) {
+        gen_set_Rc0(dc, cpu_gpr[rx]);
+    }
 }
 
 static void gen_e_xori(DisasContext *dc)
 {
-    ABORT_UNSUPPORTED_FEATURE;
+    tcg_gen_xori_tl(cpu_gpr[SCI8_RA(dc->opcode)], cpu_gpr[SCI8_RD(dc->opcode)], SCI8(dc->opcode));
+    if(unlikely(SCI8_RC(dc->opcode))) {
+        gen_set_Rc0(dc, cpu_gpr[SCI8_RA(dc->opcode)]);
+    }
 }
 
 static void gen_e_addi(DisasContext *dc)
@@ -9323,7 +9874,21 @@ static void gen_e_addi(DisasContext *dc)
     }
 }
 
-#define GEN_LONG_VLE_HANDLER(name, opc1, opc2, opc3) GEN_HANDLER(name, opc1, opc2, opc3, 0, PPC_VLE)
+#define GEN_LONG_VLE_HANDLER_MASK(name, opc1, opc2, opc3, inval) GEN_HANDLER(name, opc1, opc2, opc3, inval, PPC_VLE)
+
+#define GEN_LONG_VLE_HANDLER_MASK_TYPE(name, opc1, opc2, opc3, inval, type) GEN_HANDLER(name, opc1, opc2, opc3, inval, type)
+
+#define GEN_LONG_VLE_HANDLER(name, opc1, opc2, opc3) GEN_LONG_VLE_HANDLER_MASK(name, opc1, opc2, opc3, 0)
+
+#define GEN_CLASSIC31_VLE_HANDLER_MASK(name, classic_opc2, classic_opc3, inval) \
+    GEN_LONG_VLE_HANDLER_MASK(name, 0x1F, (((classic_opc3) << 1) | ((classic_opc2) >> 4)), ((classic_opc2) & 0xF), inval)
+
+#define GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(name, classic_opc2, classic_opc3, inval, type)                                     \
+    GEN_LONG_VLE_HANDLER_MASK_TYPE(name, 0x1F, (((classic_opc3) << 1) | ((classic_opc2) >> 4)), ((classic_opc2) & 0xF), inval, \
+                                   type)
+
+#define GEN_CLASSIC31_VLE_HANDLER(name, classic_opc2, classic_opc3) \
+    GEN_CLASSIC31_VLE_HANDLER_MASK(name, classic_opc2, classic_opc3, 0)
 
 #define GEN_SHORT_VLE_HANDLER(name, opc1, opc2, opc3) GEN_OPCODE(name, opc1, opc2, opc3, 0, PPC_VLE, PPC_NONE, 2)
 
@@ -9532,6 +10097,123 @@ GEN_LONG_VLE_HANDLER(e_rlwi, 0x1F, 0x13, 0x8),
 GEN_LONG_VLE_HANDLER(e_crorc, 0x1F, 0x1A, 0x1),
 GEN_LONG_VLE_HANDLER(e_cror, 0x1F, 0x1C, 0x1),
 GEN_LONG_VLE_HANDLER(e_srwi, 0x1F, 0x23, 0x8),
+/* isel encodes its BC operand in the bits the decoder uses as opc3 for
+ * remapped classic opcodes, so it needs one entry per BC value. */
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x00, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x01, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x02, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x03, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x04, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x05, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x06, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x07, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x08, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x09, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x0A, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x0B, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x0C, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x0D, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x0E, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x0F, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x10, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x11, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x12, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x13, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x14, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x15, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x16, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x17, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x18, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x19, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x1A, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x1B, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x1C, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x1D, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x1E, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(isel, 0x0F, 0x1F, 0x00000001, PPC_ISEL),
+GEN_CLASSIC31_VLE_HANDLER_MASK(cmp, 0x00, 0x00, 0x00400000),
+GEN_CLASSIC31_VLE_HANDLER_MASK(cmpl, 0x00, 0x01, 0x00400000),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(mulhwu, 0x0B, 0x00, 0x00000400, PPC_INTEGER),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(mulhw, 0x0B, 0x02, 0x00000400, PPC_INTEGER),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(mullw, 0x0B, 0x07, 0x00000000, PPC_INTEGER),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(mullwo, 0x0B, 0x17, 0x00000000, PPC_INTEGER),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(cntlzw, 0x1A, 0x00, 0x0000F800, PPC_INTEGER),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(slw, 0x18, 0x00, 0x00000000, PPC_INTEGER),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(srw, 0x18, 0x10, 0x00000000, PPC_INTEGER),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(sraw, 0x18, 0x18, 0x00000000, PPC_INTEGER),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(srawi, 0x18, 0x19, 0x00000000, PPC_INTEGER),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(divwu, 0x0B, 0x0E, 0x00000000, PPC_INTEGER),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(divwuo, 0x0B, 0x1E, 0x00000000, PPC_INTEGER),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(divw, 0x0B, 0x0F, 0x00000000, PPC_INTEGER),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(divwo, 0x0B, 0x1F, 0x00000000, PPC_INTEGER),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(extsb, 0x1A, 0x1D, 0x0000F800, PPC_INTEGER),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(extsh, 0x1A, 0x1C, 0x0000F800, PPC_INTEGER),
+GEN_CLASSIC31_VLE_HANDLER(addc, 0x0A, 0x00),
+GEN_CLASSIC31_VLE_HANDLER(adde, 0x0A, 0x04),
+GEN_CLASSIC31_VLE_HANDLER(add, 0x0A, 0x08),
+GEN_CLASSIC31_VLE_HANDLER(addco, 0x0A, 0x10),
+GEN_CLASSIC31_VLE_HANDLER(addeo, 0x0A, 0x14),
+GEN_CLASSIC31_VLE_HANDLER(addo, 0x0A, 0x18),
+GEN_CLASSIC31_VLE_HANDLER_MASK(addze, 0x0A, 0x06, 0x0000F800),
+GEN_CLASSIC31_VLE_HANDLER_MASK(addme, 0x0A, 0x07, 0x0000F800),
+GEN_CLASSIC31_VLE_HANDLER_MASK(addzeo, 0x0A, 0x16, 0x0000F800),
+GEN_CLASSIC31_VLE_HANDLER_MASK(addmeo, 0x0A, 0x17, 0x0000F800),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(subfc, 0x08, 0x00, 0x00000000, PPC_INTEGER),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(subf, 0x08, 0x01, 0x00000000, PPC_INTEGER),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(neg, 0x08, 0x03, 0x0000F800, PPC_INTEGER),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(subfe, 0x08, 0x04, 0x00000000, PPC_INTEGER),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(subfze, 0x08, 0x06, 0x0000F800, PPC_INTEGER),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(subfme, 0x08, 0x07, 0x0000F800, PPC_INTEGER),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(subfco, 0x08, 0x10, 0x00000000, PPC_INTEGER),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(subfo, 0x08, 0x11, 0x00000000, PPC_INTEGER),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(nego, 0x08, 0x13, 0x0000F800, PPC_INTEGER),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(subfeo, 0x08, 0x14, 0x00000000, PPC_INTEGER),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(subfzeo, 0x08, 0x16, 0x0000F800, PPC_INTEGER),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(subfmeo, 0x08, 0x17, 0x0000F800, PPC_INTEGER),
+GEN_CLASSIC31_VLE_HANDLER(and, 0x1C, 0x00),
+GEN_CLASSIC31_VLE_HANDLER(andc, 0x1C, 0x01),
+GEN_CLASSIC31_VLE_HANDLER(nor, 0x1C, 0x03),
+GEN_CLASSIC31_VLE_HANDLER(eqv, 0x1C, 0x08),
+GEN_CLASSIC31_VLE_HANDLER(xor, 0x1C, 0x09),
+GEN_CLASSIC31_VLE_HANDLER(orc, 0x1C, 0x0C),
+GEN_CLASSIC31_VLE_HANDLER(or, 0x1C, 0x0D),
+GEN_CLASSIC31_VLE_HANDLER(nand, 0x1C, 0x0E),
+GEN_LONG_VLE_HANDLER_MASK(lwzx, 0x1F, 0x01, 0x07, 0x00000001),
+GEN_LONG_VLE_HANDLER_MASK(lwzux, 0x1F, 0x03, 0x07, 0x00000001),
+GEN_LONG_VLE_HANDLER_MASK(lbzx, 0x1F, 0x05, 0x07, 0x00000001),
+GEN_LONG_VLE_HANDLER_MASK(lbzux, 0x1F, 0x07, 0x07, 0x00000001),
+GEN_LONG_VLE_HANDLER_MASK(stwx, 0x1F, 0x09, 0x07, 0x00000001),
+GEN_LONG_VLE_HANDLER_MASK(stwux, 0x1F, 0x0B, 0x07, 0x00000001),
+GEN_LONG_VLE_HANDLER_MASK(stbx, 0x1F, 0x0D, 0x07, 0x00000001),
+GEN_LONG_VLE_HANDLER_MASK(stbux, 0x1F, 0x0F, 0x07, 0x00000001),
+GEN_LONG_VLE_HANDLER_MASK(lhzx, 0x1F, 0x11, 0x07, 0x00000001),
+GEN_LONG_VLE_HANDLER_MASK(lhzux, 0x1F, 0x13, 0x07, 0x00000001),
+GEN_LONG_VLE_HANDLER_MASK(lhax, 0x1F, 0x15, 0x07, 0x00000001),
+GEN_LONG_VLE_HANDLER_MASK(lhaux, 0x1F, 0x17, 0x07, 0x00000001),
+GEN_LONG_VLE_HANDLER_MASK(sthx, 0x1F, 0x19, 0x07, 0x00000001),
+GEN_LONG_VLE_HANDLER_MASK(sthux, 0x1F, 0x1B, 0x07, 0x00000001),
+GEN_CLASSIC31_VLE_HANDLER_MASK_TYPE(mcrxr, 0x00, 0x10, 0x007FF801, PPC_MISC),
+GEN_LONG_VLE_HANDLER_MASK(mfcr, 0x1F, 0x01, 0x3, 0x00000801),
+GEN_LONG_VLE_HANDLER_MASK(mfmsr, 0x1F, 0x05, 0x3, 0x001FF801),
+GEN_LONG_VLE_HANDLER_MASK(mtcrf, 0x1F, 0x09, 0x0, 0x00000801),
+GEN_LONG_VLE_HANDLER_MASK(mtmsr, 0x1F, 0x09, 0x2, 0x001FF801),
+GEN_LONG_VLE_HANDLER_MASK(wrtee, 0x1F, 0x08, 0x3, 0x000FFC01),
+GEN_LONG_VLE_HANDLER_MASK(wrteei, 0x1F, 0x0A, 0x3, 0x000E7C01),
+GEN_LONG_VLE_HANDLER_MASK(dcbf, 0x1F, 0x05, 0x6, 0x03C00001),
+GEN_LONG_VLE_HANDLER_MASK(dcbst, 0x1F, 0x03, 0x6, 0x03E00001),
+GEN_LONG_VLE_HANDLER_MASK(dcbt, 0x1F, 0x11, 0x6, 0x02000001),
+GEN_LONG_VLE_HANDLER_MASK(dcbtst, 0x1F, 0x0F, 0x6, 0x02000001),
+GEN_LONG_VLE_HANDLER_MASK(dcbz, 0x1F, 0x3F, 0x6, 0x03E00001),
+GEN_LONG_VLE_HANDLER_MASK(icbi, 0x1F, 0x3D, 0x6, 0x03E00001),
+GEN_LONG_VLE_HANDLER_MASK(mbar, 0x1F, 0x35, 0x6, 0x001FF801),
+GEN_LONG_VLE_HANDLER_MASK(msync, 0x1F, 0x25, 0x6, 0x03FFF801),
+GEN_LONG_VLE_HANDLER_MASK(tlbsync, 0x1F, 0x23, 0x6, 0x03FFF801),
+GEN_LONG_VLE_HANDLER_MASK(tlbre_booke206, 0x1F, 0x3B, 0x2, 0x00000001),
+GEN_LONG_VLE_HANDLER_MASK(tlbsx_booke206, 0x1F, 0x39, 0x2, 0x00000000),
+GEN_LONG_VLE_HANDLER_MASK(tlbivax_booke206, 0x1F, 0x31, 0x2, 0x00000001),
+GEN_LONG_VLE_HANDLER_MASK(mfspr, 0x1F, 0x15, 0x3, 0x00000001),
+GEN_LONG_VLE_HANDLER_MASK(mtspr, 0x1F, 0x1D, 0x3, 0x00000001),
+GEN_LONG_VLE_HANDLER_MASK(tlbwe_booke206, 0x1F, 0x3D, 0x2, 0x00000001),
 
 GEN_SHORT_VLE_HANDLER(se_lbz, 0x20, 0xFF, 0xFF),
 GEN_SHORT_VLE_HANDLER(se_lbz, 0x21, 0xFF, 0xFF),
