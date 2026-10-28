@@ -6862,7 +6862,7 @@ static int disas_insn(CPUState *env, DisasContext *dc)
             gen_helper_handle_custom_instruction(pc_modified, id, opcode);
 
             int exit_tb_label = gen_new_label();
-            tcg_gen_brcondi_i64(TCG_COND_EQ, pc_modified, 1, exit_tb_label);
+            tcg_gen_brcondi_i32(TCG_COND_EQ, pc_modified, 1, exit_tb_label);
 
             //  this is executed conditionally - only if `handle_custom_instruction` returns 0
             //  otherwise `cpu_pc` points to a proper value and should not be overwritten by `dc->base.pc`
@@ -6875,7 +6875,7 @@ static int disas_insn(CPUState *env, DisasContext *dc)
 
             tcg_temp_free_i64(id);
             tcg_temp_free_i64(opcode);
-            tcg_temp_free_i64(pc_modified);
+            tcg_temp_free_i32(pc_modified);
 
             return ci->length;
         }
