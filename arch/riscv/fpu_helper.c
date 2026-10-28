@@ -809,6 +809,7 @@ uint64_t helper_fcvt_s_d(CPUState *env, uint64_t rs1, uint64_t rm)
     rs1 = f64_to_f32(f1).v;
 
     set_fp3_exceptions();
+    mark_fs_dirty();
     return rs1;
 }
 
