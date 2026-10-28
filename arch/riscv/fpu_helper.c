@@ -656,7 +656,6 @@ uint64_t helper_fcvt_lu_d_rod(CPUState *env, uint64_t frs1)
     frs1 = f64_to_ui64(f1, softfloat_round_odd, true);
 
     set_fp3_exceptions();
-    mark_fs_dirty();
     return frs1;
 }
 
@@ -1250,7 +1249,6 @@ target_ulong helper_fcvt_w_h(CPUState *env, uint64_t frs1, uint64_t rm)
     frs1 = (int64_t)((int32_t)f16_to_i32(f1, RM_3, true));
 
     set_fp3_exceptions();
-    mark_fs_dirty();
     return frs1;
 }
 
@@ -1264,7 +1262,6 @@ target_ulong helper_fcvt_wu_h(CPUState *env, uint64_t frs1, uint64_t rm)
     frs1 = (int64_t)((int32_t)f16_to_ui32(f1, RM_3, true));
 
     set_fp3_exceptions();
-    mark_fs_dirty();
     return frs1;
 }
 
@@ -1278,7 +1275,6 @@ uint64_t helper_fcvt_l_h(CPUState *env, uint64_t frs1, uint64_t rm)
     frs1 = f16_to_i64(f1, RM_3, true);
 
     set_fp3_exceptions();
-    mark_fs_dirty();
     return frs1;
 }
 
@@ -1292,7 +1288,6 @@ uint64_t helper_fcvt_lu_h(CPUState *env, uint64_t frs1, uint64_t rm)
     frs1 = f16_to_ui64(f1, RM_3, true);
 
     set_fp3_exceptions();
-    mark_fs_dirty();
     return frs1;
 }
 
