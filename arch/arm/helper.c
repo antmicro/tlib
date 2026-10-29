@@ -2857,8 +2857,15 @@ static int get_phys_addr_mpu(CPUState *env, uint32_t address, int access_type, i
             //  The ARMv7 reference manual specifies that memory regions should be naturally alligned, otherwise the
             //  behavior is `UNPREDICTABLE` However some hardware implementations (e.g. NXP S32K388) ignore the lower bits,
             //  forcing alignment. Since some versions of NXP's SDK rely on this behavior we emulate it here.
-            tlib_printf(LOG_LEVEL_DEBUG, "Base address 0x%x is not naturally aligned for size 0x%x, adjusting to 0x%x", base,
-                        size, base & (~mask));
+            //
+            //  The warning is logged once per reset as this code runs on every TLB fill.
+            if(!env->mpu_unaligned_base_warned) {
+                env->mpu_unaligned_base_warned = true;
+                tlib_printf(LOG_LEVEL_WARNING,
+                            "MPU region base address 0x%x is not naturally aligned for size 0x%" PRIx64 ", adjusting to 0x%x. "
+                            "This is UNPREDICTABLE in ARMv7, verify that your platform ignores the lower bits like NXP S32K388",
+                            base, (uint64_t)mask + 1, base & (~mask));
+            }
             base = base & (~mask);
         }
 

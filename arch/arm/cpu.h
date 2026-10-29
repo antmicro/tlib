@@ -506,6 +506,7 @@ typedef struct CPUState {
     } iwmmxt;
 
     uint32_t number_of_mpu_regions;
+    bool mpu_unaligned_base_warned;
 
     CPU_COMMON
 
