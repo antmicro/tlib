@@ -20,6 +20,7 @@
 
 #include "def-helper.h"
 #include "cpu-common.h"
+#include "cpu_registers.h"
 #include "arch_callbacks.h"
 #include "exports.h"
 
@@ -33,6 +34,7 @@
 void cpu_reset(CPUState *env)
 {
     int32_t interrupt_mode = env->interrupt_mode;
+    bool pic_fast_interrupt_redirect_enabled = env->pic_fast_interrupt_redirect_enabled;
     int32_t csr_validation_level = env->csr_validation_level;
     int privilege = env->privilege_architecture;
     target_ulong mhartid = env->mhartid;
@@ -50,6 +52,7 @@ void cpu_reset(CPUState *env)
     memset(env, 0, RESET_OFFSET);
 
     env->interrupt_mode = interrupt_mode;
+    env->pic_fast_interrupt_redirect_enabled = pic_fast_interrupt_redirect_enabled;
     env->csr_validation_level = csr_validation_level;
     env->mhartid = mhartid;
     env->privilege_architecture = privilege;
@@ -511,6 +514,7 @@ void do_interrupt(CPUState *env)
     target_ulong bit = 0;
     uint8_t is_interrupt = 0;
     uint8_t is_in_clic_mode = cpu_in_clic_mode(env);
+    bool is_in_pic_fast_interrupt_redirect_mode = env->pic_fast_interrupt_redirect_enabled;
 
     if(env->exception_index & (RISCV_EXCP_INT_FLAG)) {
         /* hacky for now. the MSB (bit 63) indicates interrupt but cs->exception
@@ -586,6 +590,11 @@ void do_interrupt(CPUState *env)
                 /* CLIC mode exception or shv non-vectored interrupt */
                 env->pc = env->mtvec & ~MTVEC_MODE_SUBMODE;
             }
+        } else if(is_in_pic_fast_interrupt_redirect_mode && bit == IRQ_VEER_PIC_MEI) {
+            //  in fast interrupt redirect mode mtvec lookup is bypassed
+            tlib_pic_fast_interrupt_capture();
+            target_ulong meihap = tlib_read_csr(CSR_VEER_MEIHAP);
+            env->pc = ldp_phys(meihap);
         } else if(get_field(env->mtvec, MTVEC_MODE) == MTVEC_MODE_CLINT_VECTORED && is_interrupt &&
                   env->privilege_architecture >= RISCV_PRIV1_10) {
             /* CLINT vectored mode */

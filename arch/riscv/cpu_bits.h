@@ -274,6 +274,7 @@
 #define CSR_MARCHID        0xf12
 #define CSR_MIMPID         0xf13
 #define CSR_MHARTID        0xf14
+#define CSR_VEER_MEIHAP    0xfc8
 #define CSR_VSTART         0x008
 #define CSR_VXSAT          0x009
 #define CSR_VXRM           0x00a
@@ -458,6 +459,8 @@
 #define IRQ_SE (1 << IRQ_S_EXT)
 #define IRQ_HE (1 << IRQ_H_EXT)
 #define IRQ_ME (1 << IRQ_M_EXT)
+
+#define IRQ_VEER_PIC_MEI IRQ_M_EXT
 
 #define PRV_U 0
 #define PRV_S 1

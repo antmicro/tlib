@@ -191,6 +191,13 @@ void tlib_mark_feature_silent(uint32_t feature_bit, uint32_t value)
 
 EXC_VOID_2(tlib_mark_feature_silent, uint32_t, feature_bit, uint32_t, value)
 
+void tlib_set_pic_fast_interrupt_redirect_mode(bool mode)
+{
+    cpu->pic_fast_interrupt_redirect_enabled = mode;
+}
+
+EXC_VOID_1(tlib_set_pic_fast_interrupt_redirect_mode, bool, mode)
+
 uint32_t tlib_is_feature_enabled(uint32_t feature_bit)
 {
     return (cpu->misa & (1L << feature_bit)) != 0;

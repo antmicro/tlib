@@ -14,6 +14,7 @@ void tlib_handle_post_gpr_access_hook(uint32_t register_index, uint32_t is_write
 void tlib_handle_pre_stack_access_hook(uint64_t address, uint32_t width, uint32_t is_write);
 void tlib_clic_clear_edge_interrupt(void);
 void tlib_clic_acknowledge_interrupt(void);
+void tlib_pic_fast_interrupt_capture(void);
 
 void tlib_extpmp_cfg_csr_write(uint32_t register_index, uint64_t value);
 uint64_t tlib_extpmp_cfg_csr_read(uint32_t register_index);

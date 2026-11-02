@@ -240,6 +240,8 @@ struct CPUState {
 
     bool is_pre_stack_access_hook_enabled;
 
+    bool pic_fast_interrupt_redirect_enabled;
+
     CPU_COMMON
 
     int8_t are_post_gpr_access_hooks_enabled;
