@@ -40,6 +40,8 @@
 #warning Big-Endian Host architecture is currently only partially supported, emulation errors might arise
 #endif
 
+#ifndef TARGET_RISCV
+
 #include "softfloat-2.h"
 
 typedef union {
@@ -99,6 +101,8 @@ typedef union {
     } ll;
 #endif
 } CPU_QuadU;
+
+#endif /* !TARGET_RISCV */
 
 /* CPU memory access without any memory or io remapping */
 
@@ -258,6 +262,8 @@ static inline void stq_le_p(void *ptr, uint64_t v)
 
 /* float access */
 
+#ifndef TARGET_RISCV
+
 static inline float64 ldfq_le_p(const void *ptr)
 {
     return *(float64 *)ptr;
@@ -268,6 +274,8 @@ static inline void stfq_le_p(void *ptr, float64 v)
     *(float64 *)ptr = v;
 }
 #endif
+
+#endif /* !TARGET_RISCV */
 
 #if !defined(HOST_WORDS_BIGENDIAN) || defined(WORDS_ALIGNED)
 
@@ -362,6 +370,8 @@ static inline void stq_be_p(void *ptr, uint64_t v)
 
 /* float access */
 
+#ifndef TARGET_RISCV
+
 static inline float64 ldfq_be_p(const void *ptr)
 {
     CPU_DoubleU u;
@@ -377,6 +387,8 @@ static inline void stfq_be_p(void *ptr, float64 v)
     stl_be_p(ptr, u.l.upper);
     stl_be_p((uint8_t *)ptr + 4, u.l.lower);
 }
+
+#endif /* !TARGET_RISCV */
 
 #else
 

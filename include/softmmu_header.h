@@ -174,6 +174,8 @@ static inline void glue(glue(st, SUFFIX), MEMSUFFIX)(target_ulong ptr, RES_TYPE 
 
 #endif /* ACCESS_TYPE != (NB_MMU_MODES + 1) */
 
+#ifndef TARGET_RISCV
+
 #if ACCESS_TYPE != (NB_MMU_MODES + 1)
 
 #if DATA_SIZE == 8
@@ -221,6 +223,8 @@ static inline void glue(stfl, MEMSUFFIX)(target_ulong ptr, float32 v)
 #endif /* DATA_SIZE == 4 */
 
 #endif /* ACCESS_TYPE != (NB_MMU_MODES + 1) */
+
+#endif /* !TARGET_RISCV */
 
 #undef RES_TYPE
 #undef DATA_TYPE
