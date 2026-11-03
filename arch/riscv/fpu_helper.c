@@ -1435,7 +1435,7 @@ void helper_vfmv_fs(CPUState *env, int32_t vd, int32_t vs2)
     }
 }
 
-void helper_vfmv_sf(CPUState *env, uint32_t vd, float64 rs1)
+void helper_vfmv_sf(CPUState *env, uint32_t vd, uint64_t rs1)
 {
     const target_ulong eew = env->vsew;
     ensure_vector_float_embedded_extension_or_raise_exception(env, eew);
