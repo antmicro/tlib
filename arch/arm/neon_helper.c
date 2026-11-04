@@ -1101,6 +1101,9 @@ uint32_t HELPER(neon_shl_s8)(uint32_t a, uint32_t b)
 
 static uint32_t shl_u8(uint8_t a, int8_t b)
 {
+    if(abs(b) >= 8 * sizeof a) {
+        return 0;
+    }
     uint32_t au = a;
     return b >= 0 ? au << b : au >> -b;
 }
@@ -1144,6 +1147,9 @@ uint32_t HELPER(neon_shl_s16)(uint32_t a, uint32_t b)
 
 static uint32_t shl_u16(uint16_t a, int8_t b)
 {
+    if(abs(b) >= 8 * sizeof a) {
+        return 0;
+    }
     uint32_t au = a;
     return b >= 0 ? au << b : au >> -b;
 }
@@ -1396,6 +1402,10 @@ uint32_t HELPER(neon_qshl_s8)(CPUState *env, uint32_t a, uint32_t b)
 
 static uint8_t qshl_u8(CPUState *env, uint8_t a, int8_t b)
 {
+    if(a != 0 && b >= (int)(8 * sizeof a)) {
+        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        return UINT8_MAX;
+    }
     uint32_t result = shl_u8(a, b);
     if(result > UINT8_MAX) {
         //  Saturated?
@@ -1452,6 +1462,10 @@ uint32_t HELPER(neon_qshl_s16)(CPUState *env, uint32_t a, uint32_t b)
 
 static uint16_t qshl_u16(CPUState *env, uint16_t a, int8_t b)
 {
+    if(a != 0 && b >= (int)(8 * sizeof a)) {
+        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        return UINT16_MAX;
+    }
     uint32_t result = shl_u16(a, b);
     if(result > UINT16_MAX) {
         //  Saturated?
