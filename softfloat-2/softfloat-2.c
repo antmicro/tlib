@@ -6501,17 +6501,24 @@ float64 uint32_to_float64(uint32 a STATUS_PARAM)
     return int64_to_float64(a STATUS_VAR);
 }
 
+/* Discard exceptions from the intermediate signed conversion on unsigned
+ * saturation: an invalid conversion must not also raise inexact. Preserve
+ * exception flags that were already set before the conversion.
+ */
 uint32 float32_to_uint32(float32 a STATUS_PARAM)
 {
     int64_t v;
+    int old_flags = STATUS(float_exception_flags);
     uint32 res;
 
     v = float32_to_int64(a STATUS_VAR);
     if(v < 0) {
         res = 0;
+        STATUS(float_exception_flags) = old_flags;
         float_raise(float_flag_invalid STATUS_VAR);
     } else if(v > 0xffffffff) {
         res = 0xffffffff;
+        STATUS(float_exception_flags) = old_flags;
         float_raise(float_flag_invalid STATUS_VAR);
     } else {
         res = v;
@@ -6522,14 +6529,17 @@ uint32 float32_to_uint32(float32 a STATUS_PARAM)
 uint32 float32_to_uint32_round_to_zero(float32 a STATUS_PARAM)
 {
     int64_t v;
+    int old_flags = STATUS(float_exception_flags);
     uint32 res;
 
     v = float32_to_int64_round_to_zero(a STATUS_VAR);
     if(v < 0) {
         res = 0;
+        STATUS(float_exception_flags) = old_flags;
         float_raise(float_flag_invalid STATUS_VAR);
     } else if(v > 0xffffffff) {
         res = 0xffffffff;
+        STATUS(float_exception_flags) = old_flags;
         float_raise(float_flag_invalid STATUS_VAR);
     } else {
         res = v;
@@ -6540,14 +6550,17 @@ uint32 float32_to_uint32_round_to_zero(float32 a STATUS_PARAM)
 uint16 float32_to_uint16(float32 a STATUS_PARAM)
 {
     int64_t v;
+    int old_flags = STATUS(float_exception_flags);
     uint16 res;
 
     v = float32_to_int64(a STATUS_VAR);
     if(v < 0) {
         res = 0;
+        STATUS(float_exception_flags) = old_flags;
         float_raise(float_flag_invalid STATUS_VAR);
     } else if(v > UINT16_MAX) {
         res = UINT16_MAX;
+        STATUS(float_exception_flags) = old_flags;
         float_raise(float_flag_invalid STATUS_VAR);
     } else {
         res = v;
@@ -6558,14 +6571,17 @@ uint16 float32_to_uint16(float32 a STATUS_PARAM)
 uint16 float32_to_uint16_round_to_zero(float32 a STATUS_PARAM)
 {
     int64_t v;
+    int old_flags = STATUS(float_exception_flags);
     uint16 res;
 
     v = float32_to_int64_round_to_zero(a STATUS_VAR);
     if(v < 0) {
         res = 0;
+        STATUS(float_exception_flags) = old_flags;
         float_raise(float_flag_invalid STATUS_VAR);
     } else if(v > 0xffff) {
         res = 0xffff;
+        STATUS(float_exception_flags) = old_flags;
         float_raise(float_flag_invalid STATUS_VAR);
     } else {
         res = v;
@@ -6576,14 +6592,17 @@ uint16 float32_to_uint16_round_to_zero(float32 a STATUS_PARAM)
 uint32 float64_to_uint32(float64 a STATUS_PARAM)
 {
     int64_t v;
+    int old_flags = STATUS(float_exception_flags);
     uint32 res;
 
     v = float64_to_int64(a STATUS_VAR);
     if(v < 0) {
         res = 0;
+        STATUS(float_exception_flags) = old_flags;
         float_raise(float_flag_invalid STATUS_VAR);
     } else if(v > 0xffffffff) {
         res = 0xffffffff;
+        STATUS(float_exception_flags) = old_flags;
         float_raise(float_flag_invalid STATUS_VAR);
     } else {
         res = v;
@@ -6594,14 +6613,17 @@ uint32 float64_to_uint32(float64 a STATUS_PARAM)
 uint32 float64_to_uint32_round_to_zero(float64 a STATUS_PARAM)
 {
     int64_t v;
+    int old_flags = STATUS(float_exception_flags);
     uint32 res;
 
     v = float64_to_int64_round_to_zero(a STATUS_VAR);
     if(v < 0) {
         res = 0;
+        STATUS(float_exception_flags) = old_flags;
         float_raise(float_flag_invalid STATUS_VAR);
     } else if(v > 0xffffffff) {
         res = 0xffffffff;
+        STATUS(float_exception_flags) = old_flags;
         float_raise(float_flag_invalid STATUS_VAR);
     } else {
         res = v;
@@ -6612,14 +6634,17 @@ uint32 float64_to_uint32_round_to_zero(float64 a STATUS_PARAM)
 uint16 float64_to_uint16_round_to_zero(float64 a STATUS_PARAM)
 {
     int64_t v;
+    int old_flags = STATUS(float_exception_flags);
     uint16 res;
 
     v = float64_to_int64_round_to_zero(a STATUS_VAR);
     if(v < 0) {
         res = 0;
+        STATUS(float_exception_flags) = old_flags;
         float_raise(float_flag_invalid STATUS_VAR);
     } else if(v > 0xffff) {
         res = 0xffff;
+        STATUS(float_exception_flags) = old_flags;
         float_raise(float_flag_invalid STATUS_VAR);
     } else {
         res = v;
