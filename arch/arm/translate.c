@@ -7638,11 +7638,11 @@ static int do_coproc_insn(CPUState *env, DisasContext *s, uint32_t insn, int cpn
      */
     if(is64) {
         if(cpnum == 15) {
-            /* Only the generic timer registers are handled by the external
-             * emulation layer. Other unknown 64-bit CP15 registers are
-             * UNDEFINED.
+            /* Only the allocated generic timer registers are handled by the
+             * external emulation layer. Other unknown 64-bit CP15 registers
+             * are UNDEFINED.
              */
-            if(crm != 14) {
+            if(crm != 14 || (opc1 > 4 && opc1 != 6)) {
                 return 1;
             }
 
