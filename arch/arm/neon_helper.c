@@ -128,7 +128,7 @@ static uint32_t qaddsub_8_common(CPUState *env, uint32_t a, uint32_t b, enum ope
         }
 
         if(saturated) {
-            env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+            env->vfp.qc = 1;
         }
     }
 
@@ -178,7 +178,7 @@ static uint32_t qaddsub_16_common(CPUState *env, uint32_t a, uint32_t b, enum op
         }
 
         if(saturated) {
-            env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+            env->vfp.qc = 1;
         }
     }
 
@@ -223,7 +223,7 @@ uint32_t HELPER(neon_abs_s16)(uint32_t a)
 static int8_t qabs_s8(CPUState *env, int8_t a)
 {
     if(a == INT8_MIN) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return INT8_MAX;
     }
 
@@ -243,7 +243,7 @@ uint32_t HELPER(neon_qabs_s8)(CPUState *env, uint32_t a)
 static int16_t qabs_s16(CPUState *env, int16_t a)
 {
     if(a == INT16_MIN) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return INT16_MAX;
     }
 
@@ -260,7 +260,7 @@ uint32_t HELPER(neon_qabs_s16)(CPUState *env, uint32_t a)
 uint32_t HELPER(neon_qabs_s32)(CPUState *env, uint32_t a)
 {
     if(a == INT32_MIN) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return INT32_MAX;
     }
 
@@ -270,7 +270,7 @@ uint32_t HELPER(neon_qabs_s32)(CPUState *env, uint32_t a)
 static int8_t qneg_s8(CPUState *env, int8_t a)
 {
     if(a == INT8_MIN) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return INT8_MAX;
     }
 
@@ -290,7 +290,7 @@ uint32_t HELPER(neon_qneg_s8)(CPUState *env, uint32_t a)
 static int16_t qneg_s16(CPUState *env, int16_t a)
 {
     if(a == INT16_MIN) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return INT16_MAX;
     }
 
@@ -307,7 +307,7 @@ uint32_t HELPER(neon_qneg_s16)(CPUState *env, uint32_t a)
 uint32_t HELPER(neon_qneg_s32)(CPUState *env, uint32_t a)
 {
     if(a == INT32_MIN) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return INT32_MAX;
     }
 
@@ -496,13 +496,13 @@ uint32_t HELPER(neon_qadd_s32)(CPUState *env, uint32_t a, uint32_t b)
     if(as > 0 && bs > 0) {
         const int saturated = bs > INT32_MAX - as;
         if(saturated) {
-            env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+            env->vfp.qc = 1;
             return INT32_MAX;
         }
     } else if(as < 0 && bs < 0) {
         const int saturated = bs < INT32_MIN - as;
         if(saturated) {
-            env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+            env->vfp.qc = 1;
             return INT32_MIN;
         }
     }
@@ -515,7 +515,7 @@ uint32_t HELPER(neon_qadd_u32)(CPUState *env, uint32_t a, uint32_t b)
     const int saturated = b > UINT32_MAX - a;
 
     if(saturated) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return UINT32_MAX;
     }
 
@@ -527,7 +527,7 @@ uint64_t HELPER(neon_qadd_u64)(CPUState *env, uint64_t a, uint64_t b)
     const int saturated = b > UINT64_MAX - a;
 
     if(saturated) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return UINT64_MAX;
     }
 
@@ -542,13 +542,13 @@ uint64_t HELPER(neon_qadd_s64)(CPUState *env, uint64_t a, uint64_t b)
     if(as > 0 && bs > 0) {
         const int saturated = bs > INT64_MAX - as;
         if(saturated) {
-            env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+            env->vfp.qc = 1;
             return INT64_MAX;
         }
     } else if(as < 0 && bs < 0) {
         const int saturated = bs < INT64_MIN - as;
         if(saturated) {
-            env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+            env->vfp.qc = 1;
             return INT64_MIN;
         }
     }
@@ -581,7 +581,7 @@ uint32_t HELPER(neon_qsub_u32)(CPUState *env, uint32_t a, uint32_t b)
     const int saturated = b > a;
 
     if(saturated) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return 0;
     }
 
@@ -596,13 +596,13 @@ uint32_t HELPER(neon_qsub_s32)(CPUState *env, uint32_t a, uint32_t b)
     if(as > 0 && bs < 0) {
         const int saturated = as > INT32_MAX + bs;
         if(saturated) {
-            env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+            env->vfp.qc = 1;
             return INT32_MAX;
         }
     } else if(as < 0 && bs > 0) {
         const int saturated = as < INT32_MIN + bs;
         if(saturated) {
-            env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+            env->vfp.qc = 1;
             return INT32_MIN;
         }
     }
@@ -615,7 +615,7 @@ uint64_t HELPER(neon_qsub_u64)(CPUState *env, uint64_t a, uint64_t b)
     const int saturated = b > a;
 
     if(saturated) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return 0;
     }
 
@@ -630,13 +630,13 @@ uint64_t HELPER(neon_qsub_s64)(CPUState *env, uint64_t a, uint64_t b)
     if(as > 0 && bs < 0) {
         const int saturated = as > INT64_MAX + bs;
         if(saturated) {
-            env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+            env->vfp.qc = 1;
             return INT64_MAX;
         }
     } else if(as < 0 && bs > 0) {
         const int saturated = as < INT64_MIN + bs;
         if(saturated) {
-            env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+            env->vfp.qc = 1;
             return INT64_MIN;
         }
     }
@@ -1364,10 +1364,10 @@ static int8_t qshl_s8(CPUState *env, int8_t a, int8_t b)
 
     if(b >= ((int)sizeof(a)) * 8) {
         if(a > 0) {
-            env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+            env->vfp.qc = 1;
             return INT8_MAX;
         } else if(a < 0) {
-            env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+            env->vfp.qc = 1;
             return INT8_MIN;
         }
     }
@@ -1376,10 +1376,10 @@ static int8_t qshl_s8(CPUState *env, int8_t a, int8_t b)
 
     if(result < INT8_MIN) {
         result = INT8_MIN;
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
     } else if(result > INT8_MAX) {
         result = INT8_MAX;
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
     }
     return (int8_t)result;
 }
@@ -1399,7 +1399,7 @@ static uint8_t qshl_u8(CPUState *env, uint8_t a, int8_t b)
     uint32_t result = shl_u8(a, b);
     if(result > UINT8_MAX) {
         //  Saturated?
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return UINT8_MAX;
     }
 
@@ -1422,10 +1422,10 @@ static int16_t qshl_s16(CPUState *env, int16_t a, int8_t b)
 
     if(b >= ((int)sizeof(a)) * 8) {
         if(a > 0) {
-            env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+            env->vfp.qc = 1;
             return INT16_MAX;
         } else if(a < 0) {
-            env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+            env->vfp.qc = 1;
             return INT16_MIN;
         }
     }
@@ -1433,11 +1433,11 @@ static int16_t qshl_s16(CPUState *env, int16_t a, int8_t b)
     result = shl_s16(a, b);
 
     if(result < INT16_MIN) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         result = INT16_MIN;
     } else if(result > INT16_MAX) {
         result = INT16_MAX;
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
     }
 
     return (int16_t)result;
@@ -1455,7 +1455,7 @@ static uint16_t qshl_u16(CPUState *env, uint16_t a, int8_t b)
     uint32_t result = shl_u16(a, b);
     if(result > UINT16_MAX) {
         //  Saturated?
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return UINT16_MAX;
     }
 
@@ -1471,16 +1471,15 @@ uint32_t HELPER(neon_qshl_u16)(CPUState *env, uint32_t a, uint32_t b)
 
 static int32_t qshl_s32(CPUState *env, int32_t a, int8_t b)
 {
-    if(b > 0) {
-        const uint32_t mask = (INT32_MAX << (8 * sizeof a - b - 1)) & INT32_MAX;
+    if(b > 0 && a != 0) {
         if(a >= 0) {
-            if((b >= 8 * sizeof a) || (a & mask)) {
-                env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+            if((b >= 8 * sizeof a) || ((uint32_t)a > ((uint32_t)INT32_MAX >> b))) {
+                env->vfp.qc = 1;
                 return INT32_MAX;
             }
         } else {  //  a < 0
-            if((b >= 8 * sizeof a) || (~a & mask)) {
-                env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+            if((b >= 8 * sizeof a) || (~(uint32_t)a > ((uint32_t)INT32_MAX >> b))) {
+                env->vfp.qc = 1;
                 return INT32_MIN;
             }
         }
@@ -1496,11 +1495,10 @@ uint32_t HELPER(neon_qshl_s32)(CPUState *env, uint32_t a, uint32_t b)
 
 static uint32_t qshl_u32(CPUState *env, uint32_t a, int8_t b)
 {
-    if(b > 0) {
+    if(b > 0 && a != 0) {
         //  Saturated?
-        const uint32_t mask = UINT32_MAX << (8 * sizeof a - b);
-        if((b >= 8 * sizeof a) || (a & mask)) {
-            env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        if((b >= 8 * sizeof a) || (a > (UINT32_MAX >> b))) {
+            env->vfp.qc = 1;
             return UINT32_MAX;
         }
     }
@@ -1515,16 +1513,15 @@ uint32_t HELPER(neon_qshl_u32)(CPUState *env, uint32_t a, uint32_t b)
 
 static int64_t qshl_s64(CPUState *env, int64_t a, int8_t b)
 {
-    if(b > 0) {
-        const uint64_t mask = (INT64_MAX << (8 * sizeof a - b - 1)) & INT64_MAX;
+    if(b > 0 && a != 0) {
         if(a >= 0) {
-            if((b >= 8 * sizeof a) || (a & mask)) {
-                env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+            if((b >= 8 * sizeof a) || ((uint64_t)a > ((uint64_t)INT64_MAX >> b))) {
+                env->vfp.qc = 1;
                 return INT64_MAX;
             }
         } else {  //  a < 0
-            if((b >= 8 * sizeof a) || (~a & mask)) {
-                env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+            if((b >= 8 * sizeof a) || (~(uint64_t)a > ((uint64_t)INT64_MAX >> b))) {
+                env->vfp.qc = 1;
                 return INT64_MIN;
             }
         }
@@ -1540,11 +1537,10 @@ uint64_t HELPER(neon_qshl_s64)(CPUState *env, uint64_t a, uint64_t b)
 
 static uint64_t qshl_u64(CPUState *env, uint64_t a, int8_t b)
 {
-    if(b > 0) {
+    if(b > 0 && a != 0) {
         //  Saturated?
-        const uint64_t mask = UINT64_MAX << (8 * sizeof a - b);
-        if((b >= 8 * sizeof a) || (a & mask)) {
-            env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        if((b >= 8 * sizeof a) || (a > (UINT64_MAX >> b))) {
+            env->vfp.qc = 1;
             return UINT64_MAX;
         }
     }
@@ -1560,7 +1556,7 @@ uint64_t HELPER(neon_qshl_u64)(CPUState *env, uint64_t a, uint64_t b)
 static uint8_t qshlu_s8(CPUState *env, int8_t a, uint8_t b)
 {
     if(a < 0) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return 0;
     }
 
@@ -1580,7 +1576,7 @@ uint32_t HELPER(neon_qshlu_s8)(CPUState *env, uint32_t a, uint32_t b)
 static int16_t qshlu_s16(CPUState *env, int16_t a, int8_t b)
 {
     if(a < 0) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return 0;
     }
 
@@ -1597,7 +1593,7 @@ uint32_t HELPER(neon_qshlu_s16)(CPUState *env, uint32_t a, uint32_t b)
 static int32_t qshlu_s32(CPUState *env, int32_t a, int8_t b)
 {
     if(a < 0) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return 0;
     }
 
@@ -1612,7 +1608,7 @@ uint32_t HELPER(neon_qshlu_s32)(CPUState *env, uint32_t a, uint32_t b)
 static int64_t qshlu_s64(CPUState *env, int64_t a, int8_t b)
 {
     if(a < 0) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return 0;
     }
 
@@ -2030,7 +2026,7 @@ uint32_t HELPER(neon_mul_u16)(uint32_t a, uint32_t b)
 static int16_t qdmulh_s16(CPUState *env, int16_t a, int16_t b)
 {
     if(a == INT16_MIN && b == INT16_MIN) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return INT16_MAX;
     }
 
@@ -2050,7 +2046,7 @@ static int32_t qdmulh_s32(CPUState *env, int32_t a, int32_t b)
     const int64_t b64 = b;
 
     if(a == INT32_MIN && b == INT32_MIN) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return INT32_MAX;
     }
 
@@ -2065,7 +2061,7 @@ uint32_t HELPER(neon_qdmulh_s32)(CPUState *env, uint32_t a, uint32_t b)
 static int16_t qrdmulh_s16(CPUState *env, int16_t a, int16_t b)
 {
     if(a == INT16_MIN && b == INT16_MIN) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return INT16_MAX;
     }
 
@@ -2084,7 +2080,7 @@ uint32_t HELPER(neon_qrdmulh_s16)(CPUState *env, uint32_t a, uint32_t b)
 static int32_t qrdmulh_s32(CPUState *env, int32_t a, int32_t b)
 {
     if(a == INT32_MIN && b == INT32_MIN) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return INT32_MAX;
     }
 
@@ -2364,10 +2360,10 @@ uint32_t HELPER(neon_narrow_round_high_u16)(uint64_t a)
 static int8 narrow_sat_s8(CPUState *env, int16_t a)
 {
     if(a > INT8_MAX) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return INT8_MAX;
     } else if(a < INT8_MIN) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return INT8_MIN;
     }
 
@@ -2387,7 +2383,7 @@ uint32_t HELPER(neon_narrow_sat_s8)(CPUState *env, uint64_t a)
 static uint8 narrow_sat_u8(CPUState *env, uint16_t a)
 {
     if(a > UINT8_MAX) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return UINT8_MAX;
     }
 
@@ -2407,10 +2403,10 @@ uint32_t HELPER(neon_narrow_sat_u8)(CPUState *env, uint64_t a)
 static int16_t narrow_sat_s16(CPUState *env, int32_t a)
 {
     if(a > INT16_MAX) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return INT16_MAX;
     } else if(a < INT16_MIN) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return INT16_MIN;
     }
 
@@ -2428,7 +2424,7 @@ uint32_t HELPER(neon_narrow_sat_s16)(CPUState *env, uint64_t a)
 static uint16_t narrow_sat_u16(CPUState *env, uint32_t a)
 {
     if(a > UINT16_MAX) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return UINT16_MAX;
     }
 
@@ -2448,10 +2444,10 @@ uint32_t HELPER(neon_narrow_sat_s32)(CPUState *env, uint64_t a)
     const int64_t sa = a;
 
     if(sa > INT32_MAX) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return INT32_MAX;
     } else if(sa < INT32_MIN) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return INT32_MIN;
     }
 
@@ -2461,7 +2457,7 @@ uint32_t HELPER(neon_narrow_sat_s32)(CPUState *env, uint64_t a)
 uint32_t HELPER(neon_narrow_sat_u32)(CPUState *env, uint64_t a)
 {
     if(a > UINT32_MAX) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return UINT32_MAX;
     }
 
@@ -2471,10 +2467,10 @@ uint32_t HELPER(neon_narrow_sat_u32)(CPUState *env, uint64_t a)
 static uint8 unarrow_sat8(CPUState *env, int16_t a)
 {
     if(a > UINT8_MAX) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return UINT8_MAX;
     } else if(a < 0) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return 0;
     }
 
@@ -2494,10 +2490,10 @@ uint32_t HELPER(neon_unarrow_sat8)(CPUState *env, uint64_t a)
 static uint16 unarrow_sat16(CPUState *env, int32_t a)
 {
     if(a > UINT16_MAX) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return UINT16_MAX;
     } else if(a < 0) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return 0;
     }
 
@@ -2517,10 +2513,10 @@ uint32_t HELPER(neon_unarrow_sat32)(CPUState *env, uint64_t a)
     const int64_t sa = a;
 
     if(sa > UINT32_MAX) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return UINT32_MAX;
     } else if(sa < 0) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         return 0;
     }
 
@@ -2533,18 +2529,18 @@ uint64_t HELPER(neon_addl_saturate_s32)(CPUState *env, uint64_t a, uint64_t b)
     int64_t lo = (int64_t)S32_0(a) + (int64_t)S32_0(b);
 
     if(hi > INT32_MAX) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         hi = INT32_MAX;
     } else if(hi < INT32_MIN) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         hi = INT32_MIN;
     }
 
     if(lo > INT32_MAX) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         lo = INT32_MAX;
     } else if(lo < INT32_MIN) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         lo = INT32_MIN;
     }
 
@@ -2562,10 +2558,10 @@ uint64_t HELPER(neon_addl_saturate_s64)(CPUState *env, uint64_t a, uint64_t b)
     int64_t sum = sa + sb;
 
     if(sa > 0 && sb > 0 && sum < 0) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         sum = INT64_MAX;
     } else if(sa < 0 && sb < 0 && sum > 0) {
-        env->vfp.xregs[ARM_VFP_FPSCR] |= CPSR_Q;
+        env->vfp.qc = 1;
         sum = INT64_MIN;
     }
 
