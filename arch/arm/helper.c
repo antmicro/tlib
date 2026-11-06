@@ -4524,12 +4524,18 @@ float32 VFP_HELPER(fcvts, d)(float64 x, CPUState *env)
     uint##fsz##_t HELPER(vfp_to##name##p)(float##fsz x, uint32_t shift, void *fpstp)   \
     {                                                                                  \
         float_status *fpst = fpstp;                                                    \
+        float_status scaled_status = *fpst;                                            \
         float##fsz tmp;                                                                \
         if(float##fsz##_is_any_nan(x)) {                                               \
             float_raise(float_flag_invalid, fpst);                                     \
             return 0;                                                                  \
         }                                                                              \
-        tmp = float##fsz##_scalbn(x, shift, fpst);                                     \
+        /* Scaling overflow only implies integer saturation, not FP overflow. */       \
+        set_float_exception_flags(0, &scaled_status);                                   \
+        tmp = float##fsz##_scalbn(x, shift, &scaled_status);                           \
+        if(!(get_float_exception_flags(&scaled_status) & float_flag_overflow)) {        \
+            float_raise(get_float_exception_flags(&scaled_status), fpst);               \
+        }                                                                              \
         return float##fsz##_to_##itype##_round_to_zero(tmp, fpst);                     \
     }
 
