@@ -42,7 +42,22 @@ uint64_t *get_reg_pointer_64(int reg)
             return NULL;
     }
 }
-CPU_REGISTER_ACCESSOR(64);
+CPU_REGISTER_GETTER(64);
+void tlib_set_register_value_64(int reg_number, uint64_t value)
+{
+    if(reg_number == MSR_64) {
+        ppc_store_msr(cpu, value);
+        return;
+    }
+
+    uint64_t *ptr = get_reg_pointer_64(reg_number);
+    if(ptr == NULL) {
+        tlib_abortf("Write to undefined CPU register number %d detected", reg_number);
+    }
+
+    *ptr = value;
+}
+EXC_VOID_2(tlib_set_register_value_64, int, reg_number, uint64_t, value);
 #endif
 #ifdef TARGET_PPC32
 uint32_t *get_reg_pointer_32(int reg)
@@ -64,5 +79,20 @@ uint32_t *get_reg_pointer_32(int reg)
             return NULL;
     }
 }
-CPU_REGISTER_ACCESSOR(32);
+CPU_REGISTER_GETTER(32);
+void tlib_set_register_value_32(int reg_number, uint32_t value)
+{
+    if(reg_number == MSR_32) {
+        ppc_store_msr(cpu, value);
+        return;
+    }
+
+    uint32_t *ptr = get_reg_pointer_32(reg_number);
+    if(ptr == NULL) {
+        tlib_abortf("Write to undefined CPU register number %d detected", reg_number);
+    }
+
+    *ptr = value;
+}
+EXC_VOID_2(tlib_set_register_value_32, int, reg_number, uint32_t, value);
 #endif
