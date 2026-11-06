@@ -3168,6 +3168,13 @@ float16 float32_to_float16(float32 a, flag ieee STATUS_PARAM)
     /* Decimal point between bits 22 and 23.  */
     aSig |= 0x00800000;
     aExp -= 0x7f;
+    if(aExp < -25) {
+        float_raise(float_flag_underflow | float_flag_inexact STATUS_VAR);
+        roundingMode = STATUS(float_rounding_mode);
+        increment = (roundingMode == float_round_up && !aSign) ||
+                    (roundingMode == float_round_down && aSign);
+        return packFloat16(aSign, 0, increment);
+    }
     if(aExp < -14) {
         mask = 0x00ffffff;
         if(aExp >= -24) {
