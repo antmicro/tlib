@@ -225,11 +225,7 @@ static float16 commonNaNToFloat16(commonNaNT a STATUS_PARAM)
         return float16_default_nan;
     }
 
-    if(mantissa) {
-        return make_float16(((((uint16_t)a.sign) << 15) | (0x1F << 10) | mantissa));
-    } else {
-        return float16_default_nan;
-    }
+    return make_float16((((uint16_t)a.sign) << 15) | 0x7E00 | mantissa);
 }
 
 /*----------------------------------------------------------------------------
