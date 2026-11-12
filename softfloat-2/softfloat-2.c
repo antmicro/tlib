@@ -3177,7 +3177,8 @@ float16 float32_to_float16(float32 a, flag ieee STATUS_PARAM)
         mask = 0x00001fff;
     }
     if(aSig & mask) {
-        float_raise(float_flag_underflow STATUS_VAR);
+        flag isTiny = aExp < -14;
+        float_raise(float_flag_inexact STATUS_VAR);
         roundingMode = STATUS(float_rounding_mode);
         switch(roundingMode) {
             case float_round_nearest_even:
@@ -3201,8 +3202,9 @@ float16 float32_to_float16(float32 a, flag ieee STATUS_PARAM)
             aSig >>= 1;
             aExp++;
         }
-    } else if(aExp < -14 && STATUS(float_detect_tininess) == float_tininess_before_rounding) {
-        float_raise(float_flag_underflow STATUS_VAR);
+        if(isTiny && (STATUS(float_detect_tininess) == float_tininess_before_rounding || aExp < -14)) {
+            float_raise(float_flag_underflow STATUS_VAR);
+        }
     }
 
     if(ieee) {
