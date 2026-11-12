@@ -1099,7 +1099,7 @@ static inline bool cpu_has_work(CPUState *env)
         env->wfe = 0;
     }
 
-    if(env->wfi) {
+    if(env->wfi || env->self_loop) {
         bool has_work = false;
 #ifndef TARGET_PROTO_ARM_M
         has_work = is_interrupt_pending(env, CPU_INTERRUPT_FIQ | CPU_INTERRUPT_HARD | CPU_INTERRUPT_EXITTB);
@@ -1108,10 +1108,11 @@ static inline bool cpu_has_work(CPUState *env)
 #endif
         if(has_work) {
             env->wfi = 0;
+            env->self_loop = 0;
         }
     }
 
-    return !(env->wfe || env->wfi);
+    return !(env->wfe || env->wfi || env->self_loop);
 }
 
 #include "exec-all.h"

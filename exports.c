@@ -787,6 +787,7 @@ void tlib_clean_wfi_proc_state(void)
     //  Invalidates "Wait for interrupt" state, and makes the core ready to resume execution
     cpu->exception_index &= ~EXCP_WFI;
     cpu->wfi = 0;
+    cpu->self_loop = 0;
 }
 
 EXC_VOID_0(tlib_clean_wfi_proc_state)
