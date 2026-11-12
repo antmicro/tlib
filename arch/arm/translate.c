@@ -9364,7 +9364,7 @@ static void disas_arm_insn(CPUState *env, DisasContext *s, uint32_t insn)
                 /* branch (and link) */
                 if(insn == 0xeafffffe) {
                     tlib_printf(LOG_LEVEL_NOISY, "Loop to itself detected");
-                    gen_helper_wfi();
+                    gen_helper_self_loop();
                     s->base.is_jmp = DISAS_JUMP;
                     LOCK_TB(s->base.tb);
                 } else {
@@ -16432,7 +16432,7 @@ static void disas_thumb_insn(CPUState *env, DisasContext *s, uint16_t insn, uint
             /* unconditional branch */
             if(insn == 0xe7fe) {
                 tlib_printf(LOG_LEVEL_NOISY, "Loop to itself detected");
-                gen_helper_wfi();
+                gen_helper_self_loop();
                 s->base.is_jmp = DISAS_JUMP;
                 LOCK_TB(s->base.tb);
             } else {
