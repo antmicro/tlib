@@ -2230,8 +2230,8 @@ uint64_t HELPER(neon_abdl_u64)(uint32_t a, uint32_t b)
 
 uint64_t HELPER(neon_abdl_s64)(uint32_t a, uint32_t b)
 {
-    int32_t ta = a;
-    int32_t tb = b;
+    int64_t ta = (int32_t)a;
+    int64_t tb = (int32_t)b;
     return (uint64_t)(ta > tb ? ta - tb : tb - ta);
 }
 
