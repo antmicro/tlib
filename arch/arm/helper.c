@@ -2880,11 +2880,8 @@ static int get_phys_addr_mpu(CPUState *env, uint32_t address, int access_type, i
             if(width >= 8) {
                 if(!page_with_address_is_fully_covered_by_consistent_mpu_subregions(env->cp15.c6_subregion_disable[n], base,
                                                                                     1 << width, address)) {
-                    /* MPU subregions with the same state (enabled/disabled) don't cover the whole page.
-                     * Setting page size != TARGET_PAGE_SIZE effectively makes the tlb page entry one-shot:
-                     * Thanks to this every access to this page will be verified against MPU.
-                     */
-                    *page_size = 0;
+                    //  MPU subregions with the same state (enabled/disabled) don't cover the whole page.
+                    page_cannot_be_cached = true;
                 }
                 if(env->cp15.c6_subregion_disable[n] & (1 << get_mpu_subregion_number(base, width, address))) {
                     /* Subregion containing this address is disabled, try to match this address to a different region. */
@@ -2892,11 +2889,17 @@ static int get_phys_addr_mpu(CPUState *env, uint32_t address, int access_type, i
                 }
             } else {
                 /* The page is not fully covered by a single MPU region */
-                *page_size = 0;
+                page_cannot_be_cached = true;
             }
 
             break;
         }
+    }
+
+    if(page_cannot_be_cached) {
+        //  Setting page size != TARGET_PAGE_SIZE effectively makes the tlb page entry one-shot:
+        //  Thanks to this every access to this page will be verified against MPU.
+        *page_size = 0;
     }
 
     if(n < 0) {  //  background fault
@@ -2982,9 +2985,6 @@ static int get_phys_addr_mpu(CPUState *env, uint32_t address, int access_type, i
      * PAGE_EXEC  = 3 ; ACCESS_TYPE = 2
      */
     if(*prot & (1 << access_type)) {
-        if(page_cannot_be_cached) {
-            *page_size = 0;
-        }
         return TRANSLATE_SUCCESS;
     }
     return MPU_PERMISSION_FAULT;
