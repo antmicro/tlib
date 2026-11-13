@@ -2828,7 +2828,7 @@ static int get_phys_addr_mpu(CPUState *env, uint32_t address, int access_type, i
     uint32_t width;
     uint32_t mask;
     uint32_t perms;
-    bool page_contains_mpu_region = false;
+    bool page_cannot_be_cached = false;
 
     *phys_ptr = address;
     *prot = 0;
@@ -2870,12 +2870,12 @@ static int get_phys_addr_mpu(CPUState *env, uint32_t address, int access_type, i
         }
 
         if((address & TARGET_PAGE_MASK) == (base & TARGET_PAGE_MASK)) {
-            page_contains_mpu_region = true;
+            page_cannot_be_cached = true;
         }
 
         /* Check if the region is enabled */
         if(address >= base && address <= base + mask) {
-            page_contains_mpu_region = true;
+            page_cannot_be_cached = true;
             /* Check subregions, only if region size is equal to or bigger than 256 bytes (region size = 2^width) */
             if(width >= 8) {
                 if(!page_with_address_is_fully_covered_by_consistent_mpu_subregions(env->cp15.c6_subregion_disable[n], base,
@@ -2922,7 +2922,7 @@ static int get_phys_addr_mpu(CPUState *env, uint32_t address, int access_type, i
             background_result = TRANSLATE_FAIL;
         }
 
-        if(background_result == TRANSLATE_SUCCESS && page_contains_mpu_region) {
+        if(background_result == TRANSLATE_SUCCESS && page_cannot_be_cached) {
             /* Background pages cannot be stored in tlb if those pages contain any MPU regions
              * as access checks will not be performed for pages that are present in TLB.
              * Setting page size != TARGET_PAGE_SIZE effectively makes the tlb page entry one-shot:
@@ -2982,7 +2982,7 @@ static int get_phys_addr_mpu(CPUState *env, uint32_t address, int access_type, i
      * PAGE_EXEC  = 3 ; ACCESS_TYPE = 2
      */
     if(*prot & (1 << access_type)) {
-        if(page_contains_mpu_region) {
+        if(page_cannot_be_cached) {
             *page_size = 0;
         }
         return TRANSLATE_SUCCESS;
