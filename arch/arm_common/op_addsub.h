@@ -279,7 +279,7 @@ static inline uint16_t glue(unit_sub16_, PFX)(uint16_t a, uint16_t b, uint16_t *
     return (uint16_t)(((uint32_t)a - (uint32_t)b) >> 1);
 }
 
-static inline uint8_t glue(unit_sub8_, PFX)(uint16_t a, uint16_t b, uint16_t *ge)
+static inline uint8_t glue(unit_sub8_, PFX)(uint8_t a, uint8_t b, uint16_t *ge)
 {
     return (uint8_t)(((uint32_t)a - (uint32_t)b) >> 1);
 }
