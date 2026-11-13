@@ -3151,6 +3151,7 @@ float16 float32_to_float16(float32 a, flag ieee STATUS_PARAM)
             /* Input is a NaN */
             float16 r = commonNaNToFloat16(float32ToCommonNaN(a STATUS_VAR) STATUS_VAR);
             if(!ieee) {
+                float_raise(float_flag_invalid STATUS_VAR);
                 return packFloat16(aSign, 0, 0);
             }
             return r;
