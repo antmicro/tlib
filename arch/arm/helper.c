@@ -2869,7 +2869,9 @@ static int get_phys_addr_mpu(CPUState *env, uint32_t address, int access_type, i
             base = base & (~mask);
         }
 
-        if((address & TARGET_PAGE_MASK) == (base & TARGET_PAGE_MASK)) {
+        if(((address & TARGET_PAGE_MASK) == (base & TARGET_PAGE_MASK)) && width < TARGET_PAGE_BITS) {
+            //  Targeted page contains a region which does not span the entire page,
+            //  making it impossible to describe with one permission bit set.
             page_cannot_be_cached = true;
         }
 
