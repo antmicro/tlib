@@ -3564,13 +3564,15 @@ inline int get_phys_addr(CPUState *env, uint32_t address, bool is_secure, int ac
      * Generally it's a little tricky because in case no region was matched we still need to know
      * whether there are no regions on the whole page.
      *
-     * `TARGET_PAGE_SIZE` is used as default for IDAU/SAU so that the final `page_size` isn't
-     * changed if security attribution check wasn't performed.
+     * The largest value is used as default for IDAU/SAU so that the final `page_size` isn't
+     * changed if security attribution check wasn't performed. `TARGET_PAGE_SIZE` would shrink
+     * the pages and sections an MMU maps, and `tlb_set_page` has to get their real size so that
+     * invalidating one by address flushes all of it.
      *
      * The same goes for allowed permissions which are necessary in case security check differs
      * based on access type though in this case we can just modify permissions provided by MMU/MPU.
      */
-    target_ulong idau_sau_page_size = TARGET_PAGE_SIZE;
+    target_ulong idau_sau_page_size = (target_ulong)-1;
     int idau_sau_allowed_permissions = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
 
     int ret;
