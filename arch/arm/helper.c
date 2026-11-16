@@ -165,13 +165,14 @@ static void cpu_reset_model_id(CPUState *env, uint32_t id)
             set_feature(env, ARM_FEATURE_VFP);
             set_feature(env, ARM_FEATURE_VFP3);
             set_feature(env, ARM_FEATURE_VFP4);
+            set_feature(env, ARM_FEATURE_VFP_FP16);
             set_feature(env, ARM_FEATURE_NEON);
             set_feature(env, ARM_FEATURE_GENERIC_TIMER);
             set_feature(env, ARM_FEATURE_THUMB2EE);
             set_feature(env, ARM_FEATURE_LPAE);
             set_feature(env, ARM_FEATURE_V7MP);
             set_feature(env, ARM_FEATURE_ARM_DIV);
-            env->vfp.xregs[ARM_VFP_FPSID] = 0x41023070;
+            env->vfp.xregs[ARM_VFP_FPSID] = 0x41023075;
             env->vfp.xregs[ARM_VFP_MVFR0] = 0x10110222;
             env->vfp.xregs[ARM_VFP_MVFR1] = 0x11111111;
             memcpy(env->cp15.c0_c1, cortexa7_cp15_c0_c1, 8 * sizeof(uint32_t));
