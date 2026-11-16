@@ -2825,7 +2825,7 @@ static int get_phys_addr_mpu(CPUState *env, uint32_t address, int access_type, i
 {
     int n;
     uint32_t base;
-    uint32_t size;
+    uint32_t width;
     uint32_t mask;
     uint32_t perms;
     bool page_contains_mpu_region = false;
@@ -2847,12 +2847,12 @@ static int get_phys_addr_mpu(CPUState *env, uint32_t address, int access_type, i
                             "Encountered MPU region size smaller than 32bytes, this is an unpredictable setting!");
                 continue;
             default:
-                size = ((env->cp15.c6_size_and_enable[n] & MPU_SIZE_FIELD_MASK) >> 1) + 1;
+                width = ((env->cp15.c6_size_and_enable[n] & MPU_SIZE_FIELD_MASK) >> 1) + 1;
                 break;
         }
 
         base = env->cp15.c6_base_address[n];
-        mask = (1ull << size) - 1;
+        mask = (1ull << width) - 1;
         if(base & mask) {
             //  The ARMv7 reference manual specifies that memory regions should be naturally alligned, otherwise the
             //  behavior is `UNPREDICTABLE` However some hardware implementations (e.g. NXP S32K388) ignore the lower bits,
@@ -2864,7 +2864,7 @@ static int get_phys_addr_mpu(CPUState *env, uint32_t address, int access_type, i
                 tlib_printf(LOG_LEVEL_WARNING,
                             "MPU region base address 0x%x is not naturally aligned for size 0x%" PRIx64 ", adjusting to 0x%x. "
                             "This is UNPREDICTABLE in ARMv7, verify that your platform ignores the lower bits like NXP S32K388",
-                            base, (uint64_t)mask + 1, base & (~mask));
+                            width, (uint64_t)mask + 1, base & (~mask));
             }
             base = base & (~mask);
         }
@@ -2876,17 +2876,17 @@ static int get_phys_addr_mpu(CPUState *env, uint32_t address, int access_type, i
         /* Check if the region is enabled */
         if(address >= base && address <= base + mask) {
             page_contains_mpu_region = true;
-            /* Check subregions, only if region size is equal to or bigger than 256 bytes (region size = 2^size) */
-            if(size >= 8) {
+            /* Check subregions, only if region size is equal to or bigger than 256 bytes (region size = 2^width) */
+            if(width >= 8) {
                 if(!page_with_address_is_fully_covered_by_consistent_mpu_subregions(env->cp15.c6_subregion_disable[n], base,
-                                                                                    1 << size, address)) {
+                                                                                    1 << width, address)) {
                     /* MPU subregions with the same state (enabled/disabled) don't cover the whole page.
                      * Setting page size != TARGET_PAGE_SIZE effectively makes the tlb page entry one-shot:
                      * Thanks to this every access to this page will be verified against MPU.
                      */
                     *page_size = 0;
                 }
-                if(env->cp15.c6_subregion_disable[n] & (1 << get_mpu_subregion_number(base, size, address))) {
+                if(env->cp15.c6_subregion_disable[n] & (1 << get_mpu_subregion_number(base, width, address))) {
                     /* Subregion containing this address is disabled, try to match this address to a different region. */
                     continue;
                 }
