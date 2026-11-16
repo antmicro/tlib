@@ -139,10 +139,10 @@ static inline uint32_t syn_aa64_sysregtrap(uint32_t op0, uint32_t op1, uint32_t 
                                            bool isread)
 {
     //  D17.2.37
-    uint32_t iss = SYN_A64_CV << 24 | SYN_A64_COND << 20 | op2 << 17 | op1 << 14 | crn << 10 | rt << 5 | crm << 1 | isread;
+    uint32_t iss = SYN_A64_CV << 24 | op0 << 20 | op2 << 17 | op1 << 14 | crn << 10 | rt << 5 | crm << 1 | isread;
 
     //  TODO: iss2 if FEAT_LS64 is implemented
-    return syndrome32_create(SYN_EC_TRAPPED_MSR_MRS_SYSTEM_INST, 0, iss);
+    return syndrome32_create(SYN_EC_TRAPPED_MSR_MRS_SYSTEM_INST, 1, iss);
 }
 
 static inline uint32_t syn_uncategorized()
