@@ -56,7 +56,7 @@ static uint32_t cortexa7_cp15_c0_c1[8] = {
     0x00001131, 0x00011011, 0x02010555, 0, 0x10101105, 0x40000000, 0x01240000, 0x02102211
 };
 
-static uint32_t cortexa7_cp15_c0_c2[8] = { 0x01101110, 0x13112111, 0x21232041, 0x11112131, 0x10011142, 0, 0, 0 };
+static uint32_t cortexa7_cp15_c0_c2[8] = { 0x02101110, 0x13112111, 0x21232041, 0x11112131, 0x10011142, 0, 0, 0 };
 
 static uint32_t cpu_arm_find_by_name(const char *name);
 
@@ -163,6 +163,7 @@ static void cpu_reset_model_id(CPUState *env, uint32_t id)
             set_feature(env, ARM_FEATURE_AUXCR);
             set_feature(env, ARM_FEATURE_THUMB2);
             set_feature(env, ARM_FEATURE_VFP);
+            set_feature(env, ARM_FEATURE_VFP3);
             set_feature(env, ARM_FEATURE_VFP4);
             set_feature(env, ARM_FEATURE_NEON);
             set_feature(env, ARM_FEATURE_GENERIC_TIMER);
@@ -171,8 +172,8 @@ static void cpu_reset_model_id(CPUState *env, uint32_t id)
             set_feature(env, ARM_FEATURE_V7MP);
             set_feature(env, ARM_FEATURE_ARM_DIV);
             env->vfp.xregs[ARM_VFP_FPSID] = 0x41023070;
-            env->vfp.xregs[ARM_VFP_MVFR0] = 0x10110221;
-            env->vfp.xregs[ARM_VFP_MVFR1] = 0x11000011;
+            env->vfp.xregs[ARM_VFP_MVFR0] = 0x10110222;
+            env->vfp.xregs[ARM_VFP_MVFR1] = 0x11111111;
             memcpy(env->cp15.c0_c1, cortexa7_cp15_c0_c1, 8 * sizeof(uint32_t));
             memcpy(env->cp15.c0_c2, cortexa7_cp15_c0_c2, 8 * sizeof(uint32_t));
             env->cp15.c0_cachetype = 0x84448003;
