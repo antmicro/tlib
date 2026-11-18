@@ -352,6 +352,14 @@ int cpu_exec(CPUState *env)
             for(;;) {
                 cpu_sync_instructions_count(env);
 
+                if(unlikely(env->exception_index >= 0 && env->exception_index < EXCP_INTERRUPT)) {
+                    /* The last block raised a synchronous exception without leaving
+                     * the loop (e.g. Arm `svc`). Take it now: the interrupt handling
+                     * below resets exception_index, which would drop the exception
+                     * whenever an interrupt is pending but masked. */
+                    cpu_loop_exit_without_hook(env);
+                }
+
                 interrupt_request = env->interrupt_request;
                 if(unlikely(interrupt_request)) {
                     if(is_interrupt_pending(env, CPU_INTERRUPT_DEBUG)) {
