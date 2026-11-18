@@ -506,6 +506,10 @@ void do_interrupt(CPUState *env)
         return;
     }
 
+    //  MTVAL should be zero for many interrupt types. For the ones that use MTVAL,
+    //  it's set either in `tlib_on_interrupt_begin` or further in this functions.
+    env->mtval = 0;
+
     if(env->interrupt_begin_callback_enabled) {
         tlib_on_interrupt_begin(env->exception_index);
     }
