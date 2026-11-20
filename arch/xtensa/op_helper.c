@@ -58,7 +58,7 @@ void HELPER(update_ccompare)(CPUState *env, uint32_t i)
     HELPER(update_ccount)(env);
     dcc = (uint64_t)(env->sregs[CCOMPARE + i] - env->sregs[CCOUNT] - 1) + 1;
     tlib_timer_mod(i, /*env->ccompare[i].timer,*/
-                   env->ccount_time + (dcc * 1000000) / env->config->clock_freq_khz);
+                   env->ccount_time + (dcc * 1000) / env->config->clock_freq_khz); /* Microseconds, like update_ccount(). */
     env->yield_needed = 1;
 }
 
@@ -176,23 +176,15 @@ void HELPER(wsr_memctl)(CPUState *env, uint32_t v)
 
 uint32_t HELPER(rer)(CPUState *env, uint32_t addr)
 {
-    //  I think we should implement it at C# level?
-    tlib_abortf("reading from external register not yet supported");
+    /* External registers (debug module, TRAX, performance monitors)
+       are not modelled. Return their reset value so software probing them (for
+       example DSRSET to detect an attached debugger) keeps running. */
     return 0;
-    /*
-    return address_space_ldl(env->address_space_er, addr,
-                             MEMTXATTRS_UNSPECIFIED, NULL);
-    */
 }
 
 void HELPER(wer)(CPUState *env, uint32_t data, uint32_t addr)
 {
-    //  I think we should implement it at C# level?
-    tlib_abortf("writing to external register not yet supported");
-    /*
-    address_space_stl(env->address_space_er, addr, data,
-                      MEMTXATTRS_UNSPECIFIED, NULL);
-    */
+    /* See HELPER(rer); writes to unmodelled ERI registers are ignored. */
 }
 
 void HELPER(simcall)(CPUState *env)

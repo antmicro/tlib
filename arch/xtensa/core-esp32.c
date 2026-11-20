@@ -35,4 +35,5 @@
 #include "core-esp32/xtensa-modules.c.inc"
 
 XtensaConfig esp32
-    __attribute__((unused)) = { .name = "esp32", .isa_internal = &xtensa_modules, .clock_freq_khz = 140000, DEFAULT_SECTIONS };
+    __attribute__((unused)) = { .name = "esp32", .isa_internal = &xtensa_modules,
+    .opcode_translators = (const XtensaOpcodeTranslators *[]) { &xtensa_core_opcodes, &xtensa_fpu_opcodes, NULL }, .clock_freq_khz = 140000, DEFAULT_SECTIONS };
