@@ -3141,6 +3141,7 @@ float16 float32_to_float16(float32 a, flag ieee STATUS_PARAM)
     uint32_t mask;
     uint32_t increment;
     int8 roundingMode;
+    int8 oldFlags = STATUS(float_exception_flags);
     a = float32_squash_input_denormal(a STATUS_VAR);
 
     aSig = extractFloat32Frac(a);
@@ -3212,7 +3213,8 @@ float16 float32_to_float16(float32 a, flag ieee STATUS_PARAM)
         }
     } else {
         if(aExp > 16) {
-            float_raise(float_flag_invalid | float_flag_inexact STATUS_VAR);
+            set_float_exception_flags(oldFlags STATUS_VAR);
+            float_raise(float_flag_invalid STATUS_VAR);
             return packFloat16(aSign, 0x1f, 0x3ff);
         }
     }
