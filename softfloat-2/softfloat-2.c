@@ -6846,23 +6846,17 @@ int float128_compare_quiet(float128 a, float128 b STATUS_PARAM)
         uint##s##_t av, bv;                                                             \
         a = float##s##_squash_input_denormal(a STATUS_VAR);                             \
         b = float##s##_squash_input_denormal(b STATUS_VAR);                             \
-        if(float##s##_is_any_nan(a) && float##s##_is_any_nan(b)) {                      \
+        if(float##s##_is_any_nan(a) || float##s##_is_any_nan(b)) {                      \
             return propagateFloat##s##NaN(a, b STATUS_VAR);                             \
         }                                                                               \
         aSign = extractFloat##s##Sign(a);                                               \
         bSign = extractFloat##s##Sign(b);                                               \
         av = float##s##_val(a);                                                         \
         bv = float##s##_val(b);                                                         \
-        if(float##s##_is_any_nan(a)) {                                                  \
-            return b;                                                                   \
-        } else if(float##s##_is_any_nan(b)) {                                           \
-            return a;                                                                   \
+        if(aSign != bSign) {                                                            \
+            return ismin ^ aSign ? b : a;                                               \
         } else {                                                                        \
-            if(aSign != bSign) {                                                        \
-                return ismin ^ aSign ? b : a;                                           \
-            } else {                                                                    \
-                return ismin ^ aSign ^ (av < bv) ? b : a;                               \
-            }                                                                           \
+            return ismin ^ aSign ^ (av < bv) ? b : a;                                   \
         }                                                                               \
     }                                                                                   \
                                                                                         \
