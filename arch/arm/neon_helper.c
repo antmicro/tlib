@@ -1081,7 +1081,7 @@ static int32_t shl_s8(int8_t a, int8_t b)
     }
 
     if(b >= 0) {
-        return a32 << bu;
+        return (uint32_t)a32 << bu;
     } else if(a >= 0) {
         return a32 >> -b;
     } else {  //  sign extend when right-shifting negative
@@ -1127,7 +1127,7 @@ static int32_t shl_s16(int16_t a, int8_t b)
     }
 
     if(b >= 0) {
-        return a32 << bu;
+        return (uint32_t)a32 << bu;
     } else if(a >= 0) {
         return a32 >> -b;
     } else {  //  sign extend when right-shifting negative
