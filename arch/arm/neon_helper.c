@@ -1237,6 +1237,8 @@ static int8_t rshl_s8(int8_t a, int8_t b)
 
     if(b < 0 && -b <= 8 * ((int)sizeof a)) {
         ret += au >> (-b - 1) & 1;
+    } else if(b < 0) {
+        ret = 0;
     }
 
     return ret;
@@ -1280,6 +1282,8 @@ static int16_t rshl_s16(int16_t a, int8_t b)
 
     if(b < 0 && -b <= 8 * sizeof a) {
         ret += au >> (-b - 1) & 1;
+    } else if(b < 0) {
+        ret = 0;
     }
 
     return ret;
@@ -1317,6 +1321,8 @@ uint32_t HELPER(neon_rshl_s32)(uint32_t a, uint32_t b)
 
     if(bs < 0 && -bs <= 8 * sizeof a) {
         ret += a >> (-bs - 1) & 1;
+    } else if(bs < 0) {
+        ret = 0;
     }
 
     return ret;
@@ -1341,6 +1347,8 @@ uint64_t HELPER(neon_rshl_s64)(uint64_t a, uint64_t b)
 
     if(bs < 0 && -bs <= 8 * sizeof a) {
         ret += a >> (-bs - 1) & 1;
+    } else if(bs < 0) {
+        ret = 0;
     }
 
     return ret;
@@ -1631,6 +1639,8 @@ static int8_t qrshl_s8(CPUState *env, int8_t a, int8_t b)
 
     if(b < 0 && -b <= 8 * sizeof a) {
         ret += au >> (-b - 1) & 1;
+    } else if(b < 0) {
+        ret = 0;
     }
 
     return ret;
@@ -1674,6 +1684,8 @@ static int16_t qrshl_s16(CPUState *env, int16_t a, int8_t b)
 
     if(b < 0 && -b <= 8 * sizeof a) {
         ret += au >> (-b - 1) & 1;
+    } else if(b < 0) {
+        ret = 0;
     }
 
     return ret;
@@ -1711,6 +1723,8 @@ uint32_t HELPER(neon_qrshl_s32)(CPUState *env, uint32_t a, uint32_t b)
 
     if(bs < 0 && -bs <= 8 * sizeof a) {
         ret += a >> (-bs - 1) & 1;
+    } else if(bs < 0) {
+        ret = 0;
     }
 
     return ret;
@@ -1735,6 +1749,8 @@ uint64_t HELPER(neon_qrshl_s64)(CPUState *env, uint64_t a, uint64_t b)
 
     if(bs < 0 && -bs <= 8 * sizeof a) {
         ret += a >> (-bs - 1) & 1;
+    } else if(bs < 0) {
+        ret = 0;
     }
 
     return ret;
