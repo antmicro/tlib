@@ -192,17 +192,9 @@ static inline uint8_t glue(unit_add8_, PFX)(uint8_t a, uint8_t b, uint16_t *ge)
 
 static inline uint16_t glue(unit_sub16_, PFX)(uint16_t a, uint16_t b, uint16_t *ge)
 {
-    int32_t result;
-    int32_t sa, sb;
-    sa = (int32_t)((int16_t)a);
-    sb = (int32_t)((int16_t)b);
-    result = sa - sb;
-    if(result >= 0) {
-        *ge = 1;
-    } else {
-        *ge = 0;
-    }
-    return (uint16_t)((int16_t)result);
+    int32_t result = (int32_t)a - (int32_t)b;
+    *ge = a >= b;
+    return (uint16_t)result;
 }
 
 static inline uint8_t glue(unit_sub8_, PFX)(uint8_t a, uint8_t b, uint16_t *ge)
@@ -421,12 +413,12 @@ uint32_t HELPER(glue(PFX, subaddx))(uint32_t a, uint32_t b GE_ARG)
 
     res_top = glue(unit_sub16_, PFX)(a >> 16, b, &ge);
 #ifdef ARITH_GE
-    ge_flags |= (3 * ge);
+    ge_flags |= (3 * ge) << 2;
 #endif
 
     res_bottom = glue(unit_add16_, PFX)(a, b >> 16, &ge);
 #ifdef ARITH_GE
-    ge_flags |= (3 * ge) << 2;
+    ge_flags |= (3 * ge);
 #endif
 
     result = (((uint32_t)res_top) << 16) | res_bottom;
@@ -447,12 +439,12 @@ uint32_t HELPER(glue(PFX, addsubx))(uint32_t a, uint32_t b GE_ARG)
 
     res_top = glue(unit_add16_, PFX)(a >> 16, b, &ge);
 #ifdef ARITH_GE
-    ge_flags |= (3 * ge);
+    ge_flags |= (3 * ge) << 2;
 #endif
 
     res_bottom = glue(unit_sub16_, PFX)(a, b >> 16, &ge);
 #ifdef ARITH_GE
-    ge_flags |= (3 * ge) << 2;
+    ge_flags |= (3 * ge);
 #endif
 
     result = (((uint32_t)res_top) << 16) | res_bottom;
