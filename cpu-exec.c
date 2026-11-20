@@ -306,7 +306,9 @@ int cpu_exec(CPUState *env)
 #endif
 
     if(!cpu_has_work(env)) {
-        if(unlikely(env->cpu_wfi_state_change_hook_present)) {
+        /* A branch-to-self yields like WFI but is not one. self_loop is clear
+         * for an architectural WFI or WFE, which is what the hook reports. */
+        if(unlikely(env->cpu_wfi_state_change_hook_present) && !env->self_loop) {
             on_cpu_no_work(env);
         }
         return EXCP_WFI;

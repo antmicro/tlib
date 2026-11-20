@@ -245,6 +245,15 @@ void HELPER(wfi)(void)
     env->wfi = 1;
 }
 
+/* A branch to the current instruction is not a WFI. Yield so the tight loop
+ * does not consume the host, but leave env->wfi clear. Otherwise every WFI
+ * state hook, including energy-mode selection, treats a spinning core as asleep. */
+void HELPER(self_loop)(void)
+{
+    env->exception_index = EXCP_WFI;
+    env->self_loop = 1;
+}
+
 void HELPER(wfe)(void)
 {
     /* WFE should finish immediatly if an event register is set. */
