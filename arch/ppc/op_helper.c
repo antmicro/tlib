@@ -1577,8 +1577,7 @@ static inline void do_rfi(target_ulong nip, target_ulong msr, target_ulong msrm,
     nip = (uint32_t)nip;
     msr &= (uint32_t)msrm;
 #endif
-    /* XXX: beware: this is false if VLE is supported */
-    env->nip = nip & ~((target_ulong)0x00000003);
+    env->nip = nip & (tlib_is_vle_enabled() ? ~((target_ulong)0x00000001) : ~((target_ulong)0x00000003));
     hreg_store_msr(env, msr, 1);
     /* No need to raise an exception here,
      * as rfi is always the last insn of a TB
@@ -1775,17 +1774,17 @@ void helper_40x_rfci(void)
 
 void helper_rfci(void)
 {
-    do_rfi(env->spr[SPR_BOOKE_CSRR0], SPR_BOOKE_CSRR1, ~((target_ulong)0x3FFF0000), 0);
+    do_rfi(env->spr[SPR_BOOKE_CSRR0], env->spr[SPR_BOOKE_CSRR1], ~((target_ulong)0x3FFF0000), 0);
 }
 
 void helper_rfdi(void)
 {
-    do_rfi(env->spr[SPR_BOOKE_DSRR0], SPR_BOOKE_DSRR1, ~((target_ulong)0x3FFF0000), 0);
+    do_rfi(env->spr[SPR_BOOKE_DSRR0], env->spr[SPR_BOOKE_DSRR1], ~((target_ulong)0x3FFF0000), 0);
 }
 
 void helper_rfmci(void)
 {
-    do_rfi(env->spr[SPR_BOOKE_MCSRR0], SPR_BOOKE_MCSRR1, ~((target_ulong)0x3FFF0000), 0);
+    do_rfi(env->spr[SPR_BOOKE_MCSRR0], env->spr[SPR_BOOKE_MCSRR1], ~((target_ulong)0x3FFF0000), 0);
 }
 
 /* 440 specific */
