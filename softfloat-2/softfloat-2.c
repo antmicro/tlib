@@ -3136,6 +3136,7 @@ float32 float16_to_float32(float16 a, flag ieee STATUS_PARAM)
 float16 float32_to_float16(float32 a, flag ieee STATUS_PARAM)
 {
     flag aSign;
+    flag inexact;
     int16 aExp;
     uint32_t aSig;
     uint32_t mask;
@@ -3168,6 +3169,13 @@ float16 float32_to_float16(float32 a, flag ieee STATUS_PARAM)
     /* Decimal point between bits 22 and 23.  */
     aSig |= 0x00800000;
     aExp -= 0x7f;
+    if(aExp < -25) {
+        float_raise(float_flag_underflow | float_flag_inexact STATUS_VAR);
+        roundingMode = STATUS(float_rounding_mode);
+        increment = (roundingMode == float_round_up && !aSign) ||
+                    (roundingMode == float_round_down && aSign);
+        return packFloat16(aSign, 0, increment);
+    }
     if(aExp < -14) {
         mask = 0x00ffffff;
         if(aExp >= -24) {
@@ -3176,8 +3184,9 @@ float16 float32_to_float16(float32 a, flag ieee STATUS_PARAM)
     } else {
         mask = 0x00001fff;
     }
-    if(aSig & mask) {
-        float_raise(float_flag_underflow STATUS_VAR);
+    inexact = (aSig & mask) != 0;
+    if(inexact) {
+        flag isTiny = aExp < -14;
         roundingMode = STATUS(float_rounding_mode);
         switch(roundingMode) {
             case float_round_nearest_even:
@@ -3201,20 +3210,30 @@ float16 float32_to_float16(float32 a, flag ieee STATUS_PARAM)
             aSig >>= 1;
             aExp++;
         }
-    } else if(aExp < -14 && STATUS(float_detect_tininess) == float_tininess_before_rounding) {
-        float_raise(float_flag_underflow STATUS_VAR);
+        if(isTiny && (STATUS(float_detect_tininess) == float_tininess_before_rounding || aExp < -14)) {
+            float_raise(float_flag_underflow STATUS_VAR);
+        }
     }
 
     if(ieee) {
         if(aExp > 15) {
             float_raise(float_flag_overflow | float_flag_inexact STATUS_VAR);
+            roundingMode = STATUS(float_rounding_mode);
+            if(roundingMode == float_round_to_zero ||
+               (roundingMode == float_round_up && aSign) ||
+               (roundingMode == float_round_down && !aSign)) {
+                return packFloat16(aSign, 0x1e, 0x3ff);
+            }
             return packFloat16(aSign, 0x1f, 0);
         }
     } else {
         if(aExp > 16) {
-            float_raise(float_flag_invalid | float_flag_inexact STATUS_VAR);
+            float_raise(float_flag_invalid STATUS_VAR);
             return packFloat16(aSign, 0x1f, 0x3ff);
         }
+    }
+    if(inexact) {
+        float_raise(float_flag_inexact STATUS_VAR);
     }
     if(aExp < -24) {
         return packFloat16(aSign, 0, 0);
@@ -3238,14 +3257,35 @@ float16 float64_to_float16(float64 a, flag ieee STATUS_PARAM)
     aSign = extractFloat64Sign(a);
     if(aExp == 0x7FF) {
         if(aFrac) {
-            return commonNaNToFloat16(float64ToCommonNaN(a STATUS_VAR) STATUS_VAR);  //  NaN
+            commonNaNT nan = float64ToCommonNaN(a STATUS_VAR);
+            if(!ieee) {
+                float_raise(float_flag_invalid STATUS_VAR);
+                return packFloat16(aSign, 0, 0);
+            }
+            return commonNaNToFloat16(nan STATUS_VAR);
         }
-        return packFloat16(aSign, 0xFF, 0);  //  Infinity
+        if(!ieee) {
+            float_raise(float_flag_invalid STATUS_VAR);
+            return packFloat16(aSign, 0x1f, 0x3ff);
+        }
+        return packFloat16(aSign, 0x1f, 0);
     }
-    if(aExp > 0x40F) {
-        return packFloat16(aSign, 0xFF, 0);  //  Infinity
+    if(aExp == 0 && aFrac == 0) {
+        return packFloat16(aSign, 0, 0);
     }
-    return packFloat16(aSign, aExp | ((aExp & 0x400) >> 6), aFrac >> 42);
+
+    /* Keep a sticky bit below FP16's rounding position, without first
+     * rounding to FP32. Exponents outside FP32's normal range have the
+     * same FP16 overflow/underflow result and can be clamped safely.
+     * Keeping the intermediate normal also avoids spurious input flush.
+     */
+    if(aExp < 0x381) {
+        aExp = 0x381;
+    } else if(aExp > 0x47e) {
+        aExp = 0x47e;
+    }
+    shift64RightJamming(aFrac, 29, &aFrac);
+    return float32_to_float16(packFloat32(aSign, aExp - 0x380, aFrac), ieee STATUS_VAR);
 }
 
 /*----------------------------------------------------------------------------
