@@ -3423,6 +3423,23 @@ static int disas_fpv5_insn(CPUState *env, DisasContext *s, enum arm_fp_precision
 
 static void gen_exception_insn(DisasContext *s, int offset, int excp);
 
+static bool vfp_cpacr_access_allowed(CPUState *env, DisasContext *s)
+{
+#ifdef TARGET_PROTO_ARM_M
+    return true;
+#else
+    if(!arm_feature(env, ARM_FEATURE_V6)) {
+        return true;
+    }
+
+    uint32_t cp10 = extract32(env->cp15.c1_coproc, 20, 2);
+    uint32_t cp11 = extract32(env->cp15.c1_coproc, 22, 2);
+
+    return cp10 == cp11 &&
+           (cp10 == ARM_CPN_ACCESS_FULL || (cp10 == ARM_CPN_ACCESS_PRIV && !s->user));
+#endif
+}
+
 /* Disassemble a VFP instruction.  Returns nonzero if an error occurred
    (ie. an undefined instruction).  */
 static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
@@ -3434,7 +3451,7 @@ static int disas_vfp_insn(CPUState *env, DisasContext *s, uint32_t insn)
     TCGv tmp;
     TCGv tmp2;
 
-    if(!arm_feature(env, ARM_FEATURE_VFP)) {
+    if(!arm_feature(env, ARM_FEATURE_VFP) || !vfp_cpacr_access_allowed(env, s)) {
         return 1;
     }
 
@@ -4811,7 +4828,7 @@ static int disas_neon_ls_insn(CPUState *env, DisasContext *s, uint32_t insn)
     TCGv tmp2;
     TCGv_i64 tmp64;
 
-    if(!s->vfp_enabled) {
+    if(!s->vfp_enabled || !vfp_cpacr_access_allowed(env, s)) {
         return 1;
     }
     VFP_DREG_D(rd, insn);
@@ -5549,7 +5566,7 @@ static int disas_neon_data_insn(CPUState *env, DisasContext *s, uint32_t insn)
     TCGv tmp, tmp2, tmp3, tmp4, tmp5;
     TCGv_i64 tmp64;
 
-    if(!s->vfp_enabled) {
+    if(!s->vfp_enabled || !vfp_cpacr_access_allowed(env, s)) {
         return 1;
     }
     q = (insn & (1 << 6)) != 0;
