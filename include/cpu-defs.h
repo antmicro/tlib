@@ -238,7 +238,8 @@ enum bus_fault_access_mode {
                                       accessed */                              \
     target_ulong mem_io_vaddr; /* target virtual addr at which the             \
                                      memory was accessed */                    \
-    uint32_t wfi;              /* Nonzero if the CPU is in suspend state */    \
+    uint32_t wfi;       /* Nonzero if the CPU is in suspend state */          \
+    uint32_t self_loop; /* Nonzero while a branch-to-self is yielded. Not a WFI. */ \
     uint32_t interrupt_request;                                                \
     volatile sig_atomic_t exit_request;                                        \
     int tb_restart_request;                                                    \
