@@ -56,7 +56,7 @@ static uint32_t cortexa7_cp15_c0_c1[8] = {
     0x00001131, 0x00011011, 0x02010555, 0, 0x10101105, 0x40000000, 0x01240000, 0x02102211
 };
 
-static uint32_t cortexa7_cp15_c0_c2[8] = { 0x01101110, 0x13112111, 0x21232041, 0x11112131, 0x10011142, 0, 0, 0 };
+static uint32_t cortexa7_cp15_c0_c2[8] = { 0x02101110, 0x13112111, 0x21232041, 0x11112131, 0x10011142, 0, 0, 0 };
 
 static uint32_t cpu_arm_find_by_name(const char *name);
 
@@ -163,16 +163,18 @@ static void cpu_reset_model_id(CPUState *env, uint32_t id)
             set_feature(env, ARM_FEATURE_AUXCR);
             set_feature(env, ARM_FEATURE_THUMB2);
             set_feature(env, ARM_FEATURE_VFP);
+            set_feature(env, ARM_FEATURE_VFP3);
             set_feature(env, ARM_FEATURE_VFP4);
+            set_feature(env, ARM_FEATURE_VFP_FP16);
             set_feature(env, ARM_FEATURE_NEON);
             set_feature(env, ARM_FEATURE_GENERIC_TIMER);
             set_feature(env, ARM_FEATURE_THUMB2EE);
             set_feature(env, ARM_FEATURE_LPAE);
             set_feature(env, ARM_FEATURE_V7MP);
             set_feature(env, ARM_FEATURE_ARM_DIV);
-            env->vfp.xregs[ARM_VFP_FPSID] = 0x41023070;
-            env->vfp.xregs[ARM_VFP_MVFR0] = 0x10110221;
-            env->vfp.xregs[ARM_VFP_MVFR1] = 0x11000011;
+            env->vfp.xregs[ARM_VFP_FPSID] = 0x41023075;
+            env->vfp.xregs[ARM_VFP_MVFR0] = 0x10110222;
+            env->vfp.xregs[ARM_VFP_MVFR1] = 0x11111111;
             memcpy(env->cp15.c0_c1, cortexa7_cp15_c0_c1, 8 * sizeof(uint32_t));
             memcpy(env->cp15.c0_c2, cortexa7_cp15_c0_c2, 8 * sizeof(uint32_t));
             env->cp15.c0_cachetype = 0x84448003;
@@ -561,6 +563,12 @@ static void cpu_reset_model_id(CPUState *env, uint32_t id)
     }
     if(arm_feature(env, ARM_FEATURE_ARM_DIV)) {
         set_feature(env, ARM_FEATURE_THUMB_DIV);
+    }
+    if(arm_feature(env, ARM_FEATURE_VFP4)) {
+        set_feature(env, ARM_FEATURE_VFP3);
+    }
+    if(arm_feature(env, ARM_FEATURE_VFP3)) {
+        set_feature(env, ARM_FEATURE_VFP);
     }
     if(arm_feature(env, ARM_FEATURE_PMSA)) {
         set_feature(env, ARM_FEATURE_MPU);
@@ -3576,13 +3584,15 @@ inline int get_phys_addr(CPUState *env, uint32_t address, bool is_secure, int ac
      * Generally it's a little tricky because in case no region was matched we still need to know
      * whether there are no regions on the whole page.
      *
-     * `TARGET_PAGE_SIZE` is used as default for IDAU/SAU so that the final `page_size` isn't
-     * changed if security attribution check wasn't performed.
+     * The largest value is used as default for IDAU/SAU so that the final `page_size` isn't
+     * changed if security attribution check wasn't performed. `TARGET_PAGE_SIZE` would shrink
+     * the pages and sections an MMU maps, and `tlb_set_page` has to get their real size so that
+     * invalidating one by address flushes all of it.
      *
      * The same goes for allowed permissions which are necessary in case security check differs
      * based on access type though in this case we can just modify permissions provided by MMU/MPU.
      */
-    target_ulong idau_sau_page_size = TARGET_PAGE_SIZE;
+    target_ulong idau_sau_page_size = (target_ulong)-1;
     int idau_sau_allowed_permissions = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
 
     int ret;
